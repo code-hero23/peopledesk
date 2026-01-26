@@ -1,0 +1,136 @@
+import { useState, useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
+import { login, reset } from '../features/auth/authSlice';
+
+function Login() {
+    const [formData, setFormData] = useState({
+        email: '',
+        password: '',
+    });
+
+    const { email, password } = formData;
+
+    const navigate = useNavigate();
+    const dispatch = useDispatch();
+
+    const { user, isLoading, isError, isSuccess, message } = useSelector(
+        (state) => state.auth
+    );
+
+    useEffect(() => {
+        if (isError) {
+            alert(message);
+        }
+
+        if (isSuccess || user) {
+            if (user.role === 'ADMIN') {
+                navigate('/admin-dashboard');
+            } else {
+                navigate('/dashboard');
+            }
+        }
+
+        dispatch(reset());
+    }, [user, isError, isSuccess, message, navigate, dispatch]);
+
+    const onChange = (e) => {
+        setFormData((prevState) => ({
+            ...prevState,
+            [e.target.name]: e.target.value,
+        }));
+    };
+
+    const onSubmit = (e) => {
+        e.preventDefault();
+        dispatch(login({ email, password }));
+    };
+
+    return (
+        <div className="flex min-h-screen bg-slate-50 font-sans">
+            {/* Left Side - Hero / Brand */}
+            <div className="hidden lg:flex lg:w-1/2 bg-[#e00000] relative overflow-hidden flex-col justify-between p-12 text-white">
+                <div className="relative z-10">
+                    <img
+                        src="/assets/logo.jpg"
+                        alt="Cookscape Logo"
+                        className="h-16 object-contain mb-8 bg-white p-2 text-black rounded-lg shadow-sm" // Added bg-white for visibility if logo is transparent/dark
+                    />
+                    <h1 className="text-5xl font-bold leading-tight mb-4">Interiors &<br />Beyond.</h1>
+                    <p className="text-red-100 text-xl max-w-md">Streamline your workflow, manage projects, and track progress with the all-new Cookscape Portal.</p>
+                </div>
+
+                {/* Abstract pattern */}
+                <div className="absolute top-0 right-0 w-full h-full opacity-10 pointer-events-none">
+                    <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="w-full h-full fill-current text-white">
+                        <path d="M0 0 L100 0 L100 100 Z" />
+                    </svg>
+                </div>
+
+                <div className="relative z-10 text-sm text-red-200">
+                    &copy; {new Date().getFullYear()} Cookscape Interiors. All rights reserved.
+                </div>
+            </div>
+
+            {/* Right Side - Login Form */}
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white/50">
+                <div className="w-full max-w-md bg-white p-10 rounded-2xl shadow-xl border border-slate-100">
+                    <div className="text-center mb-8 lg:text-left">
+                        {/* Mobile Logo */}
+                        <img src="/assets/logo.jpg" alt="Logo" className="h-12 mx-auto lg:hidden mb-6" />
+
+                        <h2 className="text-3xl font-bold text-slate-800">Welcome Back</h2>
+                        <p className="text-slate-500 mt-2">Please enter your credentials to access your workspace.</p>
+                    </div>
+
+                    <form onSubmit={onSubmit} className="space-y-6">
+                        <div>
+                            <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                            <input
+                                type="email"
+                                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[#e00000] focus:ring-4 focus:ring-red-500/10 outline-none transition-all"
+                                id="email"
+                                name="email"
+                                value={email}
+                                placeholder="name@cookscape.com"
+                                onChange={onChange}
+                                required
+                            />
+                        </div>
+                        <div>
+                            <div className="flex justify-between items-center mb-2">
+                                <label className="block text-sm font-semibold text-slate-700">Password</label>
+                                <a href="#" className="text-sm font-medium text-[#e00000] hover:text-red-700">Forgot password?</a>
+                            </div>
+                            <input
+                                type="password"
+                                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[#e00000] focus:ring-4 focus:ring-red-500/10 outline-none transition-all"
+                                id="password"
+                                name="password"
+                                value={password}
+                                placeholder="Enter your password"
+                                onChange={onChange}
+                                required
+                            />
+                        </div>
+
+                        <button
+                            type="submit"
+                            disabled={isLoading}
+                            className={`w-full py-3.5 rounded-lg font-bold text-white shadow-lg shadow-red-500/30 transition-all transform active:scale-[0.98] ${isLoading ? 'bg-red-400 cursor-not-allowed' : 'bg-[#e00000] hover:bg-[#b30000]'
+                                }`}
+                        >
+                            {isLoading ? 'Signing In...' : 'Sign In'}
+                        </button>
+                    </form>
+
+                    <p className="text-center text-slate-400 text-sm mt-8">
+                        Need help? <a href="#" className="text-slate-600 font-medium hover:underline">Contact Support</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+export default Login;

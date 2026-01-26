@@ -1,0 +1,80 @@
+import { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { getMyRequests, reset } from '../../features/employee/employeeSlice';
+
+const MyRequests = () => {
+    const dispatch = useDispatch();
+    const { requests } = useSelector((state) => state.employee);
+
+    useEffect(() => {
+        dispatch(getMyRequests());
+        return () => { dispatch(reset()); };
+    }, [dispatch]);
+
+    return (
+        <div className="space-y-8 animate-fade-in pb-20">
+            <div>
+                <h2 className="text-3xl font-bold text-slate-800">My Requests</h2>
+                <p className="text-slate-500">History of your leave and permission requests.</p>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-6">
+                    <h3 className="font-bold text-lg text-slate-700 mb-4">Leave Requests</h3>
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                            <thead className="text-slate-400 font-medium border-b border-slate-100">
+                                <tr>
+                                    <th className="pb-3 pl-2">Dates</th>
+                                    <th className="pb-3">Type</th>
+                                    <th className="pb-3">Reason</th>
+                                    <th className="pb-3">Status</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-slate-100">
+                                {requests.leaves.map(req => (
+                                    <tr key={req.id}>
+                                        <td className="py-3 pl-2 font-medium text-slate-700">
+                                            {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
+                                        </td>
+                                        <td className="py-3">{req.type}</td>
+                                        <td className="py-3 text-slate-500 italic">"{req.reason}"</td>
+                                        <td className="py-3">
+                                            <span className={`px-2 py-1 rounded text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                                req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                                }`}>{req.status}</span>
+                                        </td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                        {requests.leaves.length === 0 && <p className="text-slate-400 italic mt-4 text-center">No leave requests found.</p>}
+                    </div>
+                </div>
+            </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-6">
+                    <h3 className="font-bold text-lg text-slate-700 mb-4">Permission Requests</h3>
+                    <div className="space-y-4">
+                        {requests.permissions.map(req => (
+                            <div key={req.id} className="p-4 rounded-lg border border-slate-100 flex justify-between items-center bg-slate-50 hover:bg-white hover:border-blue-100 transition-colors">
+                                <div>
+                                    <p className="font-bold text-slate-800">{new Date(req.date).toLocaleDateString()}</p>
+                                    <p className="text-sm text-slate-500">{req.startTime} - {req.endTime}</p>
+                                    <p className="text-xs text-slate-400 mt-1">"{req.reason}"</p>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                    req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                    }`}>{req.status}</span>
+                            </div>
+                        ))}
+                        {requests.permissions.length === 0 && <p className="text-slate-400 italic text-center">No permission requests found.</p>}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+export default MyRequests;
