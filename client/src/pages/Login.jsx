@@ -47,14 +47,14 @@ function Login() {
     };
 
     return (
-        <div className="flex min-h-screen bg-slate-50 font-sans">
+        <div className="flex min-h-screen bg-[#191b1c] font-sans text-white">
             {/* Left Side - Hero / Brand */}
             <div className="hidden lg:flex lg:w-1/2 bg-[#e00000] relative overflow-hidden flex-col justify-between p-12 text-white">
                 <div className="relative z-10">
                     <img
                         src="/orbix-logo.png"
                         alt="Cookscape Logo"
-                        className="h-32 object-contain mb-8 bg-white p-2 text-black rounded-lg shadow-sm" // Added bg-white for visibility if logo is transparent/dark
+                        className="h-32 object-contain mb-8 bg-white p-2 text-black rounded-lg shadow-sm"
                     />
                     <h1 className="text-5xl font-bold leading-tight mb-4">Interiors &<br />Beyond.</h1>
                     <p className="text-red-100 text-xl max-w-md">Streamline your workflow, manage projects, and track progress with the all-new Cookscape Portal.</p>
@@ -73,22 +73,22 @@ function Login() {
             </div>
 
             {/* Right Side - Login Form */}
-            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-white/50">
-                <div className="w-full max-w-md bg-white p-10 rounded-2xl shadow-xl border border-slate-100">
+            <div className="w-full lg:w-1/2 flex items-center justify-center p-8 bg-[#191b1c]">
+                <div className="w-full max-w-md bg-[#191b1c] p-10 rounded-2xl shadow-2xl border border-gray-800">
                     <div className="text-center mb-8 lg:text-left">
                         {/* Mobile Logo */}
-                        <img src="/orbix-logo.png" alt="Logo" className="h-20 mx-auto lg:hidden mb-6" />
+                        <img src="/orbix-logo.png" alt="Logo" className="h-20 mx-auto lg:hidden mb-6 bg-white rounded-lg p-2" />
 
-                        <h2 className="text-3xl font-bold text-slate-800">Welcome Back</h2>
-                        <p className="text-slate-500 mt-2">Please enter your credentials to access your workspace.</p>
+                        <h2 className="text-3xl font-bold text-white">Welcome Back</h2>
+                        <p className="text-gray-400 mt-2">Please enter your credentials to access your workspace.</p>
                     </div>
 
                     <form onSubmit={onSubmit} className="space-y-6">
                         <div>
-                            <label className="block text-sm font-semibold text-slate-700 mb-2">Email Address</label>
+                            <label className="block text-sm font-semibold text-gray-300 mb-2">Email Address</label>
                             <input
                                 type="email"
-                                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[#e00000] focus:ring-4 focus:ring-red-500/10 outline-none transition-all"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#25282a] text-white focus:border-[#e00000] focus:ring-4 focus:ring-red-500/10 outline-none transition-all placeholder-gray-500"
                                 id="email"
                                 name="email"
                                 value={email}
@@ -99,11 +99,11 @@ function Login() {
                         </div>
                         <div>
                             <div className="flex justify-between items-center mb-2">
-                                <label className="block text-sm font-semibold text-slate-700">Password</label>
+                                <label className="block text-sm font-semibold text-gray-300">Password</label>
                             </div>
                             <input
                                 type="password"
-                                className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-[#e00000] focus:ring-4 focus:ring-red-500/10 outline-none transition-all"
+                                className="w-full px-4 py-3 rounded-lg border border-gray-700 bg-[#25282a] text-white focus:border-[#e00000] focus:ring-4 focus:ring-red-500/10 outline-none transition-all placeholder-gray-500"
                                 id="password"
                                 name="password"
                                 value={password}
