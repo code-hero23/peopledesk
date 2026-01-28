@@ -460,6 +460,8 @@ const deleteEmployee = async (req, res) => {
 
 
 
+const fs = require('fs');
+
 // @desc    Import employees from Excel
 // @route   POST /api/admin/employees/import
 // @access  Private (Admin)
@@ -469,10 +471,18 @@ const importEmployees = async (req, res) => {
             return res.status(400).json({ message: 'Please upload an Excel file' });
         }
 
-        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        // Read from file path (Multer DiskStorage)
+        const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const data = xlsx.utils.sheet_to_json(sheet);
+
+        // Delete file after reading to save space
+        try {
+            fs.unlinkSync(req.file.path);
+        } catch (err) {
+            console.error('Failed to delete temp file:', err);
+        }
 
         if (data.length === 0) {
             return res.status(400).json({ message: 'Excel sheet is empty' });
