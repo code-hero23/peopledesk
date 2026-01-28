@@ -10,11 +10,27 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
 
-    // Start Camera
+    const [location, setLocation] = useState(null);
+
+    // Start Camera & Get Location
     const startCamera = async () => {
         // Stop any existing stream first
         if (stream) {
             stream.getTracks().forEach(track => track.stop());
+        }
+
+        // Get Location
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    setLocation({
+                        lat: position.coords.latitude.toFixed(4),
+                        lng: position.coords.longitude.toFixed(4)
+                    });
+                },
+                (err) => console.warn("Location access denied or unavailable:", err),
+                { enableHighAccuracy: true, timeout: 5000 }
+            );
         }
 
         try {
@@ -66,7 +82,6 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
 
-            // Draw video frame to canvas
             const context = canvas.getContext('2d');
 
             // Mirror if using front camera
@@ -75,7 +90,36 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
                 context.scale(-1, 1);
             }
 
+            // Draw video frame
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            // Reset transform for text overlay
+            context.setTransform(1, 0, 0, 1, 0, 0);
+
+            // Add Timestamp & Location Overlay
+            const now = new Date();
+            const dateStr = now.toLocaleDateString();
+            const timeStr = now.toLocaleTimeString();
+            const locStr = location ? `Lat: ${location.lat}, Lng: ${location.lng}` : 'Location: Not Available';
+
+            // Overlay Bar
+            const barHeight = 80; // Adjust based on resolution
+            const fontSize = 24;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
+
+            // Text
+            context.fillStyle = '#ffffff';
+            context.font = `bold ${fontSize}px sans-serif`;
+            context.textBaseline = 'middle';
+
+            // Draw Date/Time (Left)
+            context.fillText(`${dateStr} ${timeStr}`, 20, canvas.height - (barHeight / 2));
+
+            // Draw Location (Right) - aligned roughly
+            const textWidth = context.measureText(locStr).width;
+            context.fillText(locStr, canvas.width - textWidth - 20, canvas.height - (barHeight / 2));
 
             // Convert to blob/file
             canvas.toBlob((blob) => {
