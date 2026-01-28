@@ -1,10 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createLeaveRequest, getBusinessHeads } from '../features/employee/employeeSlice';
+import SuccessModal from './SuccessModal';
 
 const LeaveRequestForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { businessHeads } = useSelector((state) => state.employee);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const [formData, setFormData] = useState({
         type: 'CASUAL',
@@ -21,7 +23,8 @@ const LeaveRequestForm = ({ onSuccess }) => {
     const onSubmit = (e) => {
         e.preventDefault();
         dispatch(createLeaveRequest(formData));
-        if (onSuccess) onSuccess();
+        setShowSuccess(true);
+        // Original onSuccess called after modal closes
     };
 
     return (
@@ -116,6 +119,16 @@ const LeaveRequestForm = ({ onSuccess }) => {
                     Submit Request
                 </button>
             </div>
+
+            <SuccessModal
+                isOpen={showSuccess}
+                onClose={() => {
+                    setShowSuccess(false);
+                    if (onSuccess) onSuccess();
+                }}
+                message="Leave Request Sent!"
+                subMessage="Your manager will be notified."
+            />
         </form>
     );
 };

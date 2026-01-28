@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createPermissionRequest, getBusinessHeads } from '../features/employee/employeeSlice';
+import SuccessModal from './SuccessModal';
 
 const TimePicker = ({ label, value, onChange }) => {
     // Parse the 12h time string (e.g. "09:30 AM") or default
@@ -53,6 +54,7 @@ const TimePicker = ({ label, value, onChange }) => {
 const PermissionRequestForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { businessHeads } = useSelector((state) => state.employee);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const [formData, setFormData] = useState({
         date: '',
@@ -69,7 +71,7 @@ const PermissionRequestForm = ({ onSuccess }) => {
     const onSubmit = (e) => {
         e.preventDefault();
         dispatch(createPermissionRequest(formData));
-        if (onSuccess) onSuccess();
+        setShowSuccess(true);
     };
 
     return (
@@ -140,6 +142,16 @@ const PermissionRequestForm = ({ onSuccess }) => {
                     Submit
                 </button>
             </div>
+
+            <SuccessModal
+                isOpen={showSuccess}
+                onClose={() => {
+                    setShowSuccess(false);
+                    if (onSuccess) onSuccess();
+                }}
+                message="Permission Sent!"
+                subMessage="Waiting for approval."
+            />
         </form>
     );
 };

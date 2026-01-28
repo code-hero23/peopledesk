@@ -1,12 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createWorkLog } from '../features/employee/employeeSlice';
+import { createWorkLog } from '../../features/employee/employeeSlice';
 import { MapPin, Camera, AlertTriangle, Calendar, Clock, CheckCircle } from 'lucide-react';
+import SuccessModal from '../SuccessModal';
 
 const AEWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { attendance, isLoading } = useSelector((state) => state.employee);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     // Initial State
     const [formData, setFormData] = useState({
@@ -156,7 +158,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
         });
 
         dispatch(createWorkLog(data)).then(() => {
-            if (onSuccess) onSuccess();
+            setShowSuccess(true);
         });
     };
 
@@ -390,6 +392,16 @@ const AEWorkLogForm = ({ onSuccess }) => {
                     {isLoading ? 'Submitting...' : 'Submit Deployment Log'}
                 </button>
             </div>
+
+            <SuccessModal
+                isOpen={showSuccess}
+                onClose={() => {
+                    setShowSuccess(false);
+                    if (onSuccess) onSuccess();
+                }}
+                message="Work Log Submitted!"
+                subMessage="Great work today."
+            />
         </form>
     );
 };

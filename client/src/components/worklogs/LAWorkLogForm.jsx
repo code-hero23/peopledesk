@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog } from '../../features/employee/employeeSlice';
 import { getProjects } from '../../features/projects/projectSlice';
+import SuccessModal from '../SuccessModal';
 
 const LAWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.employee);
     const { projects } = useSelector((state) => state.projects); // Correct store key is 'projects'
+    const [showSuccess, setShowSuccess] = useState(false);
 
     useEffect(() => {
         dispatch(getProjects());
@@ -129,8 +131,9 @@ const LAWorkLogForm = ({ onSuccess }) => {
             // Wait, previous step used stringify manually? Prisma Client handles object->dbjson. 
             // My controller update had `JSON.stringify`, so I should pass objects.
         };
-        dispatch(createWorkLog(payload));
-        if (onSuccess) onSuccess();
+        dispatch(createWorkLog(payload)).then(() => {
+            setShowSuccess(true);
+        });
     };
 
     return (
@@ -244,7 +247,20 @@ const LAWorkLogForm = ({ onSuccess }) => {
                 <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
                     {isLoading ? 'Submitting...' : 'Submit log'}
                 </button>
+                <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
+                    {isLoading ? 'Submitting...' : 'Submit log'}
+                </button>
             </div>
+
+            <SuccessModal
+                isOpen={showSuccess}
+                onClose={() => {
+                    setShowSuccess(false);
+                    if (onSuccess) onSuccess();
+                }}
+                message="Work Log Submitted!"
+                subMessage="Successfully recorded."
+            />
         </form>
     );
 };

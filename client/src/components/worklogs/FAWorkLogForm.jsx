@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog } from '../../features/employee/employeeSlice';
+import SuccessModal from '../SuccessModal';
 
 const FAWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.employee);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const [formData, setFormData] = useState({
         fa_calls: '',
@@ -31,8 +33,9 @@ const FAWorkLogForm = ({ onSuccess }) => {
 
     const onSubmit = (e) => {
         e.preventDefault();
-        dispatch(createWorkLog({ ...formData }));
-        if (onSuccess) onSuccess();
+        dispatch(createWorkLog({ ...formData })).then(() => {
+            setShowSuccess(true);
+        });
     };
 
     return (
@@ -115,7 +118,20 @@ const FAWorkLogForm = ({ onSuccess }) => {
                 <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
                     {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
+                <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
+                    {isLoading ? 'Submitting...' : 'Submit Report'}
+                </button>
             </div>
+
+            <SuccessModal
+                isOpen={showSuccess}
+                onClose={() => {
+                    setShowSuccess(false);
+                    if (onSuccess) onSuccess();
+                }}
+                message="Work Log Submitted!"
+                subMessage="Keep it up!"
+            />
         </form>
     );
 };
