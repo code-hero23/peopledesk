@@ -1,5 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import axios from 'axios';
+import { UserPlus } from 'lucide-react'; // Assuming UserPlus was used or I will use it
 import { getAllEmployees, deleteEmployee, updateUserStatus, reset } from '../../features/admin/adminSlice';
 import CreateEmployeeModal from '../../components/CreateEmployeeModal';
 
@@ -9,6 +11,40 @@ const ManageEmployees = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
+    const [uploading, setUploading] = useState(false);
+    const fileInputRef = useRef(null);
+    const { user } = useSelector((state) => state.auth);
+
+    const handleFileChange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        setUploading(true);
+        try {
+            const token = user.token;
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            };
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.post(`${baseUrl}/admin/employees/import`, formData, config);
+
+            alert(response.data.message);
+            dispatch(getAllEmployees());
+            if (fileInputRef.current) fileInputRef.current.value = '';
+        } catch (error) {
+            console.error(error);
+            const msg = error.response?.data?.message || 'Import failed';
+            alert(`Error: ${msg}`);
+        } finally {
+            setUploading(false);
+        }
+    };
 
     useEffect(() => {
         dispatch(getAllEmployees());
@@ -58,12 +94,28 @@ const ManageEmployees = () => {
                     <h2 className="text-3xl font-bold text-slate-800">Manage Employees</h2>
                     <p className="text-slate-500">Add, edit, or remove team members.</p>
                 </div>
-                <button
-                    onClick={handleAdd}
-                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
-                >
-                    <span>➕</span> Add New Employee
-                </button>
+                <div className="flex gap-3">
+                    <input
+                        type="file"
+                        ref={fileInputRef}
+                        accept=".xlsx, .xls"
+                        onChange={handleFileChange}
+                        className="hidden"
+                    />
+                    <button
+                        onClick={() => fileInputRef.current.click()}
+                        disabled={uploading}
+                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
+                    >
+                        <span>📂</span> {uploading ? 'Importing...' : 'Import Excel'}
+                    </button>
+                    <button
+                        onClick={handleAdd}
+                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
+                    >
+                        <span>➕</span> Add New Employee
+                    </button>
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
+const xlsx = require('xlsx');
 const prisma = new PrismaClient();
 
 // @desc    Get all employees
@@ -459,6 +460,83 @@ const deleteEmployee = async (req, res) => {
 
 
 
+// @desc    Import employees from Excel
+// @route   POST /api/admin/employees/import
+// @access  Private (Admin)
+const importEmployees = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Please upload an Excel file' });
+        }
+
+        const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const data = xlsx.utils.sheet_to_json(sheet);
+
+        if (data.length === 0) {
+            return res.status(400).json({ message: 'Excel sheet is empty' });
+        }
+
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+
+        const salt = await bcrypt.genSalt(10);
+        // Default password for bulk import
+        const hashedPassword = await bcrypt.hash('employee@123', salt);
+
+        for (const [index, row] of data.entries()) {
+            // Excel Columns: Name, Email, Role (Optional), Designation (Optional)
+            const name = row['Name'] || row['name'];
+            const email = row['Email'] || row['email'];
+            const role = (row['Role'] || row['role'] || 'EMPLOYEE').toUpperCase();
+            const designation = (row['Designation'] || row['designation'] || 'LA').toUpperCase();
+
+            if (!name || !email) {
+                results.failed++;
+                results.errors.push(`Row ${index + 2}: Missing Name or Email`);
+                continue;
+            }
+
+            try {
+                // Check if user exists
+                const existingUser = await prisma.user.findUnique({ where: { email } });
+                if (existingUser) {
+                    results.failed++;
+                    results.errors.push(`Row ${index + 2}: Email ${email} already exists`);
+                    continue;
+                }
+
+                await prisma.user.create({
+                    data: {
+                        name,
+                        email,
+                        password: hashedPassword,
+                        role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN'].includes(role) ? role : 'EMPLOYEE',
+                        designation
+                    }
+                });
+                results.success++;
+            } catch (err) {
+                results.failed++;
+                results.errors.push(`Row ${index + 2}: ${err.message}`);
+            }
+        }
+
+        res.json({
+            message: `Import complete. Added ${results.success} users. Failed ${results.failed}.`,
+            details: results
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     getAllEmployees,
     getAllPendingRequests,
@@ -471,5 +549,6 @@ module.exports = {
     getAllAttendance,
     getDailyAttendance,
     updateEmployee,
-    deleteEmployee
+    deleteEmployee,
+    importEmployees
 };
