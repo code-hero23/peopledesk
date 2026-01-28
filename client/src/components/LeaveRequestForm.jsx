@@ -1,16 +1,22 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { createLeaveRequest } from '../features/employee/employeeSlice';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { createLeaveRequest, getBusinessHeads } from '../features/employee/employeeSlice';
 
 const LeaveRequestForm = ({ onSuccess }) => {
+    const dispatch = useDispatch();
+    const { businessHeads } = useSelector((state) => state.employee);
+
     const [formData, setFormData] = useState({
         type: 'CASUAL',
         startDate: '',
         endDate: '',
         reason: '',
+        targetBhId: '',
     });
 
-    const dispatch = useDispatch();
+    useEffect(() => {
+        dispatch(getBusinessHeads());
+    }, [dispatch]);
 
     const onSubmit = (e) => {
         e.preventDefault();
@@ -20,6 +26,24 @@ const LeaveRequestForm = ({ onSuccess }) => {
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
+            {/* BH Selection */}
+            <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Business Head</label>
+                <select
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    required
+                    value={formData.targetBhId}
+                    onChange={(e) => setFormData({ ...formData, targetBhId: e.target.value })}
+                >
+                    <option value="">-- Select Reporting Manager --</option>
+                    {businessHeads.map((bh) => (
+                        <option key={bh.id} value={bh.id}>
+                            {bh.name} ({bh.email})
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration</label>
                 <select

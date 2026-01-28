@@ -1,11 +1,27 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// @desc    Get all Business Heads
+// @route   GET /api/requests/business-heads
+// @access  Private
+const getBusinessHeads = async (req, res) => {
+    try {
+        const businessHeads = await prisma.user.findMany({
+            where: { role: 'BUSINESS_HEAD', status: 'ACTIVE' },
+            select: { id: true, name: true, email: true }
+        });
+        res.json(businessHeads);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Create a new leave request
 // @route   POST /api/requests/leave
 // @access  Private (Employee)
 const createLeaveRequest = async (req, res) => {
-    const { type, startDate, endDate, reason } = req.body;
+    const { type, startDate, endDate, reason, targetBhId } = req.body;
 
     if (!type || !startDate || !endDate || !reason) {
         return res.status(400).json({ message: 'Please details for all fields' });
@@ -26,6 +42,7 @@ const createLeaveRequest = async (req, res) => {
                 startDate: new Date(startDate),
                 endDate: new Date(endDate),
                 reason,
+                targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING'
             },
         });
@@ -41,7 +58,7 @@ const createLeaveRequest = async (req, res) => {
 // @route   POST /api/requests/permission
 // @access  Private (Employee)
 const createPermissionRequest = async (req, res) => {
-    const { date, startTime, endTime, reason } = req.body;
+    const { date, startTime, endTime, reason, targetBhId } = req.body;
 
     if (!date || !startTime || !endTime || !reason) {
         return res.status(400).json({ message: 'Please provide all details' });
@@ -50,12 +67,6 @@ const createPermissionRequest = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Validate 2 hours difference (Basic string check for HH:MM)
-        // For robust implementation, parsing time is recommended.
-        // Here we assume frontend sends specific format or just rely on backend logging for now.
-
-        // TODO: Add robust time validation logic ensuring endTime - startTime <= 2 hours
-
         const permissionRequest = await prisma.permissionRequest.create({
             data: {
                 userId,
@@ -63,6 +74,7 @@ const createPermissionRequest = async (req, res) => {
                 startTime,
                 endTime,
                 reason,
+                targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING'
             },
         });
@@ -99,4 +111,4 @@ const getMyRequests = async (req, res) => {
     }
 };
 
-module.exports = { createLeaveRequest, createPermissionRequest, getMyRequests };
+module.exports = { createLeaveRequest, createPermissionRequest, getMyRequests, getBusinessHeads };

@@ -5,20 +5,31 @@ import WorkLogForm from '../components/WorkLogForm'; // Default (LA)
 import LAWorkLogForm from '../components/worklogs/LAWorkLogForm'; // Detailed (LA)
 import CREWorkLogForm from '../components/worklogs/CREWorkLogForm';
 import FAWorkLogForm from '../components/worklogs/FAWorkLogForm';
+import AEWorkLogForm from '../components/worklogs/AEWorkLogForm';
 import LeaveRequestForm from '../components/LeaveRequestForm';
 import PermissionRequestForm from '../components/PermissionRequestForm';
 import StatCard from '../components/StatCard';
 import Modal from '../components/Modal';
 import ProjectCreationForm from '../components/ProjectCreationForm';
 
+import CheckInPhotoModal from '../components/CheckInPhotoModal';
+
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { attendance, workLogs, requests, isLoading } = useSelector((state) => state.employee);
 
+    // DEBUG LOG
+    useEffect(() => {
+        console.log('Current User State:', user);
+        console.log('Designation Check:', user?.designation === 'AE' ? 'IS AE' : 'NOT AE');
+    }, [user]);
+
     // UI State
     const [activeTab, setActiveTab] = useState('logs');
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
+    const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const [isCheckingOut, setIsCheckingOut] = useState(false); // Track if current action is check-out
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
 
     useEffect(() => {
@@ -29,11 +40,47 @@ const EmployeeDashboard = () => {
     }, [dispatch]);
 
     const handleMarkAttendance = () => {
+        console.log('handleMarkAttendance Called');
+        console.log('User Designation:', user?.designation);
+        console.log('Attendance State:', attendance);
+
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
-            dispatch(checkoutAttendance()).then(() => dispatch(getAttendanceStatus()));
+            console.log('Condition: Checking OUT');
+            // Check-Out Logic
+            if (user?.designation === 'AE') {
+                console.log('Action: Opening Photo Modal for Checkout');
+                setIsCheckingOut(true);
+                setShowCheckInModal(true);
+            } else {
+                console.log('Action: Standard Checkout (No Photo)');
+                dispatch(checkoutAttendance()).then(() => dispatch(getAttendanceStatus()));
+            }
         } else {
-            dispatch(markAttendance()).then(() => dispatch(getAttendanceStatus()));
+            console.log('Condition: Checking IN');
+            // Check-In Logic
+            if (user?.designation === 'AE') {
+                console.log('Action: Opening Photo Modal for Check-In');
+                setIsCheckingOut(false);
+                setShowCheckInModal(true);
+            } else {
+                console.log('Action: Standard Check-In (No Photo)');
+                dispatch(markAttendance()).then(() => dispatch(getAttendanceStatus()));
+            }
         }
+    };
+
+    const handlePhotoCheckIn = (photoFile) => {
+        const formData = new FormData();
+        formData.append('photo', photoFile);
+
+        const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
+
+        dispatch(action).then((res) => {
+            if (!res.error) {
+                setShowCheckInModal(false);
+                dispatch(getAttendanceStatus());
+            }
+        });
     };
 
     const closeModal = () => setActiveModal(null);
@@ -44,6 +91,8 @@ const EmployeeDashboard = () => {
                 return <CREWorkLogForm onSuccess={closeModal} />;
             case 'FA':
                 return <FAWorkLogForm onSuccess={closeModal} />;
+            case 'AE':
+                return <AEWorkLogForm onSuccess={closeModal} />;
             case 'LA':
             default:
                 if (user?.designation === 'LA' || !user?.designation) {
@@ -89,10 +138,27 @@ const EmployeeDashboard = () => {
                 </Modal>
             )}
 
+            <CheckInPhotoModal
+                isOpen={showCheckInModal}
+                onClose={() => setShowCheckInModal(false)}
+                onSubmit={handlePhotoCheckIn}
+                isLoading={isLoading}
+                isCheckingOut={isCheckingOut}
+            />
+
             {/* Header */}
+            <div className="bg-red-600 text-white p-4 rounded-xl mb-4 font-bold text-center border-4 border-yellow-400">
+                ⚠️ VERSION DEBUG: CODE IS UPDATED ⚠️
+            </div>
+
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-800">Hello, {user?.name.split(' ')[0]} 👋</h2>
+                    <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
+                        Hello, {user?.name.split(' ')[0]} 👋
+                        <span className="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full border border-slate-300">
+                            {user?.designation || 'No Designation'}
+                        </span>
+                    </h2>
                     <p className="text-slate-500">Ready to make today count?</p>
                 </div>
                 <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 text-sm font-medium text-slate-600 flex items-center gap-2">
@@ -139,7 +205,7 @@ const EmployeeDashboard = () => {
                             className="relative z-10 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 group-hover:shadow-orange-500/25"
                         >
                             <span className="text-xl">👋</span>
-                            <span>Tap to Check Out</span>
+                            <span>Tap to Check Out (Photo)</span>
                         </button>
                     ) : (
                         <div className="relative z-10 mt-6">

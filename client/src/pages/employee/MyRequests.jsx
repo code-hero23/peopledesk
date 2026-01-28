@@ -40,9 +40,15 @@ const MyRequests = () => {
                                         <td className="py-3">{req.type}</td>
                                         <td className="py-3 text-slate-500 italic">"{req.reason}"</td>
                                         <td className="py-3">
-                                            <span className={`px-2 py-1 rounded text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                                req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                                }`}>{req.status}</span>
+                                            {req.status === 'APPROVED' ? (
+                                                <span className="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700">APPROVED</span>
+                                            ) : req.status === 'REJECTED' ? (
+                                                <span className="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700">REJECTED</span>
+                                            ) : (
+                                                <span className="px-2 py-1 rounded text-xs font-bold bg-orange-100 text-orange-700">
+                                                    {req.bhStatus === 'PENDING' ? 'Waiting for BH' : req.hrStatus === 'PENDING' ? 'Waiting for HR' : 'PENDING'}
+                                                </span>
+                                            )}
                                         </td>
                                     </tr>
                                 ))}
@@ -66,7 +72,12 @@ const MyRequests = () => {
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
                                     req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>{req.status}</span>
+                                    }`}>
+                                    {req.status === 'APPROVED' ? 'APPROVED' :
+                                        req.status === 'REJECTED' ? 'REJECTED' :
+                                            req.bhStatus === 'PENDING' ? 'Wait for BH' :
+                                                req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
+                                </span>
                             </div>
                         ))}
                         {requests.permissions.length === 0 && <p className="text-slate-400 italic text-center">No permission requests found.</p>}

@@ -38,7 +38,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
             <div className="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden transform transition-all scale-100">
                 <div className="bg-slate-50 px-6 py-4 border-b border-slate-100 flex justify-between items-center">
-                    <h3 className="text-lg font-bold text-slate-800">{selectedEmployee ? 'Edit Employee' : 'Add New Employee'}</h3>
+                    <h3 className="text-lg font-bold text-slate-800">{selectedEmployee ? 'Edit Employee' : 'Add New User'}</h3>
                     <button onClick={onClose} className="text-slate-400 hover:text-red-500 text-xl font-bold">&times;</button>
                 </div>
 
@@ -74,18 +74,36 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
+
                     <div>
-                        <label className="block text-sm font-medium text-slate-700 mb-1">Designation</label>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">Role</label>
                         <select
                             className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
-                            value={formData.designation}
-                            onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                            value={formData.role || 'EMPLOYEE'}
+                            onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                         >
-                            <option value="LA">Loading Architect (LA)</option>
-                            <option value="CRE">Customer Relationship Executive (CRE)</option>
-                            <option value="FA">Feasibility Architect (FA)</option>
+                            <option value="EMPLOYEE">Employee</option>
+                            <option value="BUSINESS_HEAD">Business Head</option>
+                            <option value="HR">HR Manager</option>
+                            <option value="ADMIN">Administrator</option>
                         </select>
                     </div>
+
+                    {(formData.role === 'EMPLOYEE' || !formData.role) && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1">Designation</label>
+                            <select
+                                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
+                                value={formData.designation}
+                                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                            >
+                                <option value="LA">Loading Architect (LA)</option>
+                                <option value="CRE">Customer Relationship Executive (CRE)</option>
+                                <option value="FA">Feasibility Architect (FA)</option>
+                                <option value="AE">Application Engineer (AE)</option>
+                            </select>
+                        </div>
+                    )}
 
                     <div className="flex gap-3 pt-4">
                         <button type="button" onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-medium hover:bg-slate-50 transition-colors">

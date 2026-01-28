@@ -24,7 +24,7 @@ function Login() {
         }
 
         if (isSuccess || user) {
-            if (user.role === 'ADMIN') {
+            if (['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user.role)) {
                 navigate('/admin-dashboard');
             } else {
                 navigate('/dashboard');
@@ -52,9 +52,9 @@ function Login() {
             <div className="hidden lg:flex lg:w-1/2 bg-[#e00000] relative overflow-hidden flex-col justify-between p-12 text-white">
                 <div className="relative z-10">
                     <img
-                        src="/assets/logo.jpg"
+                        src="/orbix-logo.png"
                         alt="Cookscape Logo"
-                        className="h-16 object-contain mb-8 bg-white p-2 text-black rounded-lg shadow-sm" // Added bg-white for visibility if logo is transparent/dark
+                        className="h-32 object-contain mb-8 bg-white p-2 text-black rounded-lg shadow-sm" // Added bg-white for visibility if logo is transparent/dark
                     />
                     <h1 className="text-5xl font-bold leading-tight mb-4">Interiors &<br />Beyond.</h1>
                     <p className="text-red-100 text-xl max-w-md">Streamline your workflow, manage projects, and track progress with the all-new Cookscape Portal.</p>
@@ -68,7 +68,7 @@ function Login() {
                 </div>
 
                 <div className="relative z-10 text-sm text-red-200">
-                    &copy; {new Date().getFullYear()} Cookscape Interiors. All rights reserved.
+                    &copy; {new Date().getFullYear()} Orbix Design. All rights reserved.
                 </div>
             </div>
 
@@ -77,7 +77,7 @@ function Login() {
                 <div className="w-full max-w-md bg-white p-10 rounded-2xl shadow-xl border border-slate-100">
                     <div className="text-center mb-8 lg:text-left">
                         {/* Mobile Logo */}
-                        <img src="/assets/logo.jpg" alt="Logo" className="h-12 mx-auto lg:hidden mb-6" />
+                        <img src="/orbix-logo.png" alt="Logo" className="h-20 mx-auto lg:hidden mb-6" />
 
                         <h2 className="text-3xl font-bold text-slate-800">Welcome Back</h2>
                         <p className="text-slate-500 mt-2">Please enter your credentials to access your workspace.</p>
@@ -100,7 +100,6 @@ function Login() {
                         <div>
                             <div className="flex justify-between items-center mb-2">
                                 <label className="block text-sm font-semibold text-slate-700">Password</label>
-                                <a href="#" className="text-sm font-medium text-[#e00000] hover:text-red-700">Forgot password?</a>
                             </div>
                             <input
                                 type="password"
@@ -124,9 +123,7 @@ function Login() {
                         </button>
                     </form>
 
-                    <p className="text-center text-slate-400 text-sm mt-8">
-                        Need help? <a href="#" className="text-slate-600 font-medium hover:underline">Contact Support</a>
-                    </p>
+
                 </div>
             </div>
         </div>

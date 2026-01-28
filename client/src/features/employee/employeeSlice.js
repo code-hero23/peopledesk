@@ -7,6 +7,7 @@ const initialState = {
     attendance: null,
     workLogs: [],
     requests: { leaves: [], permissions: [] },
+    businessHeads: [],
     isLoading: false,
     isError: false,
     isSuccess: false,
@@ -39,15 +40,17 @@ export const getAttendanceStatus = createAsyncThunk(
 // Mark Attendance
 export const markAttendance = createAsyncThunk(
     'employee/markAttendance',
-    async (_, thunkAPI) => {
+    async (attendanceData, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`,
+                    // Axios automatically sets Content-Type to multipart/form-data when data is FormData
                 },
             };
-            const response = await axios.post(API_URL + 'attendance', {}, config);
+            // attendanceData can be empty object or FormData
+            const response = await axios.post(API_URL + 'attendance', attendanceData || {}, config);
             return response.data;
         } catch (error) {
             const message =
@@ -62,7 +65,7 @@ export const markAttendance = createAsyncThunk(
 // Checkout Attendance
 export const checkoutAttendance = createAsyncThunk(
     'employee/checkoutAttendance',
-    async (_, thunkAPI) => {
+    async (attendanceData, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
@@ -70,7 +73,7 @@ export const checkoutAttendance = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const response = await axios.put(API_URL + 'attendance/checkout', {}, config);
+            const response = await axios.put(API_URL + 'attendance/checkout', attendanceData || {}, config);
             return response.data;
         } catch (error) {
             const message =
@@ -192,6 +195,26 @@ export const getMyRequests = createAsyncThunk(
                 (error.response && error.response.data && error.response.data.message) ||
                 error.message ||
                 error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Get Business Heads
+export const getBusinessHeads = createAsyncThunk(
+    'employee/getBusinessHeads',
+    async (_, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            };
+            const response = await axios.get(API_URL + 'requests/business-heads', config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
             return thunkAPI.rejectWithValue(message);
         }
     }
@@ -319,6 +342,10 @@ export const employeeSlice = createSlice({
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;
+            })
+            // Get Business Heads
+            .addCase(getBusinessHeads.fulfilled, (state, action) => {
+                state.businessHeads = action.payload;
             });
     },
 });

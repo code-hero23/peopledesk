@@ -19,7 +19,12 @@ const createWorkLog = async (req, res) => {
         // LA Detailed
         la_number, la_mailId, la_projectLocation, la_freezingAmount, la_variant, la_projectValue,
         la_woodwork, la_addOns, la_cpCode, la_source, la_fa, la_referalBonus, la_siteStatus, la_specialNote,
-        la_requirements, la_colours, la_onlineMeeting, la_showroomMeeting, la_measurements
+        la_requirements, la_colours, la_onlineMeeting, la_showroomMeeting, la_measurements,
+        // AE Fields
+        ae_siteLocation, ae_gpsCoordinates, ae_siteStatus, ae_visitType, ae_workStage,
+        ae_tasksCompleted, ae_measurements, ae_itemsInstalled, ae_issuesRaised, ae_issuesResolved,
+        ae_hasIssues, ae_issueType, ae_issueDescription, ae_nextVisitRequired, ae_nextVisitDate,
+        ae_plannedWork, ae_clientMet, ae_clientFeedback, ae_photos
     } = req.body;
 
     // Validation: Require at least Process/Tasks and Hours
@@ -94,6 +99,30 @@ const createWorkLog = async (req, res) => {
                 la_onlineMeeting: la_onlineMeeting ? JSON.stringify(la_onlineMeeting) : undefined,
                 la_showroomMeeting: la_showroomMeeting ? JSON.stringify(la_showroomMeeting) : undefined,
                 la_measurements: la_measurements ? JSON.stringify(la_measurements) : undefined,
+
+                // AE Fields
+                ae_siteLocation,
+                ae_gpsCoordinates,
+                ae_siteStatus,
+                ae_visitType: ae_visitType ? JSON.stringify(ae_visitType) : undefined,
+                ae_workStage,
+                ae_tasksCompleted: ae_tasksCompleted ? JSON.stringify(ae_tasksCompleted) : undefined,
+                ae_measurements,
+                ae_itemsInstalled,
+                ae_issuesRaised,
+                ae_issuesResolved,
+                ae_hasIssues: ae_hasIssues || false,
+                ae_issueType,
+                ae_issueDescription,
+                ae_nextVisitRequired: ae_nextVisitRequired || false,
+                ae_nextVisitDate: ae_nextVisitDate ? new Date(ae_nextVisitDate) : null,
+                ae_plannedWork,
+                ae_clientMet: ae_clientMet || false,
+                ae_clientFeedback,
+                // If files are uploaded, use them; otherwise verify if ae_photos string was passed (unlikely with multer but good safety)
+                ae_photos: req.files && req.files.length > 0
+                    ? JSON.stringify(req.files.map(file => `/uploads/${file.filename}`))
+                    : (ae_photos ? JSON.stringify(ae_photos) : undefined),
 
                 date: new Date(),
             },

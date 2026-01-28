@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { useDispatch } from 'react-redux';
-import { createPermissionRequest } from '../features/employee/employeeSlice';
+import { useState, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { createPermissionRequest, getBusinessHeads } from '../features/employee/employeeSlice';
 
 const TimePicker = ({ label, value, onChange }) => {
     // Parse the 12h time string (e.g. "09:30 AM") or default
@@ -51,14 +51,20 @@ const TimePicker = ({ label, value, onChange }) => {
 };
 
 const PermissionRequestForm = ({ onSuccess }) => {
+    const dispatch = useDispatch();
+    const { businessHeads } = useSelector((state) => state.employee);
+
     const [formData, setFormData] = useState({
         date: '',
         startTime: '09:00 AM',
         endTime: '06:00 PM',
         reason: '',
+        targetBhId: '',
     });
 
-    const dispatch = useDispatch();
+    useEffect(() => {
+        dispatch(getBusinessHeads());
+    }, [dispatch]);
 
     const onSubmit = (e) => {
         e.preventDefault();
@@ -68,6 +74,24 @@ const PermissionRequestForm = ({ onSuccess }) => {
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
+            {/* BH Selection */}
+            <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Business Head</label>
+                <select
+                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    required
+                    value={formData.targetBhId}
+                    onChange={(e) => setFormData({ ...formData, targetBhId: e.target.value })}
+                >
+                    <option value="">-- Select Reporting Manager --</option>
+                    {businessHeads.map((bh) => (
+                        <option key={bh.id} value={bh.id}>
+                            {bh.name} ({bh.email})
+                        </option>
+                    ))}
+                </select>
+            </div>
+
             <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
                 <input

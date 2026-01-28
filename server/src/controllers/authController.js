@@ -90,6 +90,7 @@ const getMe = async (req, res) => {
         name: req.user.name,
         email: req.user.email,
         role: req.user.role,
+        designation: req.user.designation,
     };
     res.json(user);
 };

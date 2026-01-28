@@ -78,19 +78,29 @@ const Layout = () => {
                 {/* Logo Section */}
                 <div className={`p-4 border-b border-slate-800 flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'h-20' : 'h-32'} overflow-hidden`}>
                     <img
-                        src="/assets/logo.jpg"
+                        src="/orbix-logo.png"
                         alt="Cookscape"
-                        className={`object-contain bg-white rounded-md p-1.5 transition-all duration-300 ${isCollapsed ? 'h-10 w-10' : 'h-24 w-full max-w-[230px]'}`}
+                        className={`object-contain rounded-md p-2 transition-all duration-300 ${isCollapsed ? 'h-10 w-10' : 'h-auto w-4/5 max-h-24'}`}
+                        style={{ backgroundColor: '#191919' }}
                     />
                 </div>
 
                 {/* Navigation */}
                 <nav className="flex-1 p-3 space-y-2 mt-2 overflow-y-auto scrollbar-hide">
-                    {user?.role === 'ADMIN' ? (
+                    {['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role) ? (
                         <>
                             <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
-                            <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
-                            <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
+
+                            {/* Only Admin can manage employees fully */}
+                            {user?.role === 'ADMIN' && (
+                                <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
+                            )}
+
+                            {/* Admin does NOT see Approvals */}
+                            {user?.role !== 'ADMIN' && (
+                                <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
+                            )}
+
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
                         </>
@@ -112,7 +122,11 @@ const Layout = () => {
                         {!isCollapsed && (
                             <div className="overflow-hidden">
                                 <p className="text-sm font-medium truncate text-white">{user?.name}</p>
-                                <p className="text-xs text-slate-400 capitalize truncate">{user?.role.toLowerCase()}</p>
+                                <p className="text-xs text-slate-400 capitalize truncate">
+                                    {['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role)
+                                        ? user?.role.replace('_', ' ').toLowerCase()
+                                        : user?.designation}
+                                </p>
                             </div>
                         )}
                     </div>
@@ -133,7 +147,7 @@ const Layout = () => {
             {/* Mobile Header & Main Content */}
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
                 <header className="bg-white shadow-sm border-b border-slate-200 md:hidden p-4 flex justify-between items-center sticky top-0 z-10">
-                    <img src="/assets/logo.jpg" alt="Cookscape" className="h-8" />
+                    <img src="/orbix-logo.png" alt="Cookscape" className="h-8" />
                     <button onClick={onLogout} className="text-sm text-red-600 font-medium flex items-center gap-1">
                         <LogOut size={16} /> Logout
                     </button>

@@ -145,6 +145,94 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
+                    {/* AE Section */}
+                    {(WorkLog.ae_siteLocation || WorkLog.ae_siteStatus) && (
+                        <div>
+                            <h3 className="text-lg font-bold text-blue-600 mb-3 pb-1 border-b">AE Report</h3>
+                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                                <DetailItem label="Site Location" value={WorkLog.ae_siteLocation} />
+                                <DetailItem label="GPS Coordinates" value={WorkLog.ae_gpsCoordinates} />
+                                <DetailItem label="Site Status" value={WorkLog.ae_siteStatus} />
+                                <DetailItem label="Work Stage" value={WorkLog.ae_workStage} />
+                                <DetailItem label="Client Met?" value={WorkLog.ae_clientMet ? 'Yes' : 'No'} />
+                                <DetailItem label="Client Feedback" value={WorkLog.ae_clientFeedback} />
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Visit Type</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {renderJsonList(WorkLog.ae_visitType)}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Tasks Completed</h4>
+                                    <div className="flex flex-wrap gap-2">
+                                        {renderJsonList(WorkLog.ae_tasksCompleted)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 bg-slate-50 p-4 rounded-lg">
+                                <DetailItem label="Measurements" value={WorkLog.ae_measurements} />
+                                <DetailItem label="Items Installed" value={WorkLog.ae_itemsInstalled} />
+                                <DetailItem label="Issues Raised" value={WorkLog.ae_issuesRaised} />
+                                <DetailItem label="Issues Resolved" value={WorkLog.ae_issuesResolved} />
+                            </div>
+
+                            {WorkLog.ae_hasIssues && (
+                                <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-6 break-inside-avoid">
+                                    <h5 className="font-bold text-red-700 mb-2 flex items-center gap-2">⚠️ Issue Reported</h5>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <DetailItem label="Type" value={WorkLog.ae_issueType} />
+                                        <div>
+                                            <span className="block text-xs font-bold text-slate-400 uppercase">Description</span>
+                                            <p className="text-slate-800">{WorkLog.ae_issueDescription}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+
+                            {WorkLog.ae_nextVisitRequired && (
+                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
+                                    <h5 className="font-bold text-blue-700 mb-2">📅 Next Visit Plan</h5>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <DetailItem label="Date" value={WorkLog.ae_nextVisitDate ? new Date(WorkLog.ae_nextVisitDate).toLocaleDateString() : '-'} />
+                                        <DetailItem label="Planned Work" value={WorkLog.ae_plannedWork} />
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Photos */}
+                            {WorkLog.ae_photos && (
+                                <div>
+                                    <h4 className="text-sm font-bold text-slate-700 mb-3">Site Photos</h4>
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        {(() => {
+                                            try {
+                                                const photos = typeof WorkLog.ae_photos === 'string' ? JSON.parse(WorkLog.ae_photos) : WorkLog.ae_photos;
+                                                return Array.isArray(photos) ? photos.map((photo, index) => (
+                                                    <a key={index} href={`http://localhost:5000${photo}`} target="_blank" rel="noopener noreferrer" className="block group relative overflow-hidden rounded-lg aspect-square border border-slate-200">
+                                                        <img
+                                                            src={`http://localhost:5000${photo}`}
+                                                            alt={`Site Photo ${index + 1}`}
+                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                                                        />
+                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <span className="bg-white/90 px-3 py-1 rounded text-xs font-bold shadow-sm">View</span>
+                                                        </div>
+                                                    </a>
+                                                )) : <p className="text-sm text-slate-500">Invalid photo data</p>;
+                                            } catch (e) {
+                                                return <p className="text-sm text-slate-500">Error loading photos</p>;
+                                            }
+                                        })()}
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    )}
+
                     {/* Fallback for regular logs */}
                     {!WorkLog.cre_totalCalls && !WorkLog.fa_calls && !WorkLog.la_projectLocation && (
                         <div className="grid grid-cols-2 gap-4">
@@ -162,7 +250,7 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     </button>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

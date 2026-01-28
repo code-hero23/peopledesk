@@ -101,9 +101,23 @@ const ManageEmployees = () => {
                                         <div className="text-sm text-slate-500">{emp.email}</div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded">
-                                            {emp.designation || emp.role}
-                                        </span>
+                                        {emp.role === 'ADMIN' ? (
+                                            <span className="inline-block px-2 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded">
+                                                ADMINISTRATOR
+                                            </span>
+                                        ) : emp.role === 'BUSINESS_HEAD' ? (
+                                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded">
+                                                BUSINESS HEAD
+                                            </span>
+                                        ) : emp.role === 'HR' ? (
+                                            <span className="inline-block px-2 py-1 bg-pink-100 text-pink-700 text-xs font-bold rounded">
+                                                HR MANAGER
+                                            </span>
+                                        ) : (
+                                            <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded">
+                                                {emp.designation}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span
@@ -154,7 +168,7 @@ const ManageEmployees = () => {
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

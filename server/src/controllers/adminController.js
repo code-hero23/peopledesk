@@ -14,6 +14,7 @@ const getAllEmployees = async (req, res) => {
                 email: true,
                 role: true,
                 status: true,
+                designation: true,
                 lastWorkLogDate: true,
             },
         });
@@ -26,18 +27,58 @@ const getAllEmployees = async (req, res) => {
 
 // @desc    Get all pending requests (Leave & Permission)
 // @route   GET /api/admin/requests/pending
-// @access  Private (Admin)
+// @access  Private (Admin, BH, HR)
 const getAllPendingRequests = async (req, res) => {
     try {
+        const userRole = req.user.role;
+
+        // Base query conditions
+        let leaveWhere = {};
+        let permissionWhere = {};
+
+        if (userRole === 'BUSINESS_HEAD') {
+            // BH sees requests where targetBhId is theirs OR null (legacy/fallback)
+            // AND status is pending
+            const userId = req.user.id;
+
+            leaveWhere = {
+                bhStatus: 'PENDING',
+                status: 'PENDING',
+                OR: [
+                    { targetBhId: userId },
+                    { targetBhId: null }
+                ]
+            };
+            permissionWhere = {
+                bhStatus: 'PENDING',
+                status: 'PENDING',
+                OR: [
+                    { targetBhId: userId },
+                    { targetBhId: null }
+                ]
+            };
+        } else if (userRole === 'HR') {
+            // HR sees requests that are APPROVED by BH but PENDING HR
+            leaveWhere = { bhStatus: 'APPROVED', hrStatus: 'PENDING' };
+            permissionWhere = { bhStatus: 'APPROVED', hrStatus: 'PENDING' };
+        } else if (userRole === 'ADMIN') {
+            // Admin sees EVERYTHING pending at any stage
+            leaveWhere = { status: 'PENDING' }; // Show all pending overall
+            permissionWhere = { status: 'PENDING' };
+        } else {
+            // Regular employees/Managers shouldn't be here usually, or see nothing
+            return res.json({ leaves: [], permissions: [] });
+        }
+
         const leaves = await prisma.leaveRequest.findMany({
-            where: { status: 'PENDING' },
-            include: { user: { select: { name: true, email: true } } },
+            where: leaveWhere,
+            include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
 
         const permissions = await prisma.permissionRequest.findMany({
-            where: { status: 'PENDING' },
-            include: { user: { select: { name: true, email: true } } },
+            where: permissionWhere,
+            include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
 
@@ -50,29 +91,61 @@ const getAllPendingRequests = async (req, res) => {
 
 // @desc    Get request history (Approved/Rejected)
 // @route   GET /api/admin/requests/history
-// @access  Private (Admin)
+// @access  Private (Admin, BH, HR)
 const getRequestHistory = async (req, res) => {
     try {
+        const userRole = req.user.role;
+        const userId = req.user.id;
+
+        let leaveWhere = {};
+        let permissionWhere = {};
+
+        if (userRole === 'BUSINESS_HEAD') {
+            // BH sees requests they have acted on (bhStatus is NOT pending)
+            // They should see it even if overall status is pending (waiting for HR)
+            console.log(`BH History Query for ${userId} (BH)`);
+            leaveWhere = {
+                bhStatus: { not: 'PENDING' },
+                OR: [
+                    { targetBhId: userId },
+                    { bhId: userId }
+                ]
+            };
+            permissionWhere = {
+                bhStatus: { not: 'PENDING' },
+                OR: [
+                    { targetBhId: userId },
+                    { bhId: userId }
+                ]
+            };
+        } else if (userRole === 'HR') {
+            console.log(`HR History Query for ${userId} (HR)`);
+            // SIMPLIFIED HR Logic: HR sees EVERYTHING that is finalized (APPROVED/REJECTED)
+            // This acts as the company-wide record.
+            leaveWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
+            permissionWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
+
+        } else {
+            console.log(`History Query for ${userRole}`);
+            // Admin sees all finalized requests
+            leaveWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
+            permissionWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
+        }
+
+        console.log("Leave Where Clause:", JSON.stringify(leaveWhere, null, 2));
+
         const leaves = await prisma.leaveRequest.findMany({
-            where: {
-                status: {
-                    in: ['APPROVED', 'REJECTED']
-                }
-            },
+            where: leaveWhere,
             include: { user: { select: { name: true, email: true } } },
-            orderBy: { updatedAt: 'desc' },
-            take: 50 // Limit to last 50
+            orderBy: { createdAt: 'desc' },
+            take: 50
         });
 
         const permissions = await prisma.permissionRequest.findMany({
-            where: {
-                status: {
-                    in: ['APPROVED', 'REJECTED']
-                }
-            },
+            where: permissionWhere,
             include: { user: { select: { name: true, email: true } } },
-            orderBy: { updatedAt: 'desc' },
-            take: 50 // Limit to last 50
+            orderBy: { createdAt: 'desc' },
+            take: 50
         });
 
         res.json({ leaves, permissions });
@@ -81,13 +154,11 @@ const getRequestHistory = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
-
-// @desc    Update request status (Approve/Reject)
-// @route   PUT /api/admin/requests/:type/:id
-// @access  Private (Admin)
 const updateRequestStatus = async (req, res) => {
     const { type, id } = req.params; // type: 'leave' or 'permission'
     const { status } = req.body; // 'APPROVED' or 'REJECTED'
+    const userRole = req.user.role;
+    const userId = req.user.id;
 
     if (!['APPROVED', 'REJECTED'].includes(status)) {
         return res.status(400).json({ message: 'Invalid status' });
@@ -95,21 +166,44 @@ const updateRequestStatus = async (req, res) => {
 
     try {
         let result;
-        const adminId = req.user.id; // Who approved/rejected it
+        const model = type === 'leave' ? prisma.leaveRequest : prisma.permissionRequest;
 
-        if (type === 'leave') {
-            result = await prisma.leaveRequest.update({
-                where: { id: parseInt(id) },
-                data: { status, approvedBy: adminId },
-            });
-        } else if (type === 'permission') {
-            result = await prisma.permissionRequest.update({
-                where: { id: parseInt(id) },
-                data: { status, approvedBy: adminId },
-            });
-        } else {
-            return res.status(400).json({ message: 'Invalid request type' });
+        // Construct update data based on Role
+        let updateData = {};
+
+        if (userRole === 'BUSINESS_HEAD') {
+            updateData.bhStatus = status;
+            updateData.bhId = userId;
+
+            // If Rejected by BH, reject overall
+            if (status === 'REJECTED') {
+                updateData.status = 'REJECTED';
+            }
+            // If Approved by BH, overall remains PENDING (waiting for HR)
         }
+        else if (userRole === 'HR') {
+            updateData.hrStatus = status;
+            updateData.hrId = userId;
+
+            // HR is final authority - Update Overall Status
+            updateData.status = status;
+            updateData.approvedBy = userId; // Legacy support
+        }
+        else if (userRole === 'ADMIN') {
+            // Admin Override - Approves everything
+            updateData.bhStatus = status;
+            updateData.hrStatus = status;
+            updateData.status = status;
+            updateData.approvedBy = userId;
+        }
+        else {
+            return res.status(403).json({ message: 'Not authorized to approve' });
+        }
+
+        result = await model.update({
+            where: { id: parseInt(id) },
+            data: updateData,
+        });
 
         res.json(result);
     } catch (error) {
@@ -133,7 +227,7 @@ const updateUserStatus = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: { status },
-            select: { id: true, name: true, email: true, status: true }
+            select: { id: true, name: true, email: true, status: true, designation: true }
         });
         res.json(user);
     } catch (error) {
@@ -172,7 +266,7 @@ const createEmployee = async (req, res) => {
                 name,
                 email,
                 password: hashedPassword,
-                role: 'EMPLOYEE',
+                role: req.body.role || 'EMPLOYEE',
                 designation: designation || 'LA', // Default to LA
             },
             select: { id: true, name: true, email: true, role: true, designation: true, status: true },
@@ -362,6 +456,8 @@ const deleteEmployee = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
+
+
 
 module.exports = {
     getAllEmployees,

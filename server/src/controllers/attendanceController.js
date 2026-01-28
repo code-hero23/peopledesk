@@ -4,33 +4,53 @@ const prisma = new PrismaClient();
 // @desc    Mark attendance for today
 // @route   POST /api/attendance
 // @access  Private (Employee)
+// @desc    Mark attendance for today
+// @route   POST /api/attendance
+// @access  Private (Employee)
 const markAttendance = async (req, res) => {
     try {
         const userId = req.user.id;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        // Check if running on Sunday (optional: can be configured)
-        // if (today.getDay() === 0) { ... }
-
-        const existingAttendance = await prisma.attendance.findFirst({
+        // Fetch ALL attendance records for today
+        const existingAttendances = await prisma.attendance.findMany({
             where: {
                 userId,
                 date: {
-                    gte: today, // Greater than or equal to start of today
+                    gte: today,
                 },
             },
+            orderBy: {
+                date: 'desc' // Latest first
+            }
         });
 
-        if (existingAttendance) {
-            return res.status(400).json({ message: 'Attendance already marked for today' });
+        // Current User Logic
+        const isAE = req.user.designation === 'AE';
+        const latestAttendance = existingAttendances[0];
+
+        // Validations
+        if (latestAttendance) {
+            // If the latest record is still active (no checkout), cannot create new one
+            if (!latestAttendance.checkoutTime) {
+                return res.status(400).json({ message: 'You are already checked in. Please check out first.' });
+            }
+
+            // If checked out, proceed based on role
+            if (!isAE) {
+                // Non-AE users can only have ONE record per day
+                return res.status(400).json({ message: 'Attendance already marked for today' });
+            }
+            // If AE, and checked out, ALLOW creating new record (Fall through)
         }
 
         const attendance = await prisma.attendance.create({
             data: {
                 userId,
                 status: 'PRESENT',
-                date: new Date(), // Storing exact time as well, but queried by day
+                date: new Date(),
+                checkInPhoto: req.file ? `/uploads/${req.file.filename}` : null
             },
         });
 
@@ -44,17 +64,24 @@ const markAttendance = async (req, res) => {
 // @desc    Checkout for today
 // @route   PUT /api/attendance/checkout
 // @access  Private (Employee)
+// @desc    Checkout for today
+// @route   PUT /api/attendance/checkout
+// @access  Private (Employee)
 const checkoutAttendance = async (req, res) => {
     try {
         const userId = req.user.id;
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
+        // Find the LATEST attendance record for today
         const attendance = await prisma.attendance.findFirst({
             where: {
                 userId,
                 date: { gte: today },
             },
+            orderBy: {
+                date: 'desc'
+            }
         });
 
         if (!attendance) {
@@ -67,7 +94,10 @@ const checkoutAttendance = async (req, res) => {
 
         const updatedAttendance = await prisma.attendance.update({
             where: { id: attendance.id },
-            data: { checkoutTime: new Date() },
+            data: {
+                checkoutTime: new Date(),
+                checkoutPhoto: req.file ? `/uploads/${req.file.filename}` : null
+            },
         });
 
         res.json(updatedAttendance);
@@ -77,6 +107,9 @@ const checkoutAttendance = async (req, res) => {
     }
 };
 
+// @desc    Check if attendance is marked for today
+// @route   GET /api/attendance/today
+// @access  Private
 // @desc    Check if attendance is marked for today
 // @route   GET /api/attendance/today
 // @access  Private
@@ -93,6 +126,9 @@ const getAttendanceStatus = async (req, res) => {
                     gte: today,
                 },
             },
+            orderBy: {
+                date: 'desc'
+            }
         });
 
         res.json({ marked: !!attendance, data: attendance });

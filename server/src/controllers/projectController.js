@@ -26,7 +26,9 @@ const createProject = async (req, res) => {
             colours,
             onlineMeeting,
             showroomMeeting,
-            measurements
+            measurements,
+            latitude,
+            longitude
         } = req.body;
 
         if (!name) {
@@ -55,6 +57,8 @@ const createProject = async (req, res) => {
                 onlineMeeting,
                 showroomMeeting,
                 measurements,
+                latitude: latitude ? parseFloat(latitude) : null,
+                longitude: longitude ? parseFloat(longitude) : null,
                 managerId: req.user.id // Assign creator as manager? or just track distinct createdBy if schema supports
             }
         });

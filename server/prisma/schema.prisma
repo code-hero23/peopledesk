@@ -10,7 +10,6 @@ datasource db {
 
 enum Role {
   EMPLOYEE
-  MANAGER
   HR
   BUSINESS_HEAD
   ADMIN
@@ -62,8 +61,10 @@ model Attendance {
   date          DateTime @default(now())
   status        String   @default("PRESENT")
   checkoutTime  DateTime?
+  checkInPhoto  String?  // URL/Path to the check-in photo
+  checkoutPhoto String?  // URL/Path to the check-out photo
   createdAt     DateTime @default(now())
-  
+
   @@unique([userId, date])
 }
 
@@ -135,6 +136,27 @@ model WorkLog {
   la_showroomMeeting  Json?     // Array of { slNo, date, discussedOn }
   la_measurements     Json?     // Array of { aeName, date, discussedOn }
 
+  // AE Fields (Application Engineer)
+  ae_siteLocation     String?
+  ae_gpsCoordinates   String?
+  ae_siteStatus       String?   // New Site, Ongoing, Handover, Hold
+  ae_visitType        Json?     // ["Site Inspection", "Measurement", ...]
+  ae_workStage        String?   // Design, Production, Installation, Finishing
+  ae_tasksCompleted   Json?     // ["Measurement Taken", "Material Delivered", ...]
+  ae_measurements     String?   // Quantity
+  ae_itemsInstalled   String?   // Quantity
+  ae_issuesRaised     String?   // Quantity
+  ae_issuesResolved   String?   // Quantity
+  ae_hasIssues        Boolean?  @default(false)
+  ae_issueType        String?   // Design, Material, Site, Client
+  ae_issueDescription String?
+  ae_nextVisitRequired Boolean? @default(false)
+  ae_nextVisitDate    DateTime?
+  ae_plannedWork      String?
+  ae_clientMet        Boolean?  @default(false)
+  ae_clientFeedback   String?   // Positive, Neutral, Negative
+  ae_photos           Json?     // Array of photo URLs or filenames
+
   tasks           String?   // Making optional if 'process' takes over
   remarks         String?
   createdAt       DateTime @default(now())
@@ -148,8 +170,16 @@ model LeaveRequest {
   startDate DateTime
   endDate   DateTime
   reason    String
-  status    RequestStatus @default(PENDING)
-  approvedBy Int?
+  status    RequestStatus @default(PENDING) // Overall Status (Pending until HR approves)
+  
+  // Approval Workflow
+  bhStatus  RequestStatus @default(PENDING)
+  hrStatus  RequestStatus @default(PENDING)
+  bhId      Int?          // ID of Business Head who approved
+  targetBhId Int?         // ID of Business Head assigned to approve
+  hrId      Int?          // ID of HR who approved
+  
+  approvedBy Int?         // Legacy field (can remove later or map to hrId)
   createdAt DateTime      @default(now())
 }
 
@@ -161,7 +191,15 @@ model PermissionRequest {
   startTime String
   endTime   String
   reason    String
-  status    RequestStatus @default(PENDING)
+  status    RequestStatus @default(PENDING) // Overall Status
+  
+  // Approval Workflow
+  bhStatus  RequestStatus @default(PENDING)
+  hrStatus  RequestStatus @default(PENDING)
+  bhId      Int?
+  targetBhId Int?         // ID of Business Head assigned to approve
+  hrId      Int?
+
   approvedBy Int?
   createdAt DateTime      @default(now())
 }
@@ -186,6 +224,8 @@ model Project {
   number          String?
   mailId          String?
   location        String?
+  latitude        Float?
+  longitude       Float?
   freezingAmount  String?
   variant         String?
   projectValue    String?
