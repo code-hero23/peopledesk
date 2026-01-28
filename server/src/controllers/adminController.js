@@ -489,11 +489,12 @@ const importEmployees = async (req, res) => {
         const hashedPassword = await bcrypt.hash('employee@123', salt);
 
         for (const [index, row] of data.entries()) {
-            // Excel Columns: Name, Email, Role (Optional), Designation (Optional)
+            // Excel Columns: Name, Email, Role (Optional), Designation (Optional), Password (Optional)
             const name = row['Name'] || row['name'];
             const email = row['Email'] || row['email'];
             const role = (row['Role'] || row['role'] || 'EMPLOYEE').toUpperCase();
             const designation = (row['Designation'] || row['designation'] || 'LA').toUpperCase();
+            const rawPassword = row['Password'] || row['password'];
 
             if (!name || !email) {
                 results.failed++;
@@ -510,11 +511,15 @@ const importEmployees = async (req, res) => {
                     continue;
                 }
 
+                // Use provided password or default 'employee@123'
+                const passwordToHash = rawPassword ? String(rawPassword) : 'employee@123';
+                const userHashedPassword = await bcrypt.hash(passwordToHash, salt);
+
                 await prisma.user.create({
                     data: {
                         name,
                         email,
-                        password: hashedPassword,
+                        password: userHashedPassword,
                         role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN'].includes(role) ? role : 'EMPLOYEE',
                         designation
                     }
