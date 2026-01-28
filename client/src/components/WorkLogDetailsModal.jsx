@@ -212,9 +212,9 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                                             try {
                                                 const photos = typeof WorkLog.ae_photos === 'string' ? JSON.parse(WorkLog.ae_photos) : WorkLog.ae_photos;
                                                 return Array.isArray(photos) ? photos.map((photo, index) => (
-                                                    <a key={index} href={`http://localhost:5000${photo}`} target="_blank" rel="noopener noreferrer" className="block group relative overflow-hidden rounded-lg aspect-square border border-slate-200">
+                                                    <a key={index} href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${photo}`} target="_blank" rel="noopener noreferrer" className="block group relative overflow-hidden rounded-lg aspect-square border border-slate-200">
                                                         <img
-                                                            src={`http://localhost:5000${photo}`}
+                                                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${photo}`}
                                                             alt={`Site Photo ${index + 1}`}
                                                             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
                                                         />
