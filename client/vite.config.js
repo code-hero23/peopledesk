@@ -10,9 +10,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.ico', 'orbix-logo.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'WorkSphere AE',
-        short_name: 'WorkSphere',
-        description: 'WorkSphere Employee Dashboard & Worklog',
+        name: 'PeopleDesk',
+        short_name: 'PeopleDesk',
+        description: 'PeopleDesk Employee Dashboard & Worklog',
         theme_color: '#ffffff',
         icons: [
           {

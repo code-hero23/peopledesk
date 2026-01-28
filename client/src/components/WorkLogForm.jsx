@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog } from '../features/employee/employeeSlice';
+import SuccessModal from './SuccessModal';
 
 const WorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.employee);
+    const [showSuccess, setShowSuccess] = useState(false);
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -43,21 +45,22 @@ const WorkLogForm = ({ onSuccess }) => {
             pendingImages: Number(formData.pendingImages),
             hours: Number(calculateTotalTime())
         };
-        dispatch(createWorkLog(payload));
-        // Reset or show success?
-        setFormData({
-            date: new Date().toISOString().split('T')[0],
-            clientName: '',
-            site: '',
-            process: '',
-            imageCount: '',
-            startTime: '',
-            endTime: '',
-            completedImages: '',
-            pendingImages: '',
-            remarks: ''
+        dispatch(createWorkLog(payload)).then(() => {
+            // Reset or show success?
+            setFormData({
+                date: new Date().toISOString().split('T')[0],
+                clientName: '',
+                site: '',
+                process: '',
+                imageCount: '',
+                startTime: '',
+                endTime: '',
+                completedImages: '',
+                pendingImages: '',
+                remarks: ''
+            });
+            setShowSuccess(true);
         });
-        if (onSuccess) onSuccess();
     };
 
     return (
@@ -122,6 +125,15 @@ const WorkLogForm = ({ onSuccess }) => {
                     {isLoading ? 'Submitting...' : 'Submit Log'}
                 </button>
             </div>
+            <SuccessModal
+                isOpen={showSuccess}
+                onClose={() => {
+                    setShowSuccess(false);
+                    if (onSuccess) onSuccess();
+                }}
+                message="Work Log Submitted!"
+                subMessage="Successfully recorded."
+            />
         </form>
     );
 };
