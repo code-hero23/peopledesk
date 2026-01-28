@@ -16,11 +16,11 @@ const {
     importEmployees
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
-const { upload } = require('../middlewares/uploadMiddleware');
+const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
 
 router.get('/employees', protect, authorize('ADMIN'), getAllEmployees);
 router.post('/employees', protect, authorize('ADMIN'), createEmployee);
-router.post('/employees/import', protect, authorize('ADMIN'), upload.single('file'), importEmployees);
+router.post('/employees/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importEmployees);
 
 // Work Logs & Attendance - Accessible by Admin, BH, HR
 router.get('/worklogs', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR'), getAllWorkLogs);

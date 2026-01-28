@@ -33,7 +33,19 @@ function checkFileType(file, cb) {
     }
 }
 
-// Init upload
+// Check excel type
+function checkExcelType(file, cb) {
+    const filetypes = /xlsx|xls|csv/;
+    const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+    // MIME type check can be unreliable for Excel, trusting extension
+    if (extname) {
+        return cb(null, true);
+    } else {
+        cb('Error: Excel or CSV files only!');
+    }
+}
+
+// Init upload image
 const upload = multer({
     storage: storage,
     limits: { fileSize: 5000000 }, // 5MB limit
@@ -42,4 +54,13 @@ const upload = multer({
     }
 });
 
-module.exports = { upload };
+// Init upload excel
+const uploadExcel = multer({
+    storage: storage,
+    limits: { fileSize: 10000000 }, // 10MB limit
+    fileFilter: function (req, file, cb) {
+        checkExcelType(file, cb);
+    }
+});
+
+module.exports = { upload, uploadExcel };
