@@ -1,4 +1,4 @@
-import Modal from './Modal';
+import Modal from '../Modal';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { Printer } from 'lucide-react';

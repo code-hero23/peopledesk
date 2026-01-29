@@ -82,8 +82,7 @@ const Overview = () => {
                 return <CREWorkLogForm onSuccess={closeModal} />;
             case 'FA':
                 return <FAWorkLogForm onSuccess={closeModal} />;
-            case 'FA':
-                return <FAWorkLogForm onSuccess={closeModal} />;
+
             default:
                 // Check for new roles in config
                 if (user?.designation && WORK_LOG_CONFIG[user.designation]) {
