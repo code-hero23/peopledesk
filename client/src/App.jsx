@@ -12,6 +12,8 @@ import Attendance from './pages/admin/Attendance';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 
+import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
+
 function App() {
   return (
     <Router>
@@ -20,16 +22,24 @@ function App() {
 
         <Route path="" element={<PrivateRoute />}>
           <Route element={<Layout />}>
-            <Route path="/dashboard" element={<Overview />} />
-            <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
-            <Route path="/dashboard/requests" element={<MyRequests />} />
+
+            {/* Employee Routes - Protected from Admins */}
+            <Route element={<EmployeeGuard />}>
+              <Route path="/dashboard" element={<Overview />} />
+              <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
+              <Route path="/dashboard/requests" element={<MyRequests />} />
+            </Route>
+
+            {/* Admin Routes */}
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin/approvals" element={<Approvals />} />
             <Route path="/admin/employees" element={<ManageEmployees />} />
             <Route path="/admin/worklogs" element={<WorkLogs />} />
             <Route path="/admin/attendance" element={<Attendance />} />
           </Route>
-          <Route path="/" element={<Navigate to="/dashboard" />} />
+
+          {/* Smart Root Redirect */}
+          <Route path="/" element={<RootRedirect />} />
         </Route>
       </Routes>
     </Router>

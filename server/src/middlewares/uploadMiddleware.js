@@ -48,7 +48,7 @@ function checkExcelType(file, cb) {
 // Init upload image
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5000000 }, // 5MB limit
+    limits: { fileSize: 15000000 }, // 15MB limit
     fileFilter: function (req, file, cb) {
         checkFileType(file, cb);
     }

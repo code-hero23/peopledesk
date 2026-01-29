@@ -26,6 +26,7 @@ const Overview = () => {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
 
+
     useEffect(() => {
         dispatch(getAttendanceStatus());
         dispatch(getMyWorkLogs());
@@ -258,11 +259,11 @@ const Overview = () => {
                         <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
                             <span>⚡</span> Quick Actions
                         </h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-full">
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4 h-full">
                             {user?.designation !== 'OFFICE-ADMINISTRATION' && (
                                 <button
                                     onClick={() => setActiveModal('worklog')}
-                                    className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all group h-[120px]"
+                                    className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all group min-h-[100px] md:h-[120px]"
                                 >
                                     <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📝</div>
                                     <span className="font-bold text-sm">Daily Report</span>
@@ -272,7 +273,7 @@ const Overview = () => {
 
                             <button
                                 onClick={() => setActiveModal('leave')}
-                                className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all group h-[120px]"
+                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all group min-h-[100px] md:h-[120px]"
                             >
                                 <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏖️</div>
                                 <span className="font-bold text-sm">Request Leave</span>
@@ -280,7 +281,7 @@ const Overview = () => {
 
                             <button
                                 onClick={() => setActiveModal('permission')}
-                                className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group h-[120px]"
+                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group min-h-[100px] md:h-[120px]"
                             >
                                 <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🕑</div>
                                 <span className="font-bold text-sm">Permission</span>
@@ -289,7 +290,7 @@ const Overview = () => {
                             {(user?.designation === 'LA' || !user?.designation) && (
                                 <button
                                     onClick={() => setActiveModal('project')}
-                                    className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group h-[120px]"
+                                    className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group min-h-[100px] md:h-[120px]"
                                 >
                                     <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🚀</div>
                                     <span className="font-bold text-sm">Create Project</span>

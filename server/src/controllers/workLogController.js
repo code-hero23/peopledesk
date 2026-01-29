@@ -30,6 +30,7 @@ const createWorkLog = async (req, res) => {
         customFields
     } = req.body;
 
+
     // Validation: Require at least Process/Tasks and Hours
     // if (!tasks && !process) {
     //     return res.status(400).json({ message: 'Please provide process details' });
@@ -37,6 +38,27 @@ const createWorkLog = async (req, res) => {
 
     try {
         const userId = req.user.id;
+
+        // Check if a work log already exists for today
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingLog = await prisma.workLog.findFirst({
+            where: {
+                userId,
+                date: {
+                    gte: startOfDay,
+                    lte: endOfDay,
+                },
+            },
+        });
+
+        if (existingLog) {
+            return res.status(400).json({ message: 'You have already submitted a work log for today.' });
+        }
 
         const workLog = await prisma.workLog.create({
             data: {
