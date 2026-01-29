@@ -132,6 +132,11 @@ const Approvals = () => {
                                     ✅ Verified by {req.bhName || 'BH'}
                                 </span>
                             )}
+                            {req.bhStatus === 'REJECTED' && (
+                                <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full border border-red-200 flex items-center gap-1">
+                                    ❌ Rejected by {req.bhName || 'BH'}
+                                </span>
+                            )}
                         </div>
                         <div className="space-y-2 mb-6">
                             <p className="text-sm text-slate-600 flex items-center gap-2">
