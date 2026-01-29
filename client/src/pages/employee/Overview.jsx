@@ -179,6 +179,24 @@ const Overview = () => {
                                 <span>🕒</span>
                                 <span className="font-mono font-medium">In at {new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                             </div>
+                        ) : attendance?.checkoutTime ? (
+                            <div className="space-y-2 mt-2">
+                                <div className="flex flex-col gap-2 text-sm">
+                                    <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
+                                        <span>🕒</span>
+                                        <span className="font-mono text-slate-200">In: {new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
+                                        <span>🏁</span>
+                                        <span className="font-mono font-bold">Out: {new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                    </div>
+                                </div>
+                                <p className="text-slate-400 text-sm mt-1">
+                                    Total: <span className="font-bold text-white tracking-wide">{
+                                        Math.abs((new Date(attendance.checkoutTime) - new Date(attendance.date)) / (1000 * 60 * 60)).toFixed(2)
+                                    } HRS</span>
+                                </p>
+                            </div>
                         ) : (
                             <p className="text-slate-400 text-sm">You haven't marked your attendance yet.</p>
                         )}
