@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { login, reset } from '../features/auth/authSlice';
+import { login, googleLogin, reset } from '../features/auth/authSlice';
+import { GoogleLogin } from '@react-oauth/google';
 
 function Login() {
     const [formData, setFormData] = useState({
@@ -121,6 +122,28 @@ function Login() {
                         >
                             {isLoading ? 'Signing In...' : 'Sign In'}
                         </button>
+
+                        <div className="relative flex py-2 items-center">
+                            <div className="flex-grow border-t border-gray-700"></div>
+                            <span className="flex-shrink-0 mx-4 text-gray-500 text-sm">Or sign in with</span>
+                            <div className="flex-grow border-t border-gray-700"></div>
+                        </div>
+
+                        <div className="flex justify-center">
+                            <GoogleLogin
+                                onSuccess={credentialResponse => {
+                                    dispatch(googleLogin(credentialResponse.credential));
+                                }}
+                                onError={() => {
+                                    console.log('Login Failed');
+                                    alert('Google Sign-In failed');
+                                }}
+                                theme="filled_black"
+                                shape="pill"
+                                size="large"
+                                width="100%"
+                            />
+                        </div>
                     </form>
 
 

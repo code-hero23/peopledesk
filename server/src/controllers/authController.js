@@ -1,8 +1,10 @@
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const generateToken = require('../utils/generateToken');
+const { OAuth2Client } = require('google-auth-library');
 
 const prisma = new PrismaClient();
+const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 // @desc    Auth user & get token
 // @route   POST /api/auth/login
@@ -95,4 +97,61 @@ const getMe = async (req, res) => {
     res.json(user);
 };
 
-module.exports = { loginUser, registerUser, getMe };
+// @desc    Login with Google
+// @route   POST /api/auth/google
+// @access  Public
+const googleLogin = async (req, res) => {
+    const { token } = req.body;
+
+    try {
+        const ticket = await client.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const { email, name, picture } = ticket.getPayload();
+
+        // Check if user exists
+        const user = await prisma.user.findUnique({
+            where: { email },
+        });
+
+        if (user) {
+            // User exists, log them in
+            res.json({
+                id: user.id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                designation: user.designation,
+                token: generateToken(user.id),
+            });
+        } else {
+            // Option: Auto-register OR Return Error. 
+            // For corporate apps, usually safer to return error if not pre-registered.
+            res.status(401).json({ message: 'Email not registered. Please contact Admin.' });
+
+            /* Auto-Register Code (Commented out for safety)
+            const newUser = await prisma.user.create({
+                data: {
+                    name,
+                    email,
+                    password: bcrypt.hashSync(Math.random().toString(36).slice(-8), 10), // Random password
+                    role: 'EMPLOYEE',
+                    designation: 'PENDING'
+                }
+            });
+            res.status(201).json({ ...newUser, token: generateToken(newUser.id) });
+            */
+        }
+    } catch (error) {
+        console.error('Google Auth Error:', error);
+        res.status(401).json({ message: 'Invalid Google Token' });
+    }
+};
+
+module.exports = {
+    loginUser,
+    getMe,
+    googleLogin
+};
