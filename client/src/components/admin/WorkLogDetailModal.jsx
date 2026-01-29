@@ -11,7 +11,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
         documentTitle: `WorkLog_${log?.user?.name}_${new Date(log?.date).toLocaleDateString().replace(/\//g, '-')}`,
     });
 
-    if (!log) return null;
+    if (!isOpen || !log) return null;
 
     // Helper to safely parse customFields
     let customFields = {};

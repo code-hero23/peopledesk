@@ -44,8 +44,8 @@ const Approvals = () => {
                     <button
                         onClick={() => setActiveTab('pending')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'pending'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                             }`}
                     >
                         Pending
@@ -53,8 +53,8 @@ const Approvals = () => {
                     <button
                         onClick={() => setActiveTab('history')}
                         className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
-                                ? 'bg-blue-600 text-white shadow-sm'
-                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                            ? 'bg-blue-600 text-white shadow-sm'
+                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
                             }`}
                     >
                         History
@@ -66,8 +66,8 @@ const Approvals = () => {
                 {/* Maps for Leaves */}
                 {leaves.map((req) => (
                     <div key={`leave-${req.id}`} className={`bg-white p-6 rounded-xl shadow-sm border border-l-4 transition-shadow hover:shadow-md ${req.status === 'PENDING' ? 'border-l-orange-500 border-slate-200' :
-                            req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
-                                'border-l-red-500 border-slate-200 opacity-90'
+                        req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
+                            'border-l-red-500 border-slate-200 opacity-90'
                         }`}>
                         <div className="flex justify-between items-start mb-4">
                             <div>
@@ -75,12 +75,22 @@ const Approvals = () => {
                                 <span className="text-xs text-slate-500 uppercase tracking-wide">Leave Request</span>
                             </div>
                             <span className={`text-xs font-bold px-2 py-1 rounded ${req.status === 'PENDING' ? 'bg-orange-100 text-orange-700' :
-                                    req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                        'bg-red-100 text-red-700'
+                                req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                    'bg-red-100 text-red-700'
                                 }`}>
                                 {req.type}
                                 {activeTab === 'history' && ` (${req.status})`}
                             </span>
+                            {req.bhStatus === 'APPROVED' && (
+                                <span className="ml-2 bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                                    ✅ Verified by {req.bhName || 'BH'}
+                                </span>
+                            )}
+                            {req.bhStatus === 'REJECTED' && (
+                                <span className="ml-2 bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full border border-red-200 flex items-center gap-1">
+                                    ❌ Rejected by {req.bhName || 'BH'}
+                                </span>
+                            )}
                         </div>
                         <div className="space-y-2 mb-6">
                             <p className="text-sm text-slate-600 flex items-center gap-2">
@@ -102,8 +112,8 @@ const Approvals = () => {
                 {/* Maps for Permissions */}
                 {permissions.map((req) => (
                     <div key={`perm-${req.id}`} className={`bg-white p-6 rounded-xl shadow-sm border border-l-4 transition-shadow hover:shadow-md ${req.status === 'PENDING' ? 'border-l-yellow-500 border-slate-200' :
-                            req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
-                                'border-l-red-500 border-slate-200 opacity-90'
+                        req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
+                            'border-l-red-500 border-slate-200 opacity-90'
                         }`}>
                         <div className="flex justify-between items-start mb-4">
                             <div>
@@ -111,12 +121,17 @@ const Approvals = () => {
                                 <span className="text-xs text-slate-500 uppercase tracking-wide">Permission</span>
                             </div>
                             <span className={`text-xs font-bold px-2 py-1 rounded ${req.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
-                                    req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                        'bg-red-100 text-red-700'
+                                req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                    'bg-red-100 text-red-700'
                                 }`}>
                                 2 HRS
                                 {activeTab === 'history' && ` (${req.status})`}
                             </span>
+                            {req.bhStatus === 'APPROVED' && (
+                                <span className="ml-2 bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                                    ✅ Verified by {req.bhName || 'BH'}
+                                </span>
+                            )}
                         </div>
                         <div className="space-y-2 mb-6">
                             <p className="text-sm text-slate-600 flex items-center gap-2">

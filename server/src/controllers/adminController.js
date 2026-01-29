@@ -71,17 +71,39 @@ const getAllPendingRequests = async (req, res) => {
             return res.json({ leaves: [], permissions: [] });
         }
 
-        const leaves = await prisma.leaveRequest.findMany({
+        const leavesRaw = await prisma.leaveRequest.findMany({
             where: leaveWhere,
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
 
-        const permissions = await prisma.permissionRequest.findMany({
+        const permissionsRaw = await prisma.permissionRequest.findMany({
             where: permissionWhere,
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
+
+        // Enrich with BH Name
+        const leaveBhIds = [...new Set(leavesRaw.map(r => r.bhId).filter(id => id))];
+        const permissionBhIds = [...new Set(permissionsRaw.map(r => r.bhId).filter(id => id))];
+        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds])];
+
+        let bhMap = {};
+        if (allBhIds.length > 0) {
+            const bhUsers = await prisma.user.findMany({
+                where: { id: { in: allBhIds } },
+                select: { id: true, name: true }
+            });
+            bhUsers.forEach(u => bhMap[u.id] = u.name);
+        }
+
+        const enrichWithBhName = (req) => ({
+            ...req,
+            bhName: req.bhId ? bhMap[req.bhId] : null
+        });
+
+        const leaves = leavesRaw.map(enrichWithBhName);
+        const permissions = permissionsRaw.map(enrichWithBhName);
 
         res.json({ leaves, permissions });
     } catch (error) {
@@ -135,19 +157,41 @@ const getRequestHistory = async (req, res) => {
 
         console.log("Leave Where Clause:", JSON.stringify(leaveWhere, null, 2));
 
-        const leaves = await prisma.leaveRequest.findMany({
+        const leavesRaw = await prisma.leaveRequest.findMany({
             where: leaveWhere,
             include: { user: { select: { name: true, email: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
         });
 
-        const permissions = await prisma.permissionRequest.findMany({
+        const permissionsRaw = await prisma.permissionRequest.findMany({
             where: permissionWhere,
             include: { user: { select: { name: true, email: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
         });
+
+        // Enrich with BH Name
+        const leaveBhIds = [...new Set(leavesRaw.map(r => r.bhId).filter(id => id))];
+        const permissionBhIds = [...new Set(permissionsRaw.map(r => r.bhId).filter(id => id))];
+        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds])];
+
+        let bhMap = {};
+        if (allBhIds.length > 0) {
+            const bhUsers = await prisma.user.findMany({
+                where: { id: { in: allBhIds } },
+                select: { id: true, name: true }
+            });
+            bhUsers.forEach(u => bhMap[u.id] = u.name);
+        }
+
+        const enrichWithBhName = (req) => ({
+            ...req,
+            bhName: req.bhId ? bhMap[req.bhId] : null
+        });
+
+        const leaves = leavesRaw.map(enrichWithBhName);
+        const permissions = permissionsRaw.map(enrichWithBhName);
 
         res.json({ leaves, permissions });
     } catch (error) {
