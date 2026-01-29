@@ -152,6 +152,7 @@ const googleLogin = async (req, res) => {
 
 module.exports = {
     loginUser,
+    registerUser,
     getMe,
     googleLogin
 };
