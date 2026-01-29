@@ -81,6 +81,11 @@ const Approvals = () => {
                                 {req.type}
                                 {activeTab === 'history' && ` (${req.status})`}
                             </span>
+                            {req.bhStatus === 'PENDING' && (
+                                <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
+                                    ⏳ Waiting for BH
+                                </span>
+                            )}
                             {req.bhStatus === 'APPROVED' && (
                                 <span className="ml-2 bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
                                     ✅ Verified by {req.bhName || 'BH'}
@@ -127,6 +132,11 @@ const Approvals = () => {
                                 2 HRS
                                 {activeTab === 'history' && ` (${req.status})`}
                             </span>
+                            {req.bhStatus === 'PENDING' && (
+                                <span className="ml-2 bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
+                                    ⏳ Waiting for BH
+                                </span>
+                            )}
                             {req.bhStatus === 'APPROVED' && (
                                 <span className="ml-2 bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
                                     ✅ Verified by {req.bhName || 'BH'}

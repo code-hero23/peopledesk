@@ -59,9 +59,9 @@ const getAllPendingRequests = async (req, res) => {
                 ]
             };
         } else if (userRole === 'HR') {
-            // HR sees requests that are APPROVED by BH but PENDING HR
-            leaveWhere = { bhStatus: 'APPROVED', hrStatus: 'PENDING' };
-            permissionWhere = { bhStatus: 'APPROVED', hrStatus: 'PENDING' };
+            // HR see EVERYTHING pending (Waiting for BH or Waiting for HR)
+            leaveWhere = { status: 'PENDING' };
+            permissionWhere = { status: 'PENDING' };
         } else if (userRole === 'ADMIN') {
             // Admin sees EVERYTHING pending at any stage
             leaveWhere = { status: 'PENDING' }; // Show all pending overall
