@@ -13,6 +13,7 @@ import {
     ChevronLeft,
     ChevronRight
 } from 'lucide-react';
+import CEOPopup from './CEOPopup';
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -157,6 +158,8 @@ const Layout = () => {
                     <Outlet />
                 </main>
             </div>
+            {/* CEO Popup */}
+            <CEOPopup />
         </div>
     );
 };

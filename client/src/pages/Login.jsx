@@ -56,7 +56,7 @@ function Login() {
                         alt="Cookscape Logo"
                         className="h-32 object-contain mb-8 bg-white p-2 text-black rounded-lg shadow-sm"
                     />
-                    <h1 className="text-5xl font-bold leading-tight mb-4">Interiors &<br />Beyond.</h1>
+                    <h1 className="text-5xl font-bold leading-tight mb-4">If You Love Your Work,<br /> <span className="text-gray-400">Everyday is a Holiday!</span> </h1>
                     <p className="text-red-100 text-xl max-w-md">Streamline your workflow, manage projects, and track progress with the all-new Cookscape Portal.</p>
                 </div>
 
