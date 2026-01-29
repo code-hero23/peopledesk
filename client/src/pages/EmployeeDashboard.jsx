@@ -39,7 +39,22 @@ const EmployeeDashboard = () => {
         return () => { dispatch(reset()); };
     }, [dispatch]);
 
+    // Mobile Detection
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
+
     const handleMarkAttendance = () => {
+        // RESTRICTION: Lock Check-In for Non-AE on Mobile
+        if (isMobile && user?.designation !== 'AE') {
+            alert("Mobile Check-In is restricted to Area Engineers (AE). Please use a Desktop to check in.");
+            return;
+        }
+
         console.log('handleMarkAttendance Called');
         console.log('User Designation:', user?.designation);
         console.log('Attendance State:', attendance);
@@ -193,10 +208,12 @@ const EmployeeDashboard = () => {
                         <button
                             onClick={handleMarkAttendance}
                             disabled={isLoading}
-                            className="relative z-10 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 group-hover:shadow-blue-500/25"
+                            className={`relative z-10 w-full font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 
+                                ${isMobile && user?.designation !== 'AE' ? 'bg-slate-600 cursor-not-allowed opacity-80' : 'bg-blue-500 hover:bg-blue-600 group-hover:shadow-blue-500/25'}
+                            `}
                         >
-                            <span className="text-xl">👆</span>
-                            <span>Tap to Check In</span>
+                            <span className="text-xl">{isMobile && user?.designation !== 'AE' ? '🔒' : '👆'}</span>
+                            <span>{isMobile && user?.designation !== 'AE' ? 'Desktop Only' : 'Tap to Check In'}</span>
                         </button>
                     ) : !attendance.checkoutTime ? (
                         <button
