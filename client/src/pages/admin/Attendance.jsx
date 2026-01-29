@@ -9,8 +9,14 @@ const Attendance = () => {
     const { user } = useSelector((state) => state.auth);
     const { dailyAttendance, isLoading, isError, message } = useSelector((state) => state.admin);
 
-    // Default to today's date formatted as YYYY-MM-DD
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    // Default to today's date in LOCAL time
+    const [selectedDate, setSelectedDate] = useState(() => {
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+    });
 
     useEffect(() => {
         if (isError) {
