@@ -112,5 +112,42 @@ export const WORK_LOG_CONFIG = {
                 ]
             }
         ]
+    },
+    "CLIENT-FACILITATOR": {
+        title: "Client Facilitator Report",
+        tables: [
+            {
+                label: "Daily Tasks",
+                fields: [
+                    { name: "description", label: "Description", type: "text" },
+                    { name: "count", label: "Count", type: "number" },
+                    { name: "status", label: "Status", type: "text" }
+                ]
+            },
+            {
+                label: "Performance Metrics",
+                fields: [ // Using disabled text input for metric name so user sees it
+                    { name: "metric", label: "Metric", type: "text", disabled: true },
+                    { name: "count", label: "Count/Value", type: "number" }
+                ],
+                predefinedRows: [
+                    { metric: "No of online leads" },
+                    { metric: "Ashwin leads" },
+                    { metric: "No of FP recieved" },
+                    { metric: "No of positive" },
+                    { metric: "Feedback done" },
+                    { metric: "Group follow up today" },
+                    { metric: "Follow up calls" },
+                    { metric: "Upto today calls" },
+                    { metric: "9star" },
+                    { metric: "8star" },
+                    { metric: "7star" },
+                    { metric: "6star" },
+                    { metric: "Quote sent" },
+                    { metric: "Revised quote sent" },
+                    { metric: "No of orders" }
+                ]
+            }
+        ]
     }
 };

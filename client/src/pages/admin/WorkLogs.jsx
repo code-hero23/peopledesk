@@ -3,7 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, reset } from '../../features/admin/adminSlice';
 import { Calendar, Download, Eye } from 'lucide-react';
 import axios from 'axios';
-import WorkLogDetailsModal from '../../components/WorkLogDetailsModal';
+import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
 const WorkLogs = () => {
     const dispatch = useDispatch();
@@ -166,10 +166,10 @@ const WorkLogs = () => {
             </div>
 
             {/* Modal */}
-            <WorkLogDetailsModal
+            <WorkLogDetailModal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                log={selectedLog}
+                log={selectedLog ? { ...selectedLog.workLog, user: selectedLog.user } : null}
             />
         </div>
     );

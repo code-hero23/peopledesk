@@ -19,7 +19,8 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
         if (!config) return {};
         const initial = {};
         config.tables.forEach((table, index) => {
-            initial[index] = [{}]; // Start with one empty row
+            // Use predefined rows if available, otherwise start with one empty row
+            initial[index] = table.predefinedRows ? [...table.predefinedRows] : [{}];
         });
         return initial;
     });
@@ -44,6 +45,9 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     };
 
     const removeRow = (tableIndex, rowIndex) => {
+        // Don't allow deleting rows if the table has predefined rows (fixed structure)
+        if (config.tables[tableIndex].predefinedRows) return;
+
         setTableData(prev => {
             if (prev[tableIndex].length <= 1) return prev; // Don't delete last row
             const newTable = prev[tableIndex].filter((_, i) => i !== rowIndex);
@@ -111,30 +115,37 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                                 value={row[field.name] || ''}
                                                 onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
                                                 placeholder={field.label}
-                                                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-slate-50 focus:bg-white transition-all"
+                                                disabled={field.disabled}
+                                                className={`w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none transition-all
+                                                    ${field.disabled ? 'bg-slate-100 text-slate-500 font-medium' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}
+                                                `}
                                             />
                                         )}
                                     </div>
                                 ))}
-                                <button
-                                    type="button"
-                                    onClick={() => removeRow(tableIndex, rowIndex)}
-                                    className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end md:self-auto"
-                                    title="Delete Row"
-                                >
-                                    <Trash2 size={18} />
-                                </button>
+                                {!table.predefinedRows && (
+                                    <button
+                                        type="button"
+                                        onClick={() => removeRow(tableIndex, rowIndex)}
+                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end md:self-auto"
+                                        title="Delete Row"
+                                    >
+                                        <Trash2 size={18} />
+                                    </button>
+                                )}
                             </div>
                         ))}
                     </div>
 
-                    <button
-                        type="button"
-                        onClick={() => addRow(tableIndex)}
-                        className="mt-3 text-sm text-blue-600 font-bold hover:text-blue-800 flex items-center gap-1 py-2 px-3 hover:bg-blue-50 rounded-lg transition-colors w-full md:w-auto justify-center md:justify-start border border-dashed border-blue-200 hover:border-blue-400"
-                    >
-                        <Plus size={16} /> Add Row
-                    </button>
+                    {!table.predefinedRows && (
+                        <button
+                            type="button"
+                            onClick={() => addRow(tableIndex)}
+                            className="mt-3 text-sm text-blue-600 font-bold hover:text-blue-800 flex items-center gap-1 py-2 px-3 hover:bg-blue-50 rounded-lg transition-colors w-full md:w-auto justify-center md:justify-start border border-dashed border-blue-200 hover:border-blue-400"
+                        >
+                            <Plus size={16} /> Add Row
+                        </button>
+                    )}
                 </div>
             ))}
 

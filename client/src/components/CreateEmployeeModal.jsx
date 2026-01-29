@@ -110,6 +110,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 <option value="CUSTOMER-RELATIONSHIP">Customer Relationship</option>
                                 <option value="CLIENT-CARE">Client Care</option>
                                 <option value="ESCALATION">Escalation</option>
+                                <option value="CLIENT-FACILITATOR">Client Facilitator</option>
                             </select>
                         </div>
                     )}
