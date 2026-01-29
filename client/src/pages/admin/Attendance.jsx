@@ -84,13 +84,14 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-semibold">Employee</th>
                                 <th className="px-6 py-4 font-semibold text-center">Status</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time In</th>
+                                <th className="px-6 py-4 font-semibold text-center">Time Out</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan="3" className="text-center py-8">Loading...</td></tr>
+                                <tr><td colSpan="4" className="text-center py-8">Loading...</td></tr>
                             ) : dailyAttendance.length === 0 ? (
-                                <tr><td colSpan="3" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr><td colSpan="4" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
                                 dailyAttendance.map((record) => (
                                     <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
@@ -109,6 +110,12 @@ const Attendance = () => {
                                         <td className="px-6 py-4 text-center text-slate-600 font-mono">
                                             {record.timeIn
                                                 ? new Date(record.timeIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                : '--:--'
+                                            }
+                                        </td>
+                                        <td className="px-6 py-4 text-center text-slate-600 font-mono">
+                                            {record.timeOut
+                                                ? new Date(record.timeOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                                 : '--:--'
                                             }
                                         </td>

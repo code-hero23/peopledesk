@@ -437,6 +437,7 @@ const getDailyAttendance = async (req, res) => {
                 user: user,
                 status: record ? 'PRESENT' : 'ABSENT',
                 timeIn: record ? record.date : null,
+                timeOut: record ? record.checkoutTime : null,
                 attendanceId: record ? record.id : null
             };
         });
