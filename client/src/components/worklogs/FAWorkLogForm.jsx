@@ -18,9 +18,12 @@ const FAWorkLogForm = ({ onSuccess }) => {
         fa_revisedQuoteRn: '',
         fa_showroomVisits: '',
         fa_showroomVisitClients: '',
+        fa_showroomTime: '',
         fa_onlineDiscussion: '',
         fa_onlineDiscussionClients: '',
+        fa_onlineTime: '',
         fa_siteVisits: '',
+        fa_siteTime: '',
         fa_loadingDiscussion: '',
         fa_bookingFreezed: '',
         fa_bookingFreezedClients: '',
@@ -42,14 +45,23 @@ const FAWorkLogForm = ({ onSuccess }) => {
         <form onSubmit={onSubmit} className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
             <h3 className="font-bold text-slate-700 border-b pb-2 mb-4">FA Daily Report</h3>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-4 bg-slate-50 p-3 rounded-lg">
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Follow-up Calls</label>
-                    <input type="number" name="fa_calls" value={formData.fa_calls} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+                    <input type="number" name="fa_calls" value={formData.fa_calls} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="#" />
                 </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Site Visits</label>
-                    <input type="number" name="fa_siteVisits" value={formData.fa_siteVisits} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" />
+            </div>
+
+            <div className="bg-slate-50 p-3 rounded-lg">
+                <div className="grid grid-cols-12 gap-2 mb-2">
+                    <div className="col-span-8">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Site Visits</label>
+                        <input type="number" name="fa_siteVisits" value={formData.fa_siteVisits} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="#" />
+                    </div>
+                    <div className="col-span-4">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration</label>
+                        <input type="text" name="fa_siteTime" value={formData.fa_siteTime} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="e.g. 1 hr" />
+                    </div>
                 </div>
             </div>
 
@@ -106,6 +118,42 @@ const FAWorkLogForm = ({ onSuccess }) => {
                 </div>
             </div>
 
+            {/* Showroom Visits - NEW */}
+            <div className="bg-slate-50 p-3 rounded-lg">
+                <div className="grid grid-cols-12 gap-2 mb-2">
+                    <div className="col-span-3">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Showroom Visits</label>
+                        <input type="number" name="fa_showroomVisits" value={formData.fa_showroomVisits} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="#" />
+                    </div>
+                    <div className="col-span-5">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Clients</label>
+                        <input type="text" name="fa_showroomVisitClients" value={formData.fa_showroomVisitClients} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="Client names..." />
+                    </div>
+                    <div className="col-span-4">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration</label>
+                        <input type="text" name="fa_showroomTime" value={formData.fa_showroomTime} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="e.g. 2 hrs" />
+                    </div>
+                </div>
+            </div>
+
+            {/* Online Discussion - NEW */}
+            <div className="bg-slate-50 p-3 rounded-lg">
+                <div className="grid grid-cols-12 gap-2 mb-2">
+                    <div className="col-span-3">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Online Discussion</label>
+                        <input type="number" name="fa_onlineDiscussion" value={formData.fa_onlineDiscussion} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="#" />
+                    </div>
+                    <div className="col-span-5">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Clients</label>
+                        <input type="text" name="fa_onlineDiscussionClients" value={formData.fa_onlineDiscussionClients} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="Client names..." />
+                    </div>
+                    <div className="col-span-4">
+                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration</label>
+                        <input type="text" name="fa_onlineTime" value={formData.fa_onlineTime} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg outline-none" placeholder="e.g. 30 mins" />
+                    </div>
+                </div>
+            </div>
+
             <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Remarks</label>
                 <textarea name="remarks" value={formData.remarks} onChange={handleChange} rows="2" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"></textarea>
@@ -114,9 +162,6 @@ const FAWorkLogForm = ({ onSuccess }) => {
             <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
                     Cancel
-                </button>
-                <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
-                    {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
                 <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
                     {isLoading ? 'Submitting...' : 'Submit Report'}

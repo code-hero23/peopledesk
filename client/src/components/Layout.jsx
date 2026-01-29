@@ -11,9 +11,12 @@ import {
     Briefcase,
     LogOut,
     ChevronLeft,
-    ChevronRight
+    ChevronRight,
+    Menu,
+    X
 } from 'lucide-react';
 import CEOPopup from './CEOPopup';
+import InstallApp from './InstallApp';
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -21,6 +24,7 @@ const Layout = () => {
     const location = useLocation();
     const { user } = useSelector((state) => state.auth);
     const [isCollapsed, setIsCollapsed] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
     const onLogout = () => {
         dispatch(logout());
@@ -36,6 +40,7 @@ const Layout = () => {
         return (
             <Link
                 to={to}
+                onClick={() => setIsMobileMenuOpen(false)}
                 className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 group relative
                     ${active ? 'bg-blue-600 text-white shadow-lg' : 'text-slate-300 hover:bg-slate-800 hover:text-white'}
                     ${isCollapsed ? 'justify-center' : ''}
@@ -61,19 +66,37 @@ const Layout = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900">
+        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 relative">
+            {/* Mobile Sidebar Overlay Backdrop */}
+            {isMobileMenuOpen && (
+                <div
+                    className="fixed inset-0 bg-black/50 z-30 md:hidden animate-fade-in"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                />
+            )}
+
             {/* Sidebar */}
             <aside
-                className={`bg-slate-900 text-white flex-shrink-0 hidden md:flex flex-col transition-all duration-300 ease-in-out relative z-20 shadow-xl
+                className={`bg-slate-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-xl
+                    fixed md:relative z-40 h-full md:h-auto
+                    ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
                     ${isCollapsed ? 'w-20' : 'w-64'}
                 `}
             >
-                {/* Toggle Button */}
+                {/* Toggle Button (Desktop) */}
                 <button
                     onClick={() => setIsCollapsed(!isCollapsed)}
-                    className="absolute -right-3 top-10 bg-blue-600 text-white p-1 rounded-full shadow-lg hover:bg-blue-500 transition-colors z-30 border-2 border-slate-900"
+                    className="hidden md:flex absolute -right-3 top-10 bg-blue-600 text-white p-1 rounded-full shadow-lg hover:bg-blue-500 transition-colors z-30 border-2 border-slate-900"
                 >
                     {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                </button>
+
+                {/* Close Button (Mobile) */}
+                <button
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="md:hidden absolute top-4 right-4 text-slate-400 hover:text-white"
+                >
+                    <X size={24} />
                 </button>
 
                 {/* Logo Section */}
@@ -147,8 +170,16 @@ const Layout = () => {
 
             {/* Mobile Header & Main Content */}
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-                <header className="bg-white shadow-sm border-b border-slate-200 md:hidden p-4 flex justify-between items-center sticky top-0 z-10">
-                    <img src="/orbix-logo.png" alt="Cookscape" className="h-8" />
+                <header className="bg-white shadow-sm border-b border-slate-200 md:hidden p-4 flex justify-between items-center sticky top-0 z-10 animate-fade-in-down">
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={() => setIsMobileMenuOpen(true)}
+                            className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-transform"
+                        >
+                            <Menu size={24} />
+                        </button>
+                        <img src="/orbix-logo.png" alt="Cookscape" className="h-8" />
+                    </div>
                     <button onClick={onLogout} className="text-sm text-red-600 font-medium flex items-center gap-1">
                         <LogOut size={16} /> Logout
                     </button>
@@ -160,6 +191,7 @@ const Layout = () => {
             </div>
             {/* CEO Popup */}
             <CEOPopup />
+            <InstallApp />
         </div>
     );
 };

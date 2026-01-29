@@ -5,6 +5,8 @@ import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
 import LAWorkLogForm from '../../components/worklogs/LAWorkLogForm'; // Detailed (LA)
 import CREWorkLogForm from '../../components/worklogs/CREWorkLogForm';
 import FAWorkLogForm from '../../components/worklogs/FAWorkLogForm';
+import DynamicWorkLogForm from '../../components/worklogs/DynamicWorkLogForm';
+import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 import LeaveRequestForm from '../../components/LeaveRequestForm';
 import PermissionRequestForm from '../../components/PermissionRequestForm';
 import StatCard from '../../components/StatCard';
@@ -80,8 +82,15 @@ const Overview = () => {
                 return <CREWorkLogForm onSuccess={closeModal} />;
             case 'FA':
                 return <FAWorkLogForm onSuccess={closeModal} />;
-            case 'LA':
+            case 'FA':
+                return <FAWorkLogForm onSuccess={closeModal} />;
             default:
+                // Check for new roles in config
+                if (user?.designation && WORK_LOG_CONFIG[user.designation]) {
+                    return <DynamicWorkLogForm role={user.designation} onSuccess={closeModal} />;
+                }
+
+                // Fallback for LA or legacy
                 if (user?.designation === 'LA' || !user?.designation) {
                     return (
                         <div className="space-y-4">

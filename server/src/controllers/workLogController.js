@@ -13,8 +13,8 @@ const createWorkLog = async (req, res) => {
         cre_totalCalls, cre_showroomVisits, cre_fqSent, cre_orders, cre_proposals, cre_callBreakdown,
         // FA
         fa_calls, fa_designPending, fa_designPendingClients, fa_quotePending, fa_quotePendingClients,
-        fa_initialQuoteRn, fa_revisedQuoteRn, fa_showroomVisits, fa_showroomVisitClients,
-        fa_onlineDiscussion, fa_onlineDiscussionClients, fa_siteVisits, fa_loadingDiscussion,
+        fa_initialQuoteRn, fa_revisedQuoteRn, fa_showroomVisits, fa_showroomVisitClients, fa_showroomTime,
+        fa_onlineDiscussion, fa_onlineDiscussionClients, fa_onlineTime, fa_siteVisits, fa_siteTime, fa_loadingDiscussion,
         fa_bookingFreezed, fa_bookingFreezedClients,
         // LA Detailed
         la_number, la_mailId, la_projectLocation, la_freezingAmount, la_variant, la_projectValue,
@@ -24,7 +24,10 @@ const createWorkLog = async (req, res) => {
         ae_siteLocation, ae_gpsCoordinates, ae_siteStatus, ae_visitType, ae_workStage,
         ae_tasksCompleted, ae_measurements, ae_itemsInstalled, ae_issuesRaised, ae_issuesResolved,
         ae_hasIssues, ae_issueType, ae_issueDescription, ae_nextVisitRequired, ae_nextVisitDate,
-        ae_plannedWork, ae_clientMet, ae_clientFeedback, ae_photos
+
+        ae_plannedWork, ae_clientMet, ae_clientFeedback, ae_photos,
+        // Generic
+        customFields
     } = req.body;
 
     // Validation: Require at least Process/Tasks and Hours
@@ -72,9 +75,12 @@ const createWorkLog = async (req, res) => {
                 fa_revisedQuoteRn: fa_revisedQuoteRn ? parseInt(fa_revisedQuoteRn) : null,
                 fa_showroomVisits: fa_showroomVisits ? parseInt(fa_showroomVisits) : null,
                 fa_showroomVisitClients,
+                fa_showroomTime,
                 fa_onlineDiscussion: fa_onlineDiscussion ? parseInt(fa_onlineDiscussion) : null,
                 fa_onlineDiscussionClients,
+                fa_onlineTime,
                 fa_siteVisits: fa_siteVisits ? parseInt(fa_siteVisits) : null,
+                fa_siteTime,
                 fa_loadingDiscussion: fa_loadingDiscussion ? parseInt(fa_loadingDiscussion) : null,
                 fa_bookingFreezed: fa_bookingFreezed ? parseInt(fa_bookingFreezed) : null,
                 fa_bookingFreezedClients,
@@ -123,6 +129,9 @@ const createWorkLog = async (req, res) => {
                 ae_photos: req.files && req.files.length > 0
                     ? JSON.stringify(req.files.map(file => `/uploads/${file.filename}`))
                     : (ae_photos ? JSON.stringify(ae_photos) : undefined),
+
+                // Generic
+                customFields: customFields ? customFields : undefined,
 
                 date: new Date(),
             },

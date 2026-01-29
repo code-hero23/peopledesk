@@ -8,12 +8,19 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true
+      },
       includeAssets: ['favicon.ico', 'orbix-logo.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'PeopleDesk',
         short_name: 'PeopleDesk',
         description: 'PeopleDesk Employee Dashboard & Worklog',
         theme_color: '#ffffff',
+        background_color: '#ffffff',
+        display: 'standalone',
+        start_url: '/',
+        orientation: 'portrait',
         icons: [
           {
             src: 'orbix-logo.png',

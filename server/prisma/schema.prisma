@@ -106,9 +106,12 @@ model WorkLog {
   fa_revisedQuoteRn          Int?
   fa_showroomVisits          Int?
   fa_showroomVisitClients    String?
+  fa_showroomTime            String? // Duration
   fa_onlineDiscussion        Int?
   fa_onlineDiscussionClients String?
+  fa_onlineTime              String? // Duration
   fa_siteVisits              Int?
+  fa_siteTime                String? // Duration
   fa_loadingDiscussion       Int?
   fa_bookingFreezed          Int?
   fa_bookingFreezedClients   String?
@@ -135,6 +138,9 @@ model WorkLog {
   la_onlineMeeting    Json?     // Array of { slNo, date, discussedOn }
   la_showroomMeeting  Json?     // Array of { slNo, date, discussedOn }
   la_measurements     Json?     // Array of { aeName, date, discussedOn }
+  
+  // Generic field for new roles
+  customFields        Json?
 
   // AE Fields (Application Engineer)
   ae_siteLocation     String?
