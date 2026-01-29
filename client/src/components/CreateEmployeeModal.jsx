@@ -101,6 +101,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 <option value="CRE">Customer Relationship Executive (CRE)</option>
                                 <option value="FA">Feasibility Architect (FA)</option>
                                 <option value="AE">Application Engineer (AE)</option>
+                                <option value="OFFICE-ADMINISTRATION">Office Administration</option>
                             </select>
                         </div>
                     )}

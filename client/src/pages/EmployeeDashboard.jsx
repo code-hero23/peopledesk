@@ -26,7 +26,7 @@ const EmployeeDashboard = () => {
     }, [user]);
 
     // UI State
-    const [activeTab, setActiveTab] = useState('logs');
+    const [activeTab, setActiveTab] = useState(user?.designation === 'OFFICE-ADMINISTRATION' ? 'leaves' : 'logs');
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false); // Track if current action is check-out
@@ -236,14 +236,16 @@ const EmployeeDashboard = () => {
                             <span>⚡</span> Quick Actions
                         </h4>
                         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 h-full">
-                            <button
-                                onClick={() => setActiveModal('worklog')}
-                                className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all group h-[120px]"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📝</div>
-                                <span className="font-bold text-sm">Log Work</span>
-                                <span className="text-xs text-slate-400 mt-1">{user?.designation || 'General'} Report</span>
-                            </button>
+                            {user?.designation !== 'OFFICE-ADMINISTRATION' && (
+                                <button
+                                    onClick={() => setActiveModal('worklog')}
+                                    className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all group h-[120px]"
+                                >
+                                    <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📝</div>
+                                    <span className="font-bold text-sm">Log Work</span>
+                                    <span className="text-xs text-slate-400 mt-1">{user?.designation || 'General'} Report</span>
+                                </button>
+                            )}
 
                             <button
                                 onClick={() => setActiveModal('leave')}
@@ -278,15 +280,17 @@ const EmployeeDashboard = () => {
             {/* Recent History Tabs */}
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden min-h-[400px]">
                 <div className="border-b border-slate-100 flex overflow-x-auto scroller-none">
-                    {['logs', 'leaves', 'permissions'].map((tab) => (
-                        <button
-                            key={tab}
-                            onClick={() => setActiveTab(tab)}
-                            className={`px-6 py-4 text-sm font-bold transition-colors whitespace-nowrap capitalize ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-700'}`}
-                        >
-                            {tab === 'logs' ? 'Recent Work Logs' : tab === 'leaves' ? 'Leave History' : 'Permissions'}
-                        </button>
-                    ))}
+                    {['logs', 'leaves', 'permissions']
+                        .filter(tab => !(tab === 'logs' && user?.designation === 'OFFICE-ADMINISTRATION'))
+                        .map((tab) => (
+                            <button
+                                key={tab}
+                                onClick={() => setActiveTab(tab)}
+                                className={`px-6 py-4 text-sm font-bold transition-colors whitespace-nowrap capitalize ${activeTab === tab ? 'text-blue-600 border-b-2 border-blue-600 bg-blue-50/50' : 'text-slate-500 hover:text-slate-700'}`}
+                            >
+                                {tab === 'logs' ? 'Recent Work Logs' : tab === 'leaves' ? 'Leave History' : 'Permissions'}
+                            </button>
+                        ))}
                 </div>
 
                 <div className="p-6">
