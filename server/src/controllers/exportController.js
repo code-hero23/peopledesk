@@ -163,6 +163,10 @@ const exportAttendance = async (req, res) => {
         const groupedMap = new Map();
         const uniqueDates = new Set();
 
+        const host = req.get('host');
+        const protocol = req.protocol;
+        const baseUrl = `${protocol}://${host}`;
+
         records.forEach(record => {
             const dateObj = new Date(record.date);
             const dateStr = dateObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
@@ -180,8 +184,10 @@ const exportAttendance = async (req, res) => {
                     totalMs: 0,
                     status: record.status,
                     hasActiveSession: false,
+                    hasActiveSession: false,
                     sessionCount: 0,
-                    sessionLogs: []
+                    sessionLogs: [],
+                    sessionPhotos: []
                 });
             }
 
@@ -210,7 +216,12 @@ const exportAttendance = async (req, res) => {
 
             const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
             const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
+
+            const inPhoto = record.checkInPhoto ? `${baseUrl}${record.checkInPhoto}` : 'No Photo';
+            const outPhoto = record.checkoutPhoto ? `${baseUrl}${record.checkoutPhoto}` : 'No Photo';
+
             group.sessionLogs.push(`${inTime} - ${outTime}`);
+            group.sessionPhotos.push(`In: ${inPhoto} | Out: ${outPhoto}`);
 
         });
 
@@ -230,7 +241,9 @@ const exportAttendance = async (req, res) => {
                         status: 'ABSENT',
                         hasActiveSession: false,
                         sessionCount: 0,
-                        sessionLogs: []
+                        sessionCount: 0,
+                        sessionLogs: [],
+                        sessionPhotos: []
                     });
                 }
             });
@@ -249,6 +262,7 @@ const exportAttendance = async (req, res) => {
                 'Total Working Hours': group.status === 'ABSENT' ? '-' : totalHours,
                 'Sessions': group.sessionCount === 0 ? '-' : group.sessionCount,
                 'Session Details': group.sessionLogs.length > 0 ? group.sessionLogs.join(' | ') : '-',
+                'Photo Evidence': group.sessionPhotos.length > 0 ? group.sessionPhotos.join(' || ') : '-',
                 Status: group.status,
             };
         });
@@ -256,7 +270,7 @@ const exportAttendance = async (req, res) => {
         // Sort by Date Descending
         flattenedRecords.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
-        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Designation', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Sessions', 'Session Details', 'Status']);
+        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Designation', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Sessions', 'Session Details', 'Photo Evidence', 'Status']);
 
         res.header('Content-Type', 'text/csv');
         res.attachment('attendance.csv');

@@ -9,6 +9,7 @@ import Approvals from './pages/admin/Approvals';
 import ManageEmployees from './pages/admin/ManageEmployees';
 import WorkLogs from './pages/admin/WorkLogs';
 import Attendance from './pages/admin/Attendance';
+import AttendanceVerification from './pages/admin/AttendanceVerification';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -36,6 +37,7 @@ function App() {
             <Route path="/admin/employees" element={<ManageEmployees />} />
             <Route path="/admin/worklogs" element={<WorkLogs />} />
             <Route path="/admin/attendance" element={<Attendance />} />
+            <Route path="/admin/attendance-verification" element={<AttendanceVerification />} />
           </Route>
 
           {/* Smart Root Redirect */}

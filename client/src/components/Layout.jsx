@@ -14,7 +14,8 @@ import {
     ChevronRight,
     Menu,
     X,
-    RefreshCw
+    RefreshCw,
+    Camera
 } from 'lucide-react';
 import CEOPopup from './CEOPopup';
 import InstallApp from './InstallApp';
@@ -132,6 +133,7 @@ const Layout = () => {
 
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
+                            <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
                         </>
                     ) : (
                         <>

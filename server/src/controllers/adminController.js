@@ -454,13 +454,24 @@ const getDailyAttendance = async (req, res) => {
 
         // 3. Merge data
         const dailyReport = users.map(user => {
-            const record = attendanceRecords.find(a => a.userId === user.id);
+            // Find ALL records for this user (AEs might have multiple)
+            const userRecords = attendanceRecords.filter(a => a.userId === user.id);
+
+            // Sort by time
+            userRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+            const sessions = userRecords.map(record => ({
+                id: record.id,
+                timeIn: record.date,
+                timeOut: record.checkoutTime,
+                checkInPhoto: record.checkInPhoto,
+                checkoutPhoto: record.checkoutPhoto
+            }));
+
             return {
                 user: user,
-                status: record ? 'PRESENT' : 'ABSENT',
-                timeIn: record ? record.date : null,
-                timeOut: record ? record.checkoutTime : null,
-                attendanceId: record ? record.id : null
+                status: userRecords.length > 0 ? 'PRESENT' : 'ABSENT',
+                sessions: sessions
             };
         });
 
