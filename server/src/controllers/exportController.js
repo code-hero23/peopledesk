@@ -158,7 +158,7 @@ const exportAttendance = async (req, res) => {
 
         records.forEach(record => {
             const dateObj = new Date(record.date);
-            const dateStr = dateObj.toLocaleDateString();
+            const dateStr = dateObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
             const key = `${record.userId}_${dateStr}`;
 
             if (!groupedMap.has(key)) {
@@ -199,8 +199,8 @@ const exportAttendance = async (req, res) => {
                 group.hasActiveSession = true;
             }
 
-            const inTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-            const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Active';
+            const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+            const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
             group.sessionLogs.push(`${inTime} - ${outTime}`);
         });
 
@@ -211,8 +211,8 @@ const exportAttendance = async (req, res) => {
                 Employee: group.Employee,
                 Email: group.Email,
                 Date: group.Date,
-                'Log In': group.firstLogin.toLocaleTimeString(),
-                'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString() : '-'),
+                'Log In': group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
+                'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
                 'Total Working Hours': totalHours,
                 'Total Working Hours': totalHours,
                 'Sessions': group.sessionCount,
