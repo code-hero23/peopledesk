@@ -121,13 +121,13 @@ const Layout = () => {
                         <>
                             <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
 
-                            {/* Only Admin can manage employees fully */}
-                            {user?.role === 'ADMIN' && (
+                            {/* Only Admin and AE_MANAGER can manage employees */}
+                            {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
                                 <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
                             )}
 
-                            {/* Approvals: Only HR and BH sees them */}
-                            {['HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                            {/* Approvals: HR, BH, and AE_MANAGER */}
+                            {['HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
                                 <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
                             )}
 
@@ -154,7 +154,7 @@ const Layout = () => {
                             <div className="overflow-hidden">
                                 <p className="text-sm font-medium truncate text-white">{user?.name}</p>
                                 <p className="text-xs text-slate-400 capitalize truncate">
-                                    {['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role)
+                                    {['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role)
                                         ? user?.role.replace('_', ' ').toLowerCase()
                                         : user?.designation}
                                 </p>
