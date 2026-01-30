@@ -5,7 +5,7 @@ import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteReque
 const Approvals = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { pendingRequests, requestHistory, isLoading } = useSelector(
+    const { pendingRequests, requestHistory, isLoading, isError, message } = useSelector(
         (state) => state.admin
     );
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
@@ -42,6 +42,21 @@ const Approvals = () => {
     const canDelete = ['ADMIN', 'HR'].includes(user?.role);
 
     if (isLoading && activeTab === 'pending' && !pendingRequests.leaves) return <div className="p-8 text-center text-slate-500">Loading requests...</div>;
+
+    if (isError) {
+        return (
+            <div className="p-8 text-center bg-red-50 text-red-600 rounded-xl border border-red-200">
+                <p className="font-bold">Error loading requests</p>
+                <p className="text-sm">{message}</p>
+                <button
+                    onClick={() => dispatch(activeTab === 'pending' ? getPendingRequests() : getRequestHistory())}
+                    className="mt-4 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                >
+                    Retry
+                </button>
+            </div>
+        );
+    }
 
     const renderRequestCard = (req, type, typeLabel, color) => (
         <div key={`${type}-${req.id}`} className={`bg-white p-6 rounded-xl shadow-sm border border-l-4 transition-shadow hover:shadow-md ${req.status === 'PENDING' ? `border-l-${color}-500 border-slate-200` :
