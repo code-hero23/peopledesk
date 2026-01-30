@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
+import { Download } from 'lucide-react';
+import axios from 'axios';
 
 const Approvals = () => {
     const dispatch = useDispatch();
@@ -29,6 +31,29 @@ const Approvals = () => {
     const onDelete = (type, id) => {
         if (window.confirm('Are you sure you want to DELETE this request? This cannot be undone.')) {
             dispatch(deleteRequest({ type, id }));
+        }
+    };
+
+
+    const handleExport = async () => {
+        try {
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.get(`${baseUrl}/export/requests`, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `requests_export_${new Date().toISOString().split('T')[0]}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Export failed:", error);
+            alert("Failed to export requests.");
         }
     };
 
@@ -162,27 +187,39 @@ const Approvals = () => {
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800">Approvals</h2>
                     <p className="text-slate-500">Manage all employee requests.</p>
+                    <h2 className="text-3xl font-bold text-slate-800">Approvals</h2>
+                    <p className="text-slate-500">Manage all employee requests.</p>
                 </div>
-                {/* Tabs */}
-                <div className="flex bg-white p-1 rounded-lg border border-slate-200">
+
+                <div className="flex gap-3">
                     <button
-                        onClick={() => setActiveTab('pending')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'pending'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                            }`}
+                        onClick={handleExport}
+                        className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2"
                     >
-                        Pending
+                        <Download size={18} />
+                        <span className="hidden sm:inline">Export Requests</span>
                     </button>
-                    <button
-                        onClick={() => setActiveTab('history')}
-                        className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
-                            ? 'bg-blue-600 text-white shadow-sm'
-                            : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
-                            }`}
-                    >
-                        History
-                    </button>
+                    {/* Tabs */}
+                    <div className="flex bg-white p-1 rounded-lg border border-slate-200">
+                        <button
+                            onClick={() => setActiveTab('pending')}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'pending'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                }`}
+                        >
+                            Pending
+                        </button>
+                        <button
+                            onClick={() => setActiveTab('history')}
+                            className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
+                                ? 'bg-blue-600 text-white shadow-sm'
+                                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                }`}
+                        >
+                            History
+                        </button>
+                    </div>
                 </div>
             </div>
 

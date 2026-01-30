@@ -183,4 +183,75 @@ const exportAttendance = async (req, res) => {
     }
 };
 
-module.exports = { exportWorkLogs, exportAttendance };
+// @desc    Export Requests (Leaves, Permissions, Visits) as CSV
+// @route   GET /api/export/requests
+// @access  Private (Admin/HR)
+const exportRequests = async (req, res) => {
+    try {
+        const { status } = req.query; // Optional filter: ?status=PENDING
+        let where = {};
+        if (status) {
+            where.status = status;
+        }
+
+        // Fetch all types
+        const [leaves, permissions, siteVisits, showroomVisits] = await Promise.all([
+            prisma.leaveRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
+            prisma.permissionRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
+            prisma.siteVisitRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
+            prisma.showroomVisitRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } })
+        ]);
+
+        const combined = [
+            ...leaves.map(r => ({ ...r, type: 'Leave' })),
+            ...permissions.map(r => ({ ...r, type: 'Permission' })),
+            ...siteVisits.map(r => ({ ...r, type: 'Site Visit' })),
+            ...showroomVisits.map(r => ({ ...r, type: 'Showroom Visit' }))
+        ];
+
+        // Sort by CreatedAt desc
+        combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+
+        const flattened = combined.map(req => {
+            let duration = '';
+            if (req.type === 'Leave') {
+                duration = `${new Date(req.startDate).toLocaleDateString()} - ${new Date(req.endDate).toLocaleDateString()}`;
+            } else if (req.type === 'Permission') {
+                duration = `${new Date(req.date).toLocaleDateString()} (${req.startTime} - ${req.endTime})`;
+            } else if (req.type === 'Site Visit' || req.type === 'Showroom Visit') {
+                duration = `${new Date(req.date).toLocaleDateString()} (${req.startTime} - ${req.endTime})`;
+            }
+
+            let details = '';
+            if (req.type === 'Site Visit') details = `${req.location} (${req.projectName})`;
+            if (req.type === 'Showroom Visit') details = `${req.sourceShowroom} -> ${req.destinationShowroom}`;
+
+            return {
+                Type: req.type,
+                Employee: req.user.name,
+                Email: req.user.email,
+                'Date / Duration': duration,
+                Details: details,
+                Reason: req.reason,
+                'Overall Status': req.status,
+                'BH Status': req.bhStatus,
+                'HR Status': req.hrStatus,
+                RequestedAt: new Date(req.createdAt).toLocaleString()
+            };
+        });
+
+        const csv = convertToCSV(flattened, [
+            'Type', 'Employee', 'Email', 'Date / Duration', 'Details', 'Reason', 'Overall Status', 'BH Status', 'HR Status', 'RequestedAt'
+        ]);
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment('requests_export.csv');
+        res.send(csv);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { exportWorkLogs, exportAttendance, exportRequests };
