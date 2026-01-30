@@ -150,14 +150,29 @@ const exportAttendance = async (req, res) => {
             orderBy: { date: 'desc' },
         });
 
-        const flattenedRecords = records.map(record => ({
-            Employee: record.user.name,
-            Email: record.user.email,
-            Date: new Date(record.date).toLocaleDateString(),
-            Status: record.status, // PRESENT, ABSENT
-        }));
+        const flattenedRecords = records.map(record => {
+            const loginTime = new Date(record.date);
+            const logoutTime = record.checkoutTime ? new Date(record.checkoutTime) : null;
+            let totalHours = '';
 
-        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Date', 'Status']);
+            if (logoutTime) {
+                const diffMs = logoutTime - loginTime;
+                const hours = diffMs / (1000 * 60 * 60);
+                totalHours = hours.toFixed(2);
+            }
+
+            return {
+                Employee: record.user.name,
+                Email: record.user.email,
+                Date: loginTime.toLocaleDateString(),
+                'Log In': loginTime.toLocaleTimeString(),
+                'Log Out': logoutTime ? logoutTime.toLocaleTimeString() : '-',
+                'Total Working Hours': totalHours,
+                Status: record.status,
+            };
+        });
+
+        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Status']);
 
         res.header('Content-Type', 'text/csv');
         res.attachment('attendance.csv');
