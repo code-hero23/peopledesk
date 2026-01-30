@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getDailyWorkLogs, reset } from '../../features/admin/adminSlice';
+import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
 import { Calendar, Download, Eye, Search } from 'lucide-react';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
@@ -8,11 +8,12 @@ import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 const WorkLogs = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { dailyWorkLogs, isLoading, isError, message } = useSelector((state) => state.admin);
+    const { dailyWorkLogs, employees, isLoading, isError, message } = useSelector((state) => state.admin);
 
     // Default to today's date formatted as YYYY-MM-DD
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedExportUser, setSelectedExportUser] = useState('');
 
     // Filtering Logic
     const filteredLogs = dailyWorkLogs.filter((record) => {
@@ -48,7 +49,12 @@ const WorkLogs = () => {
         }
 
         if (user && user.token) {
-            dispatch(getDailyWorkLogs(selectedDate));
+            if (user && user.token) {
+                dispatch(getDailyWorkLogs(selectedDate));
+                if (employees.length === 0) {
+                    dispatch(getAllEmployees());
+                }
+            }
         }
 
         return () => {
@@ -70,7 +76,11 @@ const WorkLogs = () => {
             };
 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            const response = await axios.get(`${baseUrl}/export/worklogs?month=${month}&year=${year}`, config);
+            let apiUrl = `${baseUrl}/export/worklogs?month=${month}&year=${year}`;
+            if (selectedExportUser) {
+                apiUrl += `&userId=${selectedExportUser}`;
+            }
+            const response = await axios.get(apiUrl, config);
 
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
@@ -162,6 +172,16 @@ const WorkLogs = () => {
                             className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium w-48 lg:w-64"
                         />
                     </div>
+                    <select
+                        value={selectedExportUser}
+                        onChange={(e) => setSelectedExportUser(e.target.value)}
+                        className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"
+                    >
+                        <option value="">All Employees</option>
+                        {employees.map((emp) => (
+                            <option key={emp.id} value={emp.id}>{emp.name}</option>
+                        ))}
+                    </select>
                     <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
                         <Download size={18} />
                         <span>Export Month</span>
