@@ -351,7 +351,13 @@ const createEmployee = async (req, res) => {
 // @access  Private (Admin)
 const getAllWorkLogs = async (req, res) => {
     try {
+        let where = {};
+        if (req.user.role === 'AE_MANAGER') {
+            where = { user: { designation: 'AE' } };
+        }
+
         const logs = await prisma.workLog.findMany({
+            where,
             include: { user: { select: { name: true, email: true } } },
             orderBy: { date: 'desc' },
         });
@@ -375,8 +381,13 @@ const getDailyWorkLogs = async (req, res) => {
         const endOfDay = new Date(queryDate.setHours(23, 59, 59, 999));
 
         // 1. Get all active users
+        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
+        if (req.user.role === 'AE_MANAGER') {
+            userWhere.designation = 'AE';
+        }
+
         const users = await prisma.user.findMany({
-            where: { status: 'ACTIVE', role: 'EMPLOYEE' },
+            where: userWhere,
             select: { id: true, name: true, email: true, designation: true }
         });
 
@@ -412,7 +423,13 @@ const getDailyWorkLogs = async (req, res) => {
 // @access  Private (Admin)
 const getAllAttendance = async (req, res) => {
     try {
+        let where = {};
+        if (req.user.role === 'AE_MANAGER') {
+            where = { user: { designation: 'AE' } };
+        }
+
         const attendance = await prisma.attendance.findMany({
+            where,
             include: { user: { select: { name: true, email: true } } },
             orderBy: { date: 'desc' },
             take: 100, // Limit to last 100 for now, or implement pagination
@@ -437,8 +454,13 @@ const getDailyAttendance = async (req, res) => {
         const endOfDay = new Date(queryDate.setHours(23, 59, 59, 999));
 
         // 1. Get all active users
+        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
+        if (req.user.role === 'AE_MANAGER') {
+            userWhere.designation = 'AE';
+        }
+
         const users = await prisma.user.findMany({
-            where: { status: 'ACTIVE', role: 'EMPLOYEE' },
+            where: userWhere,
             select: { id: true, name: true, email: true, designation: true }
         });
 

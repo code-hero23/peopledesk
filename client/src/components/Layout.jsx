@@ -117,7 +117,7 @@ const Layout = () => {
 
                 {/* Navigation */}
                 <nav className="flex-1 p-3 space-y-2 mt-2 overflow-y-auto scrollbar-hide">
-                    {['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role) ? (
+                    {['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role) ? (
                         <>
                             <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
 
@@ -126,8 +126,8 @@ const Layout = () => {
                                 <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
                             )}
 
-                            {/* Admin does NOT see Approvals */}
-                            {user?.role !== 'ADMIN' && (
+                            {/* Approvals: Only HR and BH sees them */}
+                            {['HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                                 <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
                             )}
 

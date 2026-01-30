@@ -13,6 +13,7 @@ enum Role {
   HR
   BUSINESS_HEAD
   ADMIN
+  AE_MANAGER
 }
 
 enum Status {
