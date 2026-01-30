@@ -630,7 +630,7 @@ const importEmployees = async (req, res) => {
                         name,
                         email,
                         password: userHashedPassword,
-                        role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN'].includes(role) ? role : 'EMPLOYEE',
+                        role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER'].includes(role) ? role : 'EMPLOYEE',
                         designation
                     }
                 });
