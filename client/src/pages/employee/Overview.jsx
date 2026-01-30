@@ -127,8 +127,8 @@ const Overview = () => {
                     activeModal === 'worklog' ? 'Submit Daily Work Log' :
                         activeModal === 'leave' ? 'Request Leave' :
                             activeModal === 'permission' ? 'Request Permission' :
-                                activeModal === 'site-visit' ? 'Request Site Visit' :
-                                    activeModal === 'showroom-visit' ? 'Request Showroom Visit' :
+                                activeModal === 'site-visit' ? 'Update Site Visit' :
+                                    activeModal === 'showroom-visit' ? 'Showroom Visit' :
                                         'Create New Project'
                 } onClose={closeModal}>
                     {activeModal === 'worklog' && renderWorkLogForm()}
@@ -308,7 +308,7 @@ const Overview = () => {
                                 className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group min-h-[100px] md:h-[120px]"
                             >
                                 <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏗️</div>
-                                <span className="font-bold text-sm">Site Visit</span>
+                                <span className="font-bold text-sm">Update Site Visit</span>
                             </button>
 
                             <button
@@ -316,7 +316,7 @@ const Overview = () => {
                                 className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all group min-h-[100px] md:h-[120px]"
                             >
                                 <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏢</div>
-                                <span className="font-bold text-sm">Showroom</span>
+                                <span className="font-bold text-sm">Showroom Visit</span>
                             </button>
                         </div>
                     </div>

@@ -185,7 +185,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
                     type="submit"
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
                 >
-                    Submit Request
+                    Submit Showroom Visit
                 </button>
             </div>
 
@@ -195,7 +195,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Showroom Visit Request Sent!"
+                message="Showroom Visit Sent!"
                 subMessage="Your manager will be notified."
             />
         </form>

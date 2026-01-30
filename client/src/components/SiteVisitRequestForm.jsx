@@ -130,7 +130,7 @@ const SiteVisitRequestForm = ({ onSuccess }) => {
                     type="submit"
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
                 >
-                    Submit Request
+                    Update Site Visit
                 </button>
             </div>
 
@@ -140,7 +140,7 @@ const SiteVisitRequestForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Site Visit Request Sent!"
+                message="Site Visit Updated!"
                 subMessage="Your manager will be notified."
             />
         </form>

@@ -4,19 +4,9 @@ import { X, Quote } from 'lucide-react';
 
 const popupData = [
     {
-        image: "/ceo/ceo_1.png",
-        quote: "We are not just designing spaces — we are shaping the way people live their lives.",
-        author: "Raakesh Natarajan"
-    },
-    {
-        image: "/ceo/ceo_2.png",
-        quote: "Excellence is not an act, but a habit. Every detail matters.",
-        author: "Raakesh Natarajan"
-    },
-    {
-        image: "/ceo/ceo_3.png",
-        quote: "Innovation distinguishes between a leader and a follower.",
-        author: "Raakesh Natarajan"
+        image: "/ceo-popup.png",
+        quote: "Consistency is more powerful than motivation. Keep going.",
+        author: "Leo Jenison"
     }
 ];
 
