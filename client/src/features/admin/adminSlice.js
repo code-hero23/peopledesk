@@ -267,6 +267,21 @@ export const deleteEmployee = createAsyncThunk(
     }
 );
 
+// Delete Request (HR/Admin)
+export const deleteRequest = createAsyncThunk('admin/deleteRequest', async ({ type, id }, thunkAPI) => {
+    try {
+        const token = thunkAPI.getState().auth.user.token;
+        const config = {
+            headers: { Authorization: `Bearer ${token}` },
+        };
+        const response = await axios.delete(API_URL + `requests/${type}/${id}`, config);
+        return response.data; // { message, id, type }
+    } catch (error) {
+        const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
+    }
+});
+
 export const adminSlice = createSlice({
     name: 'admin',
     initialState,
@@ -379,10 +394,22 @@ export const adminSlice = createSlice({
                     state.pendingRequests.leaves = state.pendingRequests.leaves.filter(
                         (req) => req.id !== id
                     );
-                } else {
+                } else if (type === 'permission') {
                     state.pendingRequests.permissions = state.pendingRequests.permissions.filter(
                         (req) => req.id !== id
                     );
+                } else if (type === 'site-visit') {
+                    if (state.pendingRequests.siteVisits) {
+                        state.pendingRequests.siteVisits = state.pendingRequests.siteVisits.filter(
+                            (req) => req.id !== id
+                        );
+                    }
+                } else if (type === 'showroom-visit') {
+                    if (state.pendingRequests.showroomVisits) {
+                        state.pendingRequests.showroomVisits = state.pendingRequests.showroomVisits.filter(
+                            (req) => req.id !== id
+                        );
+                    }
                 }
             })
             // Update User Status
@@ -403,6 +430,32 @@ export const adminSlice = createSlice({
                 state.employees = state.employees.filter((emp) => emp.id !== action.payload);
                 state.isSuccess = true;
                 state.message = 'Employee removed successfully';
+            })
+            // Delete Request
+            .addCase(deleteRequest.fulfilled, (state, action) => {
+                const { id, type } = action.payload;
+                // Remove from pendingRequests
+                if (type === 'leave') {
+                    state.pendingRequests.leaves = state.pendingRequests.leaves.filter(req => req.id !== id);
+                    if (state.requestHistory.leaves) state.requestHistory.leaves = state.requestHistory.leaves.filter(req => req.id !== id);
+                } else if (type === 'permission') {
+                    state.pendingRequests.permissions = state.pendingRequests.permissions.filter(req => req.id !== id);
+                    if (state.requestHistory.permissions) state.requestHistory.permissions = state.requestHistory.permissions.filter(req => req.id !== id);
+                } else if (type === 'site-visit') {
+                    state.pendingRequests.siteVisits = state.pendingRequests.siteVisits.filter(req => req.id !== id);
+                    if (state.requestHistory.siteVisits) state.requestHistory.siteVisits = state.requestHistory.siteVisits.filter(req => req.id !== id);
+                } else if (type === 'showroom-visit') {
+                    state.pendingRequests.showroomVisits = state.pendingRequests.showroomVisits.filter(req => req.id !== id);
+                    if (state.requestHistory.showroomVisits) state.requestHistory.showroomVisits = state.requestHistory.showroomVisits.filter(req => req.id !== id);
+                }
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.message = 'Request deleted';
+            })
+            .addCase(deleteRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
             });
     },
 });

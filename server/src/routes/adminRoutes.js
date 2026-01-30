@@ -13,7 +13,8 @@ const {
     getDailyAttendance,
     updateEmployee,
     deleteEmployee,
-    importEmployees
+    importEmployees,
+    deleteRequest
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
@@ -32,6 +33,7 @@ router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR
 router.get('/requests/pending', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR'), getAllPendingRequests);
 router.get('/requests/history', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR'), getRequestHistory);
 router.put('/requests/:type/:id', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR'), updateRequestStatus);
+router.delete('/requests/:type/:id', protect, authorize('ADMIN', 'HR'), deleteRequest);
 
 // User Management - Admin Only
 router.put('/users/:id/status', protect, authorize('ADMIN'), updateUserStatus);

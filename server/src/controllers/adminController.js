@@ -83,10 +83,25 @@ const getAllPendingRequests = async (req, res) => {
             orderBy: { createdAt: 'asc' },
         });
 
+        const siteVisitsRaw = await prisma.siteVisitRequest.findMany({
+            where: permissionWhere, // Reusing permissionWhere logic as it's same structure (status/bhStatus)
+            include: { user: { select: { name: true, email: true, designation: true } } },
+            orderBy: { createdAt: 'asc' },
+        });
+
+        const showroomVisitsRaw = await prisma.showroomVisitRequest.findMany({
+            where: permissionWhere, // Reusing permissionWhere logic as it's same structure
+            include: { user: { select: { name: true, email: true, designation: true } } },
+            orderBy: { createdAt: 'asc' },
+        });
+
         // Enrich with BH Name
         const leaveBhIds = [...new Set(leavesRaw.map(r => r.bhId).filter(id => id))];
         const permissionBhIds = [...new Set(permissionsRaw.map(r => r.bhId).filter(id => id))];
-        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds])];
+        const siteBhIds = [...new Set(siteVisitsRaw.map(r => r.bhId).filter(id => id))];
+        const showroomBhIds = [...new Set(showroomVisitsRaw.map(r => r.bhId).filter(id => id))];
+
+        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds, ...siteBhIds, ...showroomBhIds])];
 
         let bhMap = {};
         if (allBhIds.length > 0) {
@@ -104,8 +119,10 @@ const getAllPendingRequests = async (req, res) => {
 
         const leaves = leavesRaw.map(enrichWithBhName);
         const permissions = permissionsRaw.map(enrichWithBhName);
+        const siteVisits = siteVisitsRaw.map(enrichWithBhName);
+        const showroomVisits = showroomVisitsRaw.map(enrichWithBhName);
 
-        res.json({ leaves, permissions });
+        res.json({ leaves, permissions, siteVisits, showroomVisits });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -211,7 +228,12 @@ const updateRequestStatus = async (req, res) => {
 
     try {
         let result;
-        const model = type === 'leave' ? prisma.leaveRequest : prisma.permissionRequest;
+        const model = type === 'leave' ? prisma.leaveRequest :
+            type === 'permission' ? prisma.permissionRequest :
+                type === 'site-visit' ? prisma.siteVisitRequest :
+                    type === 'showroom-visit' ? prisma.showroomVisitRequest : null;
+
+        if (!model) return res.status(400).json({ message: 'Invalid request type' });
 
         // Construct update data based on Role
         let updateData = {};
@@ -597,6 +619,37 @@ const importEmployees = async (req, res) => {
     }
 };
 
+// @desc    Delete a request (Admin/HR only)
+// @route   DELETE /api/admin/requests/:type/:id
+// @access  Private (Admin, HR)
+const deleteRequest = async (req, res) => {
+    const { type, id } = req.params;
+    const userRole = req.user.role;
+
+    // Only Admin and HR can delete
+    if (!['ADMIN', 'HR'].includes(userRole)) {
+        return res.status(403).json({ message: 'Not authorized to delete requests' });
+    }
+
+    try {
+        let model;
+        if (type === 'leave') model = prisma.leaveRequest;
+        else if (type === 'permission') model = prisma.permissionRequest;
+        else if (type === 'site-visit') model = prisma.siteVisitRequest;
+        else if (type === 'showroom-visit') model = prisma.showroomVisitRequest;
+        else return res.status(400).json({ message: 'Invalid request type' });
+
+        await model.delete({
+            where: { id: parseInt(id) }
+        });
+
+        res.json({ message: 'Request deleted successfully', id: parseInt(id), type });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     getAllEmployees,
     getAllPendingRequests,
@@ -610,5 +663,6 @@ module.exports = {
     getDailyAttendance,
     updateEmployee,
     deleteEmployee,
-    importEmployees
+    importEmployees,
+    deleteRequest
 };
