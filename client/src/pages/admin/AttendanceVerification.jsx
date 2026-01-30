@@ -44,14 +44,14 @@ const AttendanceVerification = () => {
         if (!path) return null;
         try {
             const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            // Extract root domain (e.g., http://localhost:5000 or https://server.com)
-            // If apiBase is a full URL, new URL() works.
-            const url = new URL(apiBase);
-            const serverRoot = url.origin; // http://localhost:5000
+            // Remove trailing slash from apiBase
+            const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
 
             // Ensure path starts with /
             const cleanPath = path.startsWith('/') ? path : `/${path}`;
-            return `${serverRoot}${cleanPath}`;
+
+            // Result: http://domain.com/api/uploads/filename.jpg
+            return `${cleanBase}${cleanPath}`;
         } catch (err) {
             console.error('URL parse error:', err);
             return path; // Fallback
