@@ -533,9 +533,21 @@ const getDailyAttendance = async (req, res) => {
                 checkoutPhoto: record.checkoutPhoto
             }));
 
+            // Calculate overall Time In and Time Out for the day
+            let timeIn = null;
+            let timeOut = null;
+
+            if (userRecords.length > 0) {
+                timeIn = userRecords[0].date; // First check-in
+                const lastRecord = userRecords[userRecords.length - 1];
+                timeOut = lastRecord.checkoutTime; // Last check-out (might be null)
+            }
+
             return {
                 user: user,
                 status: userRecords.length > 0 ? 'PRESENT' : 'ABSENT',
+                timeIn,
+                timeOut,
                 sessions: sessions
             };
         });
