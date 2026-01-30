@@ -18,6 +18,17 @@ const Attendance = () => {
         return `${year}-${month}-${day}`;
     });
 
+    const [searchTerm, setSearchTerm] = useState('');
+
+    // Filter attendance records based on search
+    const filteredAttendance = dailyAttendance.filter((record) => {
+        const term = searchTerm.toLowerCase();
+        return (
+            record.user.name.toLowerCase().includes(term) ||
+            record.user.email.toLowerCase().includes(term)
+        );
+    });
+
     useEffect(() => {
         if (isError) {
             console.error(message);
@@ -66,8 +77,22 @@ const Attendance = () => {
                     <h2 className="text-3xl font-bold text-slate-800">Daily Attendance</h2>
                     <p className="text-slate-500">Monitor employee check-ins and absences.</p>
                 </div>
-                <div className="flex items-center gap-4">
-                    <button onClick={onDownload} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
+                <div className="flex flex-col sm:flex-row items-center gap-4">
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-slate-400">🔍</span>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search employee..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 w-full border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"
+                        />
+                    </div>
+
+                    <button onClick={onDownload} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2 whitespace-nowrap">
                         <span>📅</span> Export CSV
                     </button>
                     <div className="relative">
@@ -96,10 +121,10 @@ const Attendance = () => {
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
                                 <tr><td colSpan="4" className="text-center py-8">Loading...</td></tr>
-                            ) : dailyAttendance.length === 0 ? (
+                            ) : filteredAttendance.length === 0 ? (
                                 <tr><td colSpan="4" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
-                                dailyAttendance.map((record) => (
+                                filteredAttendance.map((record) => (
                                     <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 font-medium text-slate-800">
                                             {record.user.name}
