@@ -143,36 +143,88 @@ const exportWorkLogs = async (req, res) => {
 // @desc    Export Attendance as CSV
 // @route   GET /api/export/attendance
 // @access  Private (Admin)
+// @desc    Export Attendance as CSV
+// @route   GET /api/export/attendance
+// @access  Private (Admin)
 const exportAttendance = async (req, res) => {
     try {
         const records = await prisma.attendance.findMany({
             include: { user: { select: { name: true, email: true } } },
-            orderBy: { date: 'desc' },
+            orderBy: { date: 'asc' }, // Order by asc to process timeline correctly
         });
 
-        const flattenedRecords = records.map(record => {
-            const loginTime = new Date(record.date);
-            const logoutTime = record.checkoutTime ? new Date(record.checkoutTime) : null;
-            let totalHours = '';
+        // Group by User + Date
+        const groupedMap = new Map();
 
-            if (logoutTime) {
-                const diffMs = logoutTime - loginTime;
-                const hours = diffMs / (1000 * 60 * 60);
-                totalHours = hours.toFixed(2);
+        records.forEach(record => {
+            const dateObj = new Date(record.date);
+            const dateStr = dateObj.toLocaleDateString();
+            const key = `${record.userId}_${dateStr}`;
+
+            if (!groupedMap.has(key)) {
+                groupedMap.set(key, {
+                    Employee: record.user.name,
+                    Email: record.user.email,
+                    Date: dateStr,
+                    firstLogin: dateObj,
+                    lastLogout: null,
+                    totalMs: 0,
+                    status: record.status,
+                    hasActiveSession: false,
+                    sessionCount: 0,
+                    sessionLogs: []
+                });
             }
 
+            const group = groupedMap.get(key);
+            group.sessionCount++;
+
+            // Update Start Time (Earliest)
+            if (dateObj < group.firstLogin) {
+                group.firstLogin = dateObj;
+            }
+
+            // Calculate Duration & Update End Time
+            if (record.checkoutTime) {
+                const checkoutObj = new Date(record.checkoutTime);
+
+                // Add to total duration
+                group.totalMs += (checkoutObj - dateObj);
+
+                // Update Last Logout (Latest)
+                if (!group.lastLogout || checkoutObj > group.lastLogout) {
+                    group.lastLogout = checkoutObj;
+                }
+            } else {
+                group.hasActiveSession = true;
+            }
+
+            const inTime = dateObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Active';
+            group.sessionLogs.push(`${inTime} - ${outTime}`);
+        });
+
+        const flattenedRecords = Array.from(groupedMap.values()).map(group => {
+            const totalHours = (group.totalMs / (1000 * 60 * 60)).toFixed(2);
+
             return {
-                Employee: record.user.name,
-                Email: record.user.email,
-                Date: loginTime.toLocaleDateString(),
-                'Log In': loginTime.toLocaleTimeString(),
-                'Log Out': logoutTime ? logoutTime.toLocaleTimeString() : '-',
+                Employee: group.Employee,
+                Email: group.Email,
+                Date: group.Date,
+                'Log In': group.firstLogin.toLocaleTimeString(),
+                'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString() : '-'),
                 'Total Working Hours': totalHours,
-                Status: record.status,
+                'Total Working Hours': totalHours,
+                'Sessions': group.sessionCount,
+                'Session Details': group.sessionLogs.join(' | '),
+                Status: group.status,
             };
         });
 
-        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Status']);
+        // Sort by Date Descending
+        flattenedRecords.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+
+        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Sessions', 'Session Details', 'Status']);
 
         res.header('Content-Type', 'text/csv');
         res.attachment('attendance.csv');
