@@ -42,10 +42,20 @@ const AttendanceVerification = () => {
     // Construct full URL for photos
     const getPhotoUrl = (path) => {
         if (!path) return null;
-        const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-        // If path starts with /uploads, append to server root (remove /api)
-        const serverRoot = apiBase.replace('/api', '');
-        return `${serverRoot}${path}`;
+        try {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            // Extract root domain (e.g., http://localhost:5000 or https://server.com)
+            // If apiBase is a full URL, new URL() works.
+            const url = new URL(apiBase);
+            const serverRoot = url.origin; // http://localhost:5000
+
+            // Ensure path starts with /
+            const cleanPath = path.startsWith('/') ? path : `/${path}`;
+            return `${serverRoot}${cleanPath}`;
+        } catch (err) {
+            console.error('URL parse error:', err);
+            return path; // Fallback
+        }
     };
 
     const filteredReport = report.filter(item =>
