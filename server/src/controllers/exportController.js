@@ -148,17 +148,25 @@ const exportWorkLogs = async (req, res) => {
 // @access  Private (Admin)
 const exportAttendance = async (req, res) => {
     try {
-        const records = await prisma.attendance.findMany({
-            include: { user: { select: { name: true, email: true, designation: true } } },
-            orderBy: { date: 'asc' }, // Order by asc to process timeline correctly
-        });
+        const [records, activeUsers] = await Promise.all([
+            prisma.attendance.findMany({
+                include: { user: { select: { name: true, email: true, designation: true } } },
+                orderBy: { date: 'asc' },
+            }),
+            prisma.user.findMany({
+                where: { status: 'ACTIVE' },
+                select: { id: true, name: true, email: true, designation: true }
+            })
+        ]);
 
         // Group by User + Date
         const groupedMap = new Map();
+        const uniqueDates = new Set();
 
         records.forEach(record => {
             const dateObj = new Date(record.date);
             const dateStr = dateObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+            uniqueDates.add(dateStr);
             const key = `${record.userId}_${dateStr}`;
 
             if (!groupedMap.has(key)) {
@@ -203,6 +211,29 @@ const exportAttendance = async (req, res) => {
             const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
             const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
             group.sessionLogs.push(`${inTime} - ${outTime}`);
+
+        });
+
+        // Fill in ABSENT records
+        uniqueDates.forEach(dateStr => {
+            activeUsers.forEach(user => {
+                const key = `${user.id}_${dateStr}`;
+                if (!groupedMap.has(key)) {
+                    groupedMap.set(key, {
+                        Employee: user.name,
+                        Email: user.email,
+                        Designation: user.designation || 'N/A',
+                        Date: dateStr,
+                        firstLogin: null,
+                        lastLogout: null,
+                        totalMs: 0,
+                        status: 'ABSENT',
+                        hasActiveSession: false,
+                        sessionCount: 0,
+                        sessionLogs: []
+                    });
+                }
+            });
         });
 
         const flattenedRecords = Array.from(groupedMap.values()).map(group => {
@@ -213,12 +244,11 @@ const exportAttendance = async (req, res) => {
                 Email: group.Email,
                 Designation: group.Designation,
                 Date: group.Date,
-                'Log In': group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
+                'Log In': group.firstLogin ? group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
-                'Total Working Hours': totalHours,
-                'Total Working Hours': totalHours,
-                'Sessions': group.sessionCount,
-                'Session Details': group.sessionLogs.join(' | '),
+                'Total Working Hours': group.status === 'ABSENT' ? '-' : totalHours,
+                'Sessions': group.sessionCount === 0 ? '-' : group.sessionCount,
+                'Session Details': group.sessionLogs.length > 0 ? group.sessionLogs.join(' | ') : '-',
                 Status: group.status,
             };
         });
