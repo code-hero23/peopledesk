@@ -149,7 +149,7 @@ const exportWorkLogs = async (req, res) => {
 const exportAttendance = async (req, res) => {
     try {
         const records = await prisma.attendance.findMany({
-            include: { user: { select: { name: true, email: true } } },
+            include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { date: 'asc' }, // Order by asc to process timeline correctly
         });
 
@@ -165,6 +165,7 @@ const exportAttendance = async (req, res) => {
                 groupedMap.set(key, {
                     Employee: record.user.name,
                     Email: record.user.email,
+                    Designation: record.user.designation || 'N/A',
                     Date: dateStr,
                     firstLogin: dateObj,
                     lastLogout: null,
@@ -210,6 +211,7 @@ const exportAttendance = async (req, res) => {
             return {
                 Employee: group.Employee,
                 Email: group.Email,
+                Designation: group.Designation,
                 Date: group.Date,
                 'Log In': group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
                 'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
@@ -224,7 +226,7 @@ const exportAttendance = async (req, res) => {
         // Sort by Date Descending
         flattenedRecords.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
-        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Sessions', 'Session Details', 'Status']);
+        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Designation', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Sessions', 'Session Details', 'Status']);
 
         res.header('Content-Type', 'text/csv');
         res.attachment('attendance.csv');
