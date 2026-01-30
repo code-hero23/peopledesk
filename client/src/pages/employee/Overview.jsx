@@ -37,12 +37,19 @@ const Overview = () => {
     }, [dispatch]);
 
     const handleMarkAttendance = () => {
-        console.log("Handle Mark Attendance Clicked");
-        console.log("Current Attendance:", attendance);
-        console.log("User Designation:", user?.designation);
+        // Determine action name for confirmation
+        let actionName = 'Log In';
+        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
+            actionName = user?.designation === 'AE' ? 'Check Out' : 'Log Out';
+        } else {
+            actionName = user?.designation === 'AE' ? 'Check In' : 'Log In';
+        }
+
+        if (!window.confirm(`Are you sure you want to ${actionName}?`)) {
+            return;
+        }
 
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
-            console.log("Logic: Check Out");
             // Check-Out Logic
             if (user?.designation === 'AE') {
                 setIsCheckingOut(true);
@@ -51,12 +58,10 @@ const Overview = () => {
                 dispatch(checkoutAttendance()).then(() => dispatch(getAttendanceStatus()));
             }
         } else {
-            console.log("Logic: Check In");
             // Check-In Logic
             if (user?.designation === 'AE') {
                 setIsCheckingOut(false);
                 setShowCheckInModal(true);
-                console.log("Opening Modal for Check In");
             } else {
                 dispatch(markAttendance()).then(() => dispatch(getAttendanceStatus()));
             }
