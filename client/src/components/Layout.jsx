@@ -13,7 +13,8 @@ import {
     ChevronLeft,
     ChevronRight,
     Menu,
-    X
+    X,
+    RefreshCw
 } from 'lucide-react';
 import CEOPopup from './CEOPopup';
 import InstallApp from './InstallApp';
@@ -63,6 +64,10 @@ const Layout = () => {
                 )}
             </Link>
         );
+    };
+
+    const handleRefresh = () => {
+        window.location.reload();
     };
 
     return (
@@ -155,6 +160,17 @@ const Layout = () => {
                         )}
                     </div>
 
+                    <div className="flex gap-2 mb-2">
+                        <button
+                            onClick={handleRefresh}
+                            className={`flex-1 flex items-center gap-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white py-2.5 rounded-lg transition-all duration-200 group justify-center`}
+                            title="Refresh App"
+                        >
+                            <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
+                            {!isCollapsed && <span className="text-sm font-medium">Update</span>}
+                        </button>
+                    </div>
+
                     <button
                         onClick={onLogout}
                         className={`w-full flex items-center gap-2 bg-slate-800 hover:bg-red-600/90 text-slate-300 hover:text-white py-2.5 rounded-lg transition-all duration-200 group
@@ -180,9 +196,17 @@ const Layout = () => {
                         </button>
                         <img src="/orbix-logo.png" alt="Cookscape" className="h-8" />
                     </div>
-                    <button onClick={onLogout} className="text-sm text-red-600 font-medium flex items-center gap-1">
-                        <LogOut size={16} /> Logout
-                    </button>
+                    <div className="flex items-center gap-3">
+                        <button
+                            onClick={handleRefresh}
+                            className="bg-slate-100 p-2 rounded-full text-slate-600 active:bg-slate-200 transition-colors"
+                        >
+                            <RefreshCw size={18} />
+                        </button>
+                        <button onClick={onLogout} className="text-sm text-red-600 font-medium flex items-center gap-1">
+                            <LogOut size={16} /> Logout
+                        </button>
+                    </div>
                 </header>
 
                 <main className="flex-1 p-6 md:p-8 overflow-y-auto">
