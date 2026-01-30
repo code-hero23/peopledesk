@@ -61,6 +61,76 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                     </div>
                 )}
 
+                {/* AE Details */}
+                {(log.ae_siteLocation || log.ae_visitType) && (
+                    <div className="mb-6">
+                        <h3 className="text-sm font-bold uppercase text-blue-600 mb-2 border-b border-blue-100 pb-1">Site Visit Details (AE)</h3>
+                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <div><span className="font-semibold block text-xs uppercase text-slate-500">Location</span> {log.ae_siteLocation}</div>
+                            <div>
+                                <span className="font-semibold block text-xs uppercase text-slate-500">Visit Type</span>
+                                <div className="flex gap-1 flex-wrap mt-1">
+                                    {(Array.isArray(log.ae_visitType) ? log.ae_visitType : [log.ae_visitType]).map((t, i) => (
+                                        <span key={i} className="text-xs bg-white px-2 py-1 rounded border shadow-sm">{t}</span>
+                                    ))}
+                                </div>
+                            </div>
+                            {log.ae_workStage && <div><span className="font-semibold block text-xs uppercase text-slate-500">Stage</span> {log.ae_workStage}</div>}
+                            {log.ae_measurements && <div><span className="font-semibold block text-xs uppercase text-slate-500">Measurements</span> {log.ae_measurements}</div>}
+                            {log.ae_issueDescription && <div className="col-span-2"><span className="font-semibold block text-xs uppercase text-slate-500">Issues</span> {log.ae_issueDescription}</div>}
+                            {log.ae_clientFeedback && <div className="col-span-2"><span className="font-semibold block text-xs uppercase text-slate-500">Feedback</span> {log.ae_clientFeedback}</div>}
+                        </div>
+                    </div>
+                )}
+
+                {/* CRE Details */}
+                {(log.cre_totalCalls !== null || log.cre_showroomVisits !== null) && (
+                    <div className="mb-6">
+                        <h3 className="text-sm font-bold uppercase text-blue-600 mb-2 border-b border-blue-100 pb-1">CRE Activity Report</h3>
+                        <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-lg border border-slate-200 mb-3">
+                            <div className="bg-white p-3 rounded shadow-sm border text-center">
+                                <span className="block text-2xl font-bold text-blue-600">{log.cre_totalCalls || 0}</span>
+                                <span className="text-xs uppercase font-bold text-slate-400">Total Calls</span>
+                            </div>
+                            <div className="bg-white p-3 rounded shadow-sm border text-center">
+                                <span className="block text-2xl font-bold text-orange-600">{log.cre_showroomVisits || 0}</span>
+                                <span className="text-xs uppercase font-bold text-slate-400">Showroom Visits</span>
+                            </div>
+                            {log.cre_callBreakdown && (
+                                <div className="col-span-2">
+                                    <span className="font-semibold block text-xs uppercase text-slate-500 mb-1">Call Breakdown</span>
+                                    <p className="text-sm italic">{log.cre_callBreakdown}</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+                )}
+
+                {/* FA Details */}
+                {(log.fa_calls !== null || log.fa_showroomVisits !== null) && (
+                    <div className="mb-6">
+                        <h3 className="text-sm font-bold uppercase text-blue-600 mb-2 border-b border-blue-100 pb-1">FA Activity Report</h3>
+                        <div className="grid grid-cols-3 gap-2 bg-slate-50 p-4 rounded-lg border border-slate-200 mb-3">
+                            <div className="bg-white p-2 rounded shadow-sm border text-center">
+                                <span className="block text-xl font-bold text-blue-600">{log.fa_calls || 0}</span>
+                                <span className="text-[10px] uppercase font-bold text-slate-400">Calls</span>
+                            </div>
+                            <div className="bg-white p-2 rounded shadow-sm border text-center">
+                                <span className="block text-xl font-bold text-indigo-600">{log.fa_showroomVisits || 0}</span>
+                                <span className="text-[10px] uppercase font-bold text-slate-400">Showroom</span>
+                            </div>
+                            <div className="bg-white p-2 rounded shadow-sm border text-center">
+                                <span className="block text-xl font-bold text-emerald-600">{log.fa_siteVisits || 0}</span>
+                                <span className="text-[10px] uppercase font-bold text-slate-400">Site</span>
+                            </div>
+                        </div>
+                        <div className="space-y-2">
+                            {log.fa_designPendingClients && <div className="text-sm"><span className="font-bold text-slate-600">Design Pending with:</span> {log.fa_designPendingClients}</div>}
+                            {log.fa_quotePendingClients && <div className="text-sm"><span className="font-bold text-slate-600">Quote Pending with:</span> {log.fa_quotePendingClients}</div>}
+                        </div>
+                    </div>
+                )}
+
                 {/* Custom Fields (Dynamic Tables) */}
                 {Object.entries(customFields).map(([tableName, rows]) => (
                     <div key={tableName} className="mb-8 break-inside-avoid">
