@@ -165,6 +165,10 @@ const ManageEmployees = () => {
                                             <span className="inline-block px-2 py-1 bg-pink-100 text-pink-700 text-xs font-bold rounded">
                                                 HR MANAGER
                                             </span>
+                                        ) : emp.role === 'AE_MANAGER' ? (
+                                            <span className="inline-block px-2 py-1 bg-teal-100 text-teal-700 text-xs font-bold rounded">
+                                                AE MANAGER
+                                            </span>
                                         ) : (
                                             <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded">
                                                 {emp.designation}

@@ -8,7 +8,13 @@ const prisma = new PrismaClient();
 // @access  Private (Admin)
 const getAllEmployees = async (req, res) => {
     try {
+        let where = {};
+        if (req.user.role === 'AE_MANAGER') {
+            where = { designation: 'AE' };
+        }
+
         const users = await prisma.user.findMany({
+            where,
             select: {
                 id: true,
                 name: true,
@@ -66,6 +72,16 @@ const getAllPendingRequests = async (req, res) => {
             // Admin sees EVERYTHING pending at any stage
             leaveWhere = { status: 'PENDING' }; // Show all pending overall
             permissionWhere = { status: 'PENDING' };
+        } else if (userRole === 'AE_MANAGER') {
+            // AE Manager sees ONLY AE requests
+            leaveWhere = {
+                status: 'PENDING',
+                user: { designation: 'AE' }
+            };
+            permissionWhere = {
+                status: 'PENDING',
+                user: { designation: 'AE' }
+            };
         } else {
             // Regular employees/Managers shouldn't be here usually, or see nothing
             return res.json({ leaves: [], permissions: [] });
@@ -164,7 +180,16 @@ const getRequestHistory = async (req, res) => {
             // This acts as the company-wide record.
             leaveWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
             permissionWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
-
+        } else if (userRole === 'AE_MANAGER') {
+            // AE Manager History
+            leaveWhere = {
+                status: { in: ['APPROVED', 'REJECTED'] },
+                user: { designation: 'AE' }
+            };
+            permissionWhere = {
+                status: { in: ['APPROVED', 'REJECTED'] },
+                user: { designation: 'AE' }
+            };
         } else {
             console.log(`History Query for ${userRole}`);
             // Admin sees all finalized requests
@@ -261,6 +286,13 @@ const updateRequestStatus = async (req, res) => {
             updateData.bhStatus = status;
             updateData.hrStatus = status;
             updateData.status = status;
+            updateData.status = status;
+            updateData.approvedBy = userId;
+        } else if (userRole === 'AE_MANAGER') {
+            // AE MANAGER - Acts like Admin but for AE
+            updateData.bhStatus = status;
+            updateData.hrStatus = status;
+            updateData.status = status;
             updateData.approvedBy = userId;
         }
         else {
@@ -327,14 +359,25 @@ const createEmployee = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
+        // Determine Role and Designation based on Creator
+        let newRole = req.body.role || 'EMPLOYEE';
+        let newDesignation = designation || 'LA';
+
+        if (req.user.role === 'AE_MANAGER') {
+            newRole = 'EMPLOYEE';
+            newDesignation = 'AE';
+        } else if (newRole === 'AE_MANAGER') {
+            newDesignation = 'AE MANAGER';
+        }
+
         // Create user
         const user = await prisma.user.create({
             data: {
                 name,
                 email,
                 password: hashedPassword,
-                role: req.body.role || 'EMPLOYEE',
-                designation: designation || 'LA', // Default to LA
+                role: newRole,
+                designation: newDesignation,
             },
             select: { id: true, name: true, email: true, role: true, designation: true, status: true },
         });

@@ -23,8 +23,14 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 designation: selectedEmployee.designation || (isAeManager ? 'AE' : 'LA'),
                 password: '', // Don't pre-fill password
             });
+        } else if (isAeManager) {
+            setFormData((prev) => ({
+                ...prev,
+                role: 'EMPLOYEE',
+                designation: 'AE'
+            }));
         }
-    }, [selectedEmployee]);
+    }, [selectedEmployee, isAeManager]);
 
     const onSubmit = (e) => {
         e.preventDefault();

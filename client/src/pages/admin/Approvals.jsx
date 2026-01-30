@@ -187,8 +187,7 @@ const Approvals = () => {
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800">Approvals</h2>
                     <p className="text-slate-500">Manage all employee requests.</p>
-                    <h2 className="text-3xl font-bold text-slate-800">Approvals</h2>
-                    <p className="text-slate-500">Manage all employee requests.</p>
+
                 </div>
 
                 <div className="flex gap-3">
