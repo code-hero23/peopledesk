@@ -66,7 +66,7 @@ const Layout = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 relative">
+        <div className="h-screen overflow-hidden bg-slate-50 flex font-sans text-slate-900 relative">
             {/* Mobile Sidebar Overlay Backdrop */}
             {isMobileMenuOpen && (
                 <div
@@ -78,7 +78,7 @@ const Layout = () => {
             {/* Sidebar */}
             <aside
                 className={`bg-slate-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-xl
-                    fixed md:relative z-40 h-full md:h-auto
+                    fixed md:relative z-40 h-full
                     ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
                     ${isCollapsed ? 'w-20' : 'w-64'}
                 `}
