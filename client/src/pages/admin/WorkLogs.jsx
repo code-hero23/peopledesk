@@ -228,8 +228,12 @@ const WorkLogs = () => {
                                                     </td>
                                                     <td className="px-4 py-3 text-center">
                                                         <button
-                                                            onClick={() => handleViewDetails(record)}
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewDetails(record);
+                                                            }}
+                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative z-10 cursor-pointer"
                                                             title="View Details"
                                                         >
                                                             <Eye size={18} />
