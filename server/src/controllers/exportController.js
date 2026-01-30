@@ -19,7 +19,7 @@ const convertToCSV = (data, fields) => {
 // @access  Private (Admin)
 const exportWorkLogs = async (req, res) => {
     try {
-        const { month, year, userId } = req.query;
+        const { month, year, designation } = req.query;
         let where = {};
 
         if (month && year) {
@@ -33,8 +33,10 @@ const exportWorkLogs = async (req, res) => {
             };
         }
 
-        if (userId) {
-            where.userId = parseInt(userId);
+        if (designation) {
+            where.user = {
+                designation: designation
+            };
         }
 
         const logs = await prisma.workLog.findMany({

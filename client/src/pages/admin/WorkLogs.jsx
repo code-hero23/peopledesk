@@ -13,7 +13,7 @@ const WorkLogs = () => {
     // Default to today's date formatted as YYYY-MM-DD
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedExportUser, setSelectedExportUser] = useState('');
+    const [selectedDesignation, setSelectedDesignation] = useState('');
 
     // Filtering Logic
     const filteredLogs = dailyWorkLogs.filter((record) => {
@@ -49,12 +49,7 @@ const WorkLogs = () => {
         }
 
         if (user && user.token) {
-            if (user && user.token) {
-                dispatch(getDailyWorkLogs(selectedDate));
-                if (employees.length === 0) {
-                    dispatch(getAllEmployees());
-                }
-            }
+            dispatch(getDailyWorkLogs(selectedDate));
         }
 
         return () => {
@@ -76,9 +71,10 @@ const WorkLogs = () => {
             };
 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
             let apiUrl = `${baseUrl}/export/worklogs?month=${month}&year=${year}`;
-            if (selectedExportUser) {
-                apiUrl += `&userId=${selectedExportUser}`;
+            if (selectedDesignation) {
+                apiUrl += `&designation=${selectedDesignation}`;
             }
             const response = await axios.get(apiUrl, config);
 
@@ -173,14 +169,15 @@ const WorkLogs = () => {
                         />
                     </div>
                     <select
-                        value={selectedExportUser}
-                        onChange={(e) => setSelectedExportUser(e.target.value)}
-                        className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"
+                        value={selectedDesignation}
+                        onChange={(e) => setSelectedDesignation(e.target.value)}
+                        className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium bg-white"
                     >
-                        <option value="">All Employees</option>
-                        {employees.map((emp) => (
-                            <option key={emp.id} value={emp.id}>{emp.name}</option>
-                        ))}
+                        <option value="">All Categories</option>
+                        <option value="LA">LA (Architects)</option>
+                        <option value="CRE">CRE</option>
+                        <option value="FA">FA</option>
+                        <option value="AE">AE</option>
                     </select>
                     <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
                         <Download size={18} />
