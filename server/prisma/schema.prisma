@@ -52,6 +52,49 @@ model User {
   permissionRequests  PermissionRequest[]
   loginAccessRequests LoginAccessRequest[]
   managedProjects     Project[]
+
+  siteVisitRequests   SiteVisitRequest[]
+  showroomVisitRequests ShowroomVisitRequest[]
+}
+
+model SiteVisitRequest {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  user        User          @relation(fields: [userId], references: [id])
+  projectName String
+  location    String
+  date        DateTime
+  startTime   String
+  endTime     String
+  reason      String
+  
+  targetBhId  Int?          // ID of Business Head assigned to approve
+  
+  status      RequestStatus @default(PENDING) // Overall Status
+  bhStatus    RequestStatus @default(PENDING)
+  hrStatus    RequestStatus @default(PENDING)
+  
+  createdAt   DateTime      @default(now())
+}
+
+model ShowroomVisitRequest {
+  id                  Int           @id @default(autoincrement())
+  userId              Int
+  user                User          @relation(fields: [userId], references: [id])
+  date                DateTime
+  startTime           String
+  endTime             String
+  sourceShowroom      String
+  destinationShowroom String
+  reason              String
+  
+  targetBhId          Int?          // ID of Business Head assigned to approve
+
+  status              RequestStatus @default(PENDING) // Overall Status
+  bhStatus            RequestStatus @default(PENDING)
+  hrStatus            RequestStatus @default(PENDING)
+
+  createdAt           DateTime      @default(now())
 }
 
 model Attendance {

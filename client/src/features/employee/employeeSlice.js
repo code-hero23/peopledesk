@@ -6,7 +6,7 @@ const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const initialState = {
     attendance: null,
     workLogs: [],
-    requests: { leaves: [], permissions: [] },
+    requests: { leaves: [], permissions: [], siteVisits: [], showroomVisits: [] },
     businessHeads: [],
     isLoading: false,
     isError: false,
@@ -177,6 +177,46 @@ export const createPermissionRequest = createAsyncThunk(
     }
 );
 
+// Create Site Visit Request
+export const createSiteVisitRequest = createAsyncThunk(
+    'employee/createSiteVisitRequest',
+    async (requestData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            };
+            const response = await axios.post(API_URL + 'requests/site-visit', requestData, config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Create Showroom Visit Request
+export const createShowroomVisitRequest = createAsyncThunk(
+    'employee/createShowroomVisitRequest',
+    async (requestData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            };
+            const response = await axios.post(API_URL + 'requests/showroom-visit', requestData, config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Get My Requests
 export const getMyRequests = createAsyncThunk(
     'employee/getMyRequests',
@@ -339,6 +379,35 @@ export const employeeSlice = createSlice({
                 state.requests = action.payload;
             })
             .addCase(getMyRequests.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+
+            // Create Site Visit
+            .addCase(createSiteVisitRequest.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(createSiteVisitRequest.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.requests.siteVisits.unshift(action.payload);
+            })
+            .addCase(createSiteVisitRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Create Showroom Visit
+            .addCase(createShowroomVisitRequest.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(createShowroomVisitRequest.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.requests.showroomVisits.unshift(action.payload);
+            })
+            .addCase(createShowroomVisitRequest.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

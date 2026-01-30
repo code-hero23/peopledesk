@@ -86,6 +86,74 @@ const createPermissionRequest = async (req, res) => {
     }
 };
 
+// @desc    Create a new site visit request
+// @route   POST /api/requests/site-visit
+// @access  Private (Employee)
+const createSiteVisitRequest = async (req, res) => {
+    const { projectName, location, date, startTime, endTime, reason, targetBhId } = req.body;
+
+    if (!projectName || !location || !date || !startTime || !endTime || !reason) {
+        return res.status(400).json({ message: 'Please provide all details' });
+    }
+
+    try {
+        const userId = req.user.id;
+
+        const siteVisitRequest = await prisma.siteVisitRequest.create({
+            data: {
+                userId,
+                projectName,
+                location,
+                date: new Date(date),
+                startTime,
+                endTime,
+                reason,
+                targetBhId: targetBhId ? parseInt(targetBhId) : null,
+                status: 'PENDING'
+            },
+        });
+
+        res.status(201).json(siteVisitRequest);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Create a new showroom visit request
+// @route   POST /api/requests/showroom-visit
+// @access  Private (Employee)
+const createShowroomVisitRequest = async (req, res) => {
+    const { date, startTime, endTime, sourceShowroom, destinationShowroom, reason, targetBhId } = req.body;
+
+    if (!date || !startTime || !endTime || !sourceShowroom || !destinationShowroom || !reason) {
+        return res.status(400).json({ message: 'Please provide all details' });
+    }
+
+    try {
+        const userId = req.user.id;
+
+        const showroomVisitRequest = await prisma.showroomVisitRequest.create({
+            data: {
+                userId,
+                date: new Date(date),
+                startTime,
+                endTime,
+                sourceShowroom,
+                destinationShowroom,
+                reason,
+                targetBhId: targetBhId ? parseInt(targetBhId) : null,
+                status: 'PENDING'
+            },
+        });
+
+        res.status(201).json(showroomVisitRequest);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Get all my requests (Leaves + Permissions)
 // @route   GET /api/requests
 // @access  Private
@@ -103,12 +171,23 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
+        const siteVisits = await prisma.siteVisitRequest.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        const showroomVisits = await prisma.showroomVisitRequest.findMany({
+            where: { userId },
+            orderBy: { createdAt: 'desc' },
+        });
+
         // Combine and sort or return separately. Returning object with both arrays is cleaner.
-        res.json({ leaves, permissions });
+        // Combine and sort or return separately. Returning object with both arrays is cleaner.
+        res.json({ leaves, permissions, siteVisits, showroomVisits });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-module.exports = { createLeaveRequest, createPermissionRequest, getMyRequests, getBusinessHeads };
+module.exports = { createLeaveRequest, createPermissionRequest, createSiteVisitRequest, createShowroomVisitRequest, getMyRequests, getBusinessHeads };

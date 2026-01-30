@@ -12,6 +12,8 @@ import PermissionRequestForm from '../../components/PermissionRequestForm';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
 import ProjectCreationForm from '../../components/ProjectCreationForm';
+import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
+import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
 
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
 
@@ -125,11 +127,15 @@ const Overview = () => {
                     activeModal === 'worklog' ? 'Submit Daily Work Log' :
                         activeModal === 'leave' ? 'Request Leave' :
                             activeModal === 'permission' ? 'Request Permission' :
-                                'Create New Project'
+                                activeModal === 'site-visit' ? 'Request Site Visit' :
+                                    activeModal === 'showroom-visit' ? 'Request Showroom Visit' :
+                                        'Create New Project'
                 } onClose={closeModal}>
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
                     {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} />}
+                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} />}
+                    {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}
                 </Modal>
             )}
@@ -296,6 +302,22 @@ const Overview = () => {
                                     <span className="font-bold text-sm">Create Project</span>
                                 </button>
                             )}
+
+                            <button
+                                onClick={() => setActiveModal('site-visit')}
+                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group min-h-[100px] md:h-[120px]"
+                            >
+                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏗️</div>
+                                <span className="font-bold text-sm">Site Visit</span>
+                            </button>
+
+                            <button
+                                onClick={() => setActiveModal('showroom-visit')}
+                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all group min-h-[100px] md:h-[120px]"
+                            >
+                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏢</div>
+                                <span className="font-bold text-sm">Showroom</span>
+                            </button>
                         </div>
                     </div>
                 </div>
