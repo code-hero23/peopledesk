@@ -58,6 +58,18 @@ const Approvals = () => {
         );
     }
 
+    const calculateDuration = (req) => {
+        if (req.date) return '1 Day';
+        if (req.startDate && req.endDate) {
+            const start = new Date(req.startDate);
+            const end = new Date(req.endDate);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+            return `${diffDays} Days`;
+        }
+        return req.type;
+    };
+
     const renderRequestCard = (req, type, typeLabel, color) => (
         <div key={`${type}-${req.id}`} className={`bg-white p-6 rounded-xl shadow-sm border border-l-4 transition-shadow hover:shadow-md ${req.status === 'PENDING' ? `border-l-${color}-500 border-slate-200` :
             req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
@@ -73,7 +85,7 @@ const Approvals = () => {
                         req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
                             'bg-red-100 text-red-700'
                         }`}>
-                        {type === 'leave' ? req.type :
+                        {type === 'leave' ? calculateDuration(req) :
                             type === 'permission' ? '2 HRS' :
                                 Object.keys(req).includes('sourceShowroom') ? 'Showroom Visit' : 'Site Visit'}
                         {activeTab === 'history' && ` (${req.status})`}
