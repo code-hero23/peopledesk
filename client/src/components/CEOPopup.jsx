@@ -17,9 +17,9 @@ const CEOPopup = () => {
     useEffect(() => {
         const lastSeen = localStorage.getItem('PEOPLEDESK_POPUP_LAST_SEEN');
         const now = Date.now();
-        const twentyFourHours = 24 * 60 * 60 * 1000;
+        const oneHour = 1 * 60 * 60 * 1000;
 
-        const shouldShow = !lastSeen || (now - parseInt(lastSeen) > twentyFourHours);
+        const shouldShow = !lastSeen || (now - parseInt(lastSeen) > oneHour);
 
         if (shouldShow) {
             const randomIndex = Math.floor(Math.random() * popupData.length);
