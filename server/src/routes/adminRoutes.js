@@ -20,7 +20,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
 
 router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllEmployees);
-router.post('/employees', protect, authorize('ADMIN'), createEmployee);
+router.post('/employees', protect, authorize('ADMIN', 'AE_MANAGER'), createEmployee);
 router.post('/employees/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importEmployees);
 
 // Work Logs & Attendance - Accessible by Admin, BH, HR

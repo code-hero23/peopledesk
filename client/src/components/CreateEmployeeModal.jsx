@@ -4,11 +4,15 @@ import { createEmployee, updateEmployee } from '../features/admin/adminSlice';
 
 const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
     const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth);
+    const isAeManager = user?.role === 'AE_MANAGER';
+
     const [formData, setFormData] = useState({
         name: '',
         email: '',
         password: '',
-        designation: 'LA',
+        role: 'EMPLOYEE',
+        designation: isAeManager ? 'AE' : 'LA',
     });
 
     useEffect(() => {
@@ -16,7 +20,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
             setFormData({
                 name: selectedEmployee.name,
                 email: selectedEmployee.email,
-                designation: selectedEmployee.designation || 'LA',
+                designation: selectedEmployee.designation || (isAeManager ? 'AE' : 'LA'),
                 password: '', // Don't pre-fill password
             });
         }
@@ -81,12 +85,17 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                             className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                             value={formData.role || 'EMPLOYEE'}
                             onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                            disabled={isAeManager}
                         >
                             <option value="EMPLOYEE">Employee</option>
-                            <option value="BUSINESS_HEAD">Business Head</option>
-                            <option value="HR">HR Manager</option>
-                            <option value="AE_MANAGER">AE Manager</option>
-                            <option value="ADMIN">Administrator</option>
+                            {!isAeManager && (
+                                <>
+                                    <option value="BUSINESS_HEAD">Business Head</option>
+                                    <option value="HR">HR Manager</option>
+                                    <option value="AE_MANAGER">AE Manager</option>
+                                    <option value="ADMIN">Administrator</option>
+                                </>
+                            )}
                         </select>
                     </div>
 
@@ -97,21 +106,28 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                                 value={formData.designation}
                                 onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                                disabled={isAeManager}
                             >
-                                <option value="LA">Loading Architect (LA)</option>
-                                <option value="CRE">Customer Relationship Executive (CRE)</option>
-                                <option value="FA">Feasibility Architect (FA)</option>
-                                <option value="AE">Application Engineer (AE)</option>
-                                <option value="OFFICE-ADMINISTRATION">Office Administration</option>
-                                <option value="ACCOUNT">Account</option>
-                                <option value="LEAD-OPERATION">Lead Operation</option>
-                                <option value="LEAD-CONVERSION">Lead Conversion</option>
-                                <option value="DIGITAL-MARKETING">Digital Marketing</option>
-                                <option value="VENDOR-MANAGEMENT">Vendor Management</option>
-                                <option value="CUSTOMER-RELATIONSHIP">Customer Relationship</option>
-                                <option value="CLIENT-CARE">Client Care</option>
-                                <option value="ESCALATION">Escalation</option>
-                                <option value="CLIENT-FACILITATOR">Client Facilitator</option>
+                                {isAeManager ? (
+                                    <option value="AE">Application Engineer (AE)</option>
+                                ) : (
+                                    <>
+                                        <option value="LA">Loading Architect (LA)</option>
+                                        <option value="CRE">Customer Relationship Executive (CRE)</option>
+                                        <option value="FA">Feasibility Architect (FA)</option>
+                                        <option value="AE">Application Engineer (AE)</option>
+                                        <option value="OFFICE-ADMINISTRATION">Office Administration</option>
+                                        <option value="ACCOUNT">Account</option>
+                                        <option value="LEAD-OPERATION">Lead Operation</option>
+                                        <option value="LEAD-CONVERSION">Lead Conversion</option>
+                                        <option value="DIGITAL-MARKETING">Digital Marketing</option>
+                                        <option value="VENDOR-MANAGEMENT">Vendor Management</option>
+                                        <option value="CUSTOMER-RELATIONSHIP">Customer Relationship</option>
+                                        <option value="CLIENT-CARE">Client Care</option>
+                                        <option value="ESCALATION">Escalation</option>
+                                        <option value="CLIENT-FACILITATOR">Client Facilitator</option>
+                                    </>
+                                )}
                             </select>
                         </div>
                     )}
