@@ -174,10 +174,20 @@ const WorkLogs = () => {
                         className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium bg-white"
                     >
                         <option value="">All Categories</option>
-                        <option value="LA">LA (Architects)</option>
-                        <option value="CRE">CRE</option>
-                        <option value="FA">FA</option>
-                        <option value="AE">AE</option>
+                        <option value="LA">Loading Architect (LA)</option>
+                        <option value="CRE">Customer Relationship Executive (CRE)</option>
+                        <option value="FA">Feasibility Architect (FA)</option>
+                        <option value="AE">Application Engineer (AE)</option>
+                        <option value="OFFICE-ADMINISTRATION">Office Administration</option>
+                        <option value="ACCOUNT">Account</option>
+                        <option value="LEAD-OPERATION">Lead Operation</option>
+                        <option value="LEAD-CONVERSION">Lead Conversion</option>
+                        <option value="DIGITAL-MARKETING">Digital Marketing</option>
+                        <option value="VENDOR-MANAGEMENT">Vendor Management</option>
+                        <option value="CUSTOMER-RELATIONSHIP">Customer Relationship</option>
+                        <option value="CLIENT-CARE">Client Care</option>
+                        <option value="ESCALATION">Escalation</option>
+                        <option value="CLIENT-FACILITATOR">Client Facilitator</option>
                     </select>
                     <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
                         <Download size={18} />
