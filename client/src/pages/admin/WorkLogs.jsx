@@ -139,6 +139,11 @@ const WorkLogs = () => {
         return <div className="truncate max-w-[200px]" title={log.process || log.tasks}>{log.process || log.tasks || log.remarks || '-'}</div>;
     };
 
+    const handleViewDetails = (record) => {
+        setSelectedLog(record);
+        setIsModalOpen(true);
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
