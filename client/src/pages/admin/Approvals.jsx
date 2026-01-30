@@ -81,14 +81,22 @@ const Approvals = () => {
                     <span className="text-xs text-slate-500 uppercase tracking-wide">{typeLabel}</span>
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                    <span className={`text-xs font-bold px-2 py-1 rounded ${req.status === 'PENDING' ? `bg-${color}-100 text-${color}-700` :
-                        req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                            'bg-red-100 text-red-700'
+                    <span className={`font-bold rounded-lg shadow-sm flex items-center gap-1
+                         ${type === 'leave'
+                            ? 'text-sm px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white'
+                            : `text-xs px-2 py-1 ${req.status === 'PENDING' ? `bg-${color}-100 text-${color}-700` :
+                                req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                    'bg-red-100 text-red-700'}`
                         }`}>
-                        {type === 'leave' ? calculateDuration(req) :
+                        {type === 'leave' ? (
+                            <>
+                                <span>🗓️</span>
+                                {calculateDuration(req)}
+                            </>
+                        ) :
                             type === 'permission' ? '2 HRS' :
                                 Object.keys(req).includes('sourceShowroom') ? 'Showroom Visit' : 'Site Visit'}
-                        {activeTab === 'history' && ` (${req.status})`}
+                        {activeTab === 'history' && type !== 'leave' && ` (${req.status})`}
                     </span>
                     {canDelete && (
                         <button onClick={() => onDelete(type, req.id)} className="text-xs text-red-500 hover:text-red-700 underline">Delete</button>
@@ -124,7 +132,11 @@ const Approvals = () => {
                 {req.location && <p className="text-sm text-slate-600">📍 {req.location} ({req.projectName})</p>}
                 {req.sourceShowroom && <p className="text-sm text-slate-600">🚚 {req.sourceShowroom} ➡️ {req.destinationShowroom}</p>}
 
-                <p className="text-sm text-slate-600 italic border-l-2 border-slate-200 pl-3">"{req.reason}"</p>
+                <div className="mt-3 bg-blue-50/50 p-3 rounded-md border-l-4 border-blue-500">
+                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider block mb-0.5">Reason</span>
+                    <p className="text-sm font-bold text-slate-800 italic">"{req.reason}"</p>
+                </div>
+
                 {activeTab === 'history' && (
                     <p className="text-xs text-slate-400 mt-2">Updated: {new Date(req.updatedAt || req.createdAt).toLocaleString()}</p>
                 )}
