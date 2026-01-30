@@ -84,19 +84,25 @@ const Approvals = () => {
                     <span className={`font-bold rounded-lg shadow-sm flex items-center gap-1
                          ${type === 'leave'
                             ? 'text-sm px-4 py-2 bg-gradient-to-r from-orange-500 to-red-500 text-white'
-                            : `text-xs px-2 py-1 ${req.status === 'PENDING' ? `bg-${color}-100 text-${color}-700` :
-                                req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                    'bg-red-100 text-red-700'}`
+                            : type === 'permission'
+                                ? 'text-sm px-4 py-2 bg-gradient-to-r from-violet-500 to-fuchsia-500 text-white'
+                                : `text-xs px-2 py-1 ${req.status === 'PENDING' ? `bg-${color}-100 text-${color}-700` :
+                                    req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                        'bg-red-100 text-red-700'}`
                         }`}>
                         {type === 'leave' ? (
                             <>
                                 <span>🗓️</span>
                                 {calculateDuration(req)}
                             </>
+                        ) : type === 'permission' ? (
+                            <>
+                                <span>🕑</span>
+                                2 HRS
+                            </>
                         ) :
-                            type === 'permission' ? '2 HRS' :
-                                Object.keys(req).includes('sourceShowroom') ? 'Showroom Visit' : 'Site Visit'}
-                        {activeTab === 'history' && type !== 'leave' && ` (${req.status})`}
+                            Object.keys(req).includes('sourceShowroom') ? 'Showroom Visit' : 'Site Visit'}
+                        {activeTab === 'history' && type !== 'leave' && type !== 'permission' && ` (${req.status})`}
                     </span>
                     {canDelete && (
                         <button onClick={() => onDelete(type, req.id)} className="text-xs text-red-500 hover:text-red-700 underline">Delete</button>

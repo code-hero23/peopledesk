@@ -68,8 +68,31 @@ const PermissionRequestForm = ({ onSuccess }) => {
         dispatch(getBusinessHeads());
     }, [dispatch]);
 
+    const parseTime = (timeStr) => {
+        const [time, modifier] = timeStr.split(' ');
+        let [hours, minutes] = time.split(':');
+        if (hours === '12') hours = '00';
+        if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
+        return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
+    };
+
     const onSubmit = (e) => {
         e.preventDefault();
+
+        const startMinutes = parseTime(formData.startTime);
+        const endMinutes = parseTime(formData.endTime);
+        const durationMinutes = endMinutes - startMinutes;
+
+        if (durationMinutes > 120) {
+            alert("Permissions cannot exceed 2 hours. Please apply for Half Day Leave instead.");
+            return;
+        }
+
+        if (durationMinutes <= 0) {
+            alert("End Time must be after Start Time.");
+            return;
+        }
+
         dispatch(createPermissionRequest(formData));
         setShowSuccess(true);
     };
