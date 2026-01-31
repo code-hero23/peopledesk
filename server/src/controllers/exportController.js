@@ -33,7 +33,9 @@ const exportWorkLogs = async (req, res) => {
             };
         }
 
-        if (designation) {
+        if (req.user.role === 'AE_MANAGER') {
+            where.user = { designation: 'AE' };
+        } else if (designation) {
             where.user = {
                 designation: designation
             };
@@ -148,13 +150,22 @@ const exportWorkLogs = async (req, res) => {
 // @access  Private (Admin)
 const exportAttendance = async (req, res) => {
     try {
+        let attendanceWhere = {};
+        let userWhere = { status: 'ACTIVE' };
+
+        if (req.user.role === 'AE_MANAGER') {
+            attendanceWhere = { user: { designation: 'AE' } };
+            userWhere.designation = 'AE';
+        }
+
         const [records, activeUsers] = await Promise.all([
             prisma.attendance.findMany({
+                where: attendanceWhere,
                 include: { user: { select: { name: true, email: true, designation: true } } },
                 orderBy: { date: 'asc' },
             }),
             prisma.user.findMany({
-                where: { status: 'ACTIVE' },
+                where: userWhere,
                 select: { id: true, name: true, email: true, designation: true }
             })
         ]);
