@@ -10,6 +10,7 @@ import ManageEmployees from './pages/admin/ManageEmployees';
 import WorkLogs from './pages/admin/WorkLogs';
 import Attendance from './pages/admin/Attendance';
 import AttendanceVerification from './pages/admin/AttendanceVerification';
+import VisitRequests from './pages/admin/VisitRequests';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
 
@@ -34,6 +35,7 @@ function App() {
             {/* Admin Routes */}
             <Route path="/admin-dashboard" element={<AdminDashboard />} />
             <Route path="/admin/approvals" element={<Approvals />} />
+            <Route path="/admin/visit-requests" element={<VisitRequests />} />
             <Route path="/admin/employees" element={<ManageEmployees />} />
             <Route path="/admin/worklogs" element={<WorkLogs />} />
             <Route path="/admin/attendance" element={<Attendance />} />

@@ -15,7 +15,8 @@ import {
     Menu,
     X,
     RefreshCw,
-    Camera
+    Camera,
+    MapPin
 } from 'lucide-react';
 import CEOPopup from './CEOPopup';
 import InstallApp from './InstallApp';
@@ -126,9 +127,12 @@ const Layout = () => {
                                 <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
                             )}
 
-                            {/* Approvals: HR, BH, and AE_MANAGER */}
-                            {['HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                                <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
+                            {/* Approvals: Admin, HR, BH, and AE_MANAGER */}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <>
+                                    <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
+                                    <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
+                                </>
                             )}
 
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />

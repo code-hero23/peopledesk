@@ -289,11 +289,15 @@ const updateRequestStatus = async (req, res) => {
             updateData.status = status;
             updateData.approvedBy = userId;
         } else if (userRole === 'AE_MANAGER') {
-            // AE MANAGER - Acts like Admin but for AE
+            // AE MANAGER - Acts like BH but for all AE designated staff
             updateData.bhStatus = status;
-            updateData.hrStatus = status;
-            updateData.status = status;
-            updateData.approvedBy = userId;
+            updateData.bhId = userId;
+
+            // If Rejected by AE Manager, reject overall
+            if (status === 'REJECTED') {
+                updateData.status = 'REJECTED';
+            }
+            // If Approved, overall remains PENDING (waiting for HR)
         }
         else {
             return res.status(403).json({ message: 'Not authorized to approve' });

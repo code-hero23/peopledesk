@@ -13,406 +13,355 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
 
     if (!isOpen || !log) return null;
 
-    // Helper to safely parse JSON or return object
     const safeParse = (data) => {
         if (!data) return null;
         if (typeof data === 'object') return data;
-        try {
-            return JSON.parse(data);
-        } catch (e) {
-            console.error("Parse error", e);
-            return null;
-        }
+        try { return JSON.parse(data); } catch (e) { return null; }
     };
 
-    // Parse Metrics
     const aeOpening = safeParse(log.ae_opening_metrics);
     const aeClosing = safeParse(log.ae_closing_metrics);
-
-    // LA Metrics (If implemented fully in previous steps, otherwise fallback to root)
+    const creOpening = safeParse(log.cre_opening_metrics);
+    const creClosing = safeParse(log.cre_closing_metrics);
+    const faOpening = safeParse(log.fa_opening_metrics);
+    const faClosing = safeParse(log.fa_closing_metrics);
     const laOpening = safeParse(log.la_opening_metrics);
-    // const laClosing = safeParse(log.la_closing_metrics); // LA detailed are usually root or arrays
+    const laClosing = safeParse(log.la_closing_metrics);
 
-    let customFields = {};
-    try {
-        if (log.customFields) {
-            customFields = typeof log.customFields === 'string' ? JSON.parse(log.customFields) : log.customFields;
-        }
-    } catch (e) { }
+    // Common styling for metric cards
+    const DataGrid = ({ items }) => (
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+            {items.filter(i => i.value !== null && i.value !== undefined && i.value !== '').map((item, idx) => (
+                <div key={idx} className="bg-slate-50 border border-slate-200 p-2 rounded">
+                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{item.label}</p>
+                    <p className="text-sm font-bold text-slate-800">{item.value}</p>
+                </div>
+            ))}
+        </div>
+    );
+
+    const SectionHeader = ({ title, colorClass }) => (
+        <div className={`mt-8 mb-4 flex items-center gap-3`}>
+            <div className={`h-6 w-1 ${colorClass}`}></div>
+            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{title}</h3>
+        </div>
+    );
 
     return (
         <Modal title="Work Log Details" onClose={onClose}>
             <div className="flex justify-end mb-4">
                 <button
                     onClick={handlePrint}
-                    className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors shadow-sm font-medium"
+                    className="flex items-center gap-2 bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg transition-all shadow-md font-bold text-sm"
                 >
-                    <Printer size={18} /> Print Report
+                    <Printer size={18} /> PRINT REPORT
                 </button>
             </div>
 
-
-            <div ref={printRef} className="p-8 bg-white text-slate-900 print:p-8 print:text-black print:w-[210mm] print:h-auto print:mx-auto">
+            <div ref={printRef} className="p-8 bg-white text-slate-900 border border-slate-100 rounded-xl print:p-8 print:border-0 print:w-full">
                 <style type="text/css" media="print">
                     {`
-                        @page { size: A4; margin: 20mm; }
-                        body { -webkit-print-color-adjust: exact; }
-                        .print-hidden { display: none !important; }
-                        .print-break-inside-avoid { break-inside: avoid; }
+                        @page { size: A4; margin: 15mm; }
+                        body { -webkit-print-color-adjust: exact; font-family: sans-serif; }
+                        .print-no-break { break-inside: avoid; }
                     `}
                 </style>
 
-                {/* Header for Print */}
-                <div className="border-b-2 border-slate-800 pb-4 mb-6 flex justify-between items-end print:mb-4">
+                {/* Report Header */}
+                <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
                     <div>
-                        <h1 className="text-2xl font-bold uppercase tracking-wide text-slate-800">Daily Work Report</h1>
-                        <p className="text-slate-600 font-semibold mt-1 text-lg">{log.user?.name}</p>
-                        <p className="text-slate-500 font-medium">{log.user?.designation || log.user?.role}</p>
-                    </div>
-                    <div className="text-right">
-                        <p className="text-slate-900 font-bold text-lg">{new Date(log.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
-                        <div className="text-sm text-slate-500 mt-1">
-                            {log.startTime && log.endTime ? `${log.startTime} - ${log.endTime}` : ''}
-                            {log.hours ? ` (${log.hours} Hrs)` : ''}
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">DAILY WORK REPORT</h1>
+                        <div className="flex items-center gap-2 mt-2">
+                            <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
+                                {log.user?.designation || log.user?.role}
+                            </span>
+                            <span className="text-slate-400 text-xs font-bold">|</span>
+                            <span className="text-slate-800 font-black text-lg">{log.user?.name}</span>
                         </div>
                     </div>
+                    <div className="text-right">
+                        <p className="text-lg font-black text-slate-900">{new Date(log.date).toLocaleDateString([], { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                        <p className="text-sm font-bold text-blue-600 mt-1 uppercase tracking-widest">
+                            {log.startTime && log.endTime ? `${log.startTime} - ${log.endTime}` : 'Timeline Not Recorded'}
+                        </p>
+                    </div>
                 </div>
 
+                {/* 1. START OF DAY (OPENING) SECTION */}
+                <div className="print-no-break">
+                    <SectionHeader title="START OF DAY (OPENING)" colorClass="bg-blue-600" />
 
-                {/* General Info */}
-                <div className="mb-8 grid grid-cols-2 gap-4 text-sm border-b border-slate-100 pb-4">
-                    <div><span className="font-semibold text-slate-500">Log Date:</span> {new Date(log.date).toLocaleDateString()}</div>
-                    <div><span className="font-semibold text-slate-500">Overall Timings:</span> {log.startTime || '-'} to {log.endTime || '-'} ({log.hours || 0} hrs)</div>
-                </div>
+                    {/* CRE Opening Table */}
+                    {creOpening && (
+                        <div className="mb-6">
+                            <h4 className="text-[11px] font-black text-blue-600 mb-2">METRICS SUMMARY</h4>
+                            <DataGrid items={[
+                                { label: 'Showroom Visit', value: creOpening.showroomVisit },
+                                { label: 'Online Discussion', value: creOpening.onlineDiscussion },
+                                { label: 'FP Received', value: creOpening.fpReceived },
+                                { label: 'FQ Sent', value: creOpening.fqSent },
+                                { label: 'No. of Orders', value: creOpening.noOfOrder },
+                                { label: 'No. of Proposal (IQ)', value: creOpening.noOfProposalIQ },
+                            ]} />
 
-                {/* --- OPENING REPORT SECTION --- */}
-                <div className="mb-8 break-inside-avoid">
-                    <h3 className="text-md font-bold uppercase text-white bg-slate-800 px-3 py-1 inline-block rounded-sm mb-4">Start of Day (Opening)</h3>
+                            <div className="mt-4 grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Call Plan (Target 1)</p>
+                                    <div className="flex justify-between font-black text-slate-800">
+                                        <span>7*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.sevenStar || 0}</span></span>
+                                        <span>6*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.sixStar || 0}</span></span>
+                                        <span>5*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.fiveStar || 0}</span></span>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Call Plan (Target 2)</p>
+                                    <div className="flex justify-between font-black text-slate-800">
+                                        <span>4*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.fourStar || 0}</span></span>
+                                        <span>3*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.threeStar || 0}</span></span>
+                                        <span>2*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.twoStar || 0}</span></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
+                    {/* FA Opening */}
+                    {faOpening && (
+                        <div className="mb-6">
+                            <DataGrid items={[
+                                { label: 'Showroom Visit', value: faOpening.showroomVisit },
+                                { label: 'Online Discussion', value: faOpening.onlineDiscussion },
+                                { label: 'Quotation Pending', value: faOpening.quotationPending },
+                            ]} />
+                            <div className="mt-3 bg-slate-50 p-3 rounded border border-slate-100">
+                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Target Metrics</p>
+                                <div className="flex gap-6 font-black text-slate-800">
+                                    <span>9*: {faOpening.calls?.nineStar || 0}</span>
+                                    <span>8*: {faOpening.calls?.eightStar || 0}</span>
+                                    <span>7*: {faOpening.calls?.sevenStar || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
-                        {/* AE Opening */}
-                        {aeOpening && (
-                            <>
-                                <div className="col-span-2 text-blue-600 font-bold border-b border-blue-50 mb-1 pb-1">AE Plan</div>
-                                <div><span className="font-semibold text-slate-600">Site Location:</span> {aeOpening.ae_siteLocation || log.ae_siteLocation || '-'}</div>
-                                <div><span className="font-semibold text-slate-600">Site Status:</span> {aeOpening.ae_siteStatus || log.ae_siteStatus || '-'}</div>
-                                {aeOpening.ae_gpsCoordinates && <div className="col-span-2 text-xs text-slate-400">GPS: {aeOpening.ae_gpsCoordinates}</div>}
-                                <div className="col-span-2"><span className="font-semibold text-slate-600">Planned Work:</span> {aeOpening.ae_plannedWork || log.ae_plannedWork || '-'}</div>
-                            </>
-                        )}
+                    {/* AE Opening */}
+                    {aeOpening && (
+                        <div className="mb-6 space-y-4">
+                            <DataGrid items={[
+                                { label: 'Site Location', value: aeOpening.ae_siteLocation || log.ae_siteLocation },
+                                { label: 'Site Status', value: aeOpening.ae_siteStatus || log.ae_siteStatus },
+                                { label: 'GPS', value: aeOpening.ae_gpsCoordinates || log.ae_gpsCoordinates },
+                            ]} />
+                            <div className="bg-blue-50/50 p-4 border border-blue-100 rounded-lg">
+                                <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Planned Work for Today</p>
+                                <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"{aeOpening.ae_plannedWork || log.ae_plannedWork || 'No specific tasks provided'}"</p>
+                            </div>
+                        </div>
+                    )}
 
-                        {/* CRE Opening */}
-                        {log.cre_opening_metrics && (
-                            <>
-                                <div className="col-span-2 text-blue-600 font-bold border-b border-blue-50 mb-1 pb-1 mt-2">CRE Start of Day</div>
-                                {(() => {
-                                    const m = typeof log.cre_opening_metrics === 'string' ? JSON.parse(log.cre_opening_metrics) : log.cre_opening_metrics;
-                                    return (
-                                        <>
-                                            <div><span className="font-semibold text-slate-600">Showroom Visit:</span> {m.showroomVisit || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">Online Discussion:</span> {m.onlineDiscussion || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">FP Received:</span> {m.fpReceived || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">FQ Sent:</span> {m.fqSent || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">Orders:</span> {m.noOfOrder || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">Proposals (IQ):</span> {m.noOfProposalIQ || '-'}</div>
-                                            <div className="col-span-2 bg-slate-50 p-2 rounded text-xs">
-                                                <span className="font-bold">Call Targets:</span> 7*({m.uptoTodayCalls1?.sevenStar}), 6*({m.uptoTodayCalls1?.sixStar}), 5*({m.uptoTodayCalls1?.fiveStar}) | 4*({m.uptoTodayCalls2?.fourStar}), 3*({m.uptoTodayCalls2?.threeStar}), 2*({m.uptoTodayCalls2?.twoStar})
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </>
-                        )}
+                    {/* LA Opening */}
+                    {laOpening && (
+                        <div className="mb-6">
+                            <h4 className="text-[10px] font-black text-blue-600 mb-3 uppercase tracking-tighter">Requested Documents / Plan</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {[
+                                    { label: 'Initial 2D', data: laOpening.initial2D },
+                                    { label: 'Production 2D', data: laOpening.production2D },
+                                    { label: 'Revised 2D', data: laOpening.revised2D },
+                                    { label: 'Fresh 3D', data: laOpening.fresh3D },
+                                    { label: 'Revised 3D', data: laOpening.revised3D },
+                                    { label: 'Estimation', data: laOpening.estimation },
+                                ].filter(x => x.data?.count > 0).map((item, i) => (
+                                    <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
+                                            <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
+                                        </div>
+                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold truncate">{item.data.details}</p>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
-                        {/* FA Opening */}
-                        {log.fa_opening_metrics && (
-                            <>
-                                <div className="col-span-2 text-blue-600 font-bold border-b border-blue-50 mb-1 pb-1 mt-2">FA Start of Day</div>
-                                {(() => {
-                                    const m = typeof log.fa_opening_metrics === 'string' ? JSON.parse(log.fa_opening_metrics) : log.fa_opening_metrics;
-                                    return (
-                                        <>
-                                            <div><span className="font-semibold text-slate-600">Showroom Visit:</span> {m.showroomVisit || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">Online Discussion:</span> {m.onlineDiscussion || '-'}</div>
-                                            <div><span className="font-semibold text-slate-600">Quotes Pending:</span> {m.quotationPending || '-'}</div>
-                                            <div className="col-span-2 text-xs">
-                                                <span className="font-semibold">Call Plan:</span> 9*({m.calls?.nineStar}), 8*({m.calls?.eightStar}), 7*({m.calls?.sevenStar})...
-                                            </div>
-                                        </>
-                                    );
-                                })()}
-                            </>
-                        )}
-
-                        {/* LA Opening */}
-                        {log.la_opening_metrics && (
-                            <>
-                                <div className="col-span-2 text-blue-600 font-bold border-b border-blue-50 mb-1 pb-1 mt-2">LA Start of Day</div>
-                                {(() => {
-                                    const m = typeof log.la_opening_metrics === 'string' ? JSON.parse(log.la_opening_metrics) : log.la_opening_metrics;
-                                    // Helper to show only non-empty
-                                    const showIf = (label, obj) => (obj?.count || obj?.details) ? (<div><span className="font-semibold text-slate-600">{label}:</span> {obj.count} {obj.details ? `(${obj.details})` : ''}</div>) : null;
-
-                                    return (
-                                        <>
-                                            {showIf('Initial 2D', m.initial2D)}
-                                            {showIf('Production 2D', m.production2D)}
-                                            {showIf('Revised 2D', m.revised2D)}
-                                            {showIf('Fresh 3D', m.fresh3D)}
-                                            {showIf('Revised 3D', m.revised3D)}
-                                            {showIf('Estimation', m.estimation)}
-                                        </>
-                                    );
-                                })()}
-                            </>
-                        )}
-
-                        {/* General / Project Details (Visible if AE Opening is missing OR if generic fields exist) */}
-                        {(!aeOpening && !log.cre_opening_metrics && !log.fa_opening_metrics && !log.la_opening_metrics) || (log.projectName || log.clientName || log.process) ? (
-                            <>
-                                <div className="col-span-2 text-purple-600 font-bold border-b border-purple-50 mb-1 pb-1 mt-2">General Details</div>
-
-                                {log.projectName && <div><span className="font-semibold text-slate-600">Project:</span> {log.projectName}</div>}
-                                {log.clientName && <div><span className="font-semibold text-slate-600">Client:</span> {log.clientName}</div>}
-
-                                {(log.site || log.la_projectLocation || laOpening?.la_projectLocation) && (
-                                    <div><span className="font-semibold text-slate-600">Location:</span> {log.site || log.la_projectLocation || laOpening?.la_projectLocation}</div>
-                                )}
-
-                                {(log.la_number || laOpening?.la_number) && <div><span className="font-semibold text-slate-600">Project No:</span> {log.la_number || laOpening?.la_number}</div>}
-
-                                {(log.process || log.tasks) && (
-                                    <div className="col-span-2 mt-2 bg-slate-50 p-2 rounded">
-                                        <span className="font-semibold text-slate-600 block mb-1">Process / Tasks:</span>
-                                        {log.process} {log.tasks ? ` - ${log.tasks}` : ''}
+                    {/* Generic / Root Details for LA (Fallback) */}
+                    {(log.projectName || log.clientName || log.la_number) && (
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-100 mb-6">
+                            <div className="grid grid-cols-2 gap-y-3">
+                                <div className="col-span-2 md:col-span-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase">Project / Client Name</p>
+                                    <p className="text-sm font-black text-slate-800">{log.projectName || log.clientName || 'N/A'}</p>
+                                </div>
+                                <div className="col-span-2 md:col-span-1">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase">Project Number</p>
+                                    <p className="text-sm font-black text-slate-800">{log.la_number || 'N/A'}</p>
+                                </div>
+                                {log.site && (
+                                    <div className="col-span-2">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase">Site Address</p>
+                                        <p className="text-sm font-bold text-slate-700">{log.site}</p>
                                     </div>
                                 )}
-                            </>
-                        ) : null}
-                    </div>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* --- CLOSING REPORT SECTION --- */}
-                <div className="mb-8 break-inside-avoid">
-                    <h3 className="text-md font-bold uppercase text-white bg-green-700 px-3 py-1 inline-block rounded-sm mb-4">End of Day (Closing)</h3>
+                {/* 2. END OF DAY (CLOSING) SECTION */}
+                <div className="print-no-break border-t border-slate-100 mt-8 pt-4">
+                    <SectionHeader title="END OF DAY (EXECUTION)" colorClass="bg-emerald-600" />
 
-                    {/* Common Closing Info */}
-                    <div className="grid grid-cols-2 gap-x-8 gap-y-4 text-sm mb-6">
-                        {log.remarks && <div className="col-span-2"><span className="font-semibold text-slate-600">Remarks:</span> {log.remarks}</div>}
-                        {log.imageCount > 0 && <div><span className="font-semibold text-slate-600">Images:</span> {log.imageCount} Uploaded</div>}
-                    </div>
+                    {/* CRE Closing Table */}
+                    {creClosing && (
+                        <div className="mb-6">
+                            <DataGrid items={[
+                                { label: 'Floor Plans Rx', value: creClosing.floorPlanReceived },
+                                { label: 'Showroom Visit', value: creClosing.showroomVisit },
+                                { label: 'Review Collection', value: creClosing.reviewCollected },
+                                { label: 'Quotation Sent', value: creClosing.quotesSent },
+                                { label: 'No. of Orders', value: creClosing.orderCount },
+                                { label: 'No. of Proposals', value: creClosing.proposalCount },
+                            ]} />
+                            <div className="mt-4 bg-emerald-50/50 p-3 rounded border border-emerald-100">
+                                <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Work Execution Quality</p>
+                                <div className="flex gap-8 font-black text-slate-800">
+                                    <span>8*: <span className="text-emerald-700">{creClosing.eightStar || 0}</span></span>
+                                    <span>7*: <span className="text-emerald-700">{creClosing.sevenStar || 0}</span></span>
+                                    <span>6*: <span className="text-emerald-700">{creClosing.sixStar || 0}</span></span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* FA Closing */}
+                    {faClosing && (
+                        <div className="mb-6">
+                            <DataGrid items={[
+                                { label: 'Showroom Visit', value: faClosing.showroomVisit },
+                                { label: 'Online Discussion', value: faClosing.onlineDiscussion },
+                                { label: 'Quotation Pending', value: faClosing.quotationPending },
+                            ]} />
+                            <div className="mt-4 grid grid-cols-2 gap-4">
+                                <div className="bg-slate-50 p-3 rounded border">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Infurnia Pending</p>
+                                    <div className="flex justify-between items-center font-bold">
+                                        <span className="text-sm">Count: {faClosing.infurniaPending?.count}</span>
+                                        <span className="text-xs text-slate-500 italic">({faClosing.infurniaPending?.text1})</span>
+                                    </div>
+                                </div>
+                                <div className="bg-slate-50 p-3 rounded border">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Execution Score</p>
+                                    <div className="flex gap-4 font-bold text-slate-800">
+                                        <span>9*: {faClosing.calls?.nineStar || 0}</span>
+                                        <span>8*: {faClosing.calls?.eightStar || 0}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
 
                     {/* AE Closing */}
                     {aeClosing && (
-                        <>
-                            <div className="col-span-2 text-green-600 font-bold border-b border-green-50 mb-1 pb-1">AE Execution</div>
-                            <div><span className="font-semibold text-slate-600">Visit Type:</span> {(() => {
-                                if (aeClosing.ae_visitType) return Array.isArray(aeClosing.ae_visitType) ? aeClosing.ae_visitType.join(', ') : aeClosing.ae_visitType;
-                                return '-';
-                            })()}</div>
-                            <div><span className="font-semibold text-slate-600">Work Stage:</span> {aeClosing.ae_workStage || '-'}</div>
-                            {aeClosing.ae_measurements && <div><span className="font-semibold text-slate-600">Measurements:</span> {aeClosing.ae_measurements}</div>}
-                            {aeClosing.ae_itemsInstalled && <div><span className="font-semibold text-slate-600">Items Installed:</span> {aeClosing.ae_itemsInstalled}</div>}
+                        <div className="mb-6 space-y-4">
+                            <DataGrid items={[
+                                { label: 'Visit Type', value: Array.isArray(aeClosing.ae_visitType) ? aeClosing.ae_visitType.join(', ') : aeClosing.ae_visitType },
+                                { label: 'Work Stage', value: aeClosing.ae_workStage },
+                                { label: 'Measurements', value: aeClosing.ae_measurements },
+                                { label: 'Installed Items', value: aeClosing.ae_itemsInstalled },
+                                { label: 'Feedback', value: aeClosing.ae_clientFeedback },
+                            ]} />
 
-                            <div className="col-span-2">
-                                <span className="font-semibold text-slate-600">Issues:</span> {aeClosing.ae_hasIssues ? <span className="text-red-500 font-bold">Yes</span> : 'No'}
-                                {aeClosing.ae_hasIssues && <p className="text-red-500 text-sm mt-1">{aeClosing.ae_issueDescription}</p>}
+                            <div className={`p-4 rounded-xl border ${aeClosing.ae_hasIssues ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
+                                <p className="text-[10px] font-black uppercase mb-1 flex items-center gap-2">
+                                    ISSUES & RESOLUTIONS {aeClosing.ae_hasIssues && <span className="bg-red-500 text-white px-1.5 rounded-full text-[8px] animate-pulse">ALERT</span>}
+                                </p>
+                                <p className="text-sm font-bold text-slate-800 leading-relaxed italic">
+                                    {aeClosing.ae_hasIssues ? aeClosing.ae_issueDescription : 'No site issues reported today.'}
+                                </p>
                             </div>
-                            <div className="col-span-2"><span className="font-semibold text-slate-600">Client Feedback:</span> {aeClosing.ae_clientFeedback || '-'}</div>
-                        </>
+                        </div>
                     )}
 
-                    {/* CRE Closing */}
-                    {log.cre_closing_metrics && (
-                        <>
-                            <div className="col-span-2 text-green-600 font-bold border-b border-green-50 mb-1 pb-1 mt-2">CRE Start of Day</div>
-                            {(() => {
-                                const m = typeof log.cre_closing_metrics === 'string' ? JSON.parse(log.cre_closing_metrics) : log.cre_closing_metrics;
-                                return (
-                                    <>
-                                        <div><span className="font-semibold text-slate-600">Floor Plans Rx:</span> {m.floorPlanReceived || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Showroom Visit:</span> {m.showroomVisit || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Reviews:</span> {m.reviewCollected || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Quotes Sent:</span> {m.quotesSent || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Orders:</span> {m.orderCount || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Proposals:</span> {m.proposalCount || '-'}</div>
-                                        <div className="col-span-2 bg-slate-50 p-2 rounded text-xs">
-                                            <span className="font-bold">Execution:</span> 8*({m.eightStar}), 7*({m.sevenStar}), 6*({m.sixStar})
+                    {/* LA Closing / End of Day Metrics */}
+                    {laClosing && (
+                        <div className="mb-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                {[
+                                    { label: 'Initial 2D', data: laClosing.initial2D },
+                                    { label: 'Production 2D', data: laClosing.production2D },
+                                    { label: 'Revised 2D', data: laClosing.revised2D },
+                                    { label: 'Fresh 3D', data: laClosing.fresh3D },
+                                    { label: 'Revised 3D', data: laClosing.revised3D },
+                                    { label: 'Estimation', data: laClosing.estimation },
+                                    { label: 'WOE', data: laClosing.woe },
+                                    { label: 'Sign Engineers', data: laClosing.signFromEngineer },
+                                ].filter(x => x.data?.count > 0).map((item, i) => (
+                                    <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
+                                            <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
                                         </div>
-                                    </>
-                                );
-                            })()}
-                        </>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
                     )}
 
-                    {/* FA Closing */}
-                    {log.fa_closing_metrics && (
-                        <>
-                            <div className="col-span-2 text-green-600 font-bold border-b border-green-50 mb-1 pb-1 mt-2">FA End of Day</div>
-                            {(() => {
-                                const m = typeof log.fa_closing_metrics === 'string' ? JSON.parse(log.fa_closing_metrics) : log.fa_closing_metrics;
-                                return (
-                                    <>
-                                        <div><span className="font-semibold text-slate-600">Showroom Visit:</span> {m.showroomVisit || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Online Discussion:</span> {m.onlineDiscussion || '-'}</div>
-                                        <div><span className="font-semibold text-slate-600">Quotes Pending:</span> {m.quotationPending || '-'}</div>
-                                        <div className="col-span-2 text-xs">
-                                            <span className="font-semibold">Infurnia Pending:</span> {m.infurniaPending?.count} ( {m.infurniaPending?.text1} )
-                                        </div>
-                                        <div className="col-span-2 text-xs">
-                                            <span className="font-semibold">Call Exec:</span> 9*({m.calls?.nineStar}), 8*({m.calls?.eightStar})...
-                                        </div>
-                                    </>
-                                );
-                            })()}
-                        </>
-                    )}
-
-
-                    {/* LA Closing */}
-                    {log.la_closing_metrics && (
-                        <>
-                            <div className="col-span-2 text-green-600 font-bold border-b border-green-50 mb-1 pb-1 mt-2">LA End of Day</div>
-                            {(() => {
-                                const m = typeof log.la_closing_metrics === 'string' ? JSON.parse(log.la_closing_metrics) : log.la_closing_metrics;
-                                const showIf = (label, obj) => (obj?.count || obj?.details) ? (<div><span className="font-semibold text-slate-600">{label}:</span> {obj.count} {obj.details ? `(${obj.details})` : ''}</div>) : null;
-
-                                return (
-                                    <>
-                                        {showIf('Initial 2D', m.initial2D)}
-                                        {showIf('Production 2D', m.production2D)}
-                                        {showIf('Revised 2D', m.revised2D)}
-                                        {showIf('Fresh 3D', m.fresh3D)}
-                                        {showIf('Revised 3D', m.revised3D)}
-                                        {showIf('Estimation', m.estimation)}
-                                        {showIf('WOE', m.woe)}
-                                        {showIf('Sign', m.signFromEngineer)}
-                                    </>
-                                );
-                            })()}
-                        </>
-                    )}
-
-                    {/* LA Project Reports (Array) */}
+                    {/* Project Reports Grid (Cleaner Table View) */}
                     {log.la_project_reports && (
-                        <div className="col-span-2 mt-2">
-                            <div className="text-green-600 font-bold border-b border-green-50 mb-1 pb-1">Project Reports</div>
-                            {(() => {
-                                const reports = typeof log.la_project_reports === 'string' ? JSON.parse(log.la_project_reports) : log.la_project_reports;
-                                if (Array.isArray(reports) && reports.length > 0) {
-                                    return (
-                                        <div className="space-y-2">
-                                            {reports.map((r, i) => (
-                                                <div key={i} className="bg-slate-50 p-2 rounded text-xs border border-slate-100">
-                                                    <div className="font-bold text-slate-700">{r.clientName} <span className="font-normal text-slate-500">({r.process})</span></div>
-                                                    <div>Time: {r.startTime} - {r.endTime} | Images: {r.completedImages}/{r.imageCount}</div>
-                                                    {r.remarks && <div className="italic text-slate-500">"{r.remarks}"</div>}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )
-                                }
-                                return <div className="text-xs text-slate-400">No specific project reports.</div>
-                            })()}
-                        </div>
-                    )}
-
-                    {/* CRE Closing */}
-                    {(log.cre_totalCalls !== null || log.cre_showroomVisits !== null) && (
-                        <div className="mb-6">
-                            <h4 className="font-bold text-blue-700 mb-2 border-b border-blue-100 pb-1">CRE Activity</h4>
-                            <div className="grid grid-cols-4 gap-4 mb-3 text-center">
-                                <div className="bg-slate-50 p-2 rounded border">
-                                    <div className="text-lg font-bold text-blue-600">{log.cre_totalCalls || 0}</div>
-                                    <div className="text-xs uppercase text-slate-500">Calls</div>
-                                </div>
-                                <div className="bg-slate-50 p-2 rounded border">
-                                    <div className="text-lg font-bold text-orange-600">{log.cre_showroomVisits || 0}</div>
-                                    <div className="text-xs uppercase text-slate-500">Visits</div>
-                                </div>
-                                <div className="bg-slate-50 p-2 rounded border">
-                                    <div className="text-lg font-bold text-emerald-600">{log.cre_proposals || 0}</div>
-                                    <div className="text-xs uppercase text-slate-500">Proposals</div>
-                                </div>
-                                <div className="bg-slate-50 p-2 rounded border">
-                                    <div className="text-lg font-bold text-purple-600">{log.cre_orders || 0}</div>
-                                    <div className="text-xs uppercase text-slate-500">Orders</div>
-                                </div>
-                            </div>
-                            {log.cre_callBreakdown && <div className="bg-slate-50 p-2 rounded text-sm italic">"{log.cre_callBreakdown}"</div>}
-                        </div>
-                    )}
-
-                    {/* FA Closing */}
-                    {(log.fa_calls !== null || log.fa_showroomVisits !== null) && (
-                        <div className="mb-6">
-                            <h4 className="font-bold text-blue-700 mb-2 border-b border-blue-100 pb-1">FA Activity</h4>
-                            <div className="grid grid-cols-3 gap-3 mb-4 text-center">
-                                <div className="border p-2 rounded">
-                                    <div className="text-lg font-bold">{log.fa_calls || 0}</div>
-                                    <div className="text-xs text-slate-500">Calls</div>
-                                </div>
-                                <div className="border p-2 rounded">
-                                    <div className="text-lg font-bold">{log.fa_showroomVisits || 0}</div>
-                                    <div className="text-xs text-slate-500">Showroom Visits</div>
-                                </div>
-                                <div className="border p-2 rounded">
-                                    <div className="text-lg font-bold">{log.fa_siteVisits || 0}</div>
-                                    <div className="text-xs text-slate-500">Site Visits</div>
-                                </div>
-                            </div>
-                            <div className="text-sm space-y-1">
-                                {log.fa_designPendingClients && <div><b>Design Pending:</b> {log.fa_designPendingClients}</div>}
-                                {log.fa_quotePendingClients && <div><b>Quote Pending:</b> {log.fa_quotePendingClients}</div>}
-                            </div>
-                        </div>
-                    )}
-
-                    {/* LA Arrays & Custom Fields */}
-                    {[
-                        { label: 'Requirements', data: log.la_requirements, cols: ['description', 'remarks'] },
-                        { label: 'Colours Used', data: log.la_colours, cols: ['area', 'colour', 'code'] },
-                        { label: 'Online Meetings', data: log.la_onlineMeeting, cols: ['date', 'time', 'client', 'agenda'] },
-                        { label: 'Showroom Meetings', data: log.la_showroomMeeting, cols: ['date', 'time', 'client', 'outcome'] },
-                        { label: 'Measurements', data: log.la_measurements, cols: ['date', 'site', 'details'] },
-                        ...Object.entries(customFields).map(([k, v]) => ({ label: k, data: v, isCustom: true }))
-                    ].map((section, idx) => {
-                        const rows = section.data;
-                        if (!rows || (Array.isArray(rows) && rows.length === 0)) return null;
-                        const tableRows = Array.isArray(rows) ? rows : [rows];
-                        const columns = section.cols || (tableRows[0] ? Object.keys(tableRows[0]) : []);
-
-                        return (
-                            <div key={idx} className="mb-6 break-inside-avoid">
-                                <h4 className="font-bold text-slate-700 mb-2 border-l-4 border-blue-500 pl-2 text-sm">{section.label}</h4>
-                                <table className="w-full border-collapse border border-slate-300 text-xs">
+                        <div className="mb-8">
+                            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3">Project Specific Reports</h4>
+                            <div className="overflow-hidden border border-slate-200 rounded-lg">
+                                <table className="w-full border-collapse text-xs">
                                     <thead>
-                                        <tr className="bg-slate-100">
-                                            {columns.map(col => <th key={col} className="border border-slate-300 px-2 py-1 text-left capitalize">{col.replace(/_/g, ' ')}</th>)}
+                                        <tr className="bg-slate-100 border-b border-slate-200">
+                                            <th className="px-4 py-2 text-left font-black text-slate-600 uppercase">Client / Project</th>
+                                            <th className="px-4 py-2 text-left font-black text-slate-600 uppercase">Process</th>
+                                            <th className="px-4 py-2 text-center font-black text-slate-600 uppercase">Time</th>
+                                            <th className="px-4 py-2 text-center font-black text-slate-600 uppercase">Images</th>
                                         </tr>
                                     </thead>
-                                    <tbody>
-                                        {tableRows.map((row, rIdx) => (
-                                            <tr key={rIdx} className="even:bg-slate-50">
-                                                {columns.map((col, cIdx) => (
-                                                    <td key={cIdx} className="border border-slate-300 px-2 py-1">
-                                                        {typeof row[col] === 'object' ? JSON.stringify(row[col]) : row[col]}
+                                    <tbody className="bg-white">
+                                        {(() => {
+                                            const reports = typeof log.la_project_reports === 'string' ? JSON.parse(log.la_project_reports) : log.la_project_reports;
+                                            return Array.isArray(reports) && reports.map((r, i) => (
+                                                <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
+                                                    <td className="px-4 py-3 font-black text-slate-800">{r.clientName}</td>
+                                                    <td className="px-4 py-3 text-slate-500 font-bold">{r.process}</td>
+                                                    <td className="px-4 py-3 text-center text-blue-600 font-bold">{r.startTime} - {r.endTime}</td>
+                                                    <td className="px-4 py-3 text-center">
+                                                        <span className="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[10px] font-black">
+                                                            {r.completedImages} / {r.imageCount}
+                                                        </span>
                                                     </td>
-                                                ))}
-                                            </tr>
-                                        ))}
+                                                </tr>
+                                            ));
+                                        })()}
                                     </tbody>
                                 </table>
                             </div>
-                        );
-                    })}
+                        </div>
+                    )}
+
+                    {/* Final Remarks */}
+                    {log.remarks && (
+                        <div className="mt-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-800">
+                            <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Final Remarks / Coordinator Notes</p>
+                            <p className="text-sm font-bold text-slate-700 italic">"{log.remarks}"</p>
+                        </div>
+                    )}
                 </div>
 
-                {/* Footer Signature */}
-                <div className="mt-12 pt-8 border-t border-slate-200 flex justify-between text-xs text-slate-400">
-                    <p>Generated by PeopleDesk</p>
-                    <p>Signature: __________________________</p>
+                {/* Footer Signature Area */}
+                <div className="mt-16 pt-8 border-t border-slate-100 flex justify-between items-end">
+                    <div className="text-left">
+                        <p className="text-[10px] font-black text-slate-400 tracking-tighter">GENERATED BY PEOPLEDESK ARCHIVE</p>
+                        <p className="text-[8px] text-slate-300">Timestamp: {new Date().toLocaleString()}</p>
+                    </div>
+                    <div className="text-right">
+                        <div className="w-48 h-px bg-slate-300 mb-2"></div>
+                        <p className="text-[10px] font-black text-slate-700 uppercase">Authorized Signature</p>
+                    </div>
                 </div>
             </div>
         </Modal>

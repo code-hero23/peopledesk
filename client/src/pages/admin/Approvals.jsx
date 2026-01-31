@@ -225,10 +225,8 @@ const Approvals = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {leaves.map(req => renderRequestCard(req, 'leave', 'Leave Request', 'orange'))}
                 {permissions.map(req => renderRequestCard(req, 'permission', 'Permission', 'purple'))}
-                {siteVisits.map(req => renderRequestCard(req, 'site-visit', 'Site Visit', 'emerald'))}
-                {showroomVisits.map(req => renderRequestCard(req, 'showroom-visit', 'Showroom Visit', 'indigo'))}
 
-                {leaves.length === 0 && permissions.length === 0 && siteVisits.length === 0 && showroomVisits.length === 0 && (
+                {leaves.length === 0 && permissions.length === 0 && (
                     <div className="col-span-full border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50">
                         <p className="text-slate-400 font-medium">✨ No {activeTab} requests found.</p>
                     </div>
