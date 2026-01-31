@@ -205,78 +205,76 @@ const WorkLogs = () => {
                 </div>
             </div>
 
+
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                <th className="px-4 py-3 font-semibold">Employee</th>
-                                <th className="px-4 py-3 font-semibold text-center">Status</th>
-                                <th className="px-4 py-3 font-semibold">Client / Site</th>
-                                <th className="px-4 py-3 font-semibold">Process / Tasks</th>
-                                <th className="px-4 py-3 font-semibold text-center">Images</th>
-                                <th className="px-4 py-3 font-semibold text-center">Timings</th>
-                                <th className="px-4 py-3 font-semibold text-center">Actions</th>
+                                <th className="px-6 py-4 font-semibold">Employee</th>
+                                <th className="px-6 py-4 font-semibold text-center">Status</th>
+                                <th className="px-6 py-4 font-semibold text-center">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan="7" className="text-center py-8">Loading...</td></tr>
+                                <tr><td colSpan="3" className="text-center py-8">Loading...</td></tr>
                             ) : dailyWorkLogs.length === 0 ? (
-                                <tr><td colSpan="7" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr><td colSpan="3" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : filteredLogs.length === 0 ? (
-                                <tr><td colSpan="7" className="text-center py-8 text-slate-400 italic">No logs found matching your search.</td></tr>
+                                <tr><td colSpan="3" className="text-center py-8 text-slate-400 italic">No logs found matching your search.</td></tr>
                             ) : (
                                 filteredLogs.map((record) => {
                                     const log = record.workLog;
+                                    // Status Logic:
+                                    // No Log -> Not Submitted
+                                    // LogStatus OPEN -> In Progress (Opening Submitted)
+                                    // LogStatus CLOSED -> Submitted (Opening & Closing Submitted)
+
+                                    let statusLabel = 'Not Submitted';
+                                    let statusColor = 'bg-slate-100 text-slate-500';
+
+                                    if (log) {
+                                        if (log.logStatus === 'CLOSED') {
+                                            statusLabel = 'Submitted';
+                                            statusColor = 'bg-green-100 text-green-700';
+                                        } else {
+                                            statusLabel = 'In Progress';
+                                            statusColor = 'bg-yellow-100 text-yellow-800';
+                                        }
+                                    }
+
                                     return (
                                         <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-4 py-3 font-medium text-slate-800">
-                                                {record.user.name}
-                                                <div className="text-xs text-slate-400 font-normal">{record.user.email}</div>
+                                            <td className="px-6 py-4 font-medium text-slate-800">
+                                                <div className="flex flex-col">
+                                                    <span className="text-base">{record.user.name}</span>
+                                                    <span className="text-xs text-slate-400 font-normal">{record.user.email}</span>
+                                                    <span className="text-xs text-slate-400 font-normal uppercase mt-0.5">{record.user.designation}</span>
+                                                </div>
                                             </td>
-                                            <td className="px-4 py-3 text-center">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${record.status === 'SUBMITTED'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-red-100 text-red-700'
-                                                    }`}>
-                                                    {record.status}
+                                            <td className="px-6 py-4 text-center">
+                                                <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${statusColor}`}>
+                                                    {statusLabel}
                                                 </span>
                                             </td>
-                                            {log ? (
-                                                <>
-                                                    <td className="px-4 py-3 text-slate-700">
-                                                        {renderClientInfo(log)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-slate-600">
-                                                        {renderWorkDescription(log)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-slate-600">
-                                                        {log.imageCount ? `${log.imageCount} Imgs` : '-'}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center text-slate-600 whitespace-nowrap">
-                                                        {(log.startTime && log.endTime) ? `${log.startTime} - ${log.endTime}` : '-'}
-                                                        {log.hours && <div className="text-xs font-bold text-slate-400">({log.hours}h)</div>}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <button
-                                                            type="button"
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleViewDetails(record);
-                                                            }}
-                                                            className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors relative z-10 cursor-pointer"
-                                                            title="View Details"
-                                                        >
-                                                            <Eye size={18} />
-                                                        </button>
-                                                    </td>
-                                                </>
-                                            ) : (
-                                                <td colSpan="5" className="px-4 py-3 text-center text-slate-400 italic">
-                                                    No work log submitted
-                                                </td>
-                                            )}
+                                            <td className="px-6 py-4 text-center">
+                                                {log ? (
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleViewDetails(record);
+                                                        }}
+                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative z-10 cursor-pointer"
+                                                        title="View & Print Details"
+                                                    >
+                                                        <Eye size={20} />
+                                                    </button>
+                                                ) : (
+                                                    <span className="text-slate-300">-</span>
+                                                )}
+                                            </td>
                                         </tr>
                                     );
                                 })
@@ -285,6 +283,7 @@ const WorkLogs = () => {
                     </table>
                 </div>
             </div>
+
 
             {/* Modal */}
             <WorkLogDetailModal

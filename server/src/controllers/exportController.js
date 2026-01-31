@@ -52,6 +52,28 @@ const exportWorkLogs = async (req, res) => {
             const formatList = (list) => Array.isArray(list) ? list.join('; ') : '';
             const formatTable = (table) => Array.isArray(table) ? JSON.stringify(table) : '';
 
+            // Helper to safely parse JSON
+            const safeParse = (data) => {
+                if (!data) return null;
+                if (typeof data === 'object') return data;
+                try { return JSON.parse(data); } catch (e) { return null; }
+            };
+
+
+            const aeOpening = safeParse(log.ae_opening_metrics);
+            const aeClosing = safeParse(log.ae_closing_metrics);
+
+            const creOpening = safeParse(log.cre_opening_metrics);
+            const creClosing = safeParse(log.cre_closing_metrics);
+
+            const faOpening = safeParse(log.fa_opening_metrics);
+            const faClosing = safeParse(log.fa_closing_metrics);
+
+            const laOpening = safeParse(log.la_opening_metrics);
+            const laClosing = safeParse(log.la_closing_metrics);
+            const laReports = safeParse(log.la_project_reports);
+
+
             return {
                 Employee: log.user.name,
                 Email: log.user.email,
@@ -62,73 +84,155 @@ const exportWorkLogs = async (req, res) => {
                 Project: log.projectName || log.project?.name || '',
                 Client: log.clientName || '',
                 Site: log.site || '',
-                Process: log.process || log.tasks || '',
+                Process: log.process || log.tasks || '', // Legacy
                 Hours: log.hours || '',
                 StartTime: log.startTime || '',
                 EndTime: log.endTime || '',
                 ImageCount: log.imageCount || '',
-                CompletedImages: log.completedImages || '',
-                PendingImages: log.pendingImages || '',
 
-                // CRE Fields
+
+                // --- OPENING (START OF DAY) ---
+                'Op_PlannedWork': aeOpening?.ae_plannedWork || log.ae_plannedWork || '',
+                'Op_SiteLocation': aeOpening?.ae_siteLocation || log.ae_siteLocation || '',
+                'Op_SiteStatus': aeOpening?.ae_siteStatus || log.ae_siteStatus || '',
+                'Op_GPS': aeOpening?.ae_gpsCoordinates || log.ae_gpsCoordinates || '',
+
+                // CRE Opening
+                'Op_CRE_ShowroomVisit': creOpening?.showroomVisit || '',
+                'Op_CRE_OnlineDisc': creOpening?.onlineDiscussion || '',
+                'Op_CRE_FPReceived': creOpening?.fpReceived || '',
+                'Op_CRE_FQSent': creOpening?.fqSent || '',
+                'Op_CRE_Orders': creOpening?.noOfOrder || '',
+                'Op_CRE_Proposals': creOpening?.noOfProposalIQ || '',
+
+                // FA Opening
+                'Op_FA_ShowroomVisit': faOpening?.showroomVisit || '',
+                'Op_FA_OnlineDisc': faOpening?.onlineDiscussion || '',
+                'Op_FA_QuotesPending': faOpening?.quotationPending || '',
+                'Op_FA_9Star': faOpening?.calls?.nineStar || '',
+
+                // LA Opening
+                'Op_LA_Initial2D': laOpening?.initial2D?.count || '',
+                'Op_LA_Prod2D': laOpening?.production2D?.count || '',
+                'Op_LA_Fresh3D': laOpening?.fresh3D?.count || '',
+
+                // --- CLOSING (END OF DAY) ---
+                'Cl_VisitType': (() => {
+                    if (aeClosing?.ae_visitType) return Array.isArray(aeClosing.ae_visitType) ? aeClosing.ae_visitType.join(', ') : aeClosing.ae_visitType;
+                    if (log.ae_visitType) return Array.isArray(log.ae_visitType) ? log.ae_visitType.join(', ') : log.ae_visitType;
+                    return '';
+                })(),
+                'Cl_WorkStage': aeClosing?.ae_workStage || log.ae_workStage || '',
+                'Cl_Measurements': aeClosing?.ae_measurements || log.ae_measurements || '',
+                'Cl_ItemsInstalled': aeClosing?.ae_itemsInstalled || log.ae_itemsInstalled || '',
+                'Cl_HasIssues': aeClosing?.ae_hasIssues ? 'Yes' : 'No',
+                'Cl_IssueDesc': aeClosing?.ae_issueDescription || log.ae_issueDescription || '',
+                'Cl_ClientFeedback': aeClosing?.ae_clientFeedback || log.ae_clientFeedback || '',
+                'Cl_Remarks': log.remarks || '',
+
+                // CRE Closing
+                'Cl_CRE_FloorPlanRx': creClosing?.floorPlanReceived || '',
+                'Cl_CRE_ShowroomVisit': creClosing?.showroomVisit || '',
+                'Cl_CRE_Reviews': creClosing?.reviewCollected || '',
+                'Cl_CRE_QuotesSent': creClosing?.quotesSent || '',
+                'Cl_CRE_Proposals': creClosing?.proposalCount || '',
+                'Cl_CRE_Orders': creClosing?.orderCount || '',
+                'Cl_CRE_8Star': creClosing?.eightStar || '',
+
+                // FA Closing
+                'Cl_FA_ShowroomVisit': faClosing?.showroomVisit || '',
+                'Cl_FA_OnlineDisc': faClosing?.onlineDiscussion || '',
+                'Cl_FA_QuotesPending': faClosing?.quotationPending || '',
+                'Cl_FA_InfurniaCount': faClosing?.infurniaPending?.count || '',
+                'Cl_FA_Call9Star': faClosing?.calls?.nineStar || '',
+
+                // LA Closing
+                'Cl_LA_Initial2D': laClosing?.initial2D?.count || '',
+                'Cl_LA_Prod2D': laClosing?.production2D?.count || '',
+                'Cl_LA_Fresh3D': laClosing?.fresh3D?.count || '',
+                'Cl_LA_ProjectReports': (() => {
+                    if (!laReports) return '';
+                    if (Array.isArray(laReports)) {
+                        return laReports.map(r => `${r.clientName} (${r.process}): ${r.completedImages}/${r.imageCount}`).join('; ');
+                    }
+                    return '';
+                })(),
+
+                // Legacy Field Fallbacks (Keep just in case)
                 CRE_TotalCalls: log.cre_totalCalls || '',
                 CRE_CallBreakdown: log.cre_callBreakdown || '',
-                CRE_ShowroomVisits: log.cre_showroomVisits || '',
-                CRE_FQSent: log.cre_fqSent || '',
-                CRE_Orders: log.cre_orders || '',
-                CRE_Proposals: log.cre_proposals || '',
-
-                // FA Fields
                 FA_Calls: log.fa_calls || '',
+
                 FA_SiteVisits: log.fa_siteVisits || '',
                 FA_DesignPending: log.fa_designPending || '',
                 FA_DesignPendingClients: log.fa_designPendingClients || '',
                 FA_QuotePending: log.fa_quotePending || '',
                 FA_QuotePendingClients: log.fa_quotePendingClients || '',
-                FA_InitialQuoteRN: log.fa_initialQuoteRn || '',
-                FA_RevisedQuoteRN: log.fa_revisedQuoteRn || '',
-                FA_BookingFreezed: log.fa_bookingFreezed || '',
-                FA_BookingFreezedClients: log.fa_bookingFreezedClients || '',
 
                 // LA Fields
                 LA_Number: log.la_number || '',
-                LA_MailId: log.la_mailId || '',
                 LA_Location: log.la_projectLocation || '',
-                LA_FreezingAmount: log.la_freezingAmount || '',
-                LA_Variant: log.la_variant || '',
-                LA_ProjectValue: log.la_projectValue || '',
-                LA_Woodwork: log.la_woodwork || '',
-                LA_AddOns: log.la_addOns || '',
-                LA_CPCode: log.la_cpCode || '',
-                LA_Source: log.la_source || '',
-                LA_FA: log.la_fa || '',
-                LA_ReferralBonus: log.la_referalBonus || '',
-                LA_SiteStatus: log.la_siteStatus || '',
-                LA_SpecialNote: log.la_specialNote || '',
+                LA_Value: log.la_projectValue || '',
+                LA_Status: log.la_siteStatus || '',
                 LA_Requirements: formatList(log.la_requirements),
                 LA_Colours: formatList(log.la_colours),
-                LA_OnlineMeeting: formatTable(log.la_onlineMeeting),
-                LA_ShowroomMeeting: formatTable(log.la_showroomMeeting),
-                LA_Measurements: formatTable(log.la_measurements),
 
                 SubmittedAt: new Date(log.createdAt).toLocaleString(),
             };
         });
 
-        // Collect all possible keys from the first object (or manually define them to ensure order)
-        const fields = [
-            'Employee', 'Email', 'Designation', 'Date',
-            'Project', 'Client', 'Site', 'Process', 'Hours', 'StartTime', 'EndTime',
-            'CRE_TotalCalls', 'CRE_CallBreakdown', 'CRE_ShowroomVisits', 'CRE_FQSent', 'CRE_Orders', 'CRE_Proposals',
-            'FA_Calls', 'FA_SiteVisits', 'FA_DesignPending', 'FA_DesignPendingClients', 'FA_QuotePending', 'FA_QuotePendingClients', 'FA_InitialQuoteRN', 'FA_RevisedQuoteRN', 'FA_BookingFreezed', 'FA_BookingFreezedClients',
-            'LA_Number', 'LA_MailId', 'LA_Location', 'LA_ProjectValue', 'LA_SiteStatus', 'LA_SpecialNote', 'LA_Requirements', 'LA_Colours',
-            'SubmittedAt'
+
+        // Define Column Groups
+        const baseColumns = ['Employee', 'Email', 'Designation', 'Date', 'Project', 'Client', 'Site', 'Hours', 'StartTime', 'EndTime', 'ImageCount', 'SubmittedAt'];
+
+        const aeColumns = [
+            'Op_PlannedWork', 'Op_SiteLocation', 'Op_SiteStatus', 'Op_GPS',
+            'Cl_VisitType', 'Cl_WorkStage', 'Cl_Measurements', 'Cl_ItemsInstalled',
+            'Cl_HasIssues', 'Cl_IssueDesc', 'Cl_ClientFeedback', 'Cl_Remarks'
         ];
 
-        // Use keys from the first flattened log if specific dynamic keys are needed, but static list is safer for CSV structure consistency
-        // Let's use Object.keys of the first item effectively, but since we map explicitly, we can just use the keys from flattenedLogs[0] if it exists,
-        // or a default list. To be safe:
-        const csvFields = flattenedLogs.length > 0 ? Object.keys(flattenedLogs[0]) : fields;
+        const creColumns = [
+            'Op_CRE_ShowroomVisit', 'Op_CRE_OnlineDisc', 'Op_CRE_FPReceived', 'Op_CRE_FQSent', 'Op_CRE_Orders', 'Op_CRE_Proposals',
+            'Cl_CRE_FloorPlanRx', 'Cl_CRE_ShowroomVisit', 'Cl_CRE_Reviews', 'Cl_CRE_QuotesSent', 'Cl_CRE_Proposals', 'Cl_CRE_Orders', 'Cl_CRE_8Star',
+            'CRE_TotalCalls', 'CRE_CallBreakdown'
+        ];
+
+        const faColumns = [
+            'Op_FA_ShowroomVisit', 'Op_FA_OnlineDisc', 'Op_FA_QuotesPending', 'Op_FA_9Star',
+            'Cl_FA_ShowroomVisit', 'Cl_FA_OnlineDisc', 'Cl_FA_QuotesPending', 'Cl_FA_InfurniaCount', 'Cl_FA_Call9Star',
+            'FA_Calls', 'FA_SiteVisits'
+        ];
+
+        const laColumns = [
+            'Op_LA_Initial2D', 'Op_LA_Prod2D', 'Op_LA_Fresh3D',
+            'Cl_LA_Initial2D', 'Cl_LA_Prod2D', 'Cl_LA_Fresh3D', 'Cl_LA_ProjectReports',
+            'LA_Number', 'LA_Location', 'LA_Value', 'LA_Status', 'LA_Requirements', 'LA_Colours'
+        ];
+
+        // Determine which fields to include
+        let csvFields = [];
+
+        // Check the effective designation filter (from query or role)
+        const effectiveDesignation = (req.user.role === 'AE_MANAGER') ? 'AE' : designation;
+
+        if (effectiveDesignation === 'AE') {
+            csvFields = [...baseColumns, ...aeColumns];
+        } else if (effectiveDesignation === 'CRE') {
+            csvFields = [...baseColumns, ...creColumns];
+        } else if (effectiveDesignation === 'FA') {
+            csvFields = [...baseColumns, ...faColumns];
+        } else if (effectiveDesignation === 'LA') {
+            csvFields = [...baseColumns, ...laColumns];
+        } else {
+            // Default: Include All (but maybe grouped logically)
+            csvFields = [
+                ...baseColumns,
+                ...aeColumns,
+                ...creColumns,
+                ...faColumns,
+                ...laColumns
+            ];
+        }
 
         const csv = convertToCSV(flattenedLogs, csvFields);
 

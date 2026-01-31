@@ -30,7 +30,7 @@ app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
 
 app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to Cookscape WorkSphere API' });
+    res.json({ message: 'Welcome to Cookscape WorkSphere API' }); // Server Restart Triggered v2
 });
 
 module.exports = app;
