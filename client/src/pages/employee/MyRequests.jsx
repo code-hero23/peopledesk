@@ -100,9 +100,7 @@ const MyRequests = () => {
                                     req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
                                     }`}>
                                     {req.status === 'APPROVED' ? 'APPROVED' :
-                                        req.status === 'REJECTED' ? 'REJECTED' :
-                                            req.bhStatus === 'PENDING' ? 'Wait for BH' :
-                                                req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
+                                        req.status === 'REJECTED' ? 'REJECTED' : 'Wait for HR'}
                                 </span>
                             </div>
                         ))}
@@ -127,9 +125,7 @@ const MyRequests = () => {
                                     req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
                                     }`}>
                                     {req.status === 'APPROVED' ? 'APPROVED' :
-                                        req.status === 'REJECTED' ? 'REJECTED' :
-                                            req.bhStatus === 'PENDING' ? 'Wait for BH' :
-                                                req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
+                                        req.status === 'REJECTED' ? 'REJECTED' : 'Wait for HR'}
                                 </span>
                             </div>
                         ))}

@@ -60,6 +60,7 @@ const VisitRequests = () => {
     const showroomVisits = displayData?.showroomVisits || [];
 
     const canDelete = ['ADMIN', 'HR'].includes(user?.role);
+    const canApprove = ['HR'].includes(user?.role);
 
     if (isLoading && activeTab === 'pending' && !pendingRequests.siteVisits) {
         return <div className="p-8 text-center text-slate-500 italic">Finding requests...</div>;
@@ -67,8 +68,8 @@ const VisitRequests = () => {
 
     const renderVisitCard = (req, type, typeLabel, icon, color) => (
         <div key={`${type}-${req.id}`} className={`bg-white p-5 rounded-xl shadow-sm border border-l-4 transition-all hover:shadow-md ${req.status === 'PENDING' ? `border-l-${color}-500 border-slate-200` :
-                req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
-                    'border-l-red-500 border-slate-200 opacity-90'
+            req.status === 'APPROVED' ? 'border-l-green-500 border-slate-200 opacity-90' :
+                'border-l-red-500 border-slate-200 opacity-90'
             }`}>
             <div className="flex justify-between items-start mb-4">
                 <div className="flex items-center gap-3">
@@ -88,20 +89,16 @@ const VisitRequests = () => {
             </div>
 
             {/* Verification Badges */}
+            {/* Verification Badges - Show only for non-visit types if needed, but for visits we skip BH status */}
             <div className="flex flex-wrap gap-2 mb-4">
-                {req.bhStatus === 'PENDING' && (
-                    <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-1 rounded border border-amber-200">
-                        ⏳ WAITING FOR MANAGER
+                {req.status === 'PENDING' && (
+                    <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-1 rounded border border-amber-200 uppercase tracking-widest">
+                        ⏳ Awaiting HR Final Approval
                     </span>
                 )}
-                {req.bhStatus === 'APPROVED' && (
-                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded border border-emerald-200">
-                        ✅ VERIFIED BY {req.bhName || 'MANAGER'}
-                    </span>
-                )}
-                {req.bhStatus === 'REJECTED' && (
-                    <span className="bg-red-50 text-red-700 text-[10px] font-bold px-2 py-1 rounded border border-red-200">
-                        ❌ REJECTED BY {req.bhName || 'MANAGER'}
+                {req.status === 'APPROVED' && (
+                    <span className="bg-emerald-50 text-emerald-700 text-[10px] font-bold px-2 py-1 rounded border border-emerald-200 uppercase tracking-widest">
+                        ✅ Approved
                     </span>
                 )}
             </div>
@@ -140,10 +137,15 @@ const VisitRequests = () => {
                 </div>
             </div>
 
-            {activeTab === 'pending' && (
+            {activeTab === 'pending' && canApprove && (
                 <div className="grid grid-cols-2 gap-2">
                     <button onClick={() => onUpdateStatus(type, req.id, 'APPROVED')} className="py-2.5 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 font-bold text-xs shadow-sm transition-all">Approve</button>
                     <button onClick={() => onUpdateStatus(type, req.id, 'REJECTED')} className="py-2.5 rounded-lg bg-red-50 text-red-600 hover:bg-red-100 font-bold text-xs transition-all">Reject</button>
+                </div>
+            )}
+            {activeTab === 'pending' && !canApprove && (
+                <div className="py-2.5 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
+                    👁️ Monitoring View (HR Approval Required)
                 </div>
             )}
         </div>

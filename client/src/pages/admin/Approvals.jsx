@@ -65,6 +65,7 @@ const Approvals = () => {
     const showroomVisits = displayData?.showroomVisits || [];
 
     const canDelete = ['ADMIN', 'HR'].includes(user?.role);
+    const canApprove = ['HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role);
 
     if (isLoading && activeTab === 'pending' && !pendingRequests.leaves) return <div className="p-8 text-center text-slate-500">Loading requests...</div>;
 
@@ -172,10 +173,15 @@ const Approvals = () => {
                     <p className="text-xs text-slate-400 mt-2">Updated: {new Date(req.updatedAt || req.createdAt).toLocaleString()}</p>
                 )}
             </div>
-            {activeTab === 'pending' && (
+            {activeTab === 'pending' && canApprove && (
                 <div className="grid grid-cols-2 gap-3">
                     <button onClick={() => onUpdateStatus(type, req.id, 'APPROVED')} className="w-full py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-bold text-sm transition-colors">Approve</button>
                     <button onClick={() => onUpdateStatus(type, req.id, 'REJECTED')} className="w-full py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-bold text-sm transition-colors">Reject</button>
+                </div>
+            )}
+            {activeTab === 'pending' && !canApprove && (
+                <div className="py-2.5 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
+                    👁️ Monitoring View (Authorization Required)
                 </div>
             )}
         </div>

@@ -32,7 +32,7 @@ router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR
 // Requests - Accessible by Admin, BH, HR
 router.get('/requests/pending', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllPendingRequests);
 router.get('/requests/history', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getRequestHistory);
-router.put('/requests/:type/:id', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), updateRequestStatus);
+router.put('/requests/:type/:id', protect, authorize('BUSINESS_HEAD', 'HR', 'AE_MANAGER'), updateRequestStatus);
 router.delete('/requests/:type/:id', protect, authorize('ADMIN', 'HR'), deleteRequest);
 
 // User Management - Admin Only

@@ -100,13 +100,13 @@ const getAllPendingRequests = async (req, res) => {
         });
 
         const siteVisitsRaw = await prisma.siteVisitRequest.findMany({
-            where: permissionWhere, // Reusing permissionWhere logic as it's same structure (status/bhStatus)
+            where: permissionWhere, // Restored visibility for all authorized roles (including BH)
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
 
         const showroomVisitsRaw = await prisma.showroomVisitRequest.findMany({
-            where: permissionWhere, // Reusing permissionWhere logic as it's same structure
+            where: permissionWhere, // Restored visibility for all authorized roles (including BH)
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
@@ -264,6 +264,11 @@ const updateRequestStatus = async (req, res) => {
         let updateData = {};
 
         if (userRole === 'BUSINESS_HEAD') {
+            // Business Head cannot approve visits anymore
+            if (type === 'site-visit' || type === 'showroom-visit') {
+                return res.status(403).json({ message: 'Managers cannot approve visit requests. Only HR can approve visits.' });
+            }
+
             updateData.bhStatus = status;
             updateData.bhId = userId;
 
@@ -280,16 +285,13 @@ const updateRequestStatus = async (req, res) => {
             // HR is final authority - Update Overall Status
             updateData.status = status;
             updateData.approvedBy = userId; // Legacy support
-        }
-        else if (userRole === 'ADMIN') {
-            // Admin Override - Approves everything
-            updateData.bhStatus = status;
-            updateData.hrStatus = status;
-            updateData.status = status;
-            updateData.status = status;
-            updateData.approvedBy = userId;
         } else if (userRole === 'AE_MANAGER') {
             // AE MANAGER - Acts like BH but for all AE designated staff
+            // Restricted from approving visits as per new HR-only visit flow
+            if (type === 'site-visit' || type === 'showroom-visit') {
+                return res.status(403).json({ message: 'Managers cannot approve visit requests. Only HR can approve visits.' });
+            }
+
             updateData.bhStatus = status;
             updateData.bhId = userId;
 

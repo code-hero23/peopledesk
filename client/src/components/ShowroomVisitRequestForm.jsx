@@ -85,23 +85,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
-            {/* BH Selection */}
-            <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Business Head</label>
-                <select
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
-                    required
-                    value={formData.targetBhId}
-                    onChange={(e) => setFormData({ ...formData, targetBhId: e.target.value })}
-                >
-                    <option value="">-- Select Reporting Manager --</option>
-                    {businessHeads.map((bh) => (
-                        <option key={bh.id} value={bh.id}>
-                            {bh.name} ({bh.email})
-                        </option>
-                    ))}
-                </select>
-            </div>
+            {/* Removed Business Head Selection as per new HR-only approval flow */}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -196,7 +180,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
                     if (onSuccess) onSuccess();
                 }}
                 message="Showroom Visit Sent!"
-                subMessage="Your manager will be notified."
+                subMessage="HR will be notified for approval."
             />
         </form>
     );
