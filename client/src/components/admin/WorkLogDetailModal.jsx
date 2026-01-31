@@ -92,69 +92,80 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                     <SectionHeader title="START OF DAY (OPENING)" colorClass="bg-blue-600" />
 
                     {/* CRE Opening Table */}
-                    {creOpening && (
+                    {(creOpening || log.cre_totalCalls || log.cre_showroomVisits) && (
                         <div className="mb-6">
-                            <h4 className="text-[11px] font-black text-blue-600 mb-2">METRICS SUMMARY</h4>
+                            <h4 className="text-[11px] font-black text-blue-600 mb-2 uppercase">METRICS SUMMARY</h4>
                             <DataGrid items={[
-                                { label: 'Showroom Visit', value: creOpening.showroomVisit },
-                                { label: 'Online Discussion', value: creOpening.onlineDiscussion },
-                                { label: 'FP Received', value: creOpening.fpReceived },
-                                { label: 'FQ Sent', value: creOpening.fqSent },
-                                { label: 'No. of Orders', value: creOpening.noOfOrder },
-                                { label: 'No. of Proposal (IQ)', value: creOpening.noOfProposalIQ },
+                                { label: 'Showroom Visit', value: creOpening?.showroomVisit || log.cre_showroomVisits },
+                                { label: 'Online Discussion', value: creOpening?.onlineDiscussion },
+                                { label: 'FP Received', value: creOpening?.fpReceived },
+                                { label: 'FQ Sent', value: creOpening?.fqSent || log.cre_fqSent },
+                                { label: 'No. of Orders', value: creOpening?.noOfOrder || log.cre_orders },
+                                { label: 'No. of Proposal (IQ)', value: creOpening?.noOfProposalIQ || log.cre_proposals },
                             ]} />
 
-                            <div className="mt-4 grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Call Plan (Target 1)</p>
-                                    <div className="flex justify-between font-black text-slate-800">
-                                        <span>7*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.sevenStar || 0}</span></span>
-                                        <span>6*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.sixStar || 0}</span></span>
-                                        <span>5*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.fiveStar || 0}</span></span>
+                            {creOpening && (
+                                <div className="mt-4 grid grid-cols-2 gap-4">
+                                    <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Call Plan (Target 1)</p>
+                                        <div className="flex justify-between font-black text-slate-800">
+                                            <span>7*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.sevenStar || 0}</span></span>
+                                            <span>6*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.sixStar || 0}</span></span>
+                                            <span>5*: <span className="text-blue-600">{creOpening.uptoTodayCalls1?.fiveStar || 0}</span></span>
+                                        </div>
+                                    </div>
+                                    <div className="bg-slate-50 p-3 rounded border border-slate-100">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Call Plan (Target 2)</p>
+                                        <div className="flex justify-between font-black text-slate-800">
+                                            <span>4*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.fourStar || 0}</span></span>
+                                            <span>3*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.threeStar || 0}</span></span>
+                                            <span>2*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.twoStar || 0}</span></span>
+                                        </div>
                                     </div>
                                 </div>
-                                <div className="bg-slate-50 p-3 rounded border border-slate-100">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Call Plan (Target 2)</p>
-                                    <div className="flex justify-between font-black text-slate-800">
-                                        <span>4*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.fourStar || 0}</span></span>
-                                        <span>3*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.threeStar || 0}</span></span>
-                                        <span>2*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.twoStar || 0}</span></span>
-                                    </div>
+                            )}
+
+                            {log.cre_callBreakdown && (
+                                <div className="mt-2 p-2 bg-slate-50 rounded border border-slate-100 text-[10px] italic text-slate-600">
+                                    <b>Call Breakdown:</b> {log.cre_callBreakdown}
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
                     {/* FA Opening */}
-                    {faOpening && (
+                    {(faOpening || log.fa_calls || log.fa_showroomVisits) && (
                         <div className="mb-6">
                             <DataGrid items={[
-                                { label: 'Showroom Visit', value: faOpening.showroomVisit },
-                                { label: 'Online Discussion', value: faOpening.onlineDiscussion },
-                                { label: 'Quotation Pending', value: faOpening.quotationPending },
+                                { label: 'Calls', value: faOpening?.calls?.total || log.fa_calls },
+                                { label: 'Showroom Visit', value: faOpening?.showroomVisit || log.fa_showroomVisits },
+                                { label: 'Online Discussion', value: faOpening?.onlineDiscussion || log.fa_onlineDiscussion },
+                                { label: 'Quotation Pending', value: faOpening?.quotationPending || log.fa_quotePending },
                             ]} />
-                            <div className="mt-3 bg-slate-50 p-3 rounded border border-slate-100">
-                                <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Target Metrics</p>
-                                <div className="flex gap-6 font-black text-slate-800">
-                                    <span>9*: {faOpening.calls?.nineStar || 0}</span>
-                                    <span>8*: {faOpening.calls?.eightStar || 0}</span>
-                                    <span>7*: {faOpening.calls?.sevenStar || 0}</span>
+                            {faOpening && (
+                                <div className="mt-3 bg-slate-50 p-3 rounded border border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Target Metrics</p>
+                                    <div className="flex gap-6 font-black text-slate-800">
+                                        <span>9*: {faOpening.calls?.nineStar || 0}</span>
+                                        <span>8*: {faOpening.calls?.eightStar || 0}</span>
+                                        <span>7*: {faOpening.calls?.sevenStar || 0}</span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
                     {/* AE Opening */}
-                    {aeOpening && (
+                    {(aeOpening || log.ae_siteLocation || log.ae_plannedWork) && (
                         <div className="mb-6 space-y-4">
                             <DataGrid items={[
-                                { label: 'Site Location', value: aeOpening.ae_siteLocation || log.ae_siteLocation },
-                                { label: 'Site Status', value: aeOpening.ae_siteStatus || log.ae_siteStatus },
-                                { label: 'GPS', value: aeOpening.ae_gpsCoordinates || log.ae_gpsCoordinates },
+                                { label: 'Site Location', value: aeOpening?.ae_siteLocation || log.ae_siteLocation },
+                                { label: 'Site Status', value: aeOpening?.ae_siteStatus || log.ae_siteStatus },
+                                { label: 'GPS', value: aeOpening?.ae_gpsCoordinates || log.ae_gpsCoordinates },
                             ]} />
                             <div className="bg-blue-50/50 p-4 border border-blue-100 rounded-lg">
                                 <p className="text-[10px] font-black text-blue-400 uppercase mb-1">Planned Work for Today</p>
-                                <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"{aeOpening.ae_plannedWork || log.ae_plannedWork || 'No specific tasks provided'}"</p>
+                                <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"{aeOpening?.ae_plannedWork || log.ae_plannedWork || 'No specific tasks provided'}"</p>
                             </div>
                         </div>
                     )}
@@ -211,72 +222,76 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                 <div className="print-no-break border-t border-slate-100 mt-8 pt-4">
                     <SectionHeader title="END OF DAY (EXECUTION)" colorClass="bg-emerald-600" />
 
-                    {/* CRE Closing Table */}
-                    {creClosing && (
+                    {/* CRE Closing */}
+                    {(creClosing || log.cre_floorPlanReceived || log.cre_reviewCollected) && (
                         <div className="mb-6">
                             <DataGrid items={[
-                                { label: 'Floor Plans Rx', value: creClosing.floorPlanReceived },
-                                { label: 'Showroom Visit', value: creClosing.showroomVisit },
-                                { label: 'Review Collection', value: creClosing.reviewCollected },
-                                { label: 'Quotation Sent', value: creClosing.quotesSent },
-                                { label: 'No. of Orders', value: creClosing.orderCount },
-                                { label: 'No. of Proposals', value: creClosing.proposalCount },
+                                { label: 'Floor Plans Rx', value: creClosing?.floorPlanReceived || log.cre_floorPlanReceived },
+                                { label: 'Showroom Visit', value: creClosing?.showroomVisit || log.cre_showroomVisits },
+                                { label: 'Review Collection', value: creClosing?.reviewCollected || log.cre_reviewCollected },
+                                { label: 'Quotation Sent', value: creClosing?.quotesSent || log.cre_quotesSent },
+                                { label: 'No. of Orders', value: creClosing?.orderCount || log.cre_orderCount },
+                                { label: 'No. of Proposals', value: creClosing?.proposalCount || log.cre_proposalCount },
                             ]} />
-                            <div className="mt-4 bg-emerald-50/50 p-3 rounded border border-emerald-100">
-                                <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Work Execution Quality</p>
-                                <div className="flex gap-8 font-black text-slate-800">
-                                    <span>8*: <span className="text-emerald-700">{creClosing.eightStar || 0}</span></span>
-                                    <span>7*: <span className="text-emerald-700">{creClosing.sevenStar || 0}</span></span>
-                                    <span>6*: <span className="text-emerald-700">{creClosing.sixStar || 0}</span></span>
+                            {creClosing && (
+                                <div className="mt-4 bg-emerald-50/50 p-3 rounded border border-emerald-100">
+                                    <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Work Execution Quality</p>
+                                    <div className="flex gap-8 font-black text-slate-800">
+                                        <span>8*: <span className="text-emerald-700">{creClosing.eightStar || 0}</span></span>
+                                        <span>7*: <span className="text-emerald-700">{creClosing.sevenStar || 0}</span></span>
+                                        <span>6*: <span className="text-emerald-700">{creClosing.sixStar || 0}</span></span>
+                                    </div>
                                 </div>
-                            </div>
+                            )}
                         </div>
                     )}
 
                     {/* FA Closing */}
-                    {faClosing && (
+                    {(faClosing || log.fa_calls || log.fa_infurniaPending) && (
                         <div className="mb-6">
                             <DataGrid items={[
-                                { label: 'Showroom Visit', value: faClosing.showroomVisit },
-                                { label: 'Online Discussion', value: faClosing.onlineDiscussion },
-                                { label: 'Quotation Pending', value: faClosing.quotationPending },
+                                { label: 'Showroom Visit', value: faClosing?.showroomVisit || log.fa_showroomVisits },
+                                { label: 'Online Discussion', value: faClosing?.onlineDiscussion || log.fa_onlineDiscussion },
+                                { label: 'Quotation Pending', value: faClosing?.quotationPending || log.fa_quotePending },
                             ]} />
                             <div className="mt-4 grid grid-cols-2 gap-4">
                                 <div className="bg-slate-50 p-3 rounded border">
                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Infurnia Pending</p>
                                     <div className="flex justify-between items-center font-bold">
-                                        <span className="text-sm">Count: {faClosing.infurniaPending?.count}</span>
-                                        <span className="text-xs text-slate-500 italic">({faClosing.infurniaPending?.text1})</span>
+                                        <span className="text-sm">Count: {faClosing?.infurniaPending?.count || log.fa_infurniaPending || 0}</span>
+                                        <span className="text-xs text-slate-500 italic">({faClosing?.infurniaPending?.text1 || 'N/A'})</span>
                                     </div>
                                 </div>
-                                <div className="bg-slate-50 p-3 rounded border">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Execution Score</p>
-                                    <div className="flex gap-4 font-bold text-slate-800">
-                                        <span>9*: {faClosing.calls?.nineStar || 0}</span>
-                                        <span>8*: {faClosing.calls?.eightStar || 0}</span>
+                                {faClosing && (
+                                    <div className="bg-slate-50 p-3 rounded border">
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Execution Score</p>
+                                        <div className="flex gap-4 font-bold text-slate-800">
+                                            <span>9*: {faClosing.calls?.nineStar || 0}</span>
+                                            <span>8*: {faClosing.calls?.eightStar || 0}</span>
+                                        </div>
                                     </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     )}
 
                     {/* AE Closing */}
-                    {aeClosing && (
+                    {(aeClosing || log.ae_visitType || log.ae_workStage) && (
                         <div className="mb-6 space-y-4">
                             <DataGrid items={[
-                                { label: 'Visit Type', value: Array.isArray(aeClosing.ae_visitType) ? aeClosing.ae_visitType.join(', ') : aeClosing.ae_visitType },
-                                { label: 'Work Stage', value: aeClosing.ae_workStage },
-                                { label: 'Measurements', value: aeClosing.ae_measurements },
-                                { label: 'Installed Items', value: aeClosing.ae_itemsInstalled },
-                                { label: 'Feedback', value: aeClosing.ae_clientFeedback },
+                                { label: 'Visit Type', value: Array.isArray(aeClosing?.ae_visitType || log.ae_visitType) ? (aeClosing?.ae_visitType || log.ae_visitType).join(', ') : (aeClosing?.ae_visitType || log.ae_visitType) },
+                                { label: 'Work Stage', value: aeClosing?.ae_workStage || log.ae_workStage },
+                                { label: 'Measurements', value: aeClosing?.ae_measurements || log.ae_measurements },
+                                { label: 'Installed Items', value: aeClosing?.ae_itemsInstalled || log.ae_itemsInstalled },
+                                { label: 'Feedback', value: aeClosing?.ae_clientFeedback || log.ae_clientFeedback },
                             ]} />
 
-                            <div className={`p-4 rounded-xl border ${aeClosing.ae_hasIssues ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
+                            <div className={`p-4 rounded-xl border ${(aeClosing?.ae_hasIssues || log.ae_hasIssues) ? 'bg-red-50 border-red-100' : 'bg-slate-50 border-slate-100'}`}>
                                 <p className="text-[10px] font-black uppercase mb-1 flex items-center gap-2">
-                                    ISSUES & RESOLUTIONS {aeClosing.ae_hasIssues && <span className="bg-red-500 text-white px-1.5 rounded-full text-[8px] animate-pulse">ALERT</span>}
+                                    ISSUES & RESOLUTIONS {(aeClosing?.ae_hasIssues || log.ae_hasIssues) && <span className="bg-red-500 text-white px-1.5 rounded-full text-[8px] animate-pulse">ALERT</span>}
                                 </p>
                                 <p className="text-sm font-bold text-slate-800 leading-relaxed italic">
-                                    {aeClosing.ae_hasIssues ? aeClosing.ae_issueDescription : 'No site issues reported today.'}
+                                    {(aeClosing?.ae_hasIssues || log.ae_hasIssues) ? (aeClosing?.ae_issueDescription || log.ae_issueDescription) : 'No site issues reported today.'}
                                 </p>
                             </div>
                         </div>
