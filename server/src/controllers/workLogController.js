@@ -11,19 +11,23 @@ const createWorkLog = async (req, res) => {
         clientName, site, process, imageCount, startTime, endTime, completedImages, pendingImages,
         // CRE
         cre_totalCalls, cre_showroomVisits, cre_fqSent, cre_orders, cre_proposals, cre_callBreakdown,
+        cre_opening_metrics,
         // FA
         fa_calls, fa_designPending, fa_designPendingClients, fa_quotePending, fa_quotePendingClients,
         fa_initialQuoteRn, fa_revisedQuoteRn, fa_showroomVisits, fa_showroomVisitClients, fa_showroomTime,
         fa_onlineDiscussion, fa_onlineDiscussionClients, fa_onlineTime, fa_siteVisits, fa_siteTime, fa_loadingDiscussion,
         fa_bookingFreezed, fa_bookingFreezedClients,
+        fa_opening_metrics,
         // LA Detailed
         la_number, la_mailId, la_projectLocation, la_freezingAmount, la_variant, la_projectValue,
         la_woodwork, la_addOns, la_cpCode, la_source, la_fa, la_referalBonus, la_siteStatus, la_specialNote,
         la_requirements, la_colours, la_onlineMeeting, la_showroomMeeting, la_measurements,
+        la_opening_metrics, // New
         // AE Fields
         ae_siteLocation, ae_gpsCoordinates, ae_siteStatus, ae_visitType, ae_workStage,
         ae_tasksCompleted, ae_measurements, ae_itemsInstalled, ae_issuesRaised, ae_issuesResolved,
         ae_hasIssues, ae_issueType, ae_issueDescription, ae_nextVisitRequired, ae_nextVisitDate,
+        ae_opening_metrics,
 
         ae_plannedWork, ae_clientMet, ae_clientFeedback, ae_photos,
         // Generic
@@ -57,7 +61,18 @@ const createWorkLog = async (req, res) => {
         });
 
         if (existingLog) {
-            return res.status(400).json({ message: 'You have already submitted a work log for today.' });
+            // If trying to OPEN a new log but one exists
+            if (req.body.logStatus === 'OPEN') {
+                return res.status(400).json({ message: 'You already have a work log for today.' });
+            }
+            // If one exists and it's closed, block new creation
+            if (existingLog.logStatus === 'CLOSED') {
+                return res.status(400).json({ message: 'You have already submitted a work log for today.' });
+            }
+            // If exists and OPEN, and we are not specifically hitting the 'close' endpoint (this is create),
+            // we might allow separate updates or just block 'create'. 
+            // Better to block 'create' and force use of 'close' endpoint for closing.
+            return res.status(400).json({ message: 'Work log already open. Please submit closing report.' });
         }
 
         const workLog = await prisma.workLog.create({
@@ -86,6 +101,8 @@ const createWorkLog = async (req, res) => {
                 cre_orders: cre_orders ? parseInt(cre_orders) : null,
                 cre_proposals: cre_proposals ? parseInt(cre_proposals) : null,
                 cre_callBreakdown,
+                cre_opening_metrics: cre_opening_metrics ? JSON.stringify(cre_opening_metrics) : undefined,
+
 
                 // FA
                 fa_calls: fa_calls ? parseInt(fa_calls) : null,
@@ -105,7 +122,9 @@ const createWorkLog = async (req, res) => {
                 fa_siteTime,
                 fa_loadingDiscussion: fa_loadingDiscussion ? parseInt(fa_loadingDiscussion) : null,
                 fa_bookingFreezed: fa_bookingFreezed ? parseInt(fa_bookingFreezed) : null,
+                fa_bookingFreezed: fa_bookingFreezed ? parseInt(fa_bookingFreezed) : null,
                 fa_bookingFreezedClients,
+                fa_opening_metrics: fa_opening_metrics ? JSON.stringify(fa_opening_metrics) : undefined,
 
                 // LA Detailed
                 la_number,
@@ -126,15 +145,18 @@ const createWorkLog = async (req, res) => {
                 la_colours: la_colours ? JSON.stringify(la_colours) : undefined,
                 la_onlineMeeting: la_onlineMeeting ? JSON.stringify(la_onlineMeeting) : undefined,
                 la_showroomMeeting: la_showroomMeeting ? JSON.stringify(la_showroomMeeting) : undefined,
+                la_showroomMeeting: la_showroomMeeting ? JSON.stringify(la_showroomMeeting) : undefined,
                 la_measurements: la_measurements ? JSON.stringify(la_measurements) : undefined,
+                la_opening_metrics: la_opening_metrics ? JSON.stringify(la_opening_metrics) : undefined,
 
                 // AE Fields
                 ae_siteLocation,
                 ae_gpsCoordinates,
                 ae_siteStatus,
-                ae_visitType: ae_visitType ? JSON.stringify(ae_visitType) : undefined,
+                ae_visitType: typeof ae_visitType === 'string' ? JSON.parse(ae_visitType) : ae_visitType,
+                ae_opening_metrics: typeof ae_opening_metrics === 'string' ? JSON.parse(ae_opening_metrics) : ae_opening_metrics, // NEW AE OPENING
                 ae_workStage,
-                ae_tasksCompleted: ae_tasksCompleted ? JSON.stringify(ae_tasksCompleted) : undefined,
+                ae_tasksCompleted: typeof ae_tasksCompleted === 'string' ? JSON.parse(ae_tasksCompleted) : ae_tasksCompleted,
                 ae_measurements,
                 ae_itemsInstalled,
                 ae_issuesRaised,
@@ -149,13 +171,14 @@ const createWorkLog = async (req, res) => {
                 ae_clientFeedback,
                 // If files are uploaded, use them; otherwise verify if ae_photos string was passed (unlikely with multer but good safety)
                 ae_photos: req.files && req.files.length > 0
-                    ? JSON.stringify(req.files.map(file => `/uploads/${file.filename}`))
-                    : (ae_photos ? JSON.stringify(ae_photos) : undefined),
+                    ? req.files.map(file => `/uploads/${file.filename}`)
+                    : (typeof ae_photos === 'string' ? JSON.parse(ae_photos) : ae_photos),
 
                 // Generic
                 customFields: customFields ? customFields : undefined,
 
                 date: new Date(),
+                logStatus: req.body.logStatus || 'CLOSED', // Default to CLOSED if not specified
             },
         });
 
@@ -166,6 +189,126 @@ const createWorkLog = async (req, res) => {
         });
 
         res.status(201).json(workLog);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Close a daily work log (Update existing OPEN log)
+// @route   PUT /api/worklogs/close
+// @access  Private (Employee)
+const closeWorkLog = async (req, res) => {
+    const {
+        cre_closing_metrics,
+        fa_closing_metrics,
+        la_closing_metrics,
+        ae_closing_metrics // NEW AE CLOSING
+    } = req.body;
+
+    try {
+        const userId = req.user.id;
+
+        // Find today's OPEN log
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingLog = await prisma.workLog.findFirst({
+            where: {
+                userId,
+                date: { gte: startOfDay, lte: endOfDay },
+                logStatus: 'OPEN'
+            }
+        });
+
+        if (!existingLog) {
+            return res.status(404).json({ message: 'No open work log found for today to close.' });
+        }
+
+        const updatedLog = await prisma.workLog.update({
+            where: { id: existingLog.id },
+            data: {
+                logStatus: 'CLOSED',
+                cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : (cre_closing_metrics ? cre_closing_metrics : undefined), // Prisma expects Json Object so if it came as Object leave it, if string parse it. Wait, Prisma Json input needs strict handling.
+                // Correction: Prisma Client expects *Object* or *Array* for Json type.
+                // If multipart -> String -> Parse to Object.
+                // If JSON -> Object -> Use as is.
+                // So: typeof === 'string' ? JSON.parse() : val.
+                // But wait, my previous fix used `JSON.parse`?  Yes.
+                // AND previous code used `JSON.stringify`? Yes, which was WRONG for Object input (double stringify).
+                // So now:
+                cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : cre_closing_metrics,
+                fa_closing_metrics: typeof fa_closing_metrics === 'string' ? JSON.parse(fa_closing_metrics) : fa_closing_metrics,
+                la_closing_metrics: typeof la_closing_metrics === 'string' ? JSON.parse(la_closing_metrics) : la_closing_metrics,
+                ae_closing_metrics: typeof ae_closing_metrics === 'string' ? JSON.parse(ae_closing_metrics) : ae_closing_metrics,
+
+                // Handle Photos for Closing
+                ae_photos: req.files && req.files.length > 0
+                    ? req.files.map(file => `/uploads/${file.filename}`)
+                    : undefined, // Append to existing? Or replace? Usually closing adds photos.
+                // Schema has ae_photos as Json?. If checking in opened log, we might overwrite.
+                // For now, simple overwrite/set is okay as Opening doesn't have photos usually.
+            }
+        });
+
+        res.json(updatedLog);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Add a Project Report to an OPEN work log
+// @route   PUT /api/worklogs/project-report
+// @access  Private (Employee)
+const addProjectReport = async (req, res) => {
+    const { projectReport } = req.body; // Expects a single object { clientName, site, ... }
+
+    try {
+        const userId = req.user.id;
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingLog = await prisma.workLog.findFirst({
+            where: {
+                userId,
+                date: { gte: startOfDay, lte: endOfDay },
+                logStatus: 'OPEN'
+            }
+        });
+
+        if (!existingLog) {
+            return res.status(404).json({ message: 'No open work log found for today.' });
+        }
+
+        // Parse existing reports array
+        let currentReports = [];
+        if (existingLog.la_project_reports) {
+            // Prisma might return it as object or string depending on version, safely parse if string
+            currentReports = typeof existingLog.la_project_reports === 'string'
+                ? JSON.parse(existingLog.la_project_reports)
+                : existingLog.la_project_reports;
+        }
+
+        // Ensure it's an array (handle case where it might be empty or null initially)
+        if (!Array.isArray(currentReports)) currentReports = [];
+
+        // Append new report
+        currentReports.push(projectReport);
+
+        const updatedLog = await prisma.workLog.update({
+            where: { id: existingLog.id },
+            data: {
+                la_project_reports: JSON.stringify(currentReports)
+            }
+        });
+
+        res.json(updatedLog);
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -192,4 +335,4 @@ const getMyWorkLogs = async (req, res) => {
     }
 };
 
-module.exports = { createWorkLog, getMyWorkLogs };
+module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, addProjectReport };

@@ -4,9 +4,9 @@ import { X, Quote } from 'lucide-react';
 
 const popupData = [
     {
-        image: "/ceo-popup.png",
-        quote: "Consistency is more powerful than motivation. Keep going.",
-        author: "Leo Jenison"
+        image: "/assets/ceo_pugazh.png",
+        quote: "Don't sleep on Saturday—it's still a chance to rise.",
+        author: "Pugazh"
     }
 ];
 

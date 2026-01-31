@@ -5,6 +5,7 @@ import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
 import LAWorkLogForm from '../../components/worklogs/LAWorkLogForm'; // Detailed (LA)
 import CREWorkLogForm from '../../components/worklogs/CREWorkLogForm';
 import FAWorkLogForm from '../../components/worklogs/FAWorkLogForm';
+import AEWorkLogForm from '../../components/worklogs/AEWorkLogForm'; // Added AE Import
 import DynamicWorkLogForm from '../../components/worklogs/DynamicWorkLogForm';
 import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 import LeaveRequestForm from '../../components/LeaveRequestForm';
@@ -90,6 +91,8 @@ const Overview = () => {
                 return <CREWorkLogForm onSuccess={closeModal} />;
             case 'FA':
                 return <FAWorkLogForm onSuccess={closeModal} />;
+            case 'AE': // Added AE Case
+                return <AEWorkLogForm onSuccess={closeModal} />;
 
             default:
                 // Check for new roles in config
@@ -99,26 +102,10 @@ const Overview = () => {
 
                 // Fallback for LA or legacy
                 if (user?.designation === 'LA' || !user?.designation) {
-                    return (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                <span className="text-sm font-bold text-slate-700">Report Type:</span>
-                                <select
-                                    className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none"
-                                    value={laFormType}
-                                    onChange={(e) => setLaFormType(e.target.value)}
-                                >
-                                    <option value="detailed">Project Wise Work Report</option>
-                                    <option value="standard">Daily Work Report</option>
-                                </select>
-                            </div>
-                            {laFormType === 'detailed' ? (
-                                <LAWorkLogForm onSuccess={closeModal} />
-                            ) : (
-                                <WorkLogForm onSuccess={closeModal} />
-                            )}
-                        </div>
-                    );
+                    if (user?.designation === 'LA') {
+                        return <LAWorkLogForm onSuccess={closeModal} />;
+                    }
+                    return <WorkLogForm onSuccess={closeModal} />;
                 }
                 return <WorkLogForm onSuccess={closeModal} />;
         }

@@ -12,6 +12,7 @@ const initialState = {
     isError: false,
     isSuccess: false,
     message: '',
+    todayLog: null, // Track today's log status
 };
 
 // Check attendance status for today
@@ -85,6 +86,34 @@ export const checkoutAttendance = createAsyncThunk(
     }
 );
 
+// Get Today's Work Log Status
+export const getTodayLogStatus = createAsyncThunk(
+    'employee/getTodayLogStatus',
+    async (_, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            // Re-using getMyWorkLogs but checking specifically for today, or new endpoint?
+            // Actually, getMyWorkLogs returns a list. We can process it or fetch just today's.
+            // Let's rely on getMyWorkLogs to fetch latest, but a specific endpoint is cleaner.
+            // However, to keep it simple, we can filter `workLogs` locally or fetch.
+            // But wait, the controller logic we added 'closeWorkLog' finds today's log.
+            // Let's just fetch recent logs and filter for today in the component or Slice.
+            // BETTER: Add a specific check so we know if it's OPEN or CLOSED.
+            const response = await axios.get(API_URL + 'worklogs', config);
+            const logs = response.data;
+            const today = new Date().toISOString().split('T')[0];
+            const todaysLog = logs.find(log => log.date.startsWith(today));
+            return todaysLog || null;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Get my work logs
 export const getMyWorkLogs = createAsyncThunk(
     'employee/getMyWorkLogs',
@@ -126,6 +155,42 @@ export const createWorkLog = createAsyncThunk(
                 (error.response && error.response.data && error.response.data.message) ||
                 error.message ||
                 error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Close work log
+export const closeWorkLog = createAsyncThunk(
+    'employee/closeWorkLog',
+    async (logData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.put(API_URL + 'worklogs/close', logData, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Add Project Report (LA)
+export const addProjectReport = createAsyncThunk(
+    'employee/addProjectReport',
+    async (reportData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.put(API_URL + 'worklogs/project-report', reportData, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
             return thunkAPI.rejectWithValue(message);
         }
     }
@@ -341,6 +406,49 @@ export const employeeSlice = createSlice({
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;
+            })
+            // Close Log
+            .addCase(closeWorkLog.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(closeWorkLog.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                // Update specific log in list or refresh
+                const index = state.workLogs.findIndex(log => log.id === action.payload.id);
+                if (index !== -1) {
+                    state.workLogs[index] = action.payload;
+                }
+                state.todayLog = action.payload;
+            })
+            .addCase(closeWorkLog.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Add Project Report
+            .addCase(addProjectReport.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(addProjectReport.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                // Update specific log in list or refresh
+                const index = state.workLogs.findIndex(log => log.id === action.payload.id);
+                if (index !== -1) {
+                    state.workLogs[index] = action.payload;
+                }
+                state.todayLog = action.payload;
+            })
+            .addCase(addProjectReport.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Get Today Status
+            // Get Today Status
+            .addCase(getTodayLogStatus.fulfilled, (state, action) => {
+                state.todayLog = action.payload;
             })
             // Create Leave
             .addCase(createLeaveRequest.pending, (state) => {

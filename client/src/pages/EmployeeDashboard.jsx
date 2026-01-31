@@ -112,28 +112,10 @@ const EmployeeDashboard = () => {
                 return <AEWorkLogForm onSuccess={closeModal} />;
             case 'LA':
             default:
-                if (user?.designation === 'LA' || !user?.designation) {
-                    return (
-                        <div className="space-y-4">
-                            <div className="flex justify-between items-center bg-slate-50 p-3 rounded-lg border border-slate-200">
-                                <span className="text-sm font-bold text-slate-700">Form Type:</span>
-                                <select
-                                    className="bg-white border border-slate-300 text-slate-700 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block p-2 outline-none"
-                                    value={laFormType}
-                                    onChange={(e) => setLaFormType(e.target.value)}
-                                >
-                                    <option value="detailed">Detailed Architect Form</option>
-                                    <option value="standard">Standard Work Log</option>
-                                </select>
-                            </div>
-                            {laFormType === 'detailed' ? (
-                                <LAWorkLogForm onSuccess={closeModal} />
-                            ) : (
-                                <WorkLogForm onSuccess={closeModal} />
-                            )}
-                        </div>
-                    );
+                if (user?.designation === 'LA') {
+                    return <LAWorkLogForm onSuccess={closeModal} />;
                 }
+                // Fallback for others
                 return <WorkLogForm onSuccess={closeModal} />;
         }
     };

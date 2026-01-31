@@ -35,6 +35,11 @@ enum RequestStatus {
   REJECTED
 }
 
+enum LogStatus {
+  OPEN
+  CLOSED
+}
+
 model User {
   id                  Int       @id @default(autoincrement())
   email               String    @unique
@@ -117,6 +122,7 @@ model WorkLog {
   userId          Int
   user            User     @relation(fields: [userId], references: [id])
   date            DateTime @default(now())
+  logStatus       LogStatus @default(CLOSED) // OPEN for pending closing report, CLOSED for finished
   projectId       Int?
   project         Project? @relation(fields: [projectId], references: [id])
   projectName     String?  // Can act as "Client Name" if needed, or specific field below
@@ -138,7 +144,9 @@ model WorkLog {
   cre_fqSent          Int?
   cre_orders          Int?
   cre_proposals       Int?
-  cre_callBreakdown   String? // For storing the "9* - 2, 8* - 3" detailed breakdown as text
+  cre_callBreakdown   String?
+  cre_opening_metrics Json?     // New Two-Part System
+  cre_closing_metrics Json?     // New Two-Part System
 
   // FA Fields
   fa_calls                   Int?
@@ -159,6 +167,8 @@ model WorkLog {
   fa_loadingDiscussion       Int?
   fa_bookingFreezed          Int?
   fa_bookingFreezedClients   String?
+  fa_opening_metrics         Json?     // New Two-Part System
+  fa_closing_metrics         Json?     // New Two-Part System
 
   // Loading Architect (LA) Detailed Fields
   la_number           String?
@@ -183,6 +193,11 @@ model WorkLog {
   la_showroomMeeting  Json?     // Array of { slNo, date, discussedOn }
   la_measurements     Json?     // Array of { aeName, date, discussedOn }
   
+  // New Three-Stage System for LA
+  la_opening_metrics  Json?
+  la_closing_metrics  Json?
+  la_project_reports  Json?     // Array of Project Reports submitted during the day
+
   // Generic field for new roles
   customFields        Json?
 
@@ -206,6 +221,8 @@ model WorkLog {
   ae_clientMet        Boolean?  @default(false)
   ae_clientFeedback   String?   // Positive, Neutral, Negative
   ae_photos           Json?     // Array of photo URLs or filenames
+  ae_opening_metrics  Json?     // New Two-Part System
+  ae_closing_metrics  Json?     // New Two-Part System
 
   tasks           String?   // Making optional if 'process' takes over
   remarks         String?
