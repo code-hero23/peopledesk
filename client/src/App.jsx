@@ -12,39 +12,43 @@ import Attendance from './pages/admin/Attendance';
 import AttendanceVerification from './pages/admin/AttendanceVerification';
 import Layout from './components/Layout';
 import PrivateRoute from './components/PrivateRoute';
+import ReloadPrompt from './components/ReloadPrompt';
 
 import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
 
 function App() {
   return (
-    <Router>
-      <Routes>
-        <Route path="/login" element={<Login />} />
+    <>
+      <ReloadPrompt />
+      <Router>
+        <Routes>
+          <Route path="/login" element={<Login />} />
 
-        <Route path="" element={<PrivateRoute />}>
-          <Route element={<Layout />}>
+          <Route path="" element={<PrivateRoute />}>
+            <Route element={<Layout />}>
 
-            {/* Employee Routes - Protected from Admins */}
-            <Route element={<EmployeeGuard />}>
-              <Route path="/dashboard" element={<Overview />} />
-              <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
-              <Route path="/dashboard/requests" element={<MyRequests />} />
+              {/* Employee Routes - Protected from Admins */}
+              <Route element={<EmployeeGuard />}>
+                <Route path="/dashboard" element={<Overview />} />
+                <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
+                <Route path="/dashboard/requests" element={<MyRequests />} />
+              </Route>
+
+              {/* Admin Routes */}
+              <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/approvals" element={<Approvals />} />
+              <Route path="/admin/employees" element={<ManageEmployees />} />
+              <Route path="/admin/worklogs" element={<WorkLogs />} />
+              <Route path="/admin/attendance" element={<Attendance />} />
+              <Route path="/admin/attendance-verification" element={<AttendanceVerification />} />
             </Route>
 
-            {/* Admin Routes */}
-            <Route path="/admin-dashboard" element={<AdminDashboard />} />
-            <Route path="/admin/approvals" element={<Approvals />} />
-            <Route path="/admin/employees" element={<ManageEmployees />} />
-            <Route path="/admin/worklogs" element={<WorkLogs />} />
-            <Route path="/admin/attendance" element={<Attendance />} />
-            <Route path="/admin/attendance-verification" element={<AttendanceVerification />} />
+            {/* Smart Root Redirect */}
+            <Route path="/" element={<RootRedirect />} />
           </Route>
-
-          {/* Smart Root Redirect */}
-          <Route path="/" element={<RootRedirect />} />
-        </Route>
-      </Routes>
-    </Router>
+        </Routes>
+      </Router>
+    </>
   );
 }
 
