@@ -13,20 +13,21 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
 
     if (!isOpen || !log) return null;
 
-    const safeParse = (data) => {
+    const safelyParseJson = (data) => {
         if (!data) return null;
         if (typeof data === 'object') return data;
         try { return JSON.parse(data); } catch (e) { return null; }
     };
 
-    const aeOpening = safeParse(log.ae_opening_metrics);
-    const aeClosing = safeParse(log.ae_closing_metrics);
-    const creOpening = safeParse(log.cre_opening_metrics);
-    const creClosing = safeParse(log.cre_closing_metrics);
-    const faOpening = safeParse(log.fa_opening_metrics);
-    const faClosing = safeParse(log.fa_closing_metrics);
-    const laOpening = safeParse(log.la_opening_metrics);
-    const laClosing = safeParse(log.la_closing_metrics);
+    const customFields = safelyParseJson(log.customFields);
+    const aeOpening = safelyParseJson(log.ae_opening_metrics);
+    const aeClosing = safelyParseJson(log.ae_closing_metrics);
+    const creOpening = safelyParseJson(log.cre_opening_metrics);
+    const creClosing = safelyParseJson(log.cre_closing_metrics);
+    const faOpening = safelyParseJson(log.fa_opening_metrics);
+    const faClosing = safelyParseJson(log.fa_closing_metrics);
+    const laOpening = safelyParseJson(log.la_opening_metrics);
+    const laClosing = safelyParseJson(log.la_closing_metrics);
 
     // Common styling for metric cards
     const DataGrid = ({ items }) => (
@@ -218,7 +219,101 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                     )}
                 </div>
 
-                {/* 2. END OF DAY (CLOSING) SECTION */}
+                {/* CUSTOM FIELDS / ROLE SPECIFIC METRICS */}
+                {customFields && (
+                    <div className="print-no-break border-t border-slate-100 mt-8 pt-4">
+                        <SectionHeader title="ROLE SPECIFIC METRICS" colorClass="bg-purple-600" />
+
+                        {/* Render Simple Key-Values */}
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
+                            {Object.entries(customFields)
+                                .filter(([_, value]) => typeof value !== 'object' || value === null)
+                                .map(([key, value]) => (
+                                    <div key={key} className="bg-slate-50 p-3 rounded border border-slate-200">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{key}</p>
+                                        <p className="text-sm font-bold text-slate-800">{value || '-'}</p>
+                                    </div>
+                                ))}
+                        </div>
+
+                        {/* Render List/Table Data (e.g. Account Rows) */}
+                        {Object.entries(customFields)
+                            .filter(([_, value]) => Array.isArray(value))
+                            .map(([key, list]) => (
+                                <div key={key} className="mb-6">
+                                    <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
+                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
+                                        <table className="w-full text-xs">
+                                            <thead className="bg-slate-50 border-b border-slate-200">
+                                                <tr>
+                                                    <th className="px-3 py-2 text-left font-bold text-slate-600 w-12">No.</th>
+                                                    {list.length > 0 && Object.keys(list[0]).map((headerKey) => (
+                                                        <th key={headerKey} className="px-3 py-2 text-left font-bold text-slate-600 capitalize">
+                                                            {headerKey}
+                                                        </th>
+                                                    ))}
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-100">
+                                                {list.map((item, idx) => (
+                                                    <tr key={idx} className="hover:bg-slate-50">
+                                                        <td className="px-3 py-2 text-slate-400 font-bold">{idx + 1}</td>
+                                                        {Object.keys(item).map((key) => (
+                                                            <td key={key} className="px-3 py-2 font-medium text-slate-800">
+                                                                {item[key]}
+                                                            </td>
+                                                        ))}
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            ))}
+                    </div>
+                )}
+
+                {/* GENERIC / GENERAL WORK METRICS (For New Roles) */}
+                {(!aeOpening && !creOpening && !faOpening && !laOpening && log.process && !customFields) && (
+                    <div className="print-no-break border-t border-slate-100 mt-8 pt-4">
+                        <SectionHeader title="GENERAL WORK METRICS" colorClass="bg-slate-600" />
+
+                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
+                            <div className="bg-slate-50 p-3 rounded border border-slate-200">
+                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Total Hours</p>
+                                <p className="text-xl font-black text-slate-800">{log.hours || 0} <span className="text-sm text-slate-500 font-bold">hrs</span></p>
+                            </div>
+                            <div className="bg-slate-50 p-3 rounded border border-slate-200">
+                                <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Images Submitted</p>
+                                <p className="text-xl font-black text-slate-800">{log.imageCount || 0}</p>
+                                <div className="flex gap-2 text-[9px] font-bold mt-1">
+                                    <span className="text-green-600">Considered: {log.completedImages || 0}</span>
+                                    <span className="text-orange-600">Pending: {log.pendingImages || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Process / Task Description</p>
+                                    <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"{log.process || log.tasks || 'No description provided'}"</p>
+                                </div>
+                                <div className="space-y-3">
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Client Name</p>
+                                        <p className="text-sm font-black text-slate-800">{log.clientName || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Site / Location</p>
+                                        <p className="text-sm font-bold text-slate-700">{log.site || 'N/A'}</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="print-no-break border-t border-slate-100 mt-8 pt-4">
                     <SectionHeader title="END OF DAY (EXECUTION)" colorClass="bg-emerald-600" />
 

@@ -203,7 +203,10 @@ const closeWorkLog = async (req, res) => {
         cre_closing_metrics,
         fa_closing_metrics,
         la_closing_metrics,
-        ae_closing_metrics // NEW AE CLOSING
+        ae_closing_metrics, // NEW AE CLOSING
+        customFields, // Generic
+        process, // Generic
+        remarks // Generic
     } = req.body;
 
     try {
@@ -247,9 +250,12 @@ const closeWorkLog = async (req, res) => {
                 // Handle Photos for Closing
                 ae_photos: req.files && req.files.length > 0
                     ? req.files.map(file => `/uploads/${file.filename}`)
-                    : undefined, // Append to existing? Or replace? Usually closing adds photos.
-                // Schema has ae_photos as Json?. If checking in opened log, we might overwrite.
-                // For now, simple overwrite/set is okay as Opening doesn't have photos usually.
+                    : undefined,
+
+                // Generic Updates
+                customFields: customFields ? customFields : undefined, // Replace/Update customFields
+                process: process || undefined,
+                remarks: remarks || undefined
             }
         });
 

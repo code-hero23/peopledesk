@@ -60,6 +60,39 @@ const exportWorkLogs = async (req, res) => {
             };
 
 
+            const customFields = log.customFields || {};
+            let genericOpening = [];
+            let genericClosing = [];
+
+            // Helper to format complex custom field values
+            const formatCustomValue = (val) => {
+                if (Array.isArray(val)) {
+                    // It's a list/table (e.g. Tasks, Leads)
+                    return val.map(item => {
+                        // Join values of the object: "Task Name (Done)" or just "Task Name - Done"
+                        // Try to find meaningful description/task fields
+                        const desc = item.description || item.task || Object.values(item)[0];
+                        const status = item.status || item.count || '';
+                        const extra = item.remark || item.details || item.bhWork || '';
+                        return `${desc} ${status ? `(${status})` : ''} ${extra ? `[${extra}]` : ''}`;
+                    }).join('; ');
+                } else if (typeof val === 'object' && val !== null) {
+                    return JSON.stringify(val);
+                }
+                return val;
+            };
+
+            Object.entries(customFields).forEach(([key, value]) => {
+                const lowerKey = key.toLowerCase();
+                if (lowerKey.startsWith('opening')) {
+                    // Remove "Opening" prefix for cleaner CSV check if desired, but keeping key is safer
+                    genericOpening.push(`${key.replace(/opening/i, '').trim().replace(/^-/, '').trim()}: ${formatCustomValue(value)}`);
+                } else if (lowerKey.startsWith('closing')) {
+                    genericClosing.push(`${key.replace(/closing/i, '').trim().replace(/^-/, '').trim()}: ${formatCustomValue(value)}`);
+                }
+            });
+
+
             const aeOpening = safeParse(log.ae_opening_metrics);
             const aeClosing = safeParse(log.ae_closing_metrics);
 
@@ -90,6 +123,9 @@ const exportWorkLogs = async (req, res) => {
                 EndTime: log.endTime || '',
                 ImageCount: log.imageCount || '',
 
+                // --- GENERIC CUSTOM FIELDS (New Roles) ---
+                'Opening Report': genericOpening.join(' | '),
+                'Closing Report': genericClosing.join(' | '),
 
                 // --- OPENING (START OF DAY) ---
                 'Op_PlannedWork': aeOpening?.ae_plannedWork || log.ae_plannedWork || '',
@@ -184,6 +220,7 @@ const exportWorkLogs = async (req, res) => {
 
         // Define Column Groups
         const baseColumns = ['Employee', 'Email', 'Designation', 'Date', 'Project', 'Client', 'Site', 'Hours', 'StartTime', 'EndTime', 'ImageCount', 'SubmittedAt'];
+        const genericColumns = ['Opening Report', 'Closing Report'];
 
         const aeColumns = [
             'Op_PlannedWork', 'Op_SiteLocation', 'Op_SiteStatus', 'Op_GPS',
@@ -225,8 +262,10 @@ const exportWorkLogs = async (req, res) => {
             csvFields = [...baseColumns, ...laColumns];
         } else {
             // Default: Include All (but maybe grouped logically)
+            // Added genericColumns for newer roles
             csvFields = [
                 ...baseColumns,
+                ...genericColumns,
                 ...aeColumns,
                 ...creColumns,
                 ...faColumns,

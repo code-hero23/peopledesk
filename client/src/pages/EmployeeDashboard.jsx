@@ -6,6 +6,16 @@ import LAWorkLogForm from '../components/worklogs/LAWorkLogForm'; // Detailed (L
 import CREWorkLogForm from '../components/worklogs/CREWorkLogForm';
 import FAWorkLogForm from '../components/worklogs/FAWorkLogForm';
 import AEWorkLogForm from '../components/worklogs/AEWorkLogForm';
+import CustomerRelationshipWorkLogForm from '../components/worklogs/CustomerRelationshipWorkLogForm'; // New Custom Form
+import DigitalMarketingWorkLogForm from '../components/worklogs/DigitalMarketingWorkLogForm'; // New Custom Form
+import AccountWorkLogForm from '../components/worklogs/AccountWorkLogForm'; // New Custom Form
+import OfficeAdminWorkLogForm from '../components/worklogs/OfficeAdminWorkLogForm'; // New Custom Form
+import LeadOperationWorkLogForm from '../components/worklogs/LeadOperationWorkLogForm'; // New Custom Form
+import LeadConversionWorkLogForm from '../components/worklogs/LeadConversionWorkLogForm'; // New Custom Form
+import VendorManagementWorkLogForm from '../components/worklogs/VendorManagementWorkLogForm'; // New Custom Form
+import ClientCareWorkLogForm from '../components/worklogs/ClientCareWorkLogForm'; // New Custom Form
+import EscalationWorkLogForm from '../components/worklogs/EscalationWorkLogForm'; // New Custom Form
+import ClientFacilitatorWorkLogForm from '../components/worklogs/ClientFacilitatorWorkLogForm'; // New Custom Form
 import LeaveRequestForm from '../components/LeaveRequestForm';
 import PermissionRequestForm from '../components/PermissionRequestForm';
 import StatCard from '../components/StatCard';
@@ -110,6 +120,26 @@ const EmployeeDashboard = () => {
                 return <FAWorkLogForm onSuccess={closeModal} />;
             case 'AE':
                 return <AEWorkLogForm onSuccess={closeModal} />;
+            case 'CUSTOMER-RELATIONSHIP':
+                return <CustomerRelationshipWorkLogForm onSuccess={closeModal} />;
+            case 'DIGITAL-MARKETING':
+                return <DigitalMarketingWorkLogForm onSuccess={closeModal} />;
+            case 'ACCOUNT':
+                return <AccountWorkLogForm onSuccess={closeModal} />;
+            case 'OFFICE-ADMINISTRATION':
+                return <OfficeAdminWorkLogForm onSuccess={closeModal} />;
+            case 'LEAD-OPERATION':
+                return <LeadOperationWorkLogForm onSuccess={closeModal} />;
+            case 'LEAD-CONVERSION':
+                return <LeadConversionWorkLogForm onSuccess={closeModal} />;
+            case 'VENDOR-MANAGEMENT':
+                return <VendorManagementWorkLogForm onSuccess={closeModal} />;
+            case 'CLIENT-CARE':
+                return <ClientCareWorkLogForm onSuccess={closeModal} />;
+            case 'ESCALATION':
+                return <EscalationWorkLogForm onSuccess={closeModal} />;
+            case 'CLIENT-FACILITATOR':
+                return <ClientFacilitatorWorkLogForm onSuccess={closeModal} />;
             case 'LA':
             default:
                 if (user?.designation === 'LA') {
