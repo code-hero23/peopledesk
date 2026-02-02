@@ -32,11 +32,23 @@ const InspirationalPopup = () => {
             });
 
             if (res.data && res.data.isActive) {
+                // FREQUENCY CAP: Check if shown in the last hour
+                const lastShowTime = localStorage.getItem('last_popup_time');
+                const now = Date.now();
+                const oneHour = 60 * 60 * 1000;
+
+                if (lastShowTime && (now - parseInt(lastShowTime)) < oneHour) {
+                    setIsVisible(false);
+                    return;
+                }
+
                 setConfig(res.data);
 
                 // Show after a short delay
                 const timer = setTimeout(() => {
                     setIsVisible(true);
+                    // Mark as shown
+                    localStorage.setItem('last_popup_time', now.toString());
                 }, 2000);
 
                 return () => clearTimeout(timer);
