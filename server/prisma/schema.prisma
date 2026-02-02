@@ -1,11 +1,272 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
   binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+model User {
+  id                    Int                    @id @default(autoincrement())
+  email                 String                 @unique
+  password              String
+  name                  String
+  role                  Role                   @default(EMPLOYEE)
+  status                Status                 @default(ACTIVE)
+  lastWorkLogDate       DateTime?
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  designation           String                 @default("LA")
+  attendance            Attendance[]
+  leaveRequests         LeaveRequest[]
+  loginAccessRequests   LoginAccessRequest[]
+  permissionRequests    PermissionRequest[]
+  managedProjects       Project[]
+  showroomVisitRequests ShowroomVisitRequest[]
+  siteVisitRequests     SiteVisitRequest[]
+  workLogs              WorkLog[]
+}
+
+model SiteVisitRequest {
+  id          Int           @id @default(autoincrement())
+  userId      Int
+  projectName String
+  location    String
+  date        DateTime
+  startTime   String
+  endTime     String
+  reason      String
+  targetBhId  Int?
+  status      RequestStatus @default(PENDING)
+  bhStatus    RequestStatus @default(PENDING)
+  hrStatus    RequestStatus @default(PENDING)
+  createdAt   DateTime      @default(now())
+  user        User          @relation(fields: [userId], references: [id])
+}
+
+model ShowroomVisitRequest {
+  id                  Int           @id @default(autoincrement())
+  userId              Int
+  date                DateTime
+  startTime           String
+  endTime             String
+  sourceShowroom      String
+  destinationShowroom String
+  reason              String
+  targetBhId          Int?
+  status              RequestStatus @default(PENDING)
+  bhStatus            RequestStatus @default(PENDING)
+  hrStatus            RequestStatus @default(PENDING)
+  createdAt           DateTime      @default(now())
+  user                User          @relation(fields: [userId], references: [id])
+}
+
+model Attendance {
+  id            Int       @id @default(autoincrement())
+  userId        Int
+  date          DateTime  @default(now())
+  status        String    @default("PRESENT")
+  createdAt     DateTime  @default(now())
+  checkInPhoto  String?
+  checkoutPhoto String?
+  checkoutTime  DateTime?
+  deviceInfo    String?
+  ipAddress     String?
+  user          User      @relation(fields: [userId], references: [id])
+
+  @@unique([userId, date])
+}
+
+model WorkLog {
+  id                         Int       @id @default(autoincrement())
+  userId                     Int
+  date                       DateTime  @default(now())
+  projectId                  Int?
+  projectName                String?
+  tasks                      String?
+  hours                      Float?
+  remarks                    String?
+  createdAt                  DateTime  @default(now())
+  ae_clientFeedback          String?
+  ae_clientMet               Boolean?  @default(false)
+  ae_gpsCoordinates          String?
+  ae_hasIssues               Boolean?  @default(false)
+  ae_issueDescription        String?
+  ae_issueType               String?
+  ae_issuesRaised            String?
+  ae_issuesResolved          String?
+  ae_itemsInstalled          String?
+  ae_measurements            String?
+  ae_nextVisitDate           DateTime?
+  ae_nextVisitRequired       Boolean?  @default(false)
+  ae_photos                  Json?
+  ae_plannedWork             String?
+  ae_siteLocation            String?
+  ae_siteStatus              String?
+  ae_tasksCompleted          Json?
+  ae_visitType               Json?
+  ae_workStage               String?
+  clientName                 String?
+  completedImages            Int?
+  cre_callBreakdown          String?
+  cre_fqSent                 Int?
+  cre_orders                 Int?
+  cre_proposals              Int?
+  cre_showroomVisits         Int?
+  cre_totalCalls             Int?
+  customFields               Json?
+  endTime                    String?
+  fa_bookingFreezed          Int?
+  fa_bookingFreezedClients   String?
+  fa_calls                   Int?
+  fa_designPending           Int?
+  fa_designPendingClients    String?
+  fa_initialQuoteRn          Int?
+  fa_loadingDiscussion       Int?
+  fa_onlineDiscussion        Int?
+  fa_onlineDiscussionClients String?
+  fa_onlineTime              String?
+  fa_quotePending            Int?
+  fa_quotePendingClients     String?
+  fa_revisedQuoteRn          Int?
+  fa_showroomTime            String?
+  fa_showroomVisitClients    String?
+  fa_showroomVisits          Int?
+  fa_siteTime                String?
+  fa_siteVisits              Int?
+  imageCount                 Int?
+  la_addOns                  String?
+  la_colours                 Json?
+  la_cpCode                  String?
+  la_fa                      String?
+  la_freezingAmount          String?
+  la_mailId                  String?
+  la_measurements            Json?
+  la_number                  String?
+  la_onlineMeeting           Json?
+  la_projectLocation         String?
+  la_projectValue            String?
+  la_referalBonus            String?
+  la_requirements            Json?
+  la_showroomMeeting         Json?
+  la_siteStatus              String?
+  la_source                  String?
+  la_specialNote             String?
+  la_variant                 String?
+  la_woodwork                String?
+  pendingImages              Int?
+  process                    String?
+  site                       String?
+  startTime                  String?
+  cre_closing_metrics        Json?
+  cre_opening_metrics        Json?
+  logStatus                  LogStatus @default(CLOSED)
+  fa_closing_metrics         Json?
+  fa_opening_metrics         Json?
+  la_closing_metrics         Json?
+  la_opening_metrics         Json?
+  la_project_reports         Json?
+  ae_closing_metrics         Json?
+  ae_opening_metrics         Json?
+  project                    Project?  @relation(fields: [projectId], references: [id])
+  user                       User      @relation(fields: [userId], references: [id])
+}
+
+model LeaveRequest {
+  id         Int           @id @default(autoincrement())
+  userId     Int
+  type       LeaveType
+  startDate  DateTime
+  endDate    DateTime
+  reason     String
+  status     RequestStatus @default(PENDING)
+  approvedBy Int?
+  createdAt  DateTime      @default(now())
+  bhId       Int?
+  bhStatus   RequestStatus @default(PENDING)
+  hrId       Int?
+  hrStatus   RequestStatus @default(PENDING)
+  targetBhId Int?
+  user       User          @relation(fields: [userId], references: [id])
+}
+
+model PermissionRequest {
+  id         Int           @id @default(autoincrement())
+  userId     Int
+  date       DateTime
+  startTime  String
+  endTime    String
+  reason     String
+  status     RequestStatus @default(PENDING)
+  approvedBy Int?
+  createdAt  DateTime      @default(now())
+  bhId       Int?
+  bhStatus   RequestStatus @default(PENDING)
+  hrId       Int?
+  hrStatus   RequestStatus @default(PENDING)
+  targetBhId Int?
+  user       User          @relation(fields: [userId], references: [id])
+}
+
+model LoginAccessRequest {
+  id        Int           @id @default(autoincrement())
+  userId    Int
+  reason    String
+  status    RequestStatus @default(PENDING)
+  createdAt DateTime      @default(now())
+  user      User          @relation(fields: [userId], references: [id])
+}
+
+model Project {
+  id              Int       @id @default(autoincrement())
+  name            String
+  description     String?
+  managerId       Int?
+  addOns          String?
+  colours         Json?
+  cpCode          String?
+  createdAt       DateTime  @default(now())
+  fa              String?
+  freezingAmount  String?
+  latitude        Float?
+  location        String?
+  longitude       Float?
+  mailId          String?
+  measurements    Json?
+  number          String?
+  onlineMeeting   Json?
+  projectValue    String?
+  referalBonus    String?
+  requirements    Json?
+  showroomMeeting Json?
+  siteStatus      String?
+  source          String?
+  specialNote     String?
+  updatedAt       DateTime  @default(now()) @updatedAt
+  variant         String?
+  woodwork        String?
+  manager         User?     @relation(fields: [managerId], references: [id])
+  workLogs        WorkLog[]
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  action    String
+  userId    Int?
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model PopupConfig {
+  id        Int      @id @default(autoincrement())
+  imageUrl  String
+  quote     String
+  author    String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
 }
 
 enum Role {
@@ -38,302 +299,4 @@ enum RequestStatus {
 enum LogStatus {
   OPEN
   CLOSED
-}
-
-model User {
-  id                  Int       @id @default(autoincrement())
-  email               String    @unique
-  password            String
-  name                String
-  role                Role      @default(EMPLOYEE)
-  designation         String    @default("LA") // LA, CRE, FA, AE
-  status              Status    @default(ACTIVE)
-  lastWorkLogDate     DateTime?
-  createdAt           DateTime  @default(now())
-  updatedAt           DateTime  @updatedAt
-
-  attendance          Attendance[]
-  workLogs            WorkLog[]
-  leaveRequests       LeaveRequest[]
-  permissionRequests  PermissionRequest[]
-  loginAccessRequests LoginAccessRequest[]
-  managedProjects     Project[]
-
-  siteVisitRequests   SiteVisitRequest[]
-  showroomVisitRequests ShowroomVisitRequest[]
-}
-
-model SiteVisitRequest {
-  id          Int           @id @default(autoincrement())
-  userId      Int
-  user        User          @relation(fields: [userId], references: [id])
-  projectName String
-  location    String
-  date        DateTime
-  startTime   String
-  endTime     String
-  reason      String
-  
-  targetBhId  Int?          // ID of Business Head assigned to approve
-  
-  status      RequestStatus @default(PENDING) // Overall Status
-  bhStatus    RequestStatus @default(PENDING)
-  hrStatus    RequestStatus @default(PENDING)
-  
-  createdAt   DateTime      @default(now())
-}
-
-model ShowroomVisitRequest {
-  id                  Int           @id @default(autoincrement())
-  userId              Int
-  user                User          @relation(fields: [userId], references: [id])
-  date                DateTime
-  startTime           String
-  endTime             String
-  sourceShowroom      String
-  destinationShowroom String
-  reason              String
-  
-  targetBhId          Int?          // ID of Business Head assigned to approve
-
-  status              RequestStatus @default(PENDING) // Overall Status
-  bhStatus            RequestStatus @default(PENDING)
-  hrStatus            RequestStatus @default(PENDING)
-
-  createdAt           DateTime      @default(now())
-}
-
-model Attendance {
-  id        Int      @id @default(autoincrement())
-  userId    Int
-  user      User     @relation(fields: [userId], references: [id])
-  date          DateTime @default(now())
-  status        String   @default("PRESENT")
-  checkoutTime  DateTime?
-  checkInPhoto  String?  // URL/Path to the check-in photo
-  checkoutPhoto String?  // URL/Path to the check-out photo
-  deviceInfo    String?  // Browser/Device Details
-  ipAddress     String?  // Captured IP Address
-  createdAt     DateTime @default(now())
-
-  @@unique([userId, date])
-}
-
-model WorkLog {
-  id              Int      @id @default(autoincrement())
-  userId          Int
-  user            User     @relation(fields: [userId], references: [id])
-  date            DateTime @default(now())
-  logStatus       LogStatus @default(CLOSED) // OPEN for pending closing report, CLOSED for finished
-  projectId       Int?
-  project         Project? @relation(fields: [projectId], references: [id])
-  projectName     String?  // Can act as "Client Name" if needed, or specific field below
-  
-  // Architect Fields (LA)
-  clientName      String?
-  site            String?
-  process         String?
-  imageCount      Int?
-  startTime       String?
-  endTime         String?
-  hours           Float?   // Keeping for backward compatibility/total time calculation
-  completedImages Int?
-  pendingImages   Int?
-  
-  // CRE Fields
-  cre_totalCalls      Int?
-  cre_showroomVisits  Int?
-  cre_fqSent          Int?
-  cre_orders          Int?
-  cre_proposals       Int?
-  cre_callBreakdown   String?
-  cre_opening_metrics Json?     // New Two-Part System
-  cre_closing_metrics Json?     // New Two-Part System
-
-  // FA Fields
-  fa_calls                   Int?
-  fa_designPending           Int?
-  fa_designPendingClients    String?
-  fa_quotePending            Int?
-  fa_quotePendingClients     String?
-  fa_initialQuoteRn          Int?
-  fa_revisedQuoteRn          Int?
-  fa_showroomVisits          Int?
-  fa_showroomVisitClients    String?
-  fa_showroomTime            String? // Duration
-  fa_onlineDiscussion        Int?
-  fa_onlineDiscussionClients String?
-  fa_onlineTime              String? // Duration
-  fa_siteVisits              Int?
-  fa_siteTime                String? // Duration
-  fa_loadingDiscussion       Int?
-  fa_bookingFreezed          Int?
-  fa_bookingFreezedClients   String?
-  fa_opening_metrics         Json?     // New Two-Part System
-  fa_closing_metrics         Json?     // New Two-Part System
-
-  // Loading Architect (LA) Detailed Fields
-  la_number           String?
-  la_mailId           String?
-  la_projectLocation  String?
-  la_freezingAmount   String?
-  la_variant          String?
-  la_projectValue     String?
-  la_woodwork         String?
-  la_addOns           String?
-  la_cpCode           String?
-  la_source           String?
-  la_fa               String?
-  la_referalBonus     String?
-  la_siteStatus       String?
-  la_specialNote      String?
-
-  // JSON fields for tables/lists
-  la_requirements     Json?     // List of requirements strings
-  la_colours          Json?     // List of colour strings
-  la_onlineMeeting    Json?     // Array of { slNo, date, discussedOn }
-  la_showroomMeeting  Json?     // Array of { slNo, date, discussedOn }
-  la_measurements     Json?     // Array of { aeName, date, discussedOn }
-  
-  // New Three-Stage System for LA
-  la_opening_metrics  Json?
-  la_closing_metrics  Json?
-  la_project_reports  Json?     // Array of Project Reports submitted during the day
-
-  // Generic field for new roles
-  customFields        Json?
-
-  // AE Fields (Application Engineer)
-  ae_siteLocation     String?
-  ae_gpsCoordinates   String?
-  ae_siteStatus       String?   // New Site, Ongoing, Handover, Hold
-  ae_visitType        Json?     // ["Site Inspection", "Measurement", ...]
-  ae_workStage        String?   // Design, Production, Installation, Finishing
-  ae_tasksCompleted   Json?     // ["Measurement Taken", "Material Delivered", ...]
-  ae_measurements     String?   // Quantity
-  ae_itemsInstalled   String?   // Quantity
-  ae_issuesRaised     String?   // Quantity
-  ae_issuesResolved   String?   // Quantity
-  ae_hasIssues        Boolean?  @default(false)
-  ae_issueType        String?   // Design, Material, Site, Client
-  ae_issueDescription String?
-  ae_nextVisitRequired Boolean? @default(false)
-  ae_nextVisitDate    DateTime?
-  ae_plannedWork      String?
-  ae_clientMet        Boolean?  @default(false)
-  ae_clientFeedback   String?   // Positive, Neutral, Negative
-  ae_photos           Json?     // Array of photo URLs or filenames
-  ae_opening_metrics  Json?     // New Two-Part System
-  ae_closing_metrics  Json?     // New Two-Part System
-
-  tasks           String?   // Making optional if 'process' takes over
-  remarks         String?
-  createdAt       DateTime @default(now())
-}
-
-model LeaveRequest {
-  id        Int           @id @default(autoincrement())
-  userId    Int
-  user      User          @relation(fields: [userId], references: [id])
-  type      LeaveType
-  startDate DateTime
-  endDate   DateTime
-  reason    String
-  status    RequestStatus @default(PENDING) // Overall Status (Pending until HR approves)
-  
-  // Approval Workflow
-  bhStatus  RequestStatus @default(PENDING)
-  hrStatus  RequestStatus @default(PENDING)
-  bhId      Int?          // ID of Business Head who approved
-  targetBhId Int?         // ID of Business Head assigned to approve
-  hrId      Int?          // ID of HR who approved
-  
-  approvedBy Int?         // Legacy field (can remove later or map to hrId)
-  createdAt DateTime      @default(now())
-}
-
-model PermissionRequest {
-  id        Int           @id @default(autoincrement())
-  userId    Int
-  user      User          @relation(fields: [userId], references: [id])
-  date      DateTime
-  startTime String
-  endTime   String
-  reason    String
-  status    RequestStatus @default(PENDING) // Overall Status
-  
-  // Approval Workflow
-  bhStatus  RequestStatus @default(PENDING)
-  hrStatus  RequestStatus @default(PENDING)
-  bhId      Int?
-  targetBhId Int?         // ID of Business Head assigned to approve
-  hrId      Int?
-
-  approvedBy Int?
-  createdAt DateTime      @default(now())
-}
-
-model LoginAccessRequest {
-  id        Int           @id @default(autoincrement())
-  userId    Int
-  user      User          @relation(fields: [userId], references: [id])
-  reason    String
-  status    RequestStatus @default(PENDING)
-  createdAt DateTime      @default(now())
-}
-
-model Project {
-  id              Int       @id @default(autoincrement())
-  name            String
-  description     String?
-  managerId       Int?
-  manager         User?     @relation(fields: [managerId], references: [id])
-  
-  // LA Project Fields
-  number          String?
-  mailId          String?
-  location        String?
-  latitude        Float?
-  longitude       Float?
-  freezingAmount  String?
-  variant         String?
-  projectValue    String?
-  woodwork        String?
-  addOns          String?
-  cpCode          String?
-  source          String?
-  fa              String?
-  referalBonus    String?
-  siteStatus      String?
-  specialNote     String?
-  
-  // JSON fields for lists/tables
-  requirements    Json?
-  colours         Json?
-  onlineMeeting   Json?
-  showroomMeeting Json?
-  measurements    Json?
-
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt @default(now())
-
-  workLogs        WorkLog[]
-}
-
-model AuditLog {
-  id        Int      @id @default(autoincrement())
-  action    String
-  userId    Int?
-  details   String?
-  createdAt DateTime @default(now())
-}
-
-model PopupConfig {
-  id        Int      @id @default(autoincrement())
-  imageUrl  String
-  quote     String
-  author    String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt @default(now())
 }
