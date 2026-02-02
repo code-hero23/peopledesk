@@ -155,14 +155,6 @@ const Attendance = () => {
                                                             <Monitor className="w-5 h-5 text-slate-400" />
                                                         );
                                                     })()}
-                                                    {/* Tooltip */}
-                                                    <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-slate-800 text-white text-xs rounded shadow-lg">
-                                                        <p className="font-semibold mb-1">Device Info:</p>
-                                                        <p className="break-words">{record.sessions[0].deviceInfo}</p>
-                                                        {record.sessions[0].ipAddress && (
-                                                            <p className="mt-1 text-slate-300">IP: {record.sessions[0].ipAddress}</p>
-                                                        )}
-                                                    </div>
                                                 </div>
                                             ) : (
                                                 <span className="text-slate-300">-</span>
