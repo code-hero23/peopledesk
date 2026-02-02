@@ -85,6 +85,7 @@ const Approvals = () => {
     }
 
     const calculateDuration = (req) => {
+        if (req.type === 'HALF_DAY') return 'Half Day ☀️';
         if (req.date) return '1 Day';
         if (req.startDate && req.endDate) {
             const start = new Date(req.startDate);
