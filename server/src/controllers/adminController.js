@@ -571,17 +571,25 @@ const getDailyAttendance = async (req, res) => {
 // @access  Private (Admin)
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
-    const { name, email, designation, role } = req.body;
+    const { name, email, designation, role, password } = req.body;
 
     try {
+        let updateData = {
+            name,
+            email,
+            designation,
+            role: role || undefined
+        };
+
+        // If password is provided, hash it and add to update data
+        if (password && password.trim() !== '') {
+            const salt = await bcrypt.genSalt(10);
+            updateData.password = await bcrypt.hash(password, salt);
+        }
+
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
-            data: {
-                name,
-                email,
-                designation,
-                role: role || undefined // Only update role if provided
-            },
+            data: updateData,
             select: { id: true, name: true, email: true, role: true, designation: true, status: true }
         });
         res.json(user);

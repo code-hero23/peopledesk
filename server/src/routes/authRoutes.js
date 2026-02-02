@@ -7,5 +7,6 @@ router.post('/login', loginUser);
 router.post('/register', registerUser);
 router.post('/google', googleLogin);
 router.get('/me', protect, getMe);
+router.get('/me', protect, getMe);
 
 module.exports = router;

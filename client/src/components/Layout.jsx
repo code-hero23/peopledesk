@@ -173,7 +173,6 @@ const Layout = () => {
                             title="Refresh App"
                         >
                             <RefreshCw size={18} className="group-hover:rotate-180 transition-transform duration-500" />
-                            {!isCollapsed && <span className="text-sm font-medium">Update</span>}
                         </button>
                     </div>
 
