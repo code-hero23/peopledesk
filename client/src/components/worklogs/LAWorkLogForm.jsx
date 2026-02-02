@@ -107,8 +107,8 @@ const LAWorkLogForm = ({ onSuccess }) => {
         e.preventDefault();
         setConfirmationConfig({
             isOpen: true,
-            title: 'Add Project Task',
-            message: 'Confirm adding this task to your daily log?',
+            title: 'Add Project Wise Report',
+            message: 'Confirm adding this report to your daily log?',
             onConfirm: () => {
                 let totalHours = 0;
                 if (projectReport.startTime && projectReport.endTime) {
@@ -159,24 +159,36 @@ const LAWorkLogForm = ({ onSuccess }) => {
     return (
         <div className="space-y-6">
             {/* Header / Toggle */}
-            <div className="bg-white p-2 rounded-2xl border border-slate-100 shadow-sm flex gap-1">
+            <div className="grid grid-cols-2 gap-4">
                 <button
                     onClick={() => setReportType('daily')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold text-sm ${reportType === 'daily'
-                        ? 'bg-slate-800 text-white shadow-md'
-                        : 'text-slate-500 hover:bg-slate-50'
+                    className={`flex flex-col items-center justify-center gap-4 py-12 rounded-[2rem] transition-all duration-300 ${reportType === 'daily'
+                        ? 'bg-slate-800 text-white shadow-2xl scale-[1.02] ring-4 ring-slate-800/10'
+                        : 'bg-white text-slate-400 border-2 border-slate-50 hover:border-slate-200 hover:bg-slate-50/50'
                         }`}
                 >
-                    <Calendar size={16} /> Daily Report
+                    <div className={`${reportType === 'daily' ? 'bg-white/10' : 'bg-slate-100'} p-5 rounded-2xl transition-colors`}>
+                        <Calendar size={40} strokeWidth={2.5} />
+                    </div>
+                    <div className="text-center">
+                        <span className={`block text-xl font-black uppercase tracking-tight ${reportType === 'daily' ? 'text-white' : 'text-slate-600'}`}>Daily Report</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest opacity-60 ${reportType === 'daily' ? 'text-slate-300' : 'text-slate-400'}`}>Metrics & Attendance</span>
+                    </div>
                 </button>
                 <button
                     onClick={() => setReportType('project')}
-                    className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-xl transition-all font-bold text-sm ${reportType === 'project'
-                        ? 'bg-blue-600 text-white shadow-md'
-                        : 'text-slate-500 hover:bg-slate-50'
+                    className={`flex flex-col items-center justify-center gap-4 py-12 rounded-[2rem] transition-all duration-300 ${reportType === 'project'
+                        ? 'bg-blue-600 text-white shadow-2xl scale-[1.02] ring-4 ring-blue-600/10'
+                        : 'bg-white text-slate-400 border-2 border-slate-50 hover:border-slate-200 hover:bg-slate-50/50'
                         }`}
                 >
-                    <Briefcase size={16} /> Project Tasks
+                    <div className={`${reportType === 'project' ? 'bg-white/10' : 'bg-blue-50'} p-5 rounded-2xl transition-colors`}>
+                        <Briefcase size={40} strokeWidth={2.5} />
+                    </div>
+                    <div className="text-center">
+                        <span className={`block text-xl font-black uppercase tracking-tight ${reportType === 'project' ? 'text-white' : 'text-blue-900/40'}`}>Project Wise</span>
+                        <span className={`text-[10px] font-bold uppercase tracking-widest opacity-60 ${reportType === 'project' ? 'text-blue-100' : 'text-slate-400'}`}>Task Wise Reporting</span>
+                    </div>
                 </button>
             </div>
 
@@ -231,7 +243,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                         {!isTodayOpen ? (
                             <div className="p-6 bg-amber-50 text-amber-800 rounded-2xl border border-amber-100 flex items-center gap-4">
                                 <Layout size={24} />
-                                <span className="font-bold">Please submit the daily OPENING report before adding project tasks.</span>
+                                <span className="font-bold">Please submit the daily OPENING report before adding project wise reports.</span>
                             </div>
                         ) : (
                             <div className="space-y-6">
@@ -240,7 +252,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                     <div className="absolute top-0 right-0 w-32 h-32 bg-gradient-to-br from-blue-50 to-transparent rounded-bl-full -mr-10 -mt-10 pointer-events-none"></div>
 
                                     <h3 className="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
-                                        <Plus className="bg-blue-600 text-white rounded-lg p-0.5" size={20} /> Add Project Task
+                                        <Plus className="bg-blue-600 text-white rounded-lg p-0.5" size={20} /> Add Project Wise Report
                                     </h3>
 
                                     <form onSubmit={handleProjectReportSubmit} className="space-y-5 relative z-10">
@@ -302,7 +314,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
                                 {/* List */}
                                 <div className="space-y-3">
-                                    <h4 className="font-black text-slate-400 text-xs uppercase px-2">Today's Tasks ({todayLog?.la_project_reports ? (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports).length : todayLog.la_project_reports.length) : 0})</h4>
+                                    <h4 className="font-black text-slate-400 text-xs uppercase px-2">Today's Reports ({todayLog?.la_project_reports ? (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports).length : todayLog.la_project_reports.length) : 0})</h4>
                                     {todayLog && todayLog.la_project_reports &&
                                         ((typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports) : todayLog.la_project_reports).map((r, idx) => (
                                             <motion.div
