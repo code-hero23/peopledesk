@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
-import { Download, MapPin, Building2, Trash2 } from 'lucide-react';
+import { Download, MapPin, Building2, Trash2, Calendar, X } from 'lucide-react';
 import axios from 'axios';
 
 const VisitRequests = () => {
@@ -90,7 +90,6 @@ const VisitRequests = () => {
             </div>
 
             {/* Verification Badges */}
-            {/* Verification Badges - Show only for non-visit types if needed, but for visits we skip BH status */}
             <div className="flex flex-wrap gap-2 mb-4">
                 {req.status === 'PENDING' && (
                     <span className="bg-amber-50 text-amber-700 text-[10px] font-bold px-2 py-1 rounded border border-amber-200 uppercase tracking-widest">
@@ -160,30 +159,40 @@ const VisitRequests = () => {
                     <p className="text-slate-500 font-medium italic">Site inspections & showroom movements.</p>
                 </div>
 
-                <div className="flex gap-2">
-                    <button onClick={handleExport} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-200 flex items-center gap-2 border border-emerald-200">
+                <div className="flex flex-wrap gap-3 items-center">
+                    <button onClick={handleExport} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-200 flex items-center gap-2 border border-emerald-200 h-9">
                         <Download size={14} /> EXPORT
                     </button>
-                    {/* Date Picker */}
-                    <div className="relative">
+
+                    {/* Ultra-Premium Date Picker */}
+                    <div className="relative flex items-center group">
+                        <div className="absolute left-3 text-slate-400 group-focus-within:text-blue-500 transition-all duration-300 group-hover:scale-110">
+                            <Calendar size={14} strokeWidth={2.5} />
+                        </div>
                         <input
                             type="date"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
-                            className="px-4 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-bold text-xs bg-white"
+                            className="bg-white/80 backdrop-blur-sm pl-9 pr-8 h-10 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-700 font-black text-[11px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-blue-300 w-[160px] appearance-none"
                         />
-                        {filterDate && (
+                        {filterDate ? (
                             <button
                                 onClick={() => setFilterDate('')}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+                                className="absolute right-2.5 p-1 rounded-lg bg-slate-100/50 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all duration-300 hover:rotate-90"
+                                title="Clear filter"
                             >
-                                ✕
+                                <X size={12} strokeWidth={3} />
                             </button>
+                        ) : (
+                            <div className="absolute right-3.5 text-[9px] font-black text-slate-300 uppercase tracking-tighter pointer-events-none group-focus-within:opacity-0 transition-opacity">
+                                DATE
+                            </div>
                         )}
                     </div>
-                    <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
-                        <button onClick={() => setActiveTab('pending')} className={`px-4 py-1.5 text-xs font-black rounded-md transition-all ${activeTab === 'pending' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>PENDING</button>
-                        <button onClick={() => setActiveTab('history')} className={`px-4 py-1.5 text-xs font-black rounded-md transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>HISTORY</button>
+
+                    <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 h-9">
+                        <button onClick={() => setActiveTab('pending')} className={`px-4 text-xs font-black rounded-md transition-all ${activeTab === 'pending' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>PENDING</button>
+                        <button onClick={() => setActiveTab('history')} className={`px-4 text-xs font-black rounded-md transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>HISTORY</button>
                     </div>
                 </div>
             </div>

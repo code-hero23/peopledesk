@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
-import { Download } from 'lucide-react';
+import { Download, Calendar, X } from 'lucide-react';
 import axios from 'axios';
 
 const Approvals = () => {
@@ -198,7 +198,7 @@ const Approvals = () => {
 
                 </div>
 
-                <div className="flex gap-3">
+                <div className="flex flex-wrap gap-3 items-center">
                     <button
                         onClick={handleExport}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2"
@@ -206,23 +206,33 @@ const Approvals = () => {
                         <Download size={18} />
                         <span className="hidden sm:inline">Export Requests</span>
                     </button>
-                    {/* Date Picker */}
-                    <div className="relative">
+
+                    {/* Ultra-Premium Date Picker */}
+                    <div className="relative flex items-center group">
+                        <div className="absolute left-3.5 text-slate-400 group-focus-within:text-blue-500 transition-all duration-300 transform group-hover:scale-110">
+                            <Calendar size={18} strokeWidth={2.5} />
+                        </div>
                         <input
                             type="date"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
-                            className="pl-4 pr-10 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium text-sm"
+                            className="bg-white/80 backdrop-blur-sm pl-11 pr-10 py-2.5 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-700 font-bold text-sm shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-blue-300 w-[190px] appearance-none"
                         />
-                        {filterDate && (
+                        {filterDate ? (
                             <button
                                 onClick={() => setFilterDate('')}
-                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold"
+                                className="absolute right-3 p-1.5 rounded-xl bg-slate-100/50 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all duration-300 hover:rotate-90"
+                                title="Clear filter"
                             >
-                                ✕
+                                <X size={14} strokeWidth={3} />
                             </button>
+                        ) : (
+                            <div className="absolute right-4 text-[10px] font-black text-slate-300 uppercase tracking-tighter pointer-events-none group-focus-within:opacity-0 transition-opacity">
+                                DATE
+                            </div>
                         )}
                     </div>
+
                     {/* Tabs */}
                     <div className="flex bg-white p-1 rounded-lg border border-slate-200">
                         <button
@@ -250,8 +260,11 @@ const Approvals = () => {
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
                 {leaves.map(req => renderRequestCard(req, 'leave', 'Leave Request', 'orange'))}
                 {permissions.map(req => renderRequestCard(req, 'permission', 'Permission', 'purple'))}
+                {siteVisits.map(req => renderRequestCard(req, 'site-visit', 'Site Visit', 'emerald'))}
+                {showroomVisits.map(req => renderRequestCard(req, 'showroom-visit', 'Cross-Showroom', 'indigo'))}
 
-                {leaves.length === 0 && permissions.length === 0 && (
+
+                {leaves.length === 0 && permissions.length === 0 && siteVisits.length === 0 && showroomVisits.length === 0 && (
                     <div className="col-span-full border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50">
                         <p className="text-slate-400 font-medium">✨ No {activeTab} requests found.</p>
                     </div>
