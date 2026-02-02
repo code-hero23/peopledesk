@@ -26,6 +26,7 @@ Navigate to the server folder and update dependencies + database.
 cd server
 npm install
 npx prisma generate
+# CRITICAL: Use 'deploy' not 'dev' to preserve data
 npx prisma migrate deploy
 ```
 

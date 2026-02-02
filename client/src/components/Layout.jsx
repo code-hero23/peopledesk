@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { logout, reset } from '../features/auth/authSlice';
+import { logout, reset, getMe } from '../features/auth/authSlice';
 import {
     LayoutDashboard,
     Users,
@@ -28,6 +28,13 @@ const Layout = () => {
     const { user } = useSelector((state) => state.auth);
     const [isCollapsed, setIsCollapsed] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    useEffect(() => {
+        if (user) {
+            dispatch(getMe());
+        }
+    }, [dispatch]);
+
 
     const onLogout = () => {
         dispatch(logout());

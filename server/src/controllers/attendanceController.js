@@ -50,7 +50,9 @@ const markAttendance = async (req, res) => {
                 userId,
                 status: 'PRESENT',
                 date: new Date(),
-                checkInPhoto: req.file ? `/uploads/${req.file.filename}` : null
+                checkInPhoto: req.file ? `/uploads/${req.file.filename}` : null,
+                deviceInfo: req.body.deviceInfo || req.headers['user-agent'],
+                ipAddress: req.ip || req.connection.remoteAddress
             },
         });
 

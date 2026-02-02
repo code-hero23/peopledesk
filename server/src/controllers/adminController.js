@@ -536,7 +536,9 @@ const getDailyAttendance = async (req, res) => {
                 timeIn: record.date,
                 timeOut: record.checkoutTime,
                 checkInPhoto: record.checkInPhoto,
-                checkoutPhoto: record.checkoutPhoto
+                checkoutPhoto: record.checkoutPhoto,
+                deviceInfo: record.deviceInfo,
+                ipAddress: record.ipAddress
             }));
 
             // Calculate overall Time In and Time Out for the day

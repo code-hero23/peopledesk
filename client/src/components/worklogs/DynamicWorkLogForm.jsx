@@ -3,12 +3,17 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog } from '../../features/employee/employeeSlice';
 import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import { Plus, Trash2 } from 'lucide-react';
 
 const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        onConfirm: () => { }
+    });
 
     // Get config for the role or return null
     const config = WORK_LOG_CONFIG[role];
@@ -55,9 +60,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
         });
     };
 
-    const onSubmit = (e) => {
-        e.preventDefault();
-
+    const handleConfirmSubmit = () => {
         // Package data for backend
         // Structure: { customFields: { "Table Label": [rows...] } }
         const customFields = {};
@@ -67,6 +70,15 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
 
         dispatch(createWorkLog({ customFields })).then(() => {
             setShowSuccess(true);
+        });
+    };
+
+    const onSubmit = (e) => {
+        e.preventDefault();
+
+        setConfirmationConfig({
+            isOpen: true,
+            onConfirm: handleConfirmSubmit
         });
     };
 
@@ -184,6 +196,16 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 }}
                 message="Work Log Submitted!"
                 subMessage="Your report has been saved successfully."
+            />
+
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title="Submit Work Log"
+                message="Are you sure you want to submit your daily report? Please check all entries before confirming."
+                type="info"
+                confirmText="Submit Report"
             />
         </form>
     );

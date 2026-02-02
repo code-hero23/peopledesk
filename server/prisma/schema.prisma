@@ -112,6 +112,8 @@ model Attendance {
   checkoutTime  DateTime?
   checkInPhoto  String?  // URL/Path to the check-in photo
   checkoutPhoto String?  // URL/Path to the check-out photo
+  deviceInfo    String?  // Browser/Device Details
+  ipAddress     String?  // Captured IP Address
   createdAt     DateTime @default(now())
 
   @@unique([userId, date])

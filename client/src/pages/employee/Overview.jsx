@@ -17,6 +17,7 @@ import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
 import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
 
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const Overview = () => {
     const dispatch = useDispatch();
@@ -30,12 +31,45 @@ const Overview = () => {
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
 
 
+    // Confirmation Modal State
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { },
+        type: 'info'
+    });
+
     useEffect(() => {
         dispatch(getAttendanceStatus());
         dispatch(getMyWorkLogs());
         dispatch(getMyRequests());
         return () => { dispatch(reset()); };
     }, [dispatch]);
+
+    const executeAttendanceAction = (actionName) => {
+        const deviceInfo = navigator.userAgent;
+        const formData = new FormData();
+        formData.append('deviceInfo', deviceInfo);
+
+        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
+            // Check-Out Logic
+            if (user?.designation === 'AE') {
+                setIsCheckingOut(true);
+                setShowCheckInModal(true);
+            } else {
+                dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
+            }
+        } else {
+            // Check-In Logic
+            if (user?.designation === 'AE') {
+                setIsCheckingOut(false);
+                setShowCheckInModal(true);
+            } else {
+                dispatch(markAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
+            }
+        }
+    };
 
     const handleMarkAttendance = () => {
         // Determine action name for confirmation
@@ -46,32 +80,44 @@ const Overview = () => {
             actionName = user?.designation === 'AE' ? 'Check In' : 'Log In';
         }
 
-        if (!window.confirm(`Are you sure you want to ${actionName}?`)) {
-            return;
-        }
+        const isLogin = ['Log In', 'Check In'].includes(actionName);
 
-        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
-            // Check-Out Logic
-            if (user?.designation === 'AE') {
-                setIsCheckingOut(true);
-                setShowCheckInModal(true);
-            } else {
-                dispatch(checkoutAttendance()).then(() => dispatch(getAttendanceStatus()));
-            }
-        } else {
-            // Check-In Logic
-            if (user?.designation === 'AE') {
-                setIsCheckingOut(false);
-                setShowCheckInModal(true);
-            } else {
-                dispatch(markAttendance()).then(() => dispatch(getAttendanceStatus()));
-            }
-        }
+        const message = isLogin ? (
+            <div className="mt-2 text-center">
+                <p className="text-lg font-bold text-emerald-600 mb-4">
+                    Before you continue, make sure:
+                </p>
+                <ul className="space-y-3 text-slate-600 text-base text-left inline-block mx-auto px-4 bg-slate-50 py-3 rounded-xl border border-slate-100">
+                    <li className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                            <span className="font-bold text-sm">✓</span>
+                        </div>
+                        <span className="font-medium">You are using a Desktop / Laptop</span>
+                    </li>
+                    <li className="flex items-center gap-3">
+                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                            <span className="font-bold text-sm">✓</span>
+                        </div>
+                        <span className="font-medium">Your work session is starting now</span>
+                    </li>
+                </ul>
+            </div>
+        ) : `Are you sure you want to ${actionName}? This will record your ${actionName.toLowerCase()} time.`;
+
+        setConfirmationConfig({
+            isOpen: true,
+            title: isLogin ? 'Start Work Confirmation' : `Confirm ${actionName}`,
+            message: message,
+            type: isLogin ? 'info' : 'warning',
+            confirmText: `Yes, ${actionName}`,
+            onConfirm: () => executeAttendanceAction(actionName)
+        });
     };
 
     const handlePhotoCheckIn = (photoFile) => {
         const formData = new FormData();
         formData.append('photo', photoFile);
+        formData.append('deviceInfo', navigator.userAgent);
 
         const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
 
@@ -138,6 +184,16 @@ const Overview = () => {
                 onSubmit={handlePhotoCheckIn}
                 isLoading={isLoading}
                 isCheckingOut={isCheckingOut}
+            />
+
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
+                type={confirmationConfig.type}
+                confirmText={confirmationConfig.confirmText}
             />
 
             {/* Header */}
