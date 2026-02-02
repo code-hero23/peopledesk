@@ -4,7 +4,8 @@ import { createWorkLog } from '../../features/employee/employeeSlice';
 import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Layers, CheckSquare, List } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const dispatch = useDispatch();
@@ -15,23 +16,19 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
         onConfirm: () => { }
     });
 
-    // Get config for the role or return null
     const config = WORK_LOG_CONFIG[role];
 
-    // Initialize state: object with keys being table indices or labels
-    // Example: { "0": [{...row1}, {...row2}], "1": [...] }
     const [tableData, setTableData] = useState(() => {
         if (!config) return {};
         const initial = {};
         config.tables.forEach((table, index) => {
-            // Use predefined rows if available, otherwise start with one empty row
             initial[index] = table.predefinedRows ? [...table.predefinedRows] : [{}];
         });
         return initial;
     });
 
     if (!config) {
-        return <div className="p-4 text-red-500">Configuration not found for role: {role}</div>;
+        return <div className="p-4 text-red-500 font-bold bg-red-50 rounded-xl">Configuration not found for role: {role}</div>;
     }
 
     const handleRowChange = (tableIndex, rowIndex, fieldName, value) => {
@@ -50,19 +47,15 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     };
 
     const removeRow = (tableIndex, rowIndex) => {
-        // Don't allow deleting rows if the table has predefined rows (fixed structure)
         if (config.tables[tableIndex].predefinedRows) return;
-
         setTableData(prev => {
-            if (prev[tableIndex].length <= 1) return prev; // Don't delete last row
+            if (prev[tableIndex].length <= 1) return prev;
             const newTable = prev[tableIndex].filter((_, i) => i !== rowIndex);
             return { ...prev, [tableIndex]: newTable };
         });
     };
 
     const handleConfirmSubmit = () => {
-        // Package data for backend
-        // Structure: { customFields: { "Table Label": [rows...] } }
         const customFields = {};
         config.tables.forEach((table, index) => {
             customFields[table.label] = tableData[index];
@@ -75,7 +68,6 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
 
     const onSubmit = (e) => {
         e.preventDefault();
-
         setConfirmationConfig({
             isOpen: true,
             onConfirm: handleConfirmSubmit
@@ -83,108 +75,120 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     };
 
     return (
-        <form onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2">
-            <div className="border-b pb-2 mb-4 sticky top-0 bg-white z-10">
-                <h3 className="font-bold text-slate-800 text-lg">{config.title}</h3>
-                <p className="text-slate-400 text-xs mt-1">Fill in the daily reporting details below.</p>
+        <motion.form
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2"
+        >
+            <div className="bg-gradient-to-r from-indigo-500 to-violet-500 p-6 rounded-2xl text-white shadow-lg shadow-indigo-200 sticky top-0 z-10">
+                <div className="flex items-center gap-4">
+                    <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                        <Layers size={24} className="text-white" />
+                    </div>
+                    <div>
+                        <h3 className="font-black text-2xl tracking-tight">{config.title}</h3>
+                        <p className="text-indigo-100 text-sm font-medium opacity-90">Daily Activity Report</p>
+                    </div>
+                </div>
             </div>
 
             {config.tables.map((table, tableIndex) => (
-                <div key={tableIndex} className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 className="font-bold text-slate-700 mb-3 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 block"></span>
-                        {table.label}
-                    </h4>
+                <div key={tableIndex} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50">
+                        <div className="p-2 rounded-lg bg-indigo-50 text-indigo-600">
+                            <List size={18} />
+                        </div>
+                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{table.label}</h4>
+                    </div>
 
-                    {/* Table Header - Hide on small screens if needed, mostly for structure */}
-                    <div className="hidden md:flex gap-4 mb-2 px-2 text-xs font-bold text-slate-400 uppercase">
+                    {/* Table Header */}
+                    <div className="hidden md:flex gap-4 mb-2 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">
                         {table.fields.map(field => (
                             <div key={field.name} className="flex-1">{field.label}</div>
                         ))}
-                        <div className="w-8"></div>
+                        {!table.predefinedRows && <div className="w-10"></div>}
                     </div>
 
                     <div className="space-y-3">
-                        {tableData[tableIndex]?.map((row, rowIndex) => (
-                            <div key={rowIndex} className="flex flex-col md:flex-row gap-3 bg-white p-3 rounded-lg border border-slate-200 shadow-sm group hover:border-blue-300 transition-colors">
-                                {table.fields.map(field => (
-                                    <div key={field.name} className="flex-1">
-                                        <label className="md:hidden text-xs font-bold text-slate-400 mb-1 block">{field.label}</label>
-                                        {field.type === 'select' ? (
-                                            <select
-                                                value={row[field.name] || ''}
-                                                onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
-                                                className="w-full px-3 py-2 text-sm border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-slate-50 focus:bg-white transition-all"
-                                            >
-                                                <option value="">Select...</option>
-                                                {field.options?.map(opt => (
-                                                    <option key={opt} value={opt}>{opt}</option>
-                                                ))}
-                                            </select>
-                                        ) : (
-                                            <input
-                                                type={field.type}
-                                                value={row[field.name] || ''}
-                                                onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
-                                                placeholder={field.label}
-                                                disabled={field.disabled}
-                                                className={`w-full px-3 py-2 text-sm border border-slate-200 rounded-lg outline-none transition-all
-                                                    ${field.disabled ? 'bg-slate-100 text-slate-500 font-medium' : 'bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 focus:border-blue-500'}
-                                                `}
-                                            />
-                                        )}
-                                    </div>
-                                ))}
-                                {!table.predefinedRows && (
-                                    <button
-                                        type="button"
-                                        onClick={() => removeRow(tableIndex, rowIndex)}
-                                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end md:self-auto"
-                                        title="Delete Row"
-                                    >
-                                        <Trash2 size={18} />
-                                    </button>
-                                )}
-                            </div>
-                        ))}
+                        <AnimatePresence>
+                            {tableData[tableIndex]?.map((row, rowIndex) => (
+                                <motion.div
+                                    key={rowIndex}
+                                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}
+                                    className="flex flex-col md:flex-row gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 group hover:bg-white hover:border-indigo-100 transition-all"
+                                >
+                                    {table.fields.map(field => (
+                                        <div key={field.name} className="flex-1">
+                                            <label className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 block">{field.label}</label>
+                                            {field.type === 'select' ? (
+                                                <div className="relative">
+                                                    <select
+                                                        value={row[field.name] || ''}
+                                                        onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
+                                                        className="w-full px-3 py-2 text-sm font-semibold border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none bg-white appearance-none cursor-pointer hover:bg-slate-50 transition-all"
+                                                    >
+                                                        <option value="">Select...</option>
+                                                        {field.options?.map(opt => (
+                                                            <option key={opt} value={opt}>{opt}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            ) : (
+                                                <input
+                                                    type={field.type}
+                                                    value={row[field.name] || ''}
+                                                    onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
+                                                    placeholder={field.label}
+                                                    disabled={field.disabled}
+                                                    className={`w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none transition-all placeholder:text-slate-300
+                                                        ${field.disabled
+                                                            ? 'bg-slate-100 border-slate-200 text-slate-500'
+                                                            : 'bg-white border-slate-200 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300'}
+                                                    `}
+                                                />
+                                            )}
+                                        </div>
+                                    ))}
+                                    {!table.predefinedRows && (
+                                        <button
+                                            type="button"
+                                            onClick={() => removeRow(tableIndex, rowIndex)}
+                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end md:self-auto"
+                                            title="Delete Row"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    )}
+                                </motion.div>
+                            ))}
+                        </AnimatePresence>
                     </div>
 
                     {!table.predefinedRows && (
                         <button
                             type="button"
                             onClick={() => addRow(tableIndex)}
-                            className="mt-3 text-sm text-blue-600 font-bold hover:text-blue-800 flex items-center gap-1 py-2 px-3 hover:bg-blue-50 rounded-lg transition-colors w-full md:w-auto justify-center md:justify-start border border-dashed border-blue-200 hover:border-blue-400"
+                            className="mt-4 w-full py-3 border-2 border-dashed border-indigo-200 rounded-xl text-indigo-500 font-bold hover:bg-indigo-50 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide"
                         >
-                            <Plus size={16} /> Add Row
+                            <Plus size={16} /> Add Entry
                         </button>
                     )}
                 </div>
             ))}
 
-            <div className="pt-4 border-t border-slate-100 flex gap-4 sticky bottom-0 bg-white pb-2">
+            <div className="flex gap-3 pt-4 border-t border-slate-100 bg-white sticky bottom-0">
                 <button
                     type="button"
-                    onClick={onSuccess} // Actually closes modal
-                    className="flex-1 py-3 rounded-xl border border-slate-200 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                    onClick={onSuccess}
+                    className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider"
                 >
                     Cancel
                 </button>
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className="flex-1 bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white font-bold py-3 rounded-xl shadow-lg shadow-blue-500/30 transition-all active:scale-95 flex justify-center items-center gap-2"
+                    className="flex-1 bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider"
                 >
-                    {isLoading ? (
-                        <>
-                            <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
-                            Submitting...
-                        </>
-                    ) : (
-                        <>
-                            <span>Submit Report</span>
-                            <span className="text-xl">🚀</span>
-                        </>
-                    )}
+                    {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Submit Report</>}
                 </button>
             </div>
 
@@ -194,8 +198,8 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Work Log Submitted!"
-                subMessage="Your report has been saved successfully."
+                message="Report Submitted!"
+                subMessage="Your work log has been recorded successfully."
             />
 
             <ConfirmationModal
@@ -203,11 +207,11 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
                 onConfirm={confirmationConfig.onConfirm}
                 title="Submit Work Log"
-                message="Are you sure you want to submit your daily report? Please check all entries before confirming."
+                message="Are you sure you want to submit your daily report?"
                 type="info"
-                confirmText="Submit Report"
+                confirmText="Submit"
             />
-        </form>
+        </motion.form>
     );
 };
 

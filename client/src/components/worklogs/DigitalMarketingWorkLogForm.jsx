@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import { Megaphone, Briefcase, User, Clock, Link, FileText, CheckSquare, Save } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
@@ -50,99 +52,128 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
     };
 
     return (
-        <form onSubmit={onSubmit} className="space-y-4">
-            <div className="bg-purple-50 p-3 rounded-lg border border-purple-100 mb-4">
-                <h4 className="font-bold text-purple-800 text-sm">Digital Marketing Daily Log</h4>
-                <p className="text-xs text-purple-600">Track your daily tasks and content creation.</p>
+        <motion.form
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            onSubmit={onSubmit} className="space-y-6"
+        >
+            <div className="bg-gradient-to-r from-purple-500 to-fuchsia-600 p-6 rounded-2xl text-white shadow-lg shadow-purple-200">
+                <div className="flex items-center gap-4">
+                    <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                        <Megaphone size={24} className="text-white" />
+                    </div>
+                    <div>
+                        <h3 className="font-black text-2xl tracking-tight">Digital Marketing Log</h3>
+                        <p className="text-purple-100 text-sm font-medium opacity-90">Track content & campaigns</p>
+                    </div>
+                </div>
             </div>
 
-            <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Work Description</label>
-                <textarea
-                    name="work"
-                    required
-                    value={formData.work}
-                    onChange={handleChange}
-                    rows="2"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                    placeholder="Describe the task..."
-                ></textarea>
-            </div>
+            <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-4">
+                <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-50">
+                    <div className="p-2 rounded-lg bg-purple-50 text-purple-600">
+                        <Briefcase size={18} />
+                    </div>
+                    <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">Task Details</h4>
+                </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Work Given By</label>
-                    <input
-                        type="text"
-                        name="workGivenBy"
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">Work Description</label>
+                    <textarea
+                        name="work"
                         required
-                        value={formData.workGivenBy}
+                        value={formData.work}
                         onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                        placeholder="Name of logic/person"
-                    />
+                        rows="3"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-medium transition-all resize-none"
+                        placeholder="Describe the campaign or content created..."
+                    ></textarea>
                 </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Hours Spent</label>
-                    <input
-                        type="number"
-                        step="0.1"
-                        name="hoursSpent"
-                        required
-                        value={formData.hoursSpent}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                        placeholder="e.g. 2.5"
-                    />
-                </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Status</label>
-                    <select
-                        name="status"
-                        value={formData.status}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none bg-white"
-                    >
-                        <option value="In Progress">In Progress</option>
-                        <option value="Completed">Completed</option>
-                        <option value="Pending Review">Pending Review</option>
-                        <option value="On Hold">On Hold</option>
-                    </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            <User size={10} /> Work Given By
+                        </label>
+                        <input
+                            type="text"
+                            name="workGivenBy"
+                            required
+                            value={formData.workGivenBy}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-semibold transition-all"
+                            placeholder="e.g. Manager Name"
+                        />
+                    </div>
+                    <div>
+                        <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            <Clock size={10} /> Hours Spent
+                        </label>
+                        <input
+                            type="number"
+                            step="0.1"
+                            name="hoursSpent"
+                            required
+                            value={formData.hoursSpent}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-semibold transition-all"
+                            placeholder="e.g. 2.5"
+                        />
+                    </div>
                 </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">File Link (Drive/Canva)</label>
-                    <input
-                        type="url"
-                        name="fileLink"
-                        value={formData.fileLink}
-                        onChange={handleChange}
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                        placeholder="https://..."
-                    />
-                </div>
-            </div>
 
-            <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Remarks</label>
-                <textarea
-                    name="remarks"
-                    value={formData.remarks}
-                    onChange={handleChange}
-                    rows="2"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-                    placeholder="Any blockers or notes..."
-                ></textarea>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            <CheckSquare size={10} /> Status
+                        </label>
+                        <select
+                            name="status"
+                            value={formData.status}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-semibold transition-all cursor-pointer"
+                        >
+                            <option value="In Progress">In Progress</option>
+                            <option value="Completed">Completed</option>
+                            <option value="Pending Review">Pending Review</option>
+                            <option value="On Hold">On Hold</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                            <Link size={10} /> File Link (Drive/Canva)
+                        </label>
+                        <input
+                            type="url"
+                            name="fileLink"
+                            value={formData.fileLink}
+                            onChange={handleChange}
+                            className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-semibold transition-all text-blue-600 underline-offset-2"
+                            placeholder="https://..."
+                        />
+                    </div>
+                </div>
+
+                <div>
+                    <label className="flex items-center gap-1 text-[10px] font-bold text-slate-400 uppercase mb-1">
+                        <FileText size={10} /> Remarks
+                    </label>
+                    <textarea
+                        name="remarks"
+                        value={formData.remarks}
+                        onChange={handleChange}
+                        rows="2"
+                        className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-medium transition-all resize-none"
+                        placeholder="Any blockers or additional notes..."
+                    ></textarea>
+                </div>
             </div>
 
             <div className="flex gap-3 pt-2">
-                <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
+                <button type="button" onClick={onSuccess} className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider">
                     Cancel
                 </button>
-                <button type="submit" disabled={isLoading} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
-                    {isLoading ? 'Submitting...' : 'Submit Log'}
+                <button type="submit" disabled={isLoading} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider">
+                    {isLoading ? 'Submitting...' : <><Save size={18} /> Submit Log</>}
                 </button>
             </div>
 
@@ -153,9 +184,9 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
                     if (onSuccess) onSuccess();
                 }}
                 message="Work Log Submitted"
-                subMessage="Digital Marketing entry recorded."
+                subMessage="Digital Marketing entry recorded successfully."
             />
-        </form>
+        </motion.form>
     );
 };
 

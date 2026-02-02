@@ -1,8 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
-import { MapPin, Camera, AlertTriangle, Calendar, Clock, CheckCircle } from 'lucide-react';
+import {
+    MapPin, Camera, AlertTriangle, Calendar, Clock, CheckCircle,
+    Navigation, Briefcase, Clipboard, HardHat, UserCheck,
+    Wrench, AlertOctagon, CornerDownRight, CheckSquare
+} from 'lucide-react';
 import SuccessModal from '../SuccessModal';
+import { motion, AnimatePresence } from 'framer-motion';
 
 const AEWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
@@ -10,7 +15,6 @@ const AEWorkLogForm = ({ onSuccess }) => {
     const { attendance, isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
-    const [activeTab, setActiveTab] = useState('opening');
 
     useEffect(() => {
         dispatch(getTodayLogStatus());
@@ -60,8 +64,6 @@ const AEWorkLogForm = ({ onSuccess }) => {
     const issueTypes = ['Design', 'Material', 'Site', 'Client'];
 
     // --- HANDLERS ---
-
-    // OPENING HANDLERS
     const handleOpeningChange = (e) => {
         const { name, value } = e.target;
         setOpeningData(prev => ({ ...prev, [name]: value }));
@@ -91,17 +93,11 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
-
-        // Convert to FormData to be compatible with backend Multer
         const formData = new FormData();
         formData.append('logStatus', 'OPEN');
         formData.append('process', 'Opening Report');
         formData.append('hours', '0');
-
-        // Map Opening Fields
         formData.append('ae_opening_metrics', JSON.stringify(openingData));
-
-        // Map to Root Fields for Backward Compat / Display
         formData.append('ae_siteLocation', openingData.ae_siteLocation || '');
         formData.append('ae_gpsCoordinates', openingData.ae_gpsCoordinates || '');
         formData.append('ae_siteStatus', openingData.ae_siteStatus || '');
@@ -115,7 +111,6 @@ const AEWorkLogForm = ({ onSuccess }) => {
         });
     };
 
-    // CLOSING HANDLERS
     const handleClosingChange = (e) => {
         const { name, value, type, checked } = e.target;
         setClosingData(prev => ({
@@ -145,18 +140,12 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
-
         const formData = new FormData();
         formData.append('logStatus', 'CLOSED');
 
-        // Prepare Closing Metrics Object
-        const metrics = {
-            ...closingData,
-            ae_photos: undefined // Files handled separately
-        };
+        const metrics = { ...closingData, ae_photos: undefined };
         formData.append('ae_closing_metrics', JSON.stringify(metrics));
 
-        // Map to Root Fields (for easier backend access/display consistency)
         formData.append('ae_visitType', JSON.stringify(closingData.ae_visitType));
         formData.append('ae_workStage', closingData.ae_workStage || '');
         formData.append('ae_tasksCompleted', JSON.stringify(closingData.ae_tasksCompleted));
@@ -168,17 +157,16 @@ const AEWorkLogForm = ({ onSuccess }) => {
         formData.append('ae_issueType', closingData.ae_issueType || '');
         formData.append('ae_issueDescription', closingData.ae_issueDescription || '');
         formData.append('ae_nextVisitRequired', closingData.ae_nextVisitRequired);
-        
+
         if (closingData.ae_nextVisitDate) {
             formData.append('ae_nextVisitDate', closingData.ae_nextVisitDate);
         }
-        
+
         formData.append('ae_clientMet', closingData.ae_clientMet);
         formData.append('ae_clientFeedback', closingData.ae_clientFeedback || '');
         formData.append('remarks', closingData.remarks || '');
         formData.append('clientName', closingData.clientName || '');
 
-        // Handle Photos
         if (closingData.ae_photos && closingData.ae_photos.length > 0) {
             closingData.ae_photos.forEach(file => {
                 formData.append('ae_photos', file);
@@ -193,259 +181,230 @@ const AEWorkLogForm = ({ onSuccess }) => {
         });
     };
 
-    // --- RENDER ---
-
-    if (isLoading) return <div className="p-4 text-center">Loading...</div>;
+    if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading...</div>;
 
     if (isTodayClosed) {
         return (
-            <div className="bg-green-50 p-8 rounded-lg text-center border border-green-200">
-                <CheckCircle className="mx-auto text-green-500 mb-4" size={48} />
-                <h3 className="text-2xl font-bold text-green-700 mb-2">Day Completed!</h3>
-                <p className="text-green-600">You have successfully submitted your daily reports.</p>
-                <div className="mt-6 p-4 bg-white rounded border text-left text-sm text-slate-600">
-                    <p><strong>Opening:</strong> {todayLog.ae_opening_metrics?.ae_plannedWork || 'Submitted'}</p>
-                    <p><strong>Closing:</strong> {todayLog.ae_closing_metrics?.clientName || 'Submitted'}</p>
-                </div>
+            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
+                <CheckCircle className="mx-auto text-emerald-500 mb-4" size={48} />
+                <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
+                <p className="text-emerald-600 font-bold">You have successfully submitted your daily reports.</p>
             </div>
         );
     }
 
-    if (isTodayOpen) {
-        // --- CLOSING FORM VIEW ---
-        return (
-            <form onSubmit={handleClosingSubmit} className="space-y-6 text-slate-700 max-h-[80vh] overflow-y-auto pr-2">
-                <div className="bg-blue-50 p-3 rounded-lg border border-blue-100 flex items-center justify-between">
-                    <span className="font-bold text-blue-800">Day in Progress</span>
-                    <span className="text-xs bg-white px-2 py-1 rounded text-blue-600 border">Checked In</span>
-                </div>
+    // --- UI COMPONENTS ---
+    const Label = ({ icon: Icon, text }) => (
+        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 mb-1.5">
+            {Icon && <Icon size={12} />} {text}
+        </span>
+    );
 
-                {/* Section 2: Site Details for Closing */}
-                <div className="space-y-4">
-                    <h4 className="font-bold text-sm uppercase text-slate-500 border-b pb-1">Site / Work Summary</h4>
-                    <div>
-                        <label className="block text-xs font-bold mb-1">Client Visited / Project</label>
-                        <input type="text" name="clientName" required value={closingData.clientName} onChange={handleClosingChange} className="w-full p-2 border rounded-lg" placeholder="e.g. Acme Corp" />
+    const Card = ({ title, icon: Icon, children, color = "blue" }) => (
+        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+            {title && (
+                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50">
+                    <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600`}>
+                        <Icon size={18} />
                     </div>
+                    <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest leading-none mt-1">{title}</h4>
+                </div>
+            )}
+            <div className="space-y-4">{children}</div>
+        </div>
+    );
+
+    if (isTodayOpen) {
+        // --- CLOSING FORM ---
+        return (
+            <motion.form
+                initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                onSubmit={handleClosingSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1"
+            >
+                <div className="bg-blue-50 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="bg-white p-2 rounded-full shadow-sm">
+                            <Clock size={20} className="text-blue-600" />
+                        </div>
+                        <span className="font-bold text-blue-900">Closing Report</span>
+                    </div>
+                    <span className="text-[10px] font-bold bg-white px-3 py-1 rounded-full text-blue-600 border border-blue-200">ACTIVE</span>
                 </div>
 
-                {/* Section 3: Visit Details */}
-                <div className="space-y-4 bg-white p-4 rounded-lg shadow-sm border border-slate-100">
-                    <h4 className="font-bold text-sm uppercase text-slate-500 border-b pb-1">Visit Details</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="md:col-span-2">
+                        <Card title="Site & Client Details" icon={MapPin} color="indigo">
+                            <Label text="Client / Project Name" />
+                            <input type="text" name="clientName" required value={closingData.clientName} onChange={handleClosingChange} className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 ring-indigo-100" placeholder="e.g. Acme Corp HQ" />
+                        </Card>
+                    </div>
 
-                    <div>
-                        <label className="block text-xs font-bold mb-2">Visit Type</label>
-                        <div className="grid grid-cols-2 gap-2">
+                    <Card title="Visit Information" icon={Navigation} color="cyan">
+                        <Label text="Visit Type" />
+                        <div className="flex flex-wrap gap-2">
                             {visitTypes.map(type => (
-                                <label key={type} className="flex items-center gap-2 text-sm cursor-pointer hover:bg-slate-50 p-1 rounded">
-                                    <input
-                                        type="checkbox"
-                                        checked={closingData.ae_visitType.includes(type)}
-                                        onChange={() => handleMultiSelect('ae_visitType', type)}
-                                        className="rounded text-blue-600 focus:ring-blue-500"
-                                    />
+                                <label key={type} className={`cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${closingData.ae_visitType.includes(type) ? 'bg-cyan-50 border-cyan-200 text-cyan-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                    <input type="checkbox" checked={closingData.ae_visitType.includes(type)} onChange={() => handleMultiSelect('ae_visitType', type)} className="hidden" />
                                     {type}
                                 </label>
                             ))}
                         </div>
-                    </div>
-
-                    <div>
-                        <label className="block text-xs font-bold mb-2">Work Stage</label>
-                        <div className="flex flex-wrap gap-2">
-                            {workStages.map(stage => (
-                                <label key={stage} className={`px-3 py-1.5 rounded-full text-xs font-bold cursor-pointer transition-colors border ${closingData.ae_workStage === stage ? 'bg-blue-100 text-blue-700 border-blue-200' : 'bg-slate-50 text-slate-600 border-slate-200'}`}>
-                                    <input
-                                        type="radio"
-                                        name="ae_workStage"
-                                        value={stage}
-                                        checked={closingData.ae_workStage === stage}
-                                        onChange={handleClosingChange}
-                                        className="hidden"
-                                    />
-                                    {stage}
-                                </label>
-                            ))}
+                        <div className="mt-4">
+                            <Label text="Current Stage" />
+                            <select name="ae_workStage" value={closingData.ae_workStage} onChange={handleClosingChange} className="w-full bg-slate-50 p-2.5 rounded-xl text-sm font-semibold text-slate-700 outline-none hover:bg-slate-100">
+                                <option value="">Select Stage...</option>
+                                {workStages.map(s => <option key={s} value={s}>{s}</option>)}
+                            </select>
                         </div>
-                    </div>
-                </div>
+                    </Card>
 
-                {/* Section 4: Work Done */}
-                <div className="space-y-4">
-                    <h4 className="font-bold text-sm uppercase text-slate-500 border-b pb-1">Work Done</h4>
-                    <div>
-                        <label className="block text-xs font-bold mb-2">Tasks Completed</label>
-                        <div className="grid grid-cols-2 gap-2 mb-4">
+                    <Card title="Work Summary" icon={HardHat} color="amber">
+                        <Label text="Tasks Completed" />
+                        <div className="flex flex-wrap gap-2 mb-4">
                             {tasksList.map(task => (
-                                <label key={task} className="flex items-center gap-2 text-sm cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        checked={closingData.ae_tasksCompleted.includes(task)}
-                                        onChange={() => handleMultiSelect('ae_tasksCompleted', task)}
-                                        className="rounded text-green-600 focus:ring-green-500"
-                                    />
+                                <label key={task} className={`cursor-pointer px-3 py-1.5 rounded-lg text-xs font-bold transition-all border ${closingData.ae_tasksCompleted.includes(task) ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                    <input type="checkbox" checked={closingData.ae_tasksCompleted.includes(task)} onChange={() => handleMultiSelect('ae_tasksCompleted', task)} className="hidden" />
                                     {task}
                                 </label>
                             ))}
                         </div>
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                        <div>
-                            <label className="block text-xs font-bold mb-1">Measurements Taken</label>
-                            <input type="text" name="ae_measurements" value={closingData.ae_measurements} onChange={handleClosingChange} className="w-full p-2 border rounded-lg" placeholder="Count/Details" />
+                        <div className="grid grid-cols-2 gap-3">
+                            <div>
+                                <Label text="Measurements" />
+                                <input type="text" name="ae_measurements" value={closingData.ae_measurements} onChange={handleClosingChange} className="w-full bg-slate-50 p-2 rounded-lg text-sm font-semibold" placeholder="Details..." />
+                            </div>
+                            <div>
+                                <Label text="Items Installed" />
+                                <input type="text" name="ae_itemsInstalled" value={closingData.ae_itemsInstalled} onChange={handleClosingChange} className="w-full bg-slate-50 p-2 rounded-lg text-sm font-semibold" placeholder="#" />
+                            </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold mb-1">Items Installed</label>
-                            <input type="text" name="ae_itemsInstalled" value={closingData.ae_itemsInstalled} onChange={handleClosingChange} className="w-full p-2 border rounded-lg" placeholder="Count" />
-                        </div>
-                    </div>
+                    </Card>
                 </div>
 
-                {/* Section 5: Issues */}
-                <div className="bg-red-50 p-4 rounded-lg border border-red-100">
-                    <div className="flex justify-between items-center mb-4">
-                        <h4 className="font-bold text-sm uppercase text-red-600 flex items-center gap-2">
-                            <AlertTriangle size={16} /> Any Issues?
-                        </h4>
+                <div className={`p-5 rounded-2xl border transition-colors ${closingData.ae_hasIssues ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'}`}>
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-2 text-red-600 font-black text-sm uppercase">
+                            <AlertOctagon size={18} /> Issues Found?
+                        </div>
                         <label className="relative inline-flex items-center cursor-pointer">
                             <input type="checkbox" name="ae_hasIssues" checked={closingData.ae_hasIssues} onChange={handleClosingChange} className="sr-only peer" />
-                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600"></div>
-                            <span className="ml-3 text-sm font-medium text-slate-700">{closingData.ae_hasIssues ? 'Yes' : 'No'}</span>
+                            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
                         </label>
                     </div>
 
-                    {closingData.ae_hasIssues && (
-                        <div className="space-y-3 animate-fade-in">
-                            <div>
-                                <label className="block text-xs font-bold mb-1">Issue Type</label>
-                                <select name="ae_issueType" value={closingData.ae_issueType} onChange={handleClosingChange} className="w-full p-2 border rounded-lg bg-white">
-                                    <option value="">Select Type</option>
-                                    {issueTypes.map(t => <option key={t} value={t}>{t}</option>)}
-                                </select>
-                            </div>
-                            <div>
-                                <label className="block text-xs font-bold mb-1">Description</label>
-                                <textarea name="ae_issueDescription" value={closingData.ae_issueDescription} onChange={handleClosingChange} rows="2" className="w-full p-2 border rounded-lg" maxLength={200} placeholder="Describe the issue"></textarea>
-                            </div>
-                            <div className="grid grid-cols-2 gap-4">
+                    <AnimatePresence>
+                        {closingData.ae_hasIssues && (
+                            <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden mt-4 space-y-4">
                                 <div>
-                                    <label className="block text-xs font-bold mb-1">Issues Raised</label>
-                                    <input type="number" name="ae_issuesRaised" value={closingData.ae_issuesRaised} onChange={handleClosingChange} className="w-full p-2 border rounded-lg bg-white" />
+                                    <Label text="Issue Type" />
+                                    <select name="ae_issueType" value={closingData.ae_issueType} onChange={handleClosingChange} className="w-full bg-white p-2.5 rounded-xl text-sm font-semibold border border-red-200">
+                                        <option value="">Select Type</option>
+                                        {issueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                    </select>
                                 </div>
-                                <div>
-                                    <label className="block text-xs font-bold mb-1">Issues Resolved</label>
-                                    <input type="number" name="ae_issuesResolved" value={closingData.ae_issuesResolved} onChange={handleClosingChange} className="w-full p-2 border rounded-lg bg-white" />
+                                <textarea name="ae_issueDescription" value={closingData.ae_issueDescription} onChange={handleClosingChange} rows="2" className="w-full bg-white p-3 rounded-xl border border-red-200 text-sm" placeholder="Describe the issue..."></textarea>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <input type="number" name="ae_issuesRaised" placeholder="Raised #" value={closingData.ae_issuesRaised} onChange={handleClosingChange} className="bg-white p-2 rounded-lg border border-red-200 text-sm" />
+                                    <input type="number" name="ae_issuesResolved" placeholder="Resolved #" value={closingData.ae_issuesResolved} onChange={handleClosingChange} className="bg-white p-2 rounded-lg border border-red-200 text-sm" />
                                 </div>
-                            </div>
-                        </div>
-                    )}
+                            </motion.div>
+                        )}
+                    </AnimatePresence>
                 </div>
 
-                {/* Section 7 & 8: Next Action & Client */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-3">
-                        <h4 className="font-bold text-sm uppercase text-slate-500 border-b pb-1">Next Action</h4>
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="checkbox" name="ae_nextVisitRequired" checked={closingData.ae_nextVisitRequired} onChange={handleClosingChange} className="rounded" />
-                            Next Visit Required?
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Card title="Next Steps" icon={CornerDownRight} color="purple">
+                        <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
+                            <input type="checkbox" name="ae_nextVisitRequired" checked={closingData.ae_nextVisitRequired} onChange={handleClosingChange} className="rounded text-purple-600" />
+                            <span className="text-sm font-bold text-slate-700">Next Visit Required?</span>
                         </label>
                         {closingData.ae_nextVisitRequired && (
-                            <>
-                                <input type="date" name="ae_nextVisitDate" value={closingData.ae_nextVisitDate} onChange={handleClosingChange} className="w-full p-2 border rounded-lg" />
-                            </>
+                            <input type="date" name="ae_nextVisitDate" value={closingData.ae_nextVisitDate} onChange={handleClosingChange} className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-200" />
                         )}
-                    </div>
-                    <div className="space-y-3">
-                        <h4 className="font-bold text-sm uppercase text-slate-500 border-b pb-1">Client Interaction</h4>
-                        <label className="flex items-center gap-2 text-sm cursor-pointer">
-                            <input type="checkbox" name="ae_clientMet" checked={closingData.ae_clientMet} onChange={handleClosingChange} className="rounded" />
-                            Client Met Today?
+                    </Card>
+
+                    <Card title="Client Feedback" icon={UserCheck} color="pink">
+                        <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer mb-2">
+                            <input type="checkbox" name="ae_clientMet" checked={closingData.ae_clientMet} onChange={handleClosingChange} className="rounded text-pink-600" />
+                            <span className="text-sm font-bold text-slate-700">Client Met?</span>
                         </label>
                         {closingData.ae_clientMet && (
-                            <div className="flex gap-4">
+                            <div className="flex gap-2">
                                 {['😊', '😐', '😟'].map(feedback => (
-                                    <label key={feedback} className={`flex-1 text-center p-2 rounded-lg border cursor-pointer hover:bg-slate-50 ${closingData.ae_clientFeedback === feedback ? 'bg-blue-50 border-blue-300 ring-2 ring-blue-100' : 'border-slate-200'}`}>
+                                    <label key={feedback} className={`flex-1 flex justify-center py-2 rounded-xl border cursor-pointer transition-all ${closingData.ae_clientFeedback === feedback ? 'bg-pink-50 border-pink-300 shadow-sm' : 'border-slate-100 opacity-50 hover:opacity-100'}`}>
                                         <input type="radio" name="ae_clientFeedback" value={feedback} checked={closingData.ae_clientFeedback === feedback} onChange={handleClosingChange} className="hidden" />
-                                        <span className="text-xl">{feedback}</span>
+                                        <span className="text-2xl filter drop-shadow-sm">{feedback}</span>
                                     </label>
                                 ))}
                             </div>
                         )}
-                    </div>
+                    </Card>
                 </div>
 
-                <div className="pt-4 border-t">
-                    <button type="submit" disabled={isLoading} className="w-full bg-red-600 hover:bg-red-700 text-white font-bold py-3 rounded-lg shadow-xl hover:shadow-2xl transition-all transform active:scale-95">
-                        {isLoading ? 'Ending Day...' : 'End Day & Submit Report'}
-                    </button>
+                <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-100 transition-colors relative">
+                    <input type="file" multiple accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
+                    <Camera className="mx-auto text-slate-400 mb-2" />
+                    <p className="text-xs font-bold text-slate-500 uppercase">Upload Site Photos</p>
+                    <p className="text-[10px] text-slate-400">{closingData.ae_photos.length} files selected</p>
                 </div>
+
+                <button type="submit" disabled={isLoading} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                    {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Complete Day</>}
+                </button>
 
                 <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); onSuccess(); }} message={modalMessage} />
-            </form>
+            </motion.form>
         );
     }
 
     // --- OPENING FORM VIEW (Default) ---
     return (
-        <form onSubmit={handleOpeningSubmit} className="space-y-6 text-slate-700 max-h-[80vh] overflow-y-auto pr-2">
-            <div>
-                <h3 className="font-bold text-xl text-slate-800">Start Your Day</h3>
-                <p className="text-slate-500 text-sm">Please submit your opening report to check in.</p>
-            </div>
-
-            {/* Section 1: Basic Info */}
-            <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
-                <h4 className="font-bold text-sm uppercase text-slate-500 mb-3 flex items-center gap-2">
-                    <CheckCircle size={16} /> Basic Info
-                </h4>
-                <div className="grid grid-cols-2 gap-4 text-sm">
+        <motion.form
+            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+            onSubmit={handleOpeningSubmit} className="space-y-6"
+        >
+            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-blue-200">
+                <div className="flex justify-between items-start">
                     <div>
-                        <span className="block text-slate-400 text-xs">AE Name</span>
-                        <span className="font-semibold">{user?.name}</span>
+                        <h3 className="font-black text-2xl">Start Day</h3>
+                        <p className="text-blue-100 text-sm font-medium mt-1">Check-in at your first site location</p>
                     </div>
-                    <div>
-                        <span className="block text-slate-400 text-xs">Date</span>
-                        <span className="font-semibold">{new Date().toLocaleDateString()}</span>
+                    <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
+                        <MapPin size={24} className="text-white" />
                     </div>
                 </div>
             </div>
 
-            {/* Section 2: Location & Plan */}
-            <div className="space-y-4">
-                <h4 className="font-bold text-sm uppercase text-slate-500 border-b pb-1">Check-in Details</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-xs font-bold mb-1">Current Location / First Site</label>
-                        <div className="flex gap-2">
-                            <input type="text" name="ae_siteLocation" value={openingData.ae_siteLocation} onChange={handleOpeningChange} className="w-full p-2 border rounded-lg" placeholder="Address or Area" required />
-                            <button type="button" onClick={captureLocation} className="bg-blue-100 text-blue-600 p-2 rounded-lg hover:bg-blue-200" title="Capture GPS">
-                                {locationLoading ? <span className="animate-spin">⌛</span> : <MapPin size={20} />}
-                            </button>
-                        </div>
-                        {openingData.ae_gpsCoordinates && <span className="text-xs text-green-600 flex items-center gap-1 mt-1"><CheckCircle size={12} /> GPS Captured</span>}
-                    </div>
-                    <div>
-                        <label className="block text-xs font-bold mb-1">Site Status (Roughly)</label>
-                        <select name="ae_siteStatus" value={openingData.ae_siteStatus} onChange={handleOpeningChange} className="w-full p-2 border rounded-lg bg-white">
-                            <option value="">Select Status</option>
-                            {siteStatuses.map(s => <option key={s} value={s}>{s}</option>)}
-                        </select>
-                    </div>
+            <Card title="Location Details" icon={Navigation} color="blue">
+                <Label text="Current Location / Site" />
+                <div className="flex gap-2 mb-4">
+                    <input type="text" name="ae_siteLocation" value={openingData.ae_siteLocation} onChange={handleOpeningChange} className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 ring-blue-100" placeholder="Enter Area..." required />
+                    <button type="button" onClick={captureLocation} className="bg-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors">
+                        {locationLoading ? <span className="animate-spin text-sm">⌛</span> : <MapPin size={20} />}
+                    </button>
                 </div>
-                <div>
-                    <label className="block text-xs font-bold mb-1">Planned Work Today</label>
-                    <textarea name="ae_plannedWork" value={openingData.ae_plannedWork} onChange={handleOpeningChange} rows="3" className="w-full p-2 border rounded-lg" placeholder="What do you intend to achieve today?" required></textarea>
-                </div>
-            </div>
+                {openingData.ae_gpsCoordinates && (
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-green-600 bg-green-50 p-2 rounded-lg border border-green-100">
+                        <CheckCircle size={12} /> GPS COORDINATES CAPTURED
+                    </div>
+                )}
+                <Label text="Site Status" />
+                <select name="ae_siteStatus" value={openingData.ae_siteStatus} onChange={handleOpeningChange} className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 font-semibold text-sm outline-none">
+                    <option value="">Select Status</option>
+                    {siteStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+            </Card>
 
-            <div className="pt-4 border-t">
-                <button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-xl hover:shadow-2xl transition-all transform active:scale-95">
-                    {isLoading ? 'Starting Day...' : 'Start Day'}
-                </button>
-            </div>
+            <Card title="Daily Plan" icon={Clipboard} color="emerald">
+                <textarea name="ae_plannedWork" value={openingData.ae_plannedWork} onChange={handleOpeningChange} rows="3" className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 font-medium text-sm outline-none resize-none" placeholder="What are your goals for today?" required></textarea>
+            </Card>
+
+            <button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                {isLoading ? 'Starting...' : <><CheckCircle size={20} /> Check In & Start Day</>}
+            </button>
 
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); }} message={modalMessage} />
-        </form>
+        </motion.form>
     );
 };
 

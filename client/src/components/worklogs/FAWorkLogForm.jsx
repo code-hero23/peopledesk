@@ -2,6 +2,11 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import {
+    Phone, Star, Briefcase, FileText, Globe, CheckSquare,
+    TrendingUp, Clock, MapPin, Layout
+} from 'lucide-react';
+import { motion } from 'framer-motion';
 
 const FAWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
@@ -13,18 +18,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
         dispatch(getTodayLogStatus());
     }, [dispatch]);
 
-    // Initial Data Structure for Both Opening and Closing
-    // Since fields are identical, we can reuse structure but store in separate state keys for clarity or just mapped on submit.
-    // Spec:
-    // 1. No of Calls (1-9 stars)
-    // 2. Infurnia pending (int + 2 text fields?) -> Let's do Count + Client + Remarks? or just Description.
-    //    User said: "(integer)& (text,text)" -> Count, Client Name, Details?
-    // 3. Quotation pending (int)
-    // 4. Initial quote (text & integer)
-    // 5. Revised quote (text & integer)
-    // 6. Showroom visit
-    // 7. Online discussion
-
+    // Initial Data Structure
     const initialMetrics = {
         calls: {
             oneStar: '', twoStar: '', threeStar: '', fourStar: '', fiveStar: '',
@@ -86,131 +80,142 @@ const FAWorkLogForm = ({ onSuccess }) => {
         });
     };
 
-    // Render Logic
-    if (isLoading) return <div>Loading...</div>;
+    if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
 
     const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
     const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
 
     if (isTodayClosed) {
         return (
-            <div className="bg-green-50 p-8 rounded-lg text-center border border-green-200">
-                <h3 className="text-2xl font-bold text-green-700 mb-2">Day Completed!</h3>
-                <p className="text-green-600">Great job today. Your report is submitted.</p>
+            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
+                <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
+                <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
+                <p className="text-emerald-600 font-bold">Daily reports submitted successfully.</p>
             </div>
         );
     }
 
-    // SHARED FORM RENDERER
-    const renderForm = (data, handleChange, title, onSubmit, btnText, colorClass = "blue") => (
-        <form onSubmit={onSubmit} className="space-y-4 max-h-[75vh] overflow-y-auto px-1">
-            <h3 className={`font-bold text-slate-700 border-b pb-2 mb-4`}>{title}</h3>
-
-            {/* 1. Star Calls */}
-            <div className="bg-slate-50 p-3 rounded-lg mb-4">
-                <h4 className="text-sm font-bold text-slate-600 mb-2">No of Calls</h4>
-                <div className="grid grid-cols-3 gap-3">
-                    {['nine', 'eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one'].map((num) => (
-                        <div key={num}>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{num} Star</label>
-                            <input
-                                type="number"
-                                value={data.calls[`${num}Star`]}
-                                onChange={(e) => handleChange(`calls.${num}Star`, e.target.value)}
-                                className="input-field"
-                            />
-                        </div>
-                    ))}
+    // --- SHARED UI COMPONENTS ---
+    const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
+        <div className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group`}>
+            <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50`}>
+                <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600 group-hover:bg-${color}-100 transition-colors`}>
+                    <Icon size={18} />
                 </div>
+                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
             </div>
-
-            {/* 2. Infurnia Pending */}
-            <div className="bg-slate-50 p-3 rounded-lg mb-4">
-                <h4 className="text-sm font-bold text-slate-600 mb-2">Infurnia Pending</h4>
-                <div className="grid grid-cols-12 gap-2">
-                    <div className="col-span-3">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Count</label>
-                        <input type="number" value={data.infurniaPending.count} onChange={(e) => handleChange('infurniaPending.count', e.target.value)} className="input-field" />
-                    </div>
-                    <div className="col-span-4">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Text 1</label>
-                        <input type="text" value={data.infurniaPending.text1} onChange={(e) => handleChange('infurniaPending.text1', e.target.value)} className="input-field" />
-                    </div>
-                    <div className="col-span-5">
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Text 2</label>
-                        <input type="text" value={data.infurniaPending.text2} onChange={(e) => handleChange('infurniaPending.text2', e.target.value)} className="input-field" />
-                    </div>
-                </div>
+            <div className="space-y-3">
+                {children}
             </div>
-
-            {/* 3. Quotation Pending */}
-            <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Quotation Pending (Count)</label>
-                <input type="number" value={data.quotationPending} onChange={(e) => handleChange('quotationPending', e.target.value)} className="input-field" />
-            </div>
-
-            {/* 4. Initial Quote */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Initial Quote (Text)</label>
-                    <input type="text" value={data.initialQuote.text} onChange={(e) => handleChange('initialQuote.text', e.target.value)} className="input-field" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Count</label>
-                    <input type="number" value={data.initialQuote.count} onChange={(e) => handleChange('initialQuote.count', e.target.value)} className="input-field" />
-                </div>
-            </div>
-
-            {/* 5. Revised Quote */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Revised Quote (Text)</label>
-                    <input type="text" value={data.revisedQuote.text} onChange={(e) => handleChange('revisedQuote.text', e.target.value)} className="input-field" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Count</label>
-                    <input type="number" value={data.revisedQuote.count} onChange={(e) => handleChange('revisedQuote.count', e.target.value)} className="input-field" />
-                </div>
-            </div>
-
-            {/* 6 & 7. Visits */}
-            <div className="grid grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Showroom Visit</label>
-                    <input type="number" value={data.showroomVisit} onChange={(e) => handleChange('showroomVisit', e.target.value)} className="input-field" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Online Discussion</label>
-                    <input type="number" value={data.onlineDiscussion} onChange={(e) => handleChange('onlineDiscussion', e.target.value)} className="input-field" />
-                </div>
-            </div>
-
-            <button type="submit" className={`w-full bg-${colorClass}-600 hover:bg-${colorClass}-700 text-white font-bold py-3 rounded-lg shadow-lg mt-4`}>
-                {btnText}
-            </button>
-
-            <style>{`
-                .input-field {
-                    width: 100%;
-                    padding: 0.5rem 0.75rem;
-                    border: 1px solid #e2e8f0;
-                    border-radius: 0.5rem;
-                    outline: none;
-                    transition: all 0.2s;
-                    font-size: 0.875rem;
-                }
-                .input-field:focus {
-                    ring: 2px solid #3b82f6;
-                    border-color: #3b82f6;
-                }
-            `}</style>
-        </form>
+        </div>
     );
+
+    const InputGroup = ({ label, value, onChange, placeholder = "0", type = "number" }) => (
+        <div>
+            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</label>
+            <input
+                type={type}
+                value={value}
+                onChange={(e) => onChange(e.target.value)}
+                className="w-full bg-slate-50 p-2.5 rounded-xl font-bold text-slate-700 text-sm outline-none border border-slate-200 focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+                placeholder={placeholder}
+            />
+        </div>
+    );
+
+    const FormLayout = ({ data, handleChange, title, onSubmit, btnText, isOpening }) => {
+        const themeColor = isOpening ? 'blue' : 'emerald';
+        const TitleIcon = isOpening ? Clock : TrendingUp;
+
+        return (
+            <motion.form
+                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+                onSubmit={onSubmit} className="space-y-6"
+            >
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                    <div className={`p-3 bg-${themeColor}-100 text-${themeColor}-600 rounded-xl`}>
+                        <TitleIcon size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-black text-slate-800">{title}</h3>
+                        <p className="text-xs text-slate-500 font-bold uppercase">{isOpening ? "Start of Day Targets" : "End of Day Achievements"}</p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* STAR CALLS */}
+                    <div className="md:col-span-2">
+                        <MetricCard title="Calls By Star Rating" icon={Star} color="amber">
+                            <div className="grid grid-cols-3 md:grid-cols-9 gap-2">
+                                {['nine', 'eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one'].map((num) => (
+                                    <InputGroup
+                                        key={num}
+                                        label={`${num} ☆`}
+                                        value={data.calls[`${num}Star`]}
+                                        onChange={(val) => handleChange(`calls.${num}Star`, val)}
+                                    />
+                                ))}
+                            </div>
+                        </MetricCard>
+                    </div>
+
+                    {/* INFURNIA */}
+                    <MetricCard title="Infurnia Pending" icon={Layout} color="purple">
+                        <div className="grid grid-cols-3 gap-3">
+                            <InputGroup label="Count" value={data.infurniaPending.count} onChange={(val) => handleChange('infurniaPending.count', val)} />
+                            <div className="col-span-2">
+                                <InputGroup label="Details 1" value={data.infurniaPending.text1} onChange={(val) => handleChange('infurniaPending.text1', val)} type="text" placeholder="Details..." />
+                            </div>
+                            <div className="col-span-3">
+                                <InputGroup label="Details 2" value={data.infurniaPending.text2} onChange={(val) => handleChange('infurniaPending.text2', val)} type="text" placeholder="More info..." />
+                            </div>
+                        </div>
+                    </MetricCard>
+
+                    {/* QUOTES */}
+                    <MetricCard title="Quotations" icon={FileText} color="blue">
+                        <div className="grid grid-cols-2 gap-3 mb-3">
+                            <InputGroup label="Pending Count" value={data.quotationPending} onChange={(val) => handleChange('quotationPending', val)} />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                            <InputGroup label="Initial (Count)" value={data.initialQuote.count} onChange={(val) => handleChange('initialQuote.count', val)} />
+                            <InputGroup label="Initial (Text)" value={data.initialQuote.text} onChange={(val) => handleChange('initialQuote.text', val)} type="text" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-3 mt-3">
+                            <InputGroup label="Revised (Count)" value={data.revisedQuote.count} onChange={(val) => handleChange('revisedQuote.count', val)} />
+                            <InputGroup label="Revised (Text)" value={data.revisedQuote.text} onChange={(val) => handleChange('revisedQuote.text', val)} type="text" />
+                        </div>
+                    </MetricCard>
+
+                    {/* VISITS */}
+                    <div className="md:col-span-2">
+                        <MetricCard title="Visits & Discussions" icon={Globe} color="teal">
+                            <div className="grid grid-cols-2 gap-4">
+                                <InputGroup label="Showroom Visits" value={data.showroomVisit} onChange={(val) => handleChange('showroomVisit', val)} />
+                                <InputGroup label="Online Discussions" value={data.onlineDiscussion} onChange={(val) => handleChange('onlineDiscussion', val)} />
+                            </div>
+                        </MetricCard>
+                    </div>
+                </div>
+
+                <button type="submit" className={`w-full bg-${themeColor}-600 hover:bg-${themeColor}-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}>
+                    <CheckSquare size={20} /> {btnText}
+                </button>
+            </motion.form>
+        );
+    };
 
     if (isTodayOpen) {
         return (
             <>
-                {renderForm(closingData, handleClosingChange, "FA Closing Report (End of Day)", handleClosingSubmit, "Submit Closing Report", "green")}
+                <FormLayout
+                    data={closingData}
+                    handleChange={handleClosingChange}
+                    title="FA Closing Report"
+                    onSubmit={handleClosingSubmit}
+                    btnText="Submit Closing Report"
+                    isOpening={false}
+                />
                 <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
             </>
         );
@@ -218,7 +223,14 @@ const FAWorkLogForm = ({ onSuccess }) => {
 
     return (
         <>
-            {renderForm(openingData, handleOpeningChange, "FA Opening Report (Start of Day)", handleOpeningSubmit, "Submit Opening Report", "blue")}
+            <FormLayout
+                data={openingData}
+                handleChange={handleOpeningChange}
+                title="FA Opening Report"
+                onSubmit={handleOpeningSubmit}
+                btnText="Submit Opening Report"
+                isOpening={true}
+            />
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
         </>
     );
