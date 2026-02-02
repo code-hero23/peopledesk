@@ -83,35 +83,64 @@ const Overview = () => {
         }
 
         const isLogin = ['Log In', 'Check In'].includes(actionName);
+        const isAE = user?.designation === 'AE';
 
-        const message = isLogin ? (
-            <div className="mt-2 text-center">
-                <p className="text-lg font-bold text-emerald-600 mb-4">
-                    Before you continue, make sure:
-                </p>
-                <ul className="space-y-3 text-slate-600 text-base text-left inline-block mx-auto px-4 bg-slate-50 py-3 rounded-xl border border-slate-100">
-                    <li className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                            <span className="font-bold text-sm">✓</span>
-                        </div>
-                        <span className="font-medium">You are using a Desktop / Laptop</span>
-                    </li>
-                    <li className="flex items-center gap-3">
-                        <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                            <span className="font-bold text-sm">✓</span>
-                        </div>
-                        <span className="font-medium">Your work session is starting now</span>
-                    </li>
-                </ul>
-            </div>
-        ) : `Are you sure you want to ${actionName}? This will record your ${actionName.toLowerCase()} time.`;
+        let message;
+        if (isAE && isLogin) {
+            message = (
+                <div className="mt-2 text-left">
+                    <p className="text-slate-600 font-bold mb-4">Before you continue, please confirm:</p>
+                    <ul className="space-y-3 text-slate-700 text-sm bg-slate-50 p-4 rounded-xl border border-slate-100">
+                        <li className="flex items-start gap-3">
+                            <span className="text-emerald-500 font-bold">✔</span>
+                            <span>You are present at the project site</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="text-emerald-500 font-bold">✔</span>
+                            <span>Your work session is starting now</span>
+                        </li>
+                        <li className="flex items-start gap-3">
+                            <span className="text-emerald-500 font-bold">✔</span>
+                            <span>You are ready to begin your assigned site tasks</span>
+                        </li>
+                    </ul>
+                    <p className="text-xs text-slate-400 mt-4 italic">
+                        By clicking Start, you confirm that you are officially starting your site work.
+                    </p>
+                </div>
+            );
+        } else if (isLogin) {
+            message = (
+                <div className="mt-2 text-center">
+                    <p className="text-lg font-bold text-emerald-600 mb-4">
+                        Before you continue, make sure:
+                    </p>
+                    <ul className="space-y-3 text-slate-600 text-base text-left inline-block mx-auto px-4 bg-slate-50 py-3 rounded-xl border border-slate-100">
+                        <li className="flex items-center gap-3">
+                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                <span className="font-bold text-sm">✓</span>
+                            </div>
+                            <span className="font-medium">You are using a Desktop / Laptop</span>
+                        </li>
+                        <li className="flex items-center gap-3">
+                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
+                                <span className="font-bold text-sm">✓</span>
+                            </div>
+                            <span className="font-medium">Your work session is starting now</span>
+                        </li>
+                    </ul>
+                </div>
+            );
+        } else {
+            message = `Are you sure you want to ${actionName}? This will record your ${actionName.toLowerCase()} time.`;
+        }
 
         setConfirmationConfig({
             isOpen: true,
-            title: isLogin ? 'Start Work Confirmation' : `Confirm ${actionName}`,
+            title: isAE && isLogin ? 'Start Work Confirmation' : (isLogin ? 'Start Work Confirmation' : `Confirm ${actionName}`),
             message: message,
             type: isLogin ? 'info' : 'warning',
-            confirmText: `Yes, ${actionName}`,
+            confirmText: isAE && isLogin ? 'Start Work' : `Yes, ${actionName}`,
             onConfirm: () => executeAttendanceAction(actionName)
         });
     };

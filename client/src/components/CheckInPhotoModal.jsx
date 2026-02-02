@@ -145,9 +145,9 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             const coordStr = location.lat ? `${location.lat}, ${location.lng}` : '';
 
             // Overlay Bar Design (Premium)
-            const barHeight = 100;
-            const fontSizeLarge = 22;
-            const fontSizeSmall = 16;
+            const barHeight = 160;
+            const fontSizeLarge = 40;
+            const fontSizeSmall = 28;
 
             context.fillStyle = 'rgba(0, 0, 0, 0.75)';
             context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
@@ -162,19 +162,19 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
 
             // 1. Draw Date/Time (Top Left of Bar)
             context.font = `bold ${fontSizeLarge}px sans-serif`;
-            context.fillText(`${dateStr} | ${timeStr}`, 24, canvas.height - barHeight + 20);
+            context.fillText(`${dateStr} | ${timeStr}`, 24, canvas.height - barHeight + 25);
 
-            // 2. Draw Area Name (Bottom Left of Bar)
-            context.font = `${fontSizeSmall}px sans-serif`;
-            context.fillStyle = '#94a3b8'; // slate-400
-            context.fillText(`📍 ${areaStr}`, 24, canvas.height - barHeight + 55);
+            // 2. Draw Area Name (Bottom Left of Bar) - NOW BOLD
+            context.font = `bold ${fontSizeSmall}px sans-serif`;
+            context.fillStyle = '#ffffff'; // Changed to white for better legibility when bolded
+            context.fillText(`📍 ${areaStr}`, 24, canvas.height - barHeight + 85);
 
             // 3. Draw Coordinates (Align Right)
             if (coordStr) {
-                context.font = `bold ${fontSizeSmall}px monospace`;
+                context.font = `bold ${fontSizeSmall - 4}px monospace`;
                 context.fillStyle = '#60a5fa'; // blue-400
                 const coordWidth = context.measureText(coordStr).width;
-                context.fillText(coordStr, canvas.width - coordWidth - 24, canvas.height - barHeight + 55);
+                context.fillText(coordStr, canvas.width - coordWidth - 24, canvas.height - barHeight + 85);
             }
 
             // Convert to blob/file
