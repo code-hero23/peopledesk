@@ -18,6 +18,7 @@ import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm'
 
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import { getDeviceType } from '../../utils/deviceUtils';
 
 const Overview = () => {
     const dispatch = useDispatch();
@@ -49,8 +50,9 @@ const Overview = () => {
 
     const executeAttendanceAction = (actionName) => {
         const deviceInfo = navigator.userAgent;
+        const deviceType = getDeviceType();
         const formData = new FormData();
-        formData.append('deviceInfo', deviceInfo);
+        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${deviceInfo}`);
 
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
             // Check-Out Logic
@@ -117,7 +119,7 @@ const Overview = () => {
     const handlePhotoCheckIn = (photoFile) => {
         const formData = new FormData();
         formData.append('photo', photoFile);
-        formData.append('deviceInfo', navigator.userAgent);
+        formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${navigator.userAgent}`);
 
         const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
 

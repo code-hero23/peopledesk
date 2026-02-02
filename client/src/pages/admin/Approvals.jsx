@@ -11,16 +11,17 @@ const Approvals = () => {
         (state) => state.admin
     );
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
+    const [filterDate, setFilterDate] = useState(''); // '' means all
 
     useEffect(() => {
         if (activeTab === 'pending') {
-            dispatch(getPendingRequests());
+            dispatch(getPendingRequests(filterDate));
         } else {
-            dispatch(getRequestHistory());
+            dispatch(getRequestHistory(filterDate));
         }
 
         return () => { dispatch(reset()); };
-    }, [dispatch, activeTab]);
+    }, [dispatch, activeTab, filterDate]);
 
     const onUpdateStatus = (type, id, status) => {
         if (window.confirm(`Confirm ${status} action?`)) {
@@ -75,7 +76,7 @@ const Approvals = () => {
                 <p className="font-bold">Error loading requests</p>
                 <p className="text-sm">{message}</p>
                 <button
-                    onClick={() => dispatch(activeTab === 'pending' ? getPendingRequests() : getRequestHistory())}
+                    onClick={() => dispatch(activeTab === 'pending' ? getPendingRequests(filterDate) : getRequestHistory(filterDate))}
                     className="mt-4 px-4 py-2 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
                 >
                     Retry
@@ -205,6 +206,23 @@ const Approvals = () => {
                         <Download size={18} />
                         <span className="hidden sm:inline">Export Requests</span>
                     </button>
+                    {/* Date Picker */}
+                    <div className="relative">
+                        <input
+                            type="date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            className="pl-4 pr-10 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium text-sm"
+                        />
+                        {filterDate && (
+                            <button
+                                onClick={() => setFilterDate('')}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
                     {/* Tabs */}
                     <div className="flex bg-white p-1 rounded-lg border border-slate-200">
                         <button

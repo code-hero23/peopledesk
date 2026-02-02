@@ -38,10 +38,27 @@ const getAllEmployees = async (req, res) => {
 const getAllPendingRequests = async (req, res) => {
     try {
         const userRole = req.user.role;
+        const { date } = req.query;
+
+        // Date filter logic
+        let dateFilter = {};
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            dateFilter = {
+                OR: [
+                    { date: { gte: startOfDay, lte: endOfDay } },
+                    { startDate: { lte: endOfDay }, endDate: { gte: startOfDay } }
+                ]
+            };
+        }
 
         // Base query conditions
-        let leaveWhere = {};
-        let permissionWhere = {};
+        let leaveWhere = { ...dateFilter };
+        let permissionWhere = { ...dateFilter };
 
         if (userRole === 'BUSINESS_HEAD') {
             // BH sees requests where targetBhId is theirs OR null (legacy/fallback)
@@ -152,9 +169,26 @@ const getRequestHistory = async (req, res) => {
     try {
         const userRole = req.user.role;
         const userId = req.user.id;
+        const { date } = req.query;
 
-        let leaveWhere = {};
-        let permissionWhere = {};
+        // Date filter logic
+        let dateFilter = {};
+        if (date) {
+            const startOfDay = new Date(date);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(date);
+            endOfDay.setHours(23, 59, 59, 999);
+
+            dateFilter = {
+                OR: [
+                    { date: { gte: startOfDay, lte: endOfDay } },
+                    { startDate: { lte: endOfDay }, endDate: { gte: startOfDay } }
+                ]
+            };
+        }
+
+        let leaveWhere = { ...dateFilter };
+        let permissionWhere = { ...dateFilter };
 
         if (userRole === 'BUSINESS_HEAD') {
             // BH sees requests they have acted on (bhStatus is NOT pending)
@@ -213,10 +247,26 @@ const getRequestHistory = async (req, res) => {
             take: 50
         });
 
+        const siteVisitsRaw = await prisma.siteVisitRequest.findMany({
+            where: permissionWhere, // Uses same history logic as permission
+            include: { user: { select: { name: true, email: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+
+        const showroomVisitsRaw = await prisma.showroomVisitRequest.findMany({
+            where: permissionWhere,
+            include: { user: { select: { name: true, email: true } } },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+
         // Enrich with BH Name
         const leaveBhIds = [...new Set(leavesRaw.map(r => r.bhId).filter(id => id))];
         const permissionBhIds = [...new Set(permissionsRaw.map(r => r.bhId).filter(id => id))];
-        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds])];
+        const siteBhIds = [...new Set(siteVisitsRaw.map(r => r.bhId).filter(id => id))];
+        const showroomBhIds = [...new Set(showroomVisitsRaw.map(r => r.bhId).filter(id => id))];
+        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds, ...siteBhIds, ...showroomBhIds])];
 
         let bhMap = {};
         if (allBhIds.length > 0) {
@@ -234,8 +284,10 @@ const getRequestHistory = async (req, res) => {
 
         const leaves = leavesRaw.map(enrichWithBhName);
         const permissions = permissionsRaw.map(enrichWithBhName);
+        const siteVisits = siteVisitsRaw.map(enrichWithBhName);
+        const showroomVisits = showroomVisitsRaw.map(enrichWithBhName);
 
-        res.json({ leaves, permissions });
+        res.json({ leaves, permissions, siteVisits, showroomVisits });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

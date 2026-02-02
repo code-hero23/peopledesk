@@ -142,13 +142,19 @@ const Attendance = () => {
                                         <td className="px-6 py-4 text-center text-slate-600">
                                             {record.sessions && record.sessions[0]?.deviceInfo ? (
                                                 <div className="group relative flex justify-center">
-                                                    {record.sessions[0].deviceInfo.toLowerCase().includes('mobile') ||
-                                                        record.sessions[0].deviceInfo.toLowerCase().includes('android') ||
-                                                        record.sessions[0].deviceInfo.toLowerCase().includes('iphone') ? (
-                                                        <Smartphone className="w-5 h-5 text-slate-400" />
-                                                    ) : (
-                                                        <Monitor className="w-5 h-5 text-slate-400" />
-                                                    )}
+                                                    {(() => {
+                                                        const info = record.sessions[0].deviceInfo.toLowerCase();
+                                                        const isMobile = info.startsWith('mobile') ||
+                                                            info.includes('android') ||
+                                                            info.includes('iphone') ||
+                                                            info.includes('ipad');
+
+                                                        return isMobile ? (
+                                                            <Smartphone className="w-5 h-5 text-slate-400" />
+                                                        ) : (
+                                                            <Monitor className="w-5 h-5 text-slate-400" />
+                                                        );
+                                                    })()}
                                                     {/* Tooltip */}
                                                     <div className="absolute bottom-full mb-2 hidden group-hover:block z-10 w-64 p-2 bg-slate-800 text-white text-xs rounded shadow-lg">
                                                         <p className="font-semibold mb-1">Device Info:</p>

@@ -128,7 +128,7 @@ export const getDailyWorkLogs = createAsyncThunk(
 // Get Pending Requests
 export const getPendingRequests = createAsyncThunk(
     'admin/getPendingRequests',
-    async (_, thunkAPI) => {
+    async (date, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
@@ -136,7 +136,8 @@ export const getPendingRequests = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const response = await axios.get(API_URL + 'requests/pending', config);
+            const query = date ? `?date=${date}` : '';
+            const response = await axios.get(API_URL + `requests/pending${query}`, config);
             return response.data;
         } catch (error) {
             const message =
@@ -151,7 +152,7 @@ export const getPendingRequests = createAsyncThunk(
 // Get Request History
 export const getRequestHistory = createAsyncThunk(
     'admin/getRequestHistory',
-    async (_, thunkAPI) => {
+    async (date, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
@@ -159,7 +160,8 @@ export const getRequestHistory = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const response = await axios.get(API_URL + 'requests/history', config);
+            const query = date ? `?date=${date}` : '';
+            const response = await axios.get(API_URL + `requests/history${query}`, config);
             return response.data;
         } catch (error) {
             const message =

@@ -11,15 +11,16 @@ const VisitRequests = () => {
         (state) => state.admin
     );
     const [activeTab, setActiveTab] = useState('pending');
+    const [filterDate, setFilterDate] = useState('');
 
     useEffect(() => {
         if (activeTab === 'pending') {
-            dispatch(getPendingRequests());
+            dispatch(getPendingRequests(filterDate));
         } else {
-            dispatch(getRequestHistory());
+            dispatch(getRequestHistory(filterDate));
         }
         return () => { dispatch(reset()); };
-    }, [dispatch, activeTab]);
+    }, [dispatch, activeTab, filterDate]);
 
     const onUpdateStatus = (type, id, status) => {
         if (window.confirm(`Confirm ${status} action?`)) {
@@ -163,6 +164,23 @@ const VisitRequests = () => {
                     <button onClick={handleExport} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-200 flex items-center gap-2 border border-emerald-200">
                         <Download size={14} /> EXPORT
                     </button>
+                    {/* Date Picker */}
+                    <div className="relative">
+                        <input
+                            type="date"
+                            value={filterDate}
+                            onChange={(e) => setFilterDate(e.target.value)}
+                            className="px-4 py-1.5 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-bold text-xs bg-white"
+                        />
+                        {filterDate && (
+                            <button
+                                onClick={() => setFilterDate('')}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 font-bold text-xs"
+                            >
+                                ✕
+                            </button>
+                        )}
+                    </div>
                     <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200">
                         <button onClick={() => setActiveTab('pending')} className={`px-4 py-1.5 text-xs font-black rounded-md transition-all ${activeTab === 'pending' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>PENDING</button>
                         <button onClick={() => setActiveTab('history')} className={`px-4 py-1.5 text-xs font-black rounded-md transition-all ${activeTab === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}>HISTORY</button>
