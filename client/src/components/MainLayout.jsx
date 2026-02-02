@@ -18,7 +18,7 @@ import {
     Camera,
     MapPin
 } from 'lucide-react';
-import CEOPopup from './CEOPopup';
+import InspirationalPopup from './common/InspirationalPopup';
 import InstallApp from './InstallApp';
 
 const Layout = () => {
@@ -145,6 +145,9 @@ const Layout = () => {
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
                             <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
+                            {user?.role === 'ADMIN' && (
+                                <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
+                            )}
                         </>
                     ) : (
                         <>
@@ -159,7 +162,7 @@ const Layout = () => {
                 <div className="p-4 border-t border-slate-800">
                     <div className={`flex items-center gap-3 mb-4 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : 'px-2'}`}>
                         <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center font-bold text-white shadow-md flex-shrink-0">
-                            {user?.name.charAt(0)}
+                            {user?.name?.charAt(0) || '?'}
                         </div>
                         {!isCollapsed && (
                             <div className="overflow-hidden">
@@ -225,8 +228,8 @@ const Layout = () => {
                     <Outlet />
                 </main>
             </div>
-            {/* CEO Popup */}
-            <CEOPopup />
+            {/* Inspirational Popup */}
+            <InspirationalPopup />
             <InstallApp />
         </div>
     );

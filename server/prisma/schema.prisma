@@ -328,10 +328,12 @@ model AuditLog {
   createdAt DateTime @default(now())
 }
 
-model CEOQuote {
+model PopupConfig {
   id        Int      @id @default(autoincrement())
   imageUrl  String
   quote     String
   author    String
+  isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
 }

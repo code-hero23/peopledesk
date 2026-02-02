@@ -150,9 +150,9 @@ const Attendance = () => {
                                                             info.includes('ipad');
 
                                                         return isMobile ? (
-                                                            <Smartphone className="w-5 h-5 text-slate-400" />
+                                                            <Smartphone className="w-5 h-5 text-red-400" />
                                                         ) : (
-                                                            <Monitor className="w-5 h-5 text-slate-400" />
+                                                            <Monitor className="w-5 h-5 text-green-400" />
                                                         );
                                                     })()}
                                                 </div>

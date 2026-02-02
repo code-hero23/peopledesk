@@ -10,7 +10,7 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
     const videoRef = useRef(null);
     const canvasRef = useRef(null);
 
-    const [location, setLocation] = useState(null);
+    const [location, setLocation] = useState({ lat: null, lng: null, areaName: 'Fetching location...' });
 
     // Start Camera & Get Location
     const startCamera = async () => {
@@ -19,16 +19,39 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             stream.getTracks().forEach(track => track.stop());
         }
 
-        // Get Location
+        // Get Location & Reverse Geocode
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    setLocation({
-                        lat: position.coords.latitude.toFixed(4),
-                        lng: position.coords.longitude.toFixed(4)
-                    });
+                async (position) => {
+                    const lat = position.coords.latitude.toFixed(4);
+                    const lng = position.coords.longitude.toFixed(4);
+
+                    setLocation(prev => ({ ...prev, lat, lng, areaName: 'Detecting Area...' }));
+
+                    try {
+                        // Reverse geocoding using OpenStreetMap Nominatim
+                        const response = await fetch(
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+                            { headers: { 'User-Agent': 'PeopleDesk-App/1.0' } }
+                        );
+                        const data = await response.json();
+                        const addr = data.address;
+
+                        // Construct a readable neighborhood/city string
+                        const area = addr.suburb || addr.neighbourhood || addr.residential || addr.city_district || addr.town || addr.city || 'Local Area';
+                        const city = addr.city || addr.state_district || addr.state || '';
+                        const formattedArea = city && area !== city ? `${area}, ${city}` : area;
+
+                        setLocation({ lat, lng, areaName: formattedArea });
+                    } catch (err) {
+                        console.error("Reverse geocoding failed:", err);
+                        setLocation({ lat, lng, areaName: 'Location Name Unavailable' });
+                    }
                 },
-                (err) => console.warn("Location access denied or unavailable:", err),
+                (err) => {
+                    console.warn("Location access denied or unavailable:", err);
+                    setLocation({ lat: null, lng: null, areaName: 'Location Access Denied' });
+                },
                 { enableHighAccuracy: true, timeout: 5000 }
             );
         }
@@ -98,28 +121,45 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
 
             // Add Timestamp & Location Overlay
             const now = new Date();
-            const dateStr = now.toLocaleDateString();
-            const timeStr = now.toLocaleTimeString();
-            const locStr = location ? `Lat: ${location.lat}, Lng: ${location.lng}` : 'Location: Not Available';
+            const dateStr = now.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+            const timeStr = now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
 
-            // Overlay Bar
-            const barHeight = 80; // Adjust based on resolution
-            const fontSize = 24;
+            // Construct the strings
+            const areaStr = location.areaName || 'Detecting Area...';
+            const coordStr = location.lat ? `${location.lat}, ${location.lng}` : '';
 
-            context.fillStyle = 'rgba(0, 0, 0, 0.6)';
+            // Overlay Bar Design (Premium)
+            const barHeight = 100;
+            const fontSizeLarge = 22;
+            const fontSizeSmall = 16;
+
+            context.fillStyle = 'rgba(0, 0, 0, 0.75)';
             context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
 
-            // Text
+            // Bottom Accent Line
+            context.fillStyle = '#3b82f6'; // Blue-500
+            context.fillRect(0, canvas.height - 4, canvas.width, 4);
+
+            // Text Properties
             context.fillStyle = '#ffffff';
-            context.font = `bold ${fontSize}px sans-serif`;
-            context.textBaseline = 'middle';
+            context.textBaseline = 'top';
 
-            // Draw Date/Time (Left)
-            context.fillText(`${dateStr} ${timeStr}`, 20, canvas.height - (barHeight / 2));
+            // 1. Draw Date/Time (Top Left of Bar)
+            context.font = `bold ${fontSizeLarge}px sans-serif`;
+            context.fillText(`${dateStr} | ${timeStr}`, 24, canvas.height - barHeight + 20);
 
-            // Draw Location (Right) - aligned roughly
-            const textWidth = context.measureText(locStr).width;
-            context.fillText(locStr, canvas.width - textWidth - 20, canvas.height - (barHeight / 2));
+            // 2. Draw Area Name (Bottom Left of Bar)
+            context.font = `${fontSizeSmall}px sans-serif`;
+            context.fillStyle = '#94a3b8'; // slate-400
+            context.fillText(`📍 ${areaStr}`, 24, canvas.height - barHeight + 55);
+
+            // 3. Draw Coordinates (Align Right)
+            if (coordStr) {
+                context.font = `bold ${fontSizeSmall}px monospace`;
+                context.fillStyle = '#60a5fa'; // blue-400
+                const coordWidth = context.measureText(coordStr).width;
+                context.fillText(coordStr, canvas.width - coordWidth - 24, canvas.height - barHeight + 55);
+            }
 
             // Convert to blob/file
             canvas.toBlob((blob) => {

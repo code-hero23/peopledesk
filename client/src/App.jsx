@@ -11,7 +11,8 @@ import WorkLogs from './pages/admin/WorkLogs';
 import Attendance from './pages/admin/Attendance';
 import AttendanceVerification from './pages/admin/AttendanceVerification';
 import VisitRequests from './pages/admin/VisitRequests';
-import Layout from './components/Layout';
+import PopupManagement from './pages/admin/PopupManagement';
+import Layout from './components/MainLayout';
 import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
 
@@ -43,6 +44,7 @@ function App() {
               <Route path="/admin/worklogs" element={<WorkLogs />} />
               <Route path="/admin/attendance" element={<Attendance />} />
               <Route path="/admin/attendance-verification" element={<AttendanceVerification />} />
+              <Route path="/admin/popup-management" element={<PopupManagement />} />
             </Route>
 
             {/* Smart Root Redirect */}
