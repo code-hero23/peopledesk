@@ -57,51 +57,30 @@ const getAllPendingRequests = async (req, res) => {
         }
 
         // Base query conditions
-        let leaveWhere = { ...dateFilter };
-        let permissionWhere = { ...dateFilter };
+        let leaveWhere = dateFilter;
+        let permissionWhere = dateFilter;
 
         if (userRole === 'BUSINESS_HEAD') {
-            // BH sees requests where targetBhId is theirs OR null (legacy/fallback)
-            // AND status is pending
             const userId = req.user.id;
-
-            leaveWhere = {
-                bhStatus: 'PENDING',
-                status: 'PENDING',
+            const bhCondition = {
                 OR: [
                     { targetBhId: userId },
                     { targetBhId: null }
                 ]
             };
-            permissionWhere = {
-                bhStatus: 'PENDING',
-                status: 'PENDING',
-                OR: [
-                    { targetBhId: userId },
-                    { targetBhId: null }
-                ]
-            };
+            leaveWhere = { AND: [leaveWhere, { bhStatus: 'PENDING', status: 'PENDING' }, bhCondition] };
+            permissionWhere = { AND: [permissionWhere, { bhStatus: 'PENDING', status: 'PENDING' }, bhCondition] };
         } else if (userRole === 'HR') {
-            // HR see EVERYTHING pending (Waiting for BH or Waiting for HR)
-            leaveWhere = { status: 'PENDING' };
-            permissionWhere = { status: 'PENDING' };
+            leaveWhere = { AND: [leaveWhere, { status: 'PENDING' }] };
+            permissionWhere = { AND: [permissionWhere, { status: 'PENDING' }] };
         } else if (userRole === 'ADMIN') {
-            // Admin sees EVERYTHING pending at any stage
-            leaveWhere = { status: 'PENDING' }; // Show all pending overall
-            permissionWhere = { status: 'PENDING' };
+            leaveWhere = { AND: [leaveWhere, { status: 'PENDING' }] };
+            permissionWhere = { AND: [permissionWhere, { status: 'PENDING' }] };
         } else if (userRole === 'AE_MANAGER') {
-            // AE Manager sees ONLY AE requests
-            leaveWhere = {
-                status: 'PENDING',
-                user: { designation: 'AE' }
-            };
-            permissionWhere = {
-                status: 'PENDING',
-                user: { designation: 'AE' }
-            };
+            leaveWhere = { AND: [leaveWhere, { status: 'PENDING', user: { designation: 'AE' } }] };
+            permissionWhere = { AND: [permissionWhere, { status: 'PENDING', user: { designation: 'AE' } }] };
         } else {
-            // Regular employees/Managers shouldn't be here usually, or see nothing
-            return res.json({ leaves: [], permissions: [] });
+            return res.json({ leaves: [], permissions: [], siteVisits: [], showroomVisits: [] });
         }
 
         const leavesRaw = await prisma.leaveRequest.findMany({
@@ -187,48 +166,36 @@ const getRequestHistory = async (req, res) => {
             };
         }
 
-        let leaveWhere = { ...dateFilter };
-        let permissionWhere = { ...dateFilter };
+        let leaveWhere = dateFilter;
+        let permissionWhere = dateFilter;
 
         if (userRole === 'BUSINESS_HEAD') {
-            // BH sees requests they have acted on (bhStatus is NOT pending)
-            // They should see it even if overall status is pending (waiting for HR)
-            console.log(`BH History Query for ${userId} (BH)`);
             leaveWhere = {
-                bhStatus: { not: 'PENDING' },
-                OR: [
-                    { targetBhId: userId },
-                    { bhId: userId }
+                AND: [
+                    leaveWhere,
+                    {
+                        bhStatus: { not: 'PENDING' },
+                        OR: [{ targetBhId: userId }, { bhId: userId }]
+                    }
                 ]
             };
             permissionWhere = {
-                bhStatus: { not: 'PENDING' },
-                OR: [
-                    { targetBhId: userId },
-                    { bhId: userId }
+                AND: [
+                    permissionWhere,
+                    {
+                        bhStatus: { not: 'PENDING' },
+                        OR: [{ targetBhId: userId }, { bhId: userId }]
+                    }
                 ]
             };
-        } else if (userRole === 'HR') {
-            console.log(`HR History Query for ${userId} (HR)`);
-            // SIMPLIFIED HR Logic: HR sees EVERYTHING that is finalized (APPROVED/REJECTED)
-            // This acts as the company-wide record.
-            leaveWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
-            permissionWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
+        } else if (userRole === 'HR' || userRole === 'ADMIN') {
+            leaveWhere = { AND: [leaveWhere, { status: { in: ['APPROVED', 'REJECTED'] } }] };
+            permissionWhere = { AND: [permissionWhere, { status: { in: ['APPROVED', 'REJECTED'] } }] };
         } else if (userRole === 'AE_MANAGER') {
-            // AE Manager History
-            leaveWhere = {
-                status: { in: ['APPROVED', 'REJECTED'] },
-                user: { designation: 'AE' }
-            };
-            permissionWhere = {
-                status: { in: ['APPROVED', 'REJECTED'] },
-                user: { designation: 'AE' }
-            };
+            leaveWhere = { AND: [leaveWhere, { status: { in: ['APPROVED', 'REJECTED'] }, user: { designation: 'AE' } }] };
+            permissionWhere = { AND: [permissionWhere, { status: { in: ['APPROVED', 'REJECTED'] }, user: { designation: 'AE' } }] };
         } else {
-            console.log(`History Query for ${userRole}`);
-            // Admin sees all finalized requests
-            leaveWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
-            permissionWhere = { status: { in: ['APPROVED', 'REJECTED'] } };
+            return res.json({ leaves: [], permissions: [], siteVisits: [], showroomVisits: [] });
         }
 
         console.log("Leave Where Clause:", JSON.stringify(leaveWhere, null, 2));
