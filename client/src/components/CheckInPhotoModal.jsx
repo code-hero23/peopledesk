@@ -23,29 +23,45 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
         if (navigator.geolocation) {
             navigator.geolocation.getCurrentPosition(
                 async (position) => {
-                    const lat = position.coords.latitude.toFixed(4);
-                    const lng = position.coords.longitude.toFixed(4);
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
 
-                    setLocation(prev => ({ ...prev, lat, lng, areaName: 'Detecting Area...' }));
+                    setLocation(prev => ({
+                        ...prev,
+                        lat: lat.toFixed(4),
+                        lng: lng.toFixed(4),
+                        areaName: 'Detecting Area...'
+                    }));
 
                     try {
-                        // Reverse geocoding using OpenStreetMap Nominatim
+                        // Reverse geocoding using OpenStreetMap Nominatim with higher zoom (18)
                         const response = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
+                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
                             { headers: { 'User-Agent': 'PeopleDesk-App/1.0' } }
                         );
                         const data = await response.json();
                         const addr = data.address;
 
-                        // Construct a readable neighborhood/city string
-                        const area = addr.suburb || addr.neighbourhood || addr.residential || addr.city_district || addr.town || addr.city || 'Local Area';
-                        const city = addr.city || addr.state_district || addr.state || '';
-                        const formattedArea = city && area !== city ? `${area}, ${city}` : area;
+                        // Prioritize more granular address components to avoid 20km generalization
+                        const primaryArea = addr.road || addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || addr.residential || addr.city_district || addr.town || 'Local Area';
+                        const secondaryArea = addr.city || addr.town || addr.state_district || addr.county || '';
 
-                        setLocation({ lat, lng, areaName: formattedArea });
+                        const formattedArea = secondaryArea && primaryArea !== secondaryArea
+                            ? `${primaryArea}, ${secondaryArea}`
+                            : primaryArea;
+
+                        setLocation({
+                            lat: lat.toFixed(4),
+                            lng: lng.toFixed(4),
+                            areaName: formattedArea
+                        });
                     } catch (err) {
                         console.error("Reverse geocoding failed:", err);
-                        setLocation({ lat, lng, areaName: 'Location Name Unavailable' });
+                        setLocation({
+                            lat: lat.toFixed(4),
+                            lng: lng.toFixed(4),
+                            areaName: 'Location Name Unavailable'
+                        });
                     }
                 },
                 (err) => {
