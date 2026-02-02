@@ -41,24 +41,28 @@ const getAllPendingRequests = async (req, res) => {
         const { date } = req.query;
 
         // Date filter logic
-        let dateFilter = {};
+        let leaveDateFilter = {};
+        let generalDateFilter = {};
         if (date) {
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);
             endOfDay.setHours(23, 59, 59, 999);
 
-            dateFilter = {
-                OR: [
-                    { date: { gte: startOfDay, lte: endOfDay } },
-                    { startDate: { lte: endOfDay }, endDate: { gte: startOfDay } }
-                ]
+            leaveDateFilter = {
+                startDate: { lte: endOfDay },
+                endDate: { gte: startOfDay }
+            };
+
+            generalDateFilter = {
+                date: { gte: startOfDay, lte: endOfDay }
             };
         }
 
         // Base query conditions
-        let leaveWhere = dateFilter;
-        let permissionWhere = dateFilter;
+        let leaveWhere = leaveDateFilter;
+        let permissionWhere = generalDateFilter;
+        let visitWhere = generalDateFilter;
 
         if (userRole === 'BUSINESS_HEAD') {
             const userId = req.user.id;
@@ -96,13 +100,13 @@ const getAllPendingRequests = async (req, res) => {
         });
 
         const siteVisitsRaw = await prisma.siteVisitRequest.findMany({
-            where: permissionWhere, // Restored visibility for all authorized roles (including BH)
+            where: { AND: [visitWhere, permissionWhere.AND ? permissionWhere.AND[1] : {}] },
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
 
         const showroomVisitsRaw = await prisma.showroomVisitRequest.findMany({
-            where: permissionWhere, // Restored visibility for all authorized roles (including BH)
+            where: { AND: [visitWhere, permissionWhere.AND ? permissionWhere.AND[1] : {}] },
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
@@ -151,23 +155,27 @@ const getRequestHistory = async (req, res) => {
         const { date } = req.query;
 
         // Date filter logic
-        let dateFilter = {};
+        let leaveDateFilter = {};
+        let generalDateFilter = {};
         if (date) {
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);
             endOfDay.setHours(23, 59, 59, 999);
 
-            dateFilter = {
-                OR: [
-                    { date: { gte: startOfDay, lte: endOfDay } },
-                    { startDate: { lte: endOfDay }, endDate: { gte: startOfDay } }
-                ]
+            leaveDateFilter = {
+                startDate: { lte: endOfDay },
+                endDate: { gte: startOfDay }
+            };
+
+            generalDateFilter = {
+                date: { gte: startOfDay, lte: endOfDay }
             };
         }
 
-        let leaveWhere = dateFilter;
-        let permissionWhere = dateFilter;
+        let leaveWhere = leaveDateFilter;
+        let permissionWhere = generalDateFilter;
+        let visitWhere = generalDateFilter;
 
         if (userRole === 'BUSINESS_HEAD') {
             leaveWhere = {
@@ -215,14 +223,14 @@ const getRequestHistory = async (req, res) => {
         });
 
         const siteVisitsRaw = await prisma.siteVisitRequest.findMany({
-            where: permissionWhere, // Uses same history logic as permission
+            where: { AND: [visitWhere, permissionWhere.AND ? permissionWhere.AND[1] : {}] },
             include: { user: { select: { name: true, email: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
         });
 
         const showroomVisitsRaw = await prisma.showroomVisitRequest.findMany({
-            where: permissionWhere,
+            where: { AND: [visitWhere, permissionWhere.AND ? permissionWhere.AND[1] : {}] },
             include: { user: { select: { name: true, email: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
