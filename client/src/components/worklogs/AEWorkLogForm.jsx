@@ -7,6 +7,7 @@ import {
     Wrench, AlertOctagon, CornerDownRight, CheckSquare
 } from 'lucide-react';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const AEWorkLogForm = ({ onSuccess }) => {
@@ -15,6 +16,12 @@ const AEWorkLogForm = ({ onSuccess }) => {
     const { attendance, isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     useEffect(() => {
         dispatch(getTodayLogStatus());
@@ -93,20 +100,28 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
-        const formData = new FormData();
-        formData.append('logStatus', 'OPEN');
-        formData.append('process', 'Opening Report');
-        formData.append('hours', '0');
-        formData.append('ae_opening_metrics', JSON.stringify(openingData));
-        formData.append('ae_siteLocation', openingData.ae_siteLocation || '');
-        formData.append('ae_gpsCoordinates', openingData.ae_gpsCoordinates || '');
-        formData.append('ae_siteStatus', openingData.ae_siteStatus || '');
-        formData.append('ae_plannedWork', openingData.ae_plannedWork || '');
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Start Your Day',
+            message: 'Are you sure you want to check-in and start your day?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'OPEN',
+                    process: 'AE Opening Report',
+                    ae_opening_metrics: openingData,
+                    ae_siteLocation: openingData.ae_siteLocation || '',
+                    ae_gpsCoordinates: openingData.ae_gpsCoordinates || '',
+                    ae_siteStatus: openingData.ae_siteStatus || '',
+                    ae_plannedWork: openingData.ae_plannedWork || ''
+                };
 
-        dispatch(createWorkLog(formData)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Day Started! Opening Report Submitted.");
-                setShowSuccess(true);
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Day Started! Opening Report Submitted.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
@@ -140,43 +155,51 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
-        const formData = new FormData();
-        formData.append('logStatus', 'CLOSED');
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Closing Report',
+            message: 'Are you sure you want to complete your day and submit all site details?',
+            onConfirm: () => {
+                const formData = new FormData();
+                formData.append('logStatus', 'CLOSED');
 
-        const metrics = { ...closingData, ae_photos: undefined };
-        formData.append('ae_closing_metrics', JSON.stringify(metrics));
+                const metrics = { ...closingData, ae_photos: undefined };
+                formData.append('ae_closing_metrics', JSON.stringify(metrics));
 
-        formData.append('ae_visitType', JSON.stringify(closingData.ae_visitType));
-        formData.append('ae_workStage', closingData.ae_workStage || '');
-        formData.append('ae_tasksCompleted', JSON.stringify(closingData.ae_tasksCompleted));
-        formData.append('ae_measurements', closingData.ae_measurements || '');
-        formData.append('ae_itemsInstalled', closingData.ae_itemsInstalled || '');
-        formData.append('ae_issuesRaised', closingData.ae_issuesRaised || '');
-        formData.append('ae_issuesResolved', closingData.ae_issuesResolved || '');
-        formData.append('ae_hasIssues', closingData.ae_hasIssues);
-        formData.append('ae_issueType', closingData.ae_issueType || '');
-        formData.append('ae_issueDescription', closingData.ae_issueDescription || '');
-        formData.append('ae_nextVisitRequired', closingData.ae_nextVisitRequired);
+                formData.append('ae_visitType', JSON.stringify(closingData.ae_visitType));
+                formData.append('ae_workStage', closingData.ae_workStage || '');
+                formData.append('ae_tasksCompleted', JSON.stringify(closingData.ae_tasksCompleted));
+                formData.append('ae_measurements', closingData.ae_measurements || '');
+                formData.append('ae_itemsInstalled', closingData.ae_itemsInstalled || '');
+                formData.append('ae_issuesRaised', closingData.ae_issuesRaised || '');
+                formData.append('ae_issuesResolved', closingData.ae_issuesResolved || '');
+                formData.append('ae_hasIssues', closingData.ae_hasIssues);
+                formData.append('ae_issueType', closingData.ae_issueType || '');
+                formData.append('ae_issueDescription', closingData.ae_issueDescription || '');
+                formData.append('ae_nextVisitRequired', closingData.ae_nextVisitRequired);
 
-        if (closingData.ae_nextVisitDate) {
-            formData.append('ae_nextVisitDate', closingData.ae_nextVisitDate);
-        }
+                if (closingData.ae_nextVisitDate) {
+                    formData.append('ae_nextVisitDate', closingData.ae_nextVisitDate);
+                }
 
-        formData.append('ae_clientMet', closingData.ae_clientMet);
-        formData.append('ae_clientFeedback', closingData.ae_clientFeedback || '');
-        formData.append('remarks', closingData.remarks || '');
-        formData.append('clientName', closingData.clientName || '');
+                formData.append('ae_clientMet', closingData.ae_clientMet);
+                formData.append('ae_clientFeedback', closingData.ae_clientFeedback || '');
+                formData.append('remarks', closingData.remarks || '');
+                formData.append('clientName', closingData.clientName || '');
 
-        if (closingData.ae_photos && closingData.ae_photos.length > 0) {
-            closingData.ae_photos.forEach(file => {
-                formData.append('ae_photos', file);
-            });
-        }
+                if (closingData.ae_photos && closingData.ae_photos.length > 0) {
+                    closingData.ae_photos.forEach(file => {
+                        formData.append('ae_photos', file);
+                    });
+                }
 
-        dispatch(closeWorkLog(formData)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Day Ended! Closing Report Submitted.");
-                setShowSuccess(true);
+                dispatch(closeWorkLog(formData)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Day Ended! Closing Report Submitted.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
@@ -353,6 +376,13 @@ const AEWorkLogForm = ({ onSuccess }) => {
                 </button>
 
                 <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); onSuccess(); }} message={modalMessage} />
+                <ConfirmationModal
+                    isOpen={confirmationConfig.isOpen}
+                    onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmationConfig.onConfirm}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                />
             </motion.form>
         );
     }
@@ -404,6 +434,13 @@ const AEWorkLogForm = ({ onSuccess }) => {
             </button>
 
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); }} message={modalMessage} />
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
+            />
         </motion.form>
     );
 };

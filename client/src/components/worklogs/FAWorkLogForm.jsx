@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import {
     Phone, Star, Briefcase, FileText, Globe, CheckSquare,
     TrendingUp, Clock, MapPin, Layout
@@ -13,6 +14,12 @@ const FAWorkLogForm = ({ onSuccess }) => {
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     useEffect(() => {
         dispatch(getTodayLogStatus());
@@ -55,27 +62,43 @@ const FAWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
-        const payload = {
-            logStatus: 'OPEN',
-            fa_opening_metrics: openingData
-        };
-        dispatch(createWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Opening Report Submitted! Day started.");
-                setShowSuccess(true);
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Opening Report',
+            message: 'Are you sure you want to start your day with these targets?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'OPEN',
+                    fa_opening_metrics: openingData
+                };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Opening Report Submitted! Day started.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
-        const payload = {
-            fa_closing_metrics: closingData
-        };
-        dispatch(closeWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Closing Report Submitted! Day ended.");
-                setShowSuccess(true);
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Closing Report',
+            message: 'Are you sure you want to submit your final achievements for today?',
+            onConfirm: () => {
+                const payload = {
+                    fa_closing_metrics: closingData
+                };
+                dispatch(closeWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Closing Report Submitted! Day ended.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
@@ -217,6 +240,13 @@ const FAWorkLogForm = ({ onSuccess }) => {
                     isOpening={false}
                 />
                 <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+                <ConfirmationModal
+                    isOpen={confirmationConfig.isOpen}
+                    onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmationConfig.onConfirm}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                />
             </>
         );
     }
@@ -232,6 +262,13 @@ const FAWorkLogForm = ({ onSuccess }) => {
                 isOpening={true}
             />
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
+            />
         </>
     );
 };

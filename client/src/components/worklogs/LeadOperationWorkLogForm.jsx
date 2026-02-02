@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import { Plus, Trash2, Settings, Clock, TrendingUp, Activity, CheckSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,6 +10,12 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     const isOpening = !todayLog;
     const isClosing = todayLog && todayLog.logStatus === 'OPEN';
@@ -40,40 +47,43 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
         const validRows = rows.filter(r => r.task.trim() !== '');
-        // Map to standard { description, status } for Admin Table compatibility if needed, 
-        // but preserving original key structure for safety as per original file.
-        // Original file mapped: const standardizedRows = validRows.map(r => ({ description: r.task, status: r.status }));
-        // I should Keep 'standardizedRows' logic for backend compatibility.
-
         const standardizedRows = validRows.map(r => ({ description: r.task, status: r.status }));
 
-        if (isOpening) {
-            const payload = {
-                logStatus: 'OPEN',
-                process: 'Lead Operation Opening Report',
-                customFields: {
-                    openingTasks: standardizedRows
-                },
-                remarks: remarks
-            };
-            dispatch(createWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        } else if (isClosing) {
-            const existingFields = todayLog.customFields || {};
-            const payload = {
-                logStatus: 'CLOSED',
-                process: 'Lead Operation Daily Reports Completed',
-                customFields: {
-                    ...existingFields,
-                    closingTasks: standardizedRows
-                },
-                remarks: remarks || todayLog.remarks
-            };
-            dispatch(closeWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        }
+        setConfirmationConfig({
+            isOpen: true,
+            title: isOpening ? 'Submit Opening Report' : 'Submit Closing Report',
+            message: `Are you sure you want to submit this ${isOpening ? 'opening' : 'closing'} report?`,
+            onConfirm: () => {
+                if (isOpening) {
+                    const payload = {
+                        logStatus: 'OPEN',
+                        process: 'Lead Operation Opening Report',
+                        customFields: {
+                            openingTasks: standardizedRows
+                        },
+                        remarks: remarks
+                    };
+                    dispatch(createWorkLog(payload)).then((res) => {
+                        if (!res.error) setShowSuccess(true);
+                    });
+                } else if (isClosing) {
+                    const existingFields = todayLog.customFields || {};
+                    const payload = {
+                        logStatus: 'CLOSED',
+                        process: 'Lead Operation Daily Reports Completed',
+                        customFields: {
+                            ...existingFields,
+                            closingTasks: standardizedRows
+                        },
+                        remarks: remarks || todayLog.remarks
+                    };
+                    dispatch(closeWorkLog(payload)).then((res) => {
+                        if (!res.error) setShowSuccess(true);
+                    });
+                }
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
@@ -203,6 +213,13 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
                 }}
                 message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
                 subMessage="Lead Operation entry recorded successfully."
+            />
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
             />
         </motion.form>
     );

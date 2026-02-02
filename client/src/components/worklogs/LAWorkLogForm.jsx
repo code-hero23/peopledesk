@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus, addProjectReport } from '../../features/employee/employeeSlice';
 import { getProjects } from '../../features/projects/projectSlice';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import {
     FileText, Box, PenTool, Layout, DollarSign,
     MessageCircle, Users, CheckSquare, Plus, Clock,
@@ -17,6 +18,12 @@ const LAWorkLogForm = ({ onSuccess }) => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     const isTodayClosed = todayLog?.logStatus === 'CLOSED';
     const isTodayOpen = todayLog?.logStatus === 'OPEN';
@@ -60,53 +67,77 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
-        const payload = { logStatus: 'OPEN', la_opening_metrics: openingData };
-        dispatch(createWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Opening Report Submitted! Day started.");
-                setShowSuccess(true);
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Opening Report',
+            message: 'Are you sure you want to start your day with these metrics?',
+            onConfirm: () => {
+                const payload = { logStatus: 'OPEN', la_opening_metrics: openingData };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Opening Report Submitted! Day started.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
-        const payload = { la_closing_metrics: closingData };
-        dispatch(closeWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Closing Report Submitted! Day ended.");
-                setShowSuccess(true);
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Closing Report',
+            message: 'Are you sure you want to end your day and submit these closing metrics?',
+            onConfirm: () => {
+                const payload = { la_closing_metrics: closingData };
+                dispatch(closeWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Closing Report Submitted! Day ended.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
 
     const handleProjectReportSubmit = (e) => {
         e.preventDefault();
-        let totalHours = 0;
-        if (projectReport.startTime && projectReport.endTime) {
-            const start = new Date(`1970-01-01T${projectReport.startTime}`);
-            const end = new Date(`1970-01-01T${projectReport.endTime}`);
-            totalHours = (end - start) / 1000 / 60 / 60;
-        }
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Add Project Task',
+            message: 'Confirm adding this task to your daily log?',
+            onConfirm: () => {
+                let totalHours = 0;
+                if (projectReport.startTime && projectReport.endTime) {
+                    const start = new Date(`1970-01-01T${projectReport.startTime}`);
+                    const end = new Date(`1970-01-01T${projectReport.endTime}`);
+                    totalHours = (end - start) / 1000 / 60 / 60;
+                }
 
-        const payload = {
-            projectReport: {
-                ...projectReport,
-                totalHours: totalHours > 0 ? totalHours.toFixed(2) : 0
-            }
-        };
+                const payload = {
+                    projectReport: {
+                        ...projectReport,
+                        totalHours: totalHours > 0 ? totalHours.toFixed(2) : 0
+                    }
+                };
 
-        dispatch(addProjectReport(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Project Report Added!");
-                setShowSuccess(true);
-                // Reset form
-                setProjectReport({
-                    date: new Date().toISOString().split('T')[0],
-                    projectId: '', clientName: '', site: '', process: '',
-                    imageCount: '', startTime: '', endTime: '',
-                    completedImages: '', pendingImages: '', remarks: ''
+                dispatch(addProjectReport(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Project Report Added!");
+                        setShowSuccess(true);
+                        // Reset form
+                        setProjectReport({
+                            date: new Date().toISOString().split('T')[0],
+                            projectId: '', clientName: '', site: '', process: '',
+                            imageCount: '', startTime: '', endTime: '',
+                            completedImages: '', pendingImages: '', remarks: ''
+                        });
+                    }
                 });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
@@ -299,6 +330,14 @@ const LAWorkLogForm = ({ onSuccess }) => {
                 )}
             </AnimatePresence>
             <SuccessModal isOpen={showSuccess} onClose={() => setShowSuccess(false)} message={modalMessage} />
+
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
+            />
         </div>
     );
 };

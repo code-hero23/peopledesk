@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import {
     Phone, Star, MapPin, MessageSquare, FileText,
     ShoppingCart, Send, ClipboardList, CheckSquare,
@@ -14,6 +15,12 @@ const CREWorkLogForm = ({ onSuccess }) => {
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     useEffect(() => {
         dispatch(getTodayLogStatus());
@@ -106,28 +113,44 @@ const CREWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
-        const payload = {
-            logStatus: 'OPEN',
-            cre_opening_metrics: openingData.cre_opening_metrics,
-        };
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Opening Report',
+            message: 'Are you sure you want to start your day with these metrics?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'OPEN',
+                    cre_opening_metrics: openingData.cre_opening_metrics,
+                };
 
-        dispatch(createWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Opening Report Submitted! Day started.");
-                setShowSuccess(true);
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Opening Report Submitted! Day started.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
-        const payload = {
-            cre_closing_metrics: closingData.cre_closing_metrics
-        };
-        dispatch(closeWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setModalMessage("Closing Report Submitted! Day ended.");
-                setShowSuccess(true);
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Closing Report',
+            message: 'Are you sure you want to submit your final metrics for today?',
+            onConfirm: () => {
+                const payload = {
+                    cre_closing_metrics: closingData.cre_closing_metrics
+                };
+                dispatch(closeWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Closing Report Submitted! Day ended.");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
@@ -244,6 +267,13 @@ const CREWorkLogForm = ({ onSuccess }) => {
                     <CheckSquare size={20} /> Submit Closing Report
                 </button>
                 <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+                <ConfirmationModal
+                    isOpen={confirmationConfig.isOpen}
+                    onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmationConfig.onConfirm}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                />
             </motion.form>
         );
     }
@@ -302,6 +332,13 @@ const CREWorkLogForm = ({ onSuccess }) => {
                 <CheckSquare size={20} /> Submit Opening Report
             </button>
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
+            />
         </motion.form>
     );
 };

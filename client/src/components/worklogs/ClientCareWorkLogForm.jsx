@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import { Plus, Trash2, Heart, Clock, TrendingUp, CheckSquare, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -9,6 +10,12 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     const isOpening = !todayLog;
     const isClosing = todayLog && todayLog.logStatus === 'OPEN';
@@ -41,31 +48,39 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
         e.preventDefault();
         const validRows = rows.filter(r => r.description.trim() !== '');
 
-        if (isOpening) {
-            const payload = {
-                logStatus: 'OPEN',
-                process: 'Client Care Opening Report',
-                customFields: { openingStats: validRows },
-                remarks: generalRemarks
-            };
-            dispatch(createWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        } else if (isClosing) {
-            const existingFields = todayLog.customFields || {};
-            const payload = {
-                logStatus: 'CLOSED',
-                process: 'Client Care Daily Reports Completed',
-                customFields: {
-                    ...existingFields,
-                    closingStats: validRows
-                },
-                remarks: generalRemarks || todayLog.remarks
-            };
-            dispatch(closeWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        }
+        setConfirmationConfig({
+            isOpen: true,
+            title: isOpening ? 'Submit Opening Report' : 'Submit Closing Report',
+            message: `Are you sure you want to submit this ${isOpening ? 'opening' : 'closing'} report?`,
+            onConfirm: () => {
+                if (isOpening) {
+                    const payload = {
+                        logStatus: 'OPEN',
+                        process: 'Client Care Opening Report',
+                        customFields: { openingStats: validRows },
+                        remarks: generalRemarks
+                    };
+                    dispatch(createWorkLog(payload)).then((res) => {
+                        if (!res.error) setShowSuccess(true);
+                    });
+                } else if (isClosing) {
+                    const existingFields = todayLog.customFields || {};
+                    const payload = {
+                        logStatus: 'CLOSED',
+                        process: 'Client Care Daily Reports Completed',
+                        customFields: {
+                            ...existingFields,
+                            closingStats: validRows
+                        },
+                        remarks: generalRemarks || todayLog.remarks
+                    };
+                    dispatch(closeWorkLog(payload)).then((res) => {
+                        if (!res.error) setShowSuccess(true);
+                    });
+                }
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
     };
 
     if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
@@ -210,6 +225,13 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
                 }}
                 message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
                 subMessage="Client Care entry recorded successfully."
+            />
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
             />
         </motion.form>
     );

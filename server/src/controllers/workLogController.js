@@ -22,7 +22,7 @@ const createWorkLog = async (req, res) => {
         la_number, la_mailId, la_projectLocation, la_freezingAmount, la_variant, la_projectValue,
         la_woodwork, la_addOns, la_cpCode, la_source, la_fa, la_referalBonus, la_siteStatus, la_specialNote,
         la_requirements, la_colours, la_onlineMeeting, la_showroomMeeting, la_measurements,
-        la_opening_metrics, // New
+        la_opening_metrics,
         // AE Fields
         ae_siteLocation, ae_gpsCoordinates, ae_siteStatus, ae_visitType, ae_workStage,
         ae_tasksCompleted, ae_measurements, ae_itemsInstalled, ae_issuesRaised, ae_issuesResolved,
@@ -101,7 +101,7 @@ const createWorkLog = async (req, res) => {
                 cre_orders: cre_orders ? parseInt(cre_orders) : null,
                 cre_proposals: cre_proposals ? parseInt(cre_proposals) : null,
                 cre_callBreakdown,
-                cre_opening_metrics: cre_opening_metrics ? JSON.stringify(cre_opening_metrics) : undefined,
+                cre_opening_metrics: typeof cre_opening_metrics === 'string' ? JSON.parse(cre_opening_metrics) : cre_opening_metrics,
 
 
                 // FA
@@ -122,9 +122,8 @@ const createWorkLog = async (req, res) => {
                 fa_siteTime,
                 fa_loadingDiscussion: fa_loadingDiscussion ? parseInt(fa_loadingDiscussion) : null,
                 fa_bookingFreezed: fa_bookingFreezed ? parseInt(fa_bookingFreezed) : null,
-                fa_bookingFreezed: fa_bookingFreezed ? parseInt(fa_bookingFreezed) : null,
                 fa_bookingFreezedClients,
-                fa_opening_metrics: fa_opening_metrics ? JSON.stringify(fa_opening_metrics) : undefined,
+                fa_opening_metrics: typeof fa_opening_metrics === 'string' ? JSON.parse(fa_opening_metrics) : fa_opening_metrics,
 
                 // LA Detailed
                 la_number,
@@ -141,13 +140,12 @@ const createWorkLog = async (req, res) => {
                 la_referalBonus,
                 la_siteStatus,
                 la_specialNote,
-                la_requirements: la_requirements ? JSON.stringify(la_requirements) : undefined, // Ensure JSON is handled if needed, or pass directly if Prisma handles it (usually expects object for Json type)
-                la_colours: la_colours ? JSON.stringify(la_colours) : undefined,
-                la_onlineMeeting: la_onlineMeeting ? JSON.stringify(la_onlineMeeting) : undefined,
-                la_showroomMeeting: la_showroomMeeting ? JSON.stringify(la_showroomMeeting) : undefined,
-                la_showroomMeeting: la_showroomMeeting ? JSON.stringify(la_showroomMeeting) : undefined,
-                la_measurements: la_measurements ? JSON.stringify(la_measurements) : undefined,
-                la_opening_metrics: la_opening_metrics ? JSON.stringify(la_opening_metrics) : undefined,
+                la_requirements: typeof la_requirements === 'string' ? JSON.parse(la_requirements) : la_requirements,
+                la_colours: typeof la_colours === 'string' ? JSON.parse(la_colours) : la_colours,
+                la_onlineMeeting: typeof la_onlineMeeting === 'string' ? JSON.parse(la_onlineMeeting) : la_onlineMeeting,
+                la_showroomMeeting: typeof la_showroomMeeting === 'string' ? JSON.parse(la_showroomMeeting) : la_showroomMeeting,
+                la_measurements: typeof la_measurements === 'string' ? JSON.parse(la_measurements) : la_measurements,
+                la_opening_metrics: typeof la_opening_metrics === 'string' ? JSON.parse(la_opening_metrics) : la_opening_metrics,
 
                 // AE Fields
                 ae_siteLocation,

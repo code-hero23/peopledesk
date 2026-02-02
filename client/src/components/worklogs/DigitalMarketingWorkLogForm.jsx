@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
+import ConfirmationModal from '../ConfirmationModal';
 import { Megaphone, Briefcase, User, Clock, Link, FileText, CheckSquare, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -9,6 +10,12 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [confirmationConfig, setConfirmationConfig] = useState({
+        isOpen: false,
+        title: '',
+        message: '',
+        onConfirm: () => { }
+    });
 
     const [formData, setFormData] = useState({
         work: '',
@@ -26,27 +33,35 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
     const onSubmit = (e) => {
         e.preventDefault();
 
-        const payload = {
-            logStatus: 'CLOSED',
-            process: `DM Task: ${formData.work} (${formData.status})`, // Summary
-            hours: parseFloat(formData.hoursSpent) || 0, // Utilize the standard hours field
-            customFields: {
-                "Work Description": formData.work,
-                "Work Given By": formData.workGivenBy,
-                "Hours Spent": formData.hoursSpent,
-                "Status": formData.status,
-                "File Link": formData.fileLink
-            },
-            remarks: formData.remarks
-        };
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Marketing Log',
+            message: 'Are you sure you want to submit this digital marketing task log?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'CLOSED',
+                    process: `DM Task: ${formData.work} (${formData.status})`, // Summary
+                    hours: parseFloat(formData.hoursSpent) || 0, // Utilize the standard hours field
+                    customFields: {
+                        "Work Description": formData.work,
+                        "Work Given By": formData.workGivenBy,
+                        "Hours Spent": formData.hoursSpent,
+                        "Status": formData.status,
+                        "File Link": formData.fileLink
+                    },
+                    remarks: formData.remarks
+                };
 
-        dispatch(createWorkLog(payload)).then((res) => {
-            if (!res.error) {
-                setFormData({
-                    work: '', workGivenBy: '', hoursSpent: '',
-                    status: 'In Progress', fileLink: '', remarks: ''
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setFormData({
+                            work: '', workGivenBy: '', hoursSpent: '',
+                            status: 'In Progress', fileLink: '', remarks: ''
+                        });
+                        setShowSuccess(true);
+                    }
                 });
-                setShowSuccess(true);
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
     };
@@ -185,6 +200,13 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
                 }}
                 message="Work Log Submitted"
                 subMessage="Digital Marketing entry recorded successfully."
+            />
+            <ConfirmationModal
+                isOpen={confirmationConfig.isOpen}
+                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onConfirm={confirmationConfig.onConfirm}
+                title={confirmationConfig.title}
+                message={confirmationConfig.message}
             />
         </motion.form>
     );
