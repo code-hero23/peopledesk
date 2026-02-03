@@ -98,7 +98,9 @@ const checkoutAttendance = async (req, res) => {
             where: { id: attendance.id },
             data: {
                 checkoutTime: new Date(),
-                checkoutPhoto: req.file ? `/uploads/${req.file.filename}` : null
+                checkoutPhoto: req.file ? `/uploads/${req.file.filename}` : null,
+                checkoutDeviceInfo: req.body.deviceInfo || req.headers['user-agent'],
+                checkoutIpAddress: req.ip || req.connection.remoteAddress
             },
         });
 

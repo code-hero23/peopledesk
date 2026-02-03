@@ -565,17 +565,23 @@ const getDailyAttendance = async (req, res) => {
                 checkInPhoto: record.checkInPhoto,
                 checkoutPhoto: record.checkoutPhoto,
                 deviceInfo: record.deviceInfo,
-                ipAddress: record.ipAddress
+                ipAddress: record.ipAddress,
+                checkoutDeviceInfo: record.checkoutDeviceInfo,
+                checkoutIpAddress: record.checkoutIpAddress
             }));
 
             // Calculate overall Time In and Time Out for the day
             let timeIn = null;
             let timeOut = null;
+            let deviceInfo = null;
+            let checkoutDeviceInfo = null;
 
             if (userRecords.length > 0) {
                 timeIn = userRecords[0].date; // First check-in
+                deviceInfo = userRecords[0].deviceInfo;
                 const lastRecord = userRecords[userRecords.length - 1];
                 timeOut = lastRecord.checkoutTime; // Last check-out (might be null)
+                checkoutDeviceInfo = lastRecord.checkoutDeviceInfo;
             }
 
             return {
@@ -583,6 +589,8 @@ const getDailyAttendance = async (req, res) => {
                 status: userRecords.length > 0 ? 'PRESENT' : 'ABSENT',
                 timeIn,
                 timeOut,
+                deviceInfo,
+                checkoutDeviceInfo,
                 sessions: sessions
             };
         });

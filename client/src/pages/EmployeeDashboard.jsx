@@ -25,6 +25,7 @@ import SiteVisitRequestForm from '../components/SiteVisitRequestForm';
 import ShowroomVisitRequestForm from '../components/ShowroomVisitRequestForm';
 
 import CheckInPhotoModal from '../components/CheckInPhotoModal';
+import { getDeviceType } from '../utils/deviceUtils';
 
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
@@ -80,7 +81,9 @@ const EmployeeDashboard = () => {
                 setShowCheckInModal(true);
             } else {
                 console.log('Action: Standard Checkout (No Photo)');
-                dispatch(checkoutAttendance()).then(() => dispatch(getAttendanceStatus()));
+                const formData = new FormData();
+                formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${navigator.userAgent}`);
+                dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
             }
         } else {
             console.log('Condition: Checking IN');

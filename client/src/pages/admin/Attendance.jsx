@@ -114,16 +114,17 @@ const Attendance = () => {
                             <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                                 <th className="px-6 py-4 font-semibold">Employee</th>
                                 <th className="px-6 py-4 font-semibold text-center">Status</th>
-                                <th className="px-6 py-4 font-semibold text-center">Device</th>
+                                <th className="px-6 py-4 font-semibold text-center">In Device</th>
+                                <th className="px-6 py-4 font-semibold text-center">Out Device</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time In</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time Out</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan="5" className="text-center py-8">Loading...</td></tr>
+                                <tr><td colSpan="6" className="text-center py-8">Loading...</td></tr>
                             ) : filteredAttendance.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr><td colSpan="6" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
                                 filteredAttendance.map((record) => (
                                     <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
@@ -139,20 +140,22 @@ const Attendance = () => {
                                                 {record.status}
                                             </span>
                                         </td>
+
+                                        {/* In Device */}
                                         <td className="px-6 py-4 text-center text-slate-600">
-                                            {record.sessions && record.sessions[0]?.deviceInfo ? (
+                                            {record.deviceInfo ? (
                                                 <div className="group relative flex justify-center">
                                                     {(() => {
-                                                        const info = record.sessions[0].deviceInfo.toLowerCase();
+                                                        const info = record.deviceInfo.toLowerCase();
                                                         const isMobile = info.startsWith('mobile') ||
                                                             info.includes('android') ||
                                                             info.includes('iphone') ||
                                                             info.includes('ipad');
 
                                                         return isMobile ? (
-                                                            <Smartphone className="w-5 h-5 text-red-400" />
+                                                            <Smartphone className="w-5 h-5 text-purple-400" />
                                                         ) : (
-                                                            <Monitor className="w-5 h-5 text-green-400" />
+                                                            <Monitor className="w-5 h-5 text-blue-400" />
                                                         );
                                                     })()}
                                                 </div>
@@ -160,6 +163,30 @@ const Attendance = () => {
                                                 <span className="text-slate-300">-</span>
                                             )}
                                         </td>
+
+                                        {/* Out Device */}
+                                        <td className="px-6 py-4 text-center text-slate-600">
+                                            {record.checkoutDeviceInfo ? (
+                                                <div className="group relative flex justify-center">
+                                                    {(() => {
+                                                        const info = record.checkoutDeviceInfo.toLowerCase();
+                                                        const isMobile = info.startsWith('mobile') ||
+                                                            info.includes('android') ||
+                                                            info.includes('iphone') ||
+                                                            info.includes('ipad');
+
+                                                        return isMobile ? (
+                                                            <Smartphone className="w-5 h-5 text-purple-400" />
+                                                        ) : (
+                                                            <Monitor className="w-5 h-5 text-blue-400" />
+                                                        );
+                                                    })()}
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-300">-</span>
+                                            )}
+                                        </td>
+
                                         <td className="px-6 py-4 text-center text-slate-600 font-mono">
                                             {record.timeIn
                                                 ? new Date(record.timeIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })

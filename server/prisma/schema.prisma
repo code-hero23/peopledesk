@@ -74,6 +74,8 @@ model Attendance {
   checkoutTime  DateTime?
   deviceInfo    String?
   ipAddress     String?
+  checkoutDeviceInfo String?
+  checkoutIpAddress  String?
   user          User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
