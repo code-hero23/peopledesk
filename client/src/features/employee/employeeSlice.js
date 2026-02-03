@@ -13,6 +13,8 @@ const initialState = {
     isSuccess: false,
     message: '',
     todayLog: null, // Track today's log status
+    isPaused: false,
+    activeBreak: null,
 };
 
 // Check attendance status for today
@@ -81,6 +83,42 @@ export const checkoutAttendance = createAsyncThunk(
                 (error.response && error.response.data && error.response.data.message) ||
                 error.message ||
                 error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Pause Attendance
+export const pauseAttendance = createAsyncThunk(
+    'employee/pauseAttendance',
+    async (breakData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.post(API_URL + 'attendance/pause', breakData, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Resume Attendance
+export const resumeAttendance = createAsyncThunk(
+    'employee/resumeAttendance',
+    async (_, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.post(API_URL + 'attendance/resume', {}, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
             return thunkAPI.rejectWithValue(message);
         }
     }
@@ -345,6 +383,8 @@ export const employeeSlice = createSlice({
             .addCase(getAttendanceStatus.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.attendance = action.payload.data;
+                state.isPaused = action.payload.isPaused;
+                state.activeBreak = action.payload.activeBreak;
             })
             .addCase(getAttendanceStatus.rejected, (state, action) => {
                 state.isLoading = false;
@@ -375,6 +415,37 @@ export const employeeSlice = createSlice({
                 state.attendance = action.payload;
             })
             .addCase(checkoutAttendance.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Pause Attendance
+            .addCase(pauseAttendance.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(pauseAttendance.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.isPaused = true;
+                state.activeBreak = action.payload.break;
+                // Update specific break in attendance if needed (optional since we might refetch)
+            })
+            .addCase(pauseAttendance.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Resume Attendance
+            .addCase(resumeAttendance.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(resumeAttendance.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.isPaused = false;
+                state.activeBreak = null;
+            })
+            .addCase(resumeAttendance.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

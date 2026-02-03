@@ -76,9 +76,20 @@ model Attendance {
   ipAddress     String?
   checkoutDeviceInfo String?
   checkoutIpAddress  String?
+  breaks        BreakLog[]
   user          User      @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
+}
+
+model BreakLog {
+  id           Int        @id @default(autoincrement())
+  attendanceId Int
+  breakType    BreakType
+  startTime    DateTime   @default(now())
+  endTime      DateTime?
+  duration     Int?       // Duration in minutes
+  attendance   Attendance @relation(fields: [attendanceId], references: [id])
 }
 
 model WorkLog {
@@ -301,4 +312,11 @@ enum RequestStatus {
 enum LogStatus {
   OPEN
   CLOSED
+}
+
+enum BreakType {
+  TEA
+  LUNCH
+  CLIENT_MEETING
+  BH_MEETING
 }

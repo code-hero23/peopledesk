@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset } from '../../features/employee/employeeSlice';
+import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance } from '../../features/employee/employeeSlice';
 import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
 import LAWorkLogForm from '../../components/worklogs/LAWorkLogForm'; // Detailed (LA)
 import CREWorkLogForm from '../../components/worklogs/CREWorkLogForm';
@@ -12,6 +12,7 @@ import LeaveRequestForm from '../../components/LeaveRequestForm';
 import PermissionRequestForm from '../../components/PermissionRequestForm';
 import StatCard from '../../components/StatCard';
 import Modal from '../../components/Modal';
+import BreakSelectionModal from '../../components/BreakSelectionModal';
 import ProjectCreationForm from '../../components/ProjectCreationForm';
 import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
 import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
@@ -23,11 +24,12 @@ import { getDeviceType } from '../../utils/deviceUtils';
 const Overview = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { attendance, workLogs, requests, isLoading } = useSelector((state) => state.employee);
+    const { attendance, workLogs, requests, isLoading, isPaused, activeBreak } = useSelector((state) => state.employee);
 
     // UI State
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
     const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const [showBreakModal, setShowBreakModal] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
 
@@ -160,6 +162,43 @@ const Overview = () => {
         });
     };
 
+    const handleBreakSelect = (breakType) => {
+        // Close break modal first
+        setShowBreakModal(false);
+
+        const breakLabels = {
+            'TEA': 'Tea Break',
+            'LUNCH': 'Lunch Break',
+            'CLIENT_MEETING': 'Client Meeting',
+            'BH_MEETING': 'BH Meeting'
+        };
+
+        const label = breakLabels[breakType] || 'Break';
+
+        setConfirmationConfig({
+            isOpen: true,
+            title: `Confirm ${label}`,
+            message: `Are you sure you want to start ${label}?`,
+            type: 'info',
+            confirmText: `Start ${label}`,
+            onConfirm: () => {
+                dispatch(pauseAttendance({ breakType })).then((res) => {
+                    if (!res.error) {
+                        dispatch(getAttendanceStatus());
+                    }
+                });
+            }
+        });
+    };
+
+    const handleResume = () => {
+        dispatch(resumeAttendance()).then((res) => {
+            if (!res.error) {
+                dispatch(getAttendanceStatus());
+            }
+        });
+    };
+
     const closeModal = () => setActiveModal(null);
 
     const renderWorkLogForm = () => {
@@ -215,6 +254,12 @@ const Overview = () => {
                 onSubmit={handlePhotoCheckIn}
                 isLoading={isLoading}
                 isCheckingOut={isCheckingOut}
+            />
+
+            <BreakSelectionModal
+                isOpen={showBreakModal}
+                onClose={() => setShowBreakModal(false)}
+                onSelect={handleBreakSelect}
             />
 
             <ConfirmationModal
@@ -298,14 +343,74 @@ const Overview = () => {
                             <span>Tap to {user?.designation === 'AE' ? 'Check In' : 'Log In'}</span>
                         </button>
                     ) : !attendance.checkoutTime ? (
-                        <button
-                            onClick={handleMarkAttendance}
-                            disabled={isLoading}
-                            className="relative z-10 w-full bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 group-hover:shadow-orange-500/25"
-                        >
-                            <span className="text-xl">👋</span>
-                            <span>Tap to {user?.designation === 'AE' ? 'Check Out' : 'Log Out'}</span>
-                        </button>
+                        <div className="flex flex-col gap-4 mt-8 relative z-10">
+                            {isPaused ? (
+                                <div className="space-y-4 animate-fade-in">
+                                    {/* Paused State Card */}
+                                    <div className="relative overflow-hidden bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-6 text-center backdrop-blur-md">
+                                        {/* Animated Pulse Background */}
+                                        <div className="absolute inset-0 bg-yellow-500/5 animate-pulse rounded-2xl"></div>
+
+                                        <p className="text-yellow-200 text-xs font-bold uppercase tracking-[0.2em] mb-3 relative z-10">Currently Paused</p>
+
+                                        <div className="flex flex-col items-center justify-center gap-3 relative z-10">
+                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-1">
+                                                {activeBreak?.breakType === 'TEA' && <span className="text-3xl">☕</span>}
+                                                {activeBreak?.breakType === 'LUNCH' && <span className="text-3xl">🍽️</span>}
+                                                {activeBreak?.breakType === 'CLIENT_MEETING' && <span className="text-3xl">💼</span>}
+                                                {activeBreak?.breakType === 'BH_MEETING' && <span className="text-3xl">👥</span>}
+                                            </div>
+                                            <div className="text-white font-medium text-lg">
+                                                {activeBreak?.breakType === 'TEA' && 'Tea Break'}
+                                                {activeBreak?.breakType === 'LUNCH' && 'Lunch Break'}
+                                                {activeBreak?.breakType === 'CLIENT_MEETING' && 'Client Meeting'}
+                                                {activeBreak?.breakType === 'BH_MEETING' && 'BH Meeting'}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleResume}
+                                        disabled={isLoading}
+                                        className="w-full group bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-emerald-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                                    >
+                                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
+                                            <span className="text-lg">▶️</span>
+                                        </div>
+                                        <span className="text-lg">Resume Work</span>
+                                    </button>
+                                </div>
+                            ) : (
+                                <div className="space-y-4">
+                                    {/* Pause Button */}
+                                    <button
+                                        onClick={() => setShowBreakModal(true)}
+                                        disabled={isLoading}
+                                        className="w-full group bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 hover:border-white/30"
+                                    >
+                                        <span className="text-xl group-hover:scale-110 transition-transform">☕</span>
+                                        <span className="text-lg">Desk Break</span>
+                                    </button>
+
+                                    {/* Divider */}
+                                    <div className="flex items-center gap-4">
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                        <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">OR</span>
+                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                    </div>
+
+                                    {/* Check Out Button */}
+                                    <button
+                                        onClick={handleMarkAttendance}
+                                        disabled={isLoading}
+                                        className="w-full group bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-orange-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                                    >
+                                        <span className="text-xl group-hover:rotate-12 transition-transform">👋</span>
+                                        <span className="text-lg">{user?.designation === 'AE' ? 'Check Out' : 'Log Out'}</span>
+                                    </button>
+                                </div>
+                            )}
+                        </div>
                     ) : (
                         <div className="relative z-10 mt-6 space-y-4">
                             <div className="text-emerald-300 font-medium flex items-center gap-2 text-sm bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
@@ -401,7 +506,7 @@ const Overview = () => {
                     </div>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

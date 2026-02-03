@@ -547,6 +547,9 @@ const getDailyAttendance = async (req, res) => {
                     gte: startOfDay,
                     lte: endOfDay
                 }
+            },
+            include: {
+                breaks: true
             }
         });
 
@@ -558,17 +561,41 @@ const getDailyAttendance = async (req, res) => {
             // Sort by time
             userRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
 
-            const sessions = userRecords.map(record => ({
-                id: record.id,
-                timeIn: record.date,
-                timeOut: record.checkoutTime,
-                checkInPhoto: record.checkInPhoto,
-                checkoutPhoto: record.checkoutPhoto,
-                deviceInfo: record.deviceInfo,
-                ipAddress: record.ipAddress,
-                checkoutDeviceInfo: record.checkoutDeviceInfo,
-                checkoutIpAddress: record.checkoutIpAddress
-            }));
+            let totalGrossDurationMinutes = 0;
+            let totalBreakDeductionMinutes = 0;
+            let totalMeetingMinutes = 0;
+
+            const sessions = userRecords.map(record => {
+                // Calculate session duration if checked out
+                if (record.checkoutTime) {
+                    const gross = (new Date(record.checkoutTime) - new Date(record.date)) / 60000; // minutes
+                    totalGrossDurationMinutes += gross;
+                }
+
+                // Calculate breaks for this session
+                const sessionBreaks = record.breaks || [];
+                sessionBreaks.forEach(b => {
+                    const duration = b.duration || 0;
+                    if (['TEA', 'LUNCH'].includes(b.breakType)) {
+                        totalBreakDeductionMinutes += duration;
+                    } else if (['CLIENT_MEETING', 'BH_MEETING'].includes(b.breakType)) {
+                        totalMeetingMinutes += duration;
+                    }
+                });
+
+                return {
+                    id: record.id,
+                    timeIn: record.date,
+                    timeOut: record.checkoutTime,
+                    checkInPhoto: record.checkInPhoto,
+                    checkoutPhoto: record.checkoutPhoto,
+                    deviceInfo: record.deviceInfo,
+                    ipAddress: record.ipAddress,
+                    checkoutDeviceInfo: record.checkoutDeviceInfo,
+                    checkoutIpAddress: record.checkoutIpAddress,
+                    breaks: sessionBreaks
+                };
+            });
 
             // Calculate overall Time In and Time Out for the day
             let timeIn = null;
@@ -584,14 +611,23 @@ const getDailyAttendance = async (req, res) => {
                 checkoutDeviceInfo = lastRecord.checkoutDeviceInfo;
             }
 
+            const effectiveMinutes = Math.max(0, totalGrossDurationMinutes - totalBreakDeductionMinutes);
+            const totalHours = (effectiveMinutes / 60).toFixed(2);
+
             return {
                 user: user,
                 status: userRecords.length > 0 ? 'PRESENT' : 'ABSENT',
                 timeIn,
                 timeOut,
+                totalHours: totalHours,
+                effectiveMinutes: effectiveMinutes,
                 deviceInfo,
                 checkoutDeviceInfo,
-                sessions: sessions
+                sessions: sessions,
+                breakData: {
+                    personal: Math.round(totalBreakDeductionMinutes),
+                    meetings: Math.round(totalMeetingMinutes)
+                }
             };
         });
 

@@ -118,13 +118,16 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-semibold text-center">Out Device</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time In</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time Out</th>
+                                <th className="px-6 py-4 font-semibold text-center">Breaks</th>
+                                <th className="px-6 py-4 font-semibold text-center">Meetings</th>
+                                <th className="px-6 py-4 font-semibold text-center">Net Hours</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan="6" className="text-center py-8">Loading...</td></tr>
+                                <tr><td colSpan="9" className="text-center py-8">Loading...</td></tr>
                             ) : filteredAttendance.length === 0 ? (
-                                <tr><td colSpan="6" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr><td colSpan="9" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
                                 filteredAttendance.map((record) => (
                                     <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
@@ -176,9 +179,9 @@ const Attendance = () => {
                                                             info.includes('ipad');
 
                                                         return isMobile ? (
-                                                            <Smartphone className="w-5 h-5 text-purple-400" />
+                                                            <Smartphone className="w-5 h-5 text-red-700" />
                                                         ) : (
-                                                            <Monitor className="w-5 h-5 text-blue-400" />
+                                                            <Monitor className="w-5 h-5 text-green-700" />
                                                         );
                                                     })()}
                                                 </div>
@@ -198,6 +201,35 @@ const Attendance = () => {
                                                 ? new Date(record.timeOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                                                 : '--:--'
                                             }
+                                        </td>
+
+                                        {/* Break Time */}
+                                        <td className="px-6 py-4 text-center text-slate-600">
+                                            {record.breakData?.personal > 0 ? (
+                                                <span className="text-orange-600 font-medium">{record.breakData.personal}m</span>
+                                            ) : (
+                                                <span className="text-slate-300">-</span>
+                                            )}
+                                        </td>
+
+                                        {/* Meeting Time */}
+                                        <td className="px-6 py-4 text-center text-slate-600">
+                                            {record.breakData?.meetings > 0 ? (
+                                                <span className="text-blue-600 font-medium">{record.breakData.meetings}m</span>
+                                            ) : (
+                                                <span className="text-slate-300">-</span>
+                                            )}
+                                        </td>
+
+                                        {/* Net Hours */}
+                                        <td className="px-6 py-4 text-center font-bold text-slate-800 font-mono">
+                                            {record.effectiveMinutes !== undefined ? (() => {
+                                                const totalMinutes = record.effectiveMinutes;
+                                                const hours = Math.floor(totalMinutes / 60);
+                                                const minutes = Math.floor(totalMinutes % 60);
+                                                const seconds = Math.round((totalMinutes - Math.floor(totalMinutes)) * 60);
+                                                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
+                                            })() : '-'}
                                         </td>
                                     </tr>
                                 ))

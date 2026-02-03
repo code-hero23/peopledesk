@@ -111,9 +111,103 @@ const checkoutAttendance = async (req, res) => {
     }
 };
 
-// @desc    Check if attendance is marked for today
-// @route   GET /api/attendance/today
+// @desc    Pause attendance (Take a break)
+// @route   POST /api/attendance/pause
 // @access  Private
+const pauseAttendance = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { breakType } = req.body; // TEA, LUNCH, CLIENT_MEETING, BH_MEETING
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Find active attendance
+        const attendance = await prisma.attendance.findFirst({
+            where: {
+                userId,
+                date: { gte: today },
+                checkoutTime: null // Must be checked in
+            },
+            orderBy: { date: 'desc' },
+            include: { breaks: true }
+        });
+
+        if (!attendance) {
+            return res.status(400).json({ message: 'No active attendance found or already checked out.' });
+        }
+
+        // Check if already paused
+        const activeBreak = attendance.breaks.find(b => !b.endTime);
+        if (activeBreak) {
+            return res.status(400).json({ message: 'You are already on a break.' });
+        }
+
+        // Create new break log
+        const newBreak = await prisma.breakLog.create({
+            data: {
+                attendanceId: attendance.id,
+                breakType: breakType,
+                startTime: new Date()
+            }
+        });
+
+        res.json({ message: 'Attendance paused', break: newBreak });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Resume attendance (End break)
+// @route   POST /api/attendance/resume
+// @access  Private
+const resumeAttendance = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        // Find active attendance
+        const attendance = await prisma.attendance.findFirst({
+            where: {
+                userId,
+                date: { gte: today },
+                checkoutTime: null
+            },
+            orderBy: { date: 'desc' },
+            include: { breaks: true }
+        });
+
+        if (!attendance) {
+            return res.status(400).json({ message: 'No active attendance found.' });
+        }
+
+        // Find active break
+        const activeBreak = attendance.breaks.find(b => !b.endTime);
+        if (!activeBreak) {
+            return res.status(400).json({ message: 'You are not currently on a break.' });
+        }
+
+        // Calculate duration (minutes)
+        const endTime = new Date();
+        const startTime = new Date(activeBreak.startTime);
+        const duration = Math.round((endTime - startTime) / 60000); // Minutes
+
+        const updatedBreak = await prisma.breakLog.update({
+            where: { id: activeBreak.id },
+            data: {
+                endTime: endTime,
+                duration: duration
+            }
+        });
+
+        res.json({ message: 'Attendance resumed', break: updatedBreak });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Check if attendance is marked for today
 // @route   GET /api/attendance/today
 // @access  Private
@@ -132,14 +226,30 @@ const getAttendanceStatus = async (req, res) => {
             },
             orderBy: {
                 date: 'desc'
+            },
+            include: {
+                breaks: true // Include breaks to check status
             }
         });
 
-        res.json({ marked: !!attendance, data: attendance });
+        // Determine pause status
+        let isPaused = false;
+        let activeBreak = null;
+        if (attendance && attendance.breaks) {
+            activeBreak = attendance.breaks.find(b => !b.endTime);
+            if (activeBreak) isPaused = true;
+        }
+
+        res.json({
+            marked: !!attendance,
+            data: attendance,
+            isPaused,
+            activeBreak
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-module.exports = { markAttendance, checkoutAttendance, getAttendanceStatus };
+module.exports = { markAttendance, checkoutAttendance, getAttendanceStatus, pauseAttendance, resumeAttendance };
