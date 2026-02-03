@@ -1,12 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createLeaveRequest, getBusinessHeads } from '../features/employee/employeeSlice';
+import { createLeaveRequest, getBusinessHeads, getMyRequests } from '../features/employee/employeeSlice';
+import { AlertCircle } from 'lucide-react';
 import SuccessModal from './SuccessModal';
 
 const LeaveRequestForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
-    const { businessHeads } = useSelector((state) => state.employee);
+    const { businessHeads, requests } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+
+    // Calculate combined request count for the current month
+    const currentMonth = new Date().getMonth();
+    const currentYear = new Date().getFullYear();
+
+    const monthlyLeaves = requests.leaves.filter(req => {
+        const d = new Date(req.createdAt);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+    }).length;
+
+    const isLimitExceeded = monthlyLeaves >= 4;
 
     const [formData, setFormData] = useState({
         type: 'CASUAL',
@@ -18,6 +30,7 @@ const LeaveRequestForm = ({ onSuccess }) => {
 
     useEffect(() => {
         dispatch(getBusinessHeads());
+        dispatch(getMyRequests());
     }, [dispatch]);
 
     const onSubmit = (e) => {
@@ -29,6 +42,17 @@ const LeaveRequestForm = ({ onSuccess }) => {
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
+            {isLimitExceeded && (
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
+                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                    <div>
+                        <p className="text-sm font-bold text-amber-800">Monthly Leave Limit Reached</p>
+                        <p className="text-xs text-amber-600 font-medium">
+                            You have already submitted {monthlyLeaves} leave requests this month. This request will be flagged for review.
+                        </p>
+                    </div>
+                </div>
+            )}
             {/* BH Selection */}
             <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Business Head</label>

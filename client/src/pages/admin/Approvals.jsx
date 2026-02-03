@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
-import { Download, Calendar, X } from 'lucide-react';
+import { Download, Calendar, X, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 
 const Approvals = () => {
@@ -138,6 +138,12 @@ const Approvals = () => {
 
             {/* Status Badges */}
             <div className="flex flex-wrap gap-2 mb-3">
+                {req.isExceededLimit && (
+                    <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 animate-pulse shadow-sm">
+                        <AlertTriangle size={10} />
+                        LIMIT EXCEEDED (4+)
+                    </span>
+                )}
                 {req.bhStatus === 'PENDING' && (
                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
                         ⏳ Waiting for BH

@@ -38,7 +38,16 @@ const MyRequests = () => {
                                             {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
                                         </td>
                                         <td className="py-3">{req.type}</td>
-                                        <td className="py-3 text-slate-500 italic">"{req.reason}"</td>
+                                        <td className="py-3 text-slate-500 italic">
+                                            "{req.reason}"
+                                            {req.isExceededLimit && (
+                                                <div className="mt-1">
+                                                    <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200">
+                                                        ⚠️ LIMIT EXCEEDED
+                                                    </span>
+                                                </div>
+                                            )}
+                                        </td>
                                         <td className="py-3">
                                             {req.status === 'APPROVED' ? (
                                                 <span className="px-2 py-1 rounded text-xs font-bold bg-green-100 text-green-700">APPROVED</span>
@@ -68,7 +77,14 @@ const MyRequests = () => {
                                 <div>
                                     <p className="font-bold text-slate-800">{new Date(req.date).toLocaleDateString()}</p>
                                     <p className="text-sm text-slate-500">{req.startTime} - {req.endTime}</p>
-                                    <p className="text-xs text-slate-400 mt-1">"{req.reason}"</p>
+                                    <p className="text-xs text-slate-400 mt-1 italic">"{req.reason}"</p>
+                                    {req.isExceededLimit && (
+                                        <div className="mt-1">
+                                            <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200">
+                                                ⚠️ LIMIT EXCEEDED
+                                            </span>
+                                        </div>
+                                    )}
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
                                     req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'

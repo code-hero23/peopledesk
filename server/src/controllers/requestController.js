@@ -35,6 +35,15 @@ const createLeaveRequest = async (req, res) => {
             return res.status(400).json({ message: 'End date cannot be before start date' });
         }
 
+        // Check for 4+ LEAVE requests this month (The 5th will be flagged)
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const leaveCount = await prisma.leaveRequest.count({
+            where: { userId, createdAt: { gte: startOfMonth } }
+        });
+
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
                 userId,
@@ -43,7 +52,8 @@ const createLeaveRequest = async (req, res) => {
                 endDate: new Date(endDate),
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
-                status: 'PENDING'
+                status: 'PENDING',
+                isExceededLimit: leaveCount >= 4
             },
         });
 
@@ -67,6 +77,15 @@ const createPermissionRequest = async (req, res) => {
     try {
         const userId = req.user.id;
 
+        // Check for 4+ PERMISSION requests this month (The 5th will be flagged)
+        const startOfMonth = new Date();
+        startOfMonth.setDate(1);
+        startOfMonth.setHours(0, 0, 0, 0);
+
+        const permCount = await prisma.permissionRequest.count({
+            where: { userId, createdAt: { gte: startOfMonth } }
+        });
+
         const permissionRequest = await prisma.permissionRequest.create({
             data: {
                 userId,
@@ -75,7 +94,8 @@ const createPermissionRequest = async (req, res) => {
                 endTime,
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
-                status: 'PENDING'
+                status: 'PENDING',
+                isExceededLimit: permCount >= 4
             },
         });
 
