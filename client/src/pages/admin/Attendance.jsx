@@ -251,7 +251,7 @@ const Attendance = () => {
                                                 {activeStatuses.some(s => s.userId === record.user.id) && (
                                                     <div className="flex items-center gap-1 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
                                                         <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></div>
-                                                        <span className="text-[10px] font-black text-rose-600 uppercase">Live</span>
+                                                        <span className="text-[10px] font-black text-rose-600 uppercase">Break</span>
                                                     </div>
                                                 )}
                                             </div>
