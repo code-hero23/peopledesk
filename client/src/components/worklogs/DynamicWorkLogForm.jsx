@@ -22,7 +22,9 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
         if (!config) return {};
         const initial = {};
         config.tables.forEach((table, index) => {
-            initial[index] = table.predefinedRows ? [...table.predefinedRows] : [{}];
+            initial[index] = table.predefinedRows
+                ? table.predefinedRows.map(row => ({ ...row, _id: crypto.randomUUID() }))
+                : [{ _id: crypto.randomUUID() }];
         });
         return initial;
     });
@@ -42,7 +44,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const addRow = (tableIndex) => {
         setTableData(prev => ({
             ...prev,
-            [tableIndex]: [...prev[tableIndex], {}]
+            [tableIndex]: [...prev[tableIndex], { _id: crypto.randomUUID() }]
         }));
     };
 
@@ -112,7 +114,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                         <AnimatePresence>
                             {tableData[tableIndex]?.map((row, rowIndex) => (
                                 <motion.div
-                                    key={rowIndex}
+                                    key={row._id}
                                     initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}
                                     className="flex flex-col md:flex-row gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 group hover:bg-white hover:border-indigo-100 transition-all"
                                 >

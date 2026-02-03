@@ -118,115 +118,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
         );
     }
 
-    // --- SHARED UI COMPONENTS ---
-    const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
-        <div className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group`}>
-            <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50`}>
-                <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600 group-hover:bg-${color}-100 transition-colors`}>
-                    <Icon size={18} />
-                </div>
-                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
-            </div>
-            <div className="space-y-3">
-                {children}
-            </div>
-        </div>
-    );
 
-    const InputGroup = ({ label, value, onChange, placeholder = "0", type = "number" }) => (
-        <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</label>
-            <input
-                type={type}
-                value={value}
-                onChange={(e) => onChange(e.target.value)}
-                className="w-full bg-slate-50 p-2.5 rounded-xl font-bold text-slate-700 text-sm outline-none border border-slate-200 focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
-                placeholder={placeholder}
-            />
-        </div>
-    );
-
-    const FormLayout = ({ data, handleChange, title, onSubmit, btnText, isOpening }) => {
-        const themeColor = isOpening ? 'blue' : 'emerald';
-        const TitleIcon = isOpening ? Clock : TrendingUp;
-
-        return (
-            <motion.form
-                initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-                onSubmit={onSubmit} className="space-y-6"
-            >
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                    <div className={`p-3 bg-${themeColor}-100 text-${themeColor}-600 rounded-xl`}>
-                        <TitleIcon size={24} />
-                    </div>
-                    <div>
-                        <h3 className="text-lg font-black text-slate-800">{title}</h3>
-                        <p className="text-xs text-slate-500 font-bold uppercase">{isOpening ? "Start of Day Targets" : "End of Day Achievements"}</p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* STAR CALLS */}
-                    <div className="md:col-span-2">
-                        <MetricCard title="Calls By Star Rating" icon={Star} color="amber">
-                            <div className="grid grid-cols-3 md:grid-cols-9 gap-2">
-                                {['nine', 'eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one'].map((num) => (
-                                    <InputGroup
-                                        key={num}
-                                        label={`${num} ☆`}
-                                        value={data.calls[`${num}Star`]}
-                                        onChange={(val) => handleChange(`calls.${num}Star`, val)}
-                                    />
-                                ))}
-                            </div>
-                        </MetricCard>
-                    </div>
-
-                    {/* INFURNIA */}
-                    <MetricCard title="Infurnia Pending" icon={Layout} color="purple">
-                        <div className="grid grid-cols-3 gap-3">
-                            <InputGroup label="Count" value={data.infurniaPending.count} onChange={(val) => handleChange('infurniaPending.count', val)} />
-                            <div className="col-span-2">
-                                <InputGroup label="Details 1" value={data.infurniaPending.text1} onChange={(val) => handleChange('infurniaPending.text1', val)} type="text" placeholder="Details..." />
-                            </div>
-                            <div className="col-span-3">
-                                <InputGroup label="Details 2" value={data.infurniaPending.text2} onChange={(val) => handleChange('infurniaPending.text2', val)} type="text" placeholder="More info..." />
-                            </div>
-                        </div>
-                    </MetricCard>
-
-                    {/* QUOTES */}
-                    <MetricCard title="Quotations" icon={FileText} color="blue">
-                        <div className="grid grid-cols-2 gap-3 mb-3">
-                            <InputGroup label="Pending Count" value={data.quotationPending} onChange={(val) => handleChange('quotationPending', val)} />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            <InputGroup label="Initial (Count)" value={data.initialQuote.count} onChange={(val) => handleChange('initialQuote.count', val)} />
-                            <InputGroup label="Initial (Text)" value={data.initialQuote.text} onChange={(val) => handleChange('initialQuote.text', val)} type="text" />
-                        </div>
-                        <div className="grid grid-cols-2 gap-3 mt-3">
-                            <InputGroup label="Revised (Count)" value={data.revisedQuote.count} onChange={(val) => handleChange('revisedQuote.count', val)} />
-                            <InputGroup label="Revised (Text)" value={data.revisedQuote.text} onChange={(val) => handleChange('revisedQuote.text', val)} type="text" />
-                        </div>
-                    </MetricCard>
-
-                    {/* VISITS */}
-                    <div className="md:col-span-2">
-                        <MetricCard title="Visits & Discussions" icon={Globe} color="teal">
-                            <div className="grid grid-cols-2 gap-4">
-                                <InputGroup label="Showroom Visits" value={data.showroomVisit} onChange={(val) => handleChange('showroomVisit', val)} />
-                                <InputGroup label="Online Discussions" value={data.onlineDiscussion} onChange={(val) => handleChange('onlineDiscussion', val)} />
-                            </div>
-                        </MetricCard>
-                    </div>
-                </div>
-
-                <button type="submit" className={`w-full bg-${themeColor}-600 hover:bg-${themeColor}-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}>
-                    <CheckSquare size={20} /> {btnText}
-                </button>
-            </motion.form>
-        );
-    };
 
     if (isTodayOpen) {
         return (
@@ -274,3 +166,113 @@ const FAWorkLogForm = ({ onSuccess }) => {
 };
 
 export default FAWorkLogForm;
+
+// --- SHARED UI COMPONENTS ---
+const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
+    <div className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group`}>
+        <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50`}>
+            <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600 group-hover:bg-${color}-100 transition-colors`}>
+                <Icon size={18} />
+            </div>
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
+        </div>
+        <div className="space-y-3">
+            {children}
+        </div>
+    </div>
+);
+
+const InputGroup = ({ label, value, onChange, placeholder = "0", type = "number" }) => (
+    <div>
+        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</label>
+        <input
+            type={type}
+            value={value}
+            onChange={(e) => onChange(e.target.value)}
+            className="w-full bg-slate-50 p-2.5 rounded-xl font-bold text-slate-700 text-sm outline-none border border-slate-200 focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+            placeholder={placeholder}
+        />
+    </div>
+);
+
+const FormLayout = ({ data, handleChange, title, onSubmit, btnText, isOpening }) => {
+    const themeColor = isOpening ? 'blue' : 'emerald';
+    const TitleIcon = isOpening ? Clock : TrendingUp;
+
+    return (
+        <motion.form
+            initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            onSubmit={onSubmit} className="space-y-6"
+        >
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+                <div className={`p-3 bg-${themeColor}-100 text-${themeColor}-600 rounded-xl`}>
+                    <TitleIcon size={24} />
+                </div>
+                <div>
+                    <h3 className="text-lg font-black text-slate-800">{title}</h3>
+                    <p className="text-xs text-slate-500 font-bold uppercase">{isOpening ? "Start of Day Targets" : "End of Day Achievements"}</p>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {/* STAR CALLS */}
+                <div className="md:col-span-2">
+                    <MetricCard title="Calls By Star Rating" icon={Star} color="amber">
+                        <div className="grid grid-cols-3 md:grid-cols-9 gap-2">
+                            {['nine', 'eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one'].map((num) => (
+                                <InputGroup
+                                    key={num}
+                                    label={`${num} ☆`}
+                                    value={data.calls[`${num}Star`]}
+                                    onChange={(val) => handleChange(`calls.${num}Star`, val)}
+                                />
+                            ))}
+                        </div>
+                    </MetricCard>
+                </div>
+
+                {/* INFURNIA */}
+                <MetricCard title="Infurnia Pending" icon={Layout} color="purple">
+                    <div className="grid grid-cols-3 gap-3">
+                        <InputGroup label="Count" value={data.infurniaPending.count} onChange={(val) => handleChange('infurniaPending.count', val)} />
+                        <div className="col-span-2">
+                            <InputGroup label="Details 1" value={data.infurniaPending.text1} onChange={(val) => handleChange('infurniaPending.text1', val)} type="text" placeholder="Details..." />
+                        </div>
+                        <div className="col-span-3">
+                            <InputGroup label="Details 2" value={data.infurniaPending.text2} onChange={(val) => handleChange('infurniaPending.text2', val)} type="text" placeholder="More info..." />
+                        </div>
+                    </div>
+                </MetricCard>
+
+                {/* QUOTES */}
+                <MetricCard title="Quotations" icon={FileText} color="blue">
+                    <div className="grid grid-cols-2 gap-3 mb-3">
+                        <InputGroup label="Pending Count" value={data.quotationPending} onChange={(val) => handleChange('quotationPending', val)} />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <InputGroup label="Initial (Count)" value={data.initialQuote.count} onChange={(val) => handleChange('initialQuote.count', val)} />
+                        <InputGroup label="Initial (Text)" value={data.initialQuote.text} onChange={(val) => handleChange('initialQuote.text', val)} type="text" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3 mt-3">
+                        <InputGroup label="Revised (Count)" value={data.revisedQuote.count} onChange={(val) => handleChange('revisedQuote.count', val)} />
+                        <InputGroup label="Revised (Text)" value={data.revisedQuote.text} onChange={(val) => handleChange('revisedQuote.text', val)} type="text" />
+                    </div>
+                </MetricCard>
+
+                {/* VISITS */}
+                <div className="md:col-span-2">
+                    <MetricCard title="Visits & Discussions" icon={Globe} color="teal">
+                        <div className="grid grid-cols-2 gap-4">
+                            <InputGroup label="Showroom Visits" value={data.showroomVisit} onChange={(val) => handleChange('showroomVisit', val)} />
+                            <InputGroup label="Online Discussions" value={data.onlineDiscussion} onChange={(val) => handleChange('onlineDiscussion', val)} />
+                        </div>
+                    </MetricCard>
+                </div>
+            </div>
+
+            <button type="submit" className={`w-full bg-${themeColor}-600 hover:bg-${themeColor}-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}>
+                <CheckSquare size={20} /> {btnText}
+            </button>
+        </motion.form>
+    );
+};

@@ -217,25 +217,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
     }
 
     // --- UI COMPONENTS ---
-    const Label = ({ icon: Icon, text }) => (
-        <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 mb-1.5">
-            {Icon && <Icon size={12} />} {text}
-        </span>
-    );
 
-    const Card = ({ title, icon: Icon, children, color = "blue" }) => (
-        <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
-            {title && (
-                <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50">
-                    <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600`}>
-                        <Icon size={18} />
-                    </div>
-                    <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest leading-none mt-1">{title}</h4>
-                </div>
-            )}
-            <div className="space-y-4">{children}</div>
-        </div>
-    );
 
     if (isTodayOpen) {
         // --- CLOSING FORM ---
@@ -446,3 +428,24 @@ const AEWorkLogForm = ({ onSuccess }) => {
 };
 
 export default AEWorkLogForm;
+
+// --- UI COMPONENTS ---
+const Label = ({ icon: Icon, text }) => (
+    <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 mb-1.5">
+        {Icon && <Icon size={12} />} {text}
+    </span>
+);
+
+const Card = ({ title, icon: Icon, children, color = "blue" }) => (
+    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+        {title && (
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50">
+                <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600`}>
+                    <Icon size={18} />
+                </div>
+                <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest leading-none mt-1">{title}</h4>
+            </div>
+        )}
+        <div className="space-y-4">{children}</div>
+    </div>
+);

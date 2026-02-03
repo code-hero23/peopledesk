@@ -170,35 +170,6 @@ const CREWorkLogForm = ({ onSuccess }) => {
         );
     }
 
-    // --- REUSABLE CARD COMPONENT ---
-    const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
-        <div className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group`}>
-            <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50`}>
-                <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600 group-hover:bg-${color}-100 transition-colors`}>
-                    <Icon size={18} />
-                </div>
-                <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
-            </div>
-            <div className="space-y-3">
-                {children}
-            </div>
-        </div>
-    );
-
-    const InputGroup = ({ label, name, value, onChange, placeholder = "0" }) => (
-        <div>
-            <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</label>
-            <input
-                type="text"
-                name={name}
-                value={value}
-                onChange={onChange}
-                className="w-full bg-slate-50 p-2.5 rounded-xl font-bold text-slate-700 text-sm outline-none border border-slate-200 focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
-                placeholder={placeholder}
-            />
-        </div>
-    );
-
     if (isTodayOpen) {
         // --- CLOSING FORM ---
         return (
@@ -344,3 +315,32 @@ const CREWorkLogForm = ({ onSuccess }) => {
 };
 
 export default CREWorkLogForm;
+
+// --- REUSABLE CARD COMPONENT ---
+const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
+    <div className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group`}>
+        <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50`}>
+            <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600 group-hover:bg-${color}-100 transition-colors`}>
+                <Icon size={18} />
+            </div>
+            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
+        </div>
+        <div className="space-y-3">
+            {children}
+        </div>
+    </div>
+);
+
+const InputGroup = ({ label, name, value, onChange, placeholder = "0" }) => (
+    <div>
+        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</label>
+        <input
+            type="text"
+            name={name}
+            value={value}
+            onChange={onChange}
+            className="w-full bg-slate-50 p-2.5 rounded-xl font-bold text-slate-700 text-sm outline-none border border-slate-200 focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+            placeholder={placeholder}
+        />
+    </div>
+);
