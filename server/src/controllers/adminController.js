@@ -639,6 +639,49 @@ const getDailyAttendance = async (req, res) => {
 };
 
 
+// @desc    Get employees currently in a break or meeting
+// @route   GET /api/admin/active-statuses
+// @access  Private (Admin, BH, HR)
+const getActiveStatuses = async (req, res) => {
+    try {
+        const activeBreaks = await prisma.breakLog.findMany({
+            where: {
+                endTime: null
+            },
+            include: {
+                attendance: {
+                    include: {
+                        user: {
+                            select: {
+                                name: true,
+                                designation: true
+                            }
+                        }
+                    }
+                }
+            },
+            orderBy: {
+                startTime: 'asc'
+            }
+        });
+
+        const formattedStatuses = activeBreaks.map(b => ({
+            id: b.id,
+            userId: b.attendance.userId,
+            userName: b.attendance.user.name,
+            designation: b.attendance.user.designation,
+            breakType: b.breakType,
+            startTime: b.startTime
+        }));
+
+        res.json(formattedStatuses);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+
 // @desc    Update employee details
 // @route   PUT /api/admin/users/:id
 // @access  Private (Admin)
@@ -836,6 +879,7 @@ module.exports = {
     getDailyWorkLogs,
     getAllAttendance,
     getDailyAttendance,
+    getActiveStatuses,
     updateEmployee,
     deleteEmployee,
     importEmployees,

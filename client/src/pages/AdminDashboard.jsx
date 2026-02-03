@@ -55,6 +55,7 @@ const AdminDashboard = () => {
                     <p className="text-slate-500">Overview of system activity.</p>
                 </div>
             </div>
+
             <div className="flex gap-3 flex-wrap">
                 <button onClick={() => navigate('/admin/employees')} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2">
                     <span>➕</span> Add Employee

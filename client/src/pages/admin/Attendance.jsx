@@ -1,13 +1,39 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
-import { Calendar, Smartphone, Monitor } from 'lucide-react';
+import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
 const Attendance = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { dailyAttendance, isLoading, isError, message } = useSelector((state) => state.admin);
+
+    // Live Status State
+    const [activeStatuses, setActiveStatuses] = useState([]);
+    const [liveTime, setLiveTime] = useState(new Date());
+
+    const fetchActiveStatuses = async () => {
+        if (!user || !user.token) return;
+        try {
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+            };
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.get(`${baseUrl}/admin/active-statuses`, config);
+            console.log('Active Statuses:', response.data);
+            if (Array.isArray(response.data)) {
+                setActiveStatuses(response.data);
+                console.log('ID Comparison:', {
+                    activeUserIds: response.data.map(s => s.userId),
+                    recordUserIds: dailyAttendance?.map(r => r.user.id)
+                });
+            }
+        } catch (error) {
+            console.error('Failed to fetch active statuses:', error);
+        }
+    };
 
     // Default to today's date in LOCAL time
     const [selectedDate, setSelectedDate] = useState(() => {
@@ -38,12 +64,36 @@ const Attendance = () => {
     useEffect(() => {
         if (user && user.token) {
             dispatch(getDailyAttendance(selectedDate));
-        }
+            fetchActiveStatuses();
 
-        return () => {
-            dispatch(reset());
-        };
+            const pollInterval = setInterval(fetchActiveStatuses, 30000);
+            const timeInterval = setInterval(() => setLiveTime(new Date()), 1000);
+
+            return () => {
+                dispatch(reset());
+                clearInterval(pollInterval);
+                clearInterval(timeInterval);
+            };
+        }
     }, [user, dispatch, selectedDate]);
+
+    const getDuration = (startTime) => {
+        const start = new Date(startTime);
+        const diff = Math.floor((liveTime - start) / 1000);
+        const mins = Math.floor(diff / 60);
+        const secs = diff % 60;
+        return `${mins}m ${secs}s`;
+    };
+
+    const getStatusStyles = (type) => {
+        switch (type) {
+            case 'TEA': return { bg: 'bg-amber-50', text: 'text-amber-600', icon: Coffee, label: 'Tea Break' };
+            case 'LUNCH': return { bg: 'bg-orange-50', text: 'text-orange-600', icon: Coffee, label: 'Lunch Break' };
+            case 'CLIENT_MEETING': return { bg: 'bg-blue-50', text: 'text-blue-600', icon: Users, label: 'Client Meeting' };
+            case 'BH_MEETING': return { bg: 'bg-purple-50', text: 'text-purple-600', icon: Zap, label: 'BH Meeting' };
+            default: return { bg: 'bg-slate-50', text: 'text-slate-600', icon: Clock, label: 'On Break' };
+        }
+    };
 
     const onDownload = async () => {
         try {
@@ -107,6 +157,61 @@ const Attendance = () => {
                 </div>
             </div>
 
+            {/* Live Status Content */}
+            {activeStatuses.length > 0 && (
+                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-6">
+                    <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                        <div className="flex items-center gap-2">
+                            <div className="relative">
+                                <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping absolute inset-0"></div>
+                                <div className="w-2 h-2 bg-rose-500 rounded-full relative"></div>
+                            </div>
+                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Active Status Panel</h3>
+                        </div>
+                        <button onClick={fetchActiveStatuses} className="text-slate-400 hover:text-rose-500 transition-colors">
+                            <Zap size={14} />
+                        </button>
+                    </div>
+
+                    <div className="p-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <AnimatePresence mode='popLayout'>
+                                {activeStatuses.map((status) => {
+                                    const styles = getStatusStyles(status.breakType);
+                                    const Icon = styles.icon;
+                                    return (
+                                        <motion.div
+                                            key={`live-${status.id}`}
+                                            layout
+                                            initial={{ opacity: 0, scale: 0.9 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            exit={{ opacity: 0, scale: 0.9 }}
+                                            className={`${styles.bg} p-4 rounded-2xl border border-white shadow-sm flex items-start gap-3`}
+                                        >
+                                            <div className={`p-2.5 rounded-xl bg-white ${styles.text} shadow-sm`}>
+                                                <Icon size={18} />
+                                            </div>
+                                            <div className="flex-1 min-w-0">
+                                                <div className="flex justify-between items-start mb-1">
+                                                    <p className="text-sm font-black text-slate-800 truncate">{status.userName}</p>
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white ${styles.text} border border-current/10 whitespace-nowrap`}>
+                                                        {styles.label}
+                                                    </span>
+                                                </div>
+                                                <div className="mt-2 flex items-center justify-between text-[11px] font-black">
+                                                    <span className="text-slate-400 font-bold uppercase">{status.designation}</span>
+                                                    <span className={styles.text}>{getDuration(status.startTime)}</span>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })}
+                            </AnimatePresence>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
@@ -130,18 +235,33 @@ const Attendance = () => {
                                 <tr><td colSpan="9" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
                                 filteredAttendance.map((record) => (
-                                    <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
+                                    <tr key={`row-${record.user.id}`} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 font-medium text-slate-800">
-                                            {record.user.name}
+                                            <div className="flex items-center gap-2">
+                                                {record.user.name}
+                                                {activeStatuses.some(s => s.userId === record.user.id) && (
+                                                    <div className="flex items-center gap-1 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+                                                        <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></div>
+                                                        <span className="text-[10px] font-black text-rose-600 uppercase">Live</span>
+                                                    </div>
+                                                )}
+                                            </div>
                                             <div className="text-xs text-slate-400 font-normal">{record.user.email}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
-                                            <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${record.status === 'PRESENT'
-                                                ? 'bg-green-100 text-green-700'
-                                                : 'bg-red-100 text-red-700'
-                                                }`}>
-                                                {record.status}
-                                            </span>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${record.status === 'PRESENT'
+                                                    ? 'bg-green-100 text-green-700'
+                                                    : 'bg-red-100 text-red-700'
+                                                    }`}>
+                                                    {record.status}
+                                                </span>
+                                                {activeStatuses.find(s => s.userId === record.user.id) && (
+                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-800 text-white`}>
+                                                        {getStatusStyles(activeStatuses.find(s => s.userId === record.user.id).breakType).label}
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
 
                                         {/* In Device */}

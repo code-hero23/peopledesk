@@ -11,6 +11,7 @@ const {
     getDailyWorkLogs,
     getAllAttendance,
     getDailyAttendance,
+    getActiveStatuses,
     updateEmployee,
     deleteEmployee,
     importEmployees,
@@ -28,6 +29,7 @@ router.get('/worklogs', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_M
 router.get('/worklogs/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getDailyWorkLogs);
 router.get('/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllAttendance);
 router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getDailyAttendance);
+router.get('/active-statuses', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getActiveStatuses);
 
 // Requests - Accessible by Admin, BH, HR
 router.get('/requests/pending', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllPendingRequests);

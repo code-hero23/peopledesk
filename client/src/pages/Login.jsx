@@ -58,6 +58,7 @@ function Login() {
             <AnimatePresence>
                 {/* Left Side - Hero / Brand */}
                 <motion.div
+                    key="login-brand"
                     initial={{ x: -100, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
@@ -110,6 +111,7 @@ function Login() {
 
                 {/* Right Side - Login Form */}
                 <motion.div
+                    key="login-form"
                     initial={{ x: 100, opacity: 0 }}
                     animate={{ x: 0, opacity: 1 }}
                     transition={{ duration: 0.8, ease: "easeOut" }}
