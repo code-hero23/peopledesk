@@ -56,9 +56,9 @@ const CREWorkLogForm = ({ onSuccess }) => {
             sevenStar: '',
             sixStar: '',
             fiveStar: '',
-            uptoTodayCalls_B: '',
-            uptoTodayCalls_C: '',
-            uptoTodayCalls_D: '',
+            fourStar: '',
+            threeStar: '',
+            twoStar: '',
             onlineDiscussion: '',
             siteMsmtDisc: '',
             whatsappSent: ''
@@ -213,6 +213,9 @@ const CREWorkLogForm = ({ onSuccess }) => {
                             <InputGroup label="7 Star" name="sevenStar" value={closingData.cre_closing_metrics.sevenStar} onChange={handleClosingChange} />
                             <InputGroup label="6 Star" name="sixStar" value={closingData.cre_closing_metrics.sixStar} onChange={handleClosingChange} />
                             <InputGroup label="5 Star" name="fiveStar" value={closingData.cre_closing_metrics.fiveStar} onChange={handleClosingChange} />
+                            <InputGroup label="4 Star" name="fourStar" value={closingData.cre_closing_metrics.fourStar} onChange={handleClosingChange} />
+                            <InputGroup label="3 Star" name="threeStar" value={closingData.cre_closing_metrics.threeStar} onChange={handleClosingChange} />
+                            <InputGroup label="2 Star" name="twoStar" value={closingData.cre_closing_metrics.twoStar} onChange={handleClosingChange} />
                         </div>
                     </MetricCard>
 
@@ -222,16 +225,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
                         <InputGroup label="WhatsApp Sent" name="whatsappSent" value={closingData.cre_closing_metrics.whatsappSent} onChange={handleClosingChange} />
                     </MetricCard>
 
-                    <div className="md:col-span-2">
-                        <MetricCard title="Call Summaries (Upto Today)" icon={Phone} color="slate">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                <InputGroup label="Calls (A)" name="uptoTodayCalls_A" value={closingData.cre_closing_metrics.uptoTodayCalls_A} onChange={handleClosingChange} />
-                                <InputGroup label="Calls (B)" name="uptoTodayCalls_B" value={closingData.cre_closing_metrics.uptoTodayCalls_B} onChange={handleClosingChange} />
-                                <InputGroup label="Calls (C)" name="uptoTodayCalls_C" value={closingData.cre_closing_metrics.uptoTodayCalls_C} onChange={handleClosingChange} />
-                                <InputGroup label="Calls (D)" name="uptoTodayCalls_D" value={closingData.cre_closing_metrics.uptoTodayCalls_D} onChange={handleClosingChange} />
-                            </div>
-                        </MetricCard>
-                    </div>
+
                 </div>
 
                 <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
