@@ -14,6 +14,15 @@ const Attendance = () => {
     const [activeStatuses, setActiveStatuses] = useState([]);
     const [liveTime, setLiveTime] = useState(new Date());
 
+    // Helper to format minutes into readable string
+    const formatDuration = (totalMinutes) => {
+        if (!totalMinutes || totalMinutes <= 0) return '-';
+        const h = Math.floor(totalMinutes / 60);
+        const m = Math.round(totalMinutes % 60);
+        if (h > 0) return `${h}h ${m}m`;
+        return `${m}m`;
+    };
+
     const fetchActiveStatuses = async () => {
         if (!user || !user.token) return;
         try {
@@ -326,7 +335,7 @@ const Attendance = () => {
                                         {/* Break Time */}
                                         <td className="px-6 py-4 text-center text-slate-600">
                                             {record.breakData?.personal > 0 ? (
-                                                <span className="text-orange-600 font-medium">{record.breakData.personal}m</span>
+                                                <span className="text-orange-600 font-bold font-mono">{formatDuration(record.breakData.personal)}</span>
                                             ) : (
                                                 <span className="text-slate-300">-</span>
                                             )}
@@ -335,7 +344,7 @@ const Attendance = () => {
                                         {/* Meeting Time */}
                                         <td className="px-6 py-4 text-center text-slate-600">
                                             {record.breakData?.meetings > 0 ? (
-                                                <span className="text-blue-600 font-medium">{record.breakData.meetings}m</span>
+                                                <span className="text-blue-600 font-bold font-mono">{formatDuration(record.breakData.meetings)}</span>
                                             ) : (
                                                 <span className="text-slate-300">-</span>
                                             )}
@@ -343,13 +352,7 @@ const Attendance = () => {
 
                                         {/* Net Hours */}
                                         <td className="px-6 py-4 text-center font-bold text-slate-800 font-mono">
-                                            {record.effectiveMinutes !== undefined ? (() => {
-                                                const totalMinutes = record.effectiveMinutes;
-                                                const hours = Math.floor(totalMinutes / 60);
-                                                const minutes = Math.floor(totalMinutes % 60);
-                                                const seconds = Math.round((totalMinutes - Math.floor(totalMinutes)) * 60);
-                                                return `${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-                                            })() : '-'}
+                                            {record.effectiveMinutes !== undefined ? formatDuration(record.effectiveMinutes) : '-'}
                                         </td>
                                     </tr>
                                 ))
