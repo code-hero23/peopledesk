@@ -211,7 +211,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                             <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'daily' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'}`}>
                                 <Calendar size={28} strokeWidth={2.5} />
                             </div>
-                            <h3 className={`text-xl font-black mb-1 ${reportType === 'daily' ? 'text-white' : 'text-slate-800'}`}>Daily Metrics</h3>
+                            <h3 className={`text-xl font-black mb-1 ${reportType === 'daily' ? 'text-white' : 'text-slate-800'}`}>Daily Reports</h3>
                             <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'daily' ? 'text-slate-400' : 'text-slate-400'}`}>Opening & Closing</p>
                         </div>
                         {reportType === 'daily' && (
