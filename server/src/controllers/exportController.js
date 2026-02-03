@@ -304,7 +304,10 @@ const exportAttendance = async (req, res) => {
         const [records, activeUsers] = await Promise.all([
             prisma.attendance.findMany({
                 where: attendanceWhere,
-                include: { user: { select: { name: true, email: true, designation: true } } },
+                include: {
+                    user: { select: { name: true, email: true, designation: true } },
+                    breaks: true
+                },
                 orderBy: { date: 'asc' },
             }),
             prisma.user.findMany({
@@ -312,6 +315,15 @@ const exportAttendance = async (req, res) => {
                 select: { id: true, name: true, email: true, designation: true }
             })
         ]);
+
+        // Helper to format minutes into readable string
+        const formatDuration = (totalMinutes) => {
+            if (!totalMinutes || totalMinutes <= 0) return '0m';
+            const h = Math.floor(totalMinutes / 60);
+            const m = Math.round(totalMinutes % 60);
+            if (h > 0) return `${h}h ${m}m`;
+            return `${m}m`;
+        };
 
         // Group by User + Date
         const groupedMap = new Map();
@@ -335,9 +347,10 @@ const exportAttendance = async (req, res) => {
                     Date: dateStr,
                     firstLogin: dateObj,
                     lastLogout: null,
-                    totalMs: 0,
+                    totalGrossMs: 0,
+                    totalBreakMinutes: 0,
+                    totalMeetingMinutes: 0,
                     status: record.status,
-                    hasActiveSession: false,
                     hasActiveSession: false,
                     sessionCount: 0,
                     sessionLogs: [],
@@ -356,16 +369,25 @@ const exportAttendance = async (req, res) => {
             // Calculate Duration & Update End Time
             if (record.checkoutTime) {
                 const checkoutObj = new Date(record.checkoutTime);
+                group.totalGrossMs += (checkoutObj - dateObj);
 
-                // Add to total duration
-                group.totalMs += (checkoutObj - dateObj);
-
-                // Update Last Logout (Latest)
                 if (!group.lastLogout || checkoutObj > group.lastLogout) {
                     group.lastLogout = checkoutObj;
                 }
             } else {
                 group.hasActiveSession = true;
+            }
+
+            // Calculate Breaks within this session
+            if (record.breaks) {
+                record.breaks.forEach(b => {
+                    const duration = b.duration || 0;
+                    if (['TEA', 'LUNCH'].includes(b.breakType)) {
+                        group.totalBreakMinutes += duration;
+                    } else if (['CLIENT_MEETING', 'BH_MEETING'].includes(b.breakType)) {
+                        group.totalMeetingMinutes += duration;
+                    }
+                });
             }
 
             const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
@@ -376,7 +398,6 @@ const exportAttendance = async (req, res) => {
 
             group.sessionLogs.push(`${inTime} - ${outTime}`);
             group.sessionPhotos.push(`In: ${inPhoto} | Out: ${outPhoto}`);
-
         });
 
         // Fill in ABSENT records
@@ -391,10 +412,11 @@ const exportAttendance = async (req, res) => {
                         Date: dateStr,
                         firstLogin: null,
                         lastLogout: null,
-                        totalMs: 0,
+                        totalGrossMs: 0,
+                        totalBreakMinutes: 0,
+                        totalMeetingMinutes: 0,
                         status: 'ABSENT',
                         hasActiveSession: false,
-                        sessionCount: 0,
                         sessionCount: 0,
                         sessionLogs: [],
                         sessionPhotos: []
@@ -404,7 +426,8 @@ const exportAttendance = async (req, res) => {
         });
 
         const flattenedRecords = Array.from(groupedMap.values()).map(group => {
-            const totalHours = (group.totalMs / (1000 * 60 * 60)).toFixed(2);
+            const grossMinutes = group.totalGrossMs / (1000 * 60);
+            const netMinutes = Math.max(0, grossMinutes - group.totalBreakMinutes);
 
             return {
                 Employee: group.Employee,
@@ -413,7 +436,9 @@ const exportAttendance = async (req, res) => {
                 Date: group.Date,
                 'Log In': group.firstLogin ? group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
-                'Total Working Hours': group.status === 'ABSENT' ? '-' : totalHours,
+                'Net Working Hours': group.status === 'ABSENT' ? '-' : formatDuration(netMinutes),
+                'Total Breaks': group.status === 'ABSENT' ? '-' : formatDuration(group.totalBreakMinutes),
+                'Total Meetings': group.status === 'ABSENT' ? '-' : formatDuration(group.totalMeetingMinutes),
                 'Sessions': group.sessionCount === 0 ? '-' : group.sessionCount,
                 'Session Details': group.sessionLogs.length > 0 ? group.sessionLogs.join(' | ') : '-',
                 'Photo Evidence': group.sessionPhotos.length > 0 ? group.sessionPhotos.join(' || ') : '-',
@@ -424,10 +449,15 @@ const exportAttendance = async (req, res) => {
         // Sort by Date Descending
         flattenedRecords.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
-        const csv = convertToCSV(flattenedRecords, ['Employee', 'Email', 'Designation', 'Date', 'Log In', 'Log Out', 'Total Working Hours', 'Sessions', 'Session Details', 'Photo Evidence', 'Status']);
+        const csvFields = [
+            'Employee', 'Email', 'Designation', 'Date', 'Log In', 'Log Out',
+            'Net Working Hours', 'Total Breaks', 'Total Meetings',
+            'Sessions', 'Session Details', 'Photo Evidence', 'Status'
+        ];
+        const csv = convertToCSV(flattenedRecords, csvFields);
 
         res.header('Content-Type', 'text/csv');
-        res.attachment('attendance.csv');
+        res.attachment('attendance_export.csv');
         res.send(csv);
     } catch (error) {
         console.error(error);
