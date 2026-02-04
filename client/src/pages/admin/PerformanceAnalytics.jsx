@@ -136,7 +136,7 @@ const PerformanceAnalytics = () => {
                             <h3 className="text-3xl font-black text-slate-800 tracking-tight">{teamOverview.find(e => e.id === selectedEmployee)?.name}</h3>
                             <div className="flex items-center gap-3 mt-2">
                                 <span className="bg-white/80 text-blue-700 text-[11px] font-bold px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border border-blue-100">Selected Profile</span>
-                                <button onClick={() => setSelectedEmployee(null)} className="text-slate-400 hover:text-red-500 text-xs font-bold underline decoration-dotted transition-colors hover:bg-red-50 px-2 py-1 rounded-lg">Clear Selection</button>
+                                <button onClick={() => { setSelectedEmployee(null); dispatch(reset()); }} className="text-slate-400 hover:text-red-500 text-xs font-bold underline decoration-dotted transition-colors hover:bg-red-50 px-2 py-1 rounded-lg">Clear Selection</button>
                             </div>
                         </div>
                     </div>
