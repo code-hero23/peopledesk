@@ -10,9 +10,22 @@ const PWAFresher = () => {
             console.log('SW Registered:', r);
             // Optional: Check for updates periodically
             if (r) {
+                // Check immediately
+                r.update();
+
+                // Check every 5 minutes
                 setInterval(() => {
+                    console.log('Checking for SW update...');
                     r.update();
-                }, 60 * 60 * 1000); // Check every hour
+                }, 5 * 60 * 1000);
+
+                // Check on window focus/visibility change
+                document.addEventListener('visibilitychange', () => {
+                    if (document.visibilityState === 'visible') {
+                        console.log('App visible, checking for SW update...');
+                        r.update();
+                    }
+                });
             }
         },
         onRegisterError(error) {
