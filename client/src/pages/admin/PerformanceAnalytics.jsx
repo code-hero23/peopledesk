@@ -290,17 +290,22 @@ const PerformanceAnalytics = () => {
                         <tbody className="divide-y divide-slate-50">
                             {teamOverview.map((emp) => {
                                 const isHighAchiever = emp.efficiency >= 100 && emp.consistency >= 100;
+                                const isLowPerformer = emp.efficiency < 30 && emp.consistency < 30;
                                 return (
                                     <tr key={emp.id} className={`transition-all duration-300 group 
                                         ${selectedEmployee === emp.id ? 'bg-blue-50/60' : ''}
-                                        ${isHighAchiever ? 'bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-amber-200 shadow-sm hover:shadow-amber-100 hover:scale-[1.01]' : 'hover:bg-blue-50/40'}
+                                        ${isHighAchiever ? 'bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-amber-200 shadow-sm hover:shadow-amber-100 hover:scale-[1.01]'
+                                            : isLowPerformer ? 'bg-gradient-to-r from-red-50 via-rose-50 to-red-50 border-red-200 shadow-sm hover:shadow-red-100 hover:scale-[1.01]'
+                                                : 'hover:bg-blue-50/40'}
                                     `}>
                                         <td className="pl-10 pr-6 py-6">
                                             <div className="flex items-center gap-4">
                                                 <div className={`relative w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm transition-all shadow-sm duration-300
                                                     ${isHighAchiever
                                                         ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white shadow-amber-200 ring-2 ring-yellow-100 ring-offset-2'
-                                                        : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-blue-200 group-hover:scale-110'
+                                                        : isLowPerformer
+                                                            ? 'bg-gradient-to-br from-red-400 to-red-600 text-white shadow-red-200 ring-2 ring-red-100 ring-offset-2'
+                                                            : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-blue-200 group-hover:scale-110'
                                                     }
                                                 `}>
                                                     {emp.name.charAt(0)}
@@ -309,10 +314,16 @@ const PerformanceAnalytics = () => {
                                                             <Crown size={12} className="text-amber-500 fill-amber-500" />
                                                         </div>
                                                     )}
+                                                    {isLowPerformer && (
+                                                        <div className="absolute -top-3 -right-3 bg-white p-1 rounded-full shadow-sm border border-red-100 animate-pulse">
+                                                            <AlertTriangle size={12} className="text-red-500 fill-red-500" />
+                                                        </div>
+                                                    )}
                                                 </div>
                                                 <div>
                                                     <div className="flex items-center gap-2">
-                                                        <p className={`font-extrabold text-sm transition-colors ${isHighAchiever ? 'text-amber-900' : 'text-slate-800 group-hover:text-blue-700'}`}>
+                                                        <p className={`font-extrabold text-sm transition-colors 
+                                                            ${isHighAchiever ? 'text-amber-900' : isLowPerformer ? 'text-red-900' : 'text-slate-800 group-hover:text-blue-700'}`}>
                                                             {emp.name}
                                                         </p>
                                                         {isHighAchiever && (
@@ -320,8 +331,13 @@ const PerformanceAnalytics = () => {
                                                                 <Award size={10} /> Star Performer
                                                             </span>
                                                         )}
+                                                        {isLowPerformer && (
+                                                            <span className="text-[10px] font-bold bg-red-100 text-red-700 px-2 py-0.5 rounded-full border border-red-200 flex items-center gap-1">
+                                                                <TrendingUp size={10} className="transform rotate-180" /> Needs Support
+                                                            </span>
+                                                        )}
                                                     </div>
-                                                    <p className={`text-[10px] font-bold uppercase tracking-wide mt-1 ${isHighAchiever ? 'text-amber-600/70' : 'text-slate-400'}`}>{emp.designation}</p>
+                                                    <p className={`text-[10px] font-bold uppercase tracking-wide mt-1 ${isHighAchiever ? 'text-amber-600/70' : isLowPerformer ? 'text-red-600/70' : 'text-slate-400'}`}>{emp.designation}</p>
                                                 </div>
                                             </div>
                                         </td>
