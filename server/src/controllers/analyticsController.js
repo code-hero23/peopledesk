@@ -62,13 +62,13 @@ const getEmployeeStats = async (req, res) => {
         let punctualityCount = 0;
 
         attendance.forEach(record => {
-            if (record.checkIn) {
-                totalLateness += calculatePunctuality(record.checkIn);
+            if (record.date) {
+                totalLateness += calculatePunctuality(record.date);
                 punctualityCount++;
             }
 
-            if (record.checkIn && record.checkOut) {
-                const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+            if (record.date && record.checkoutTime) {
+                const gross = (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60);
                 const personalBreaks = record.breaks
                     .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
                     .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
@@ -85,7 +85,7 @@ const getEmployeeStats = async (req, res) => {
 
         // Daily Trends for Graph
         const dailyTrends = attendance.map(record => {
-            const gross = record.checkIn && record.checkOut ? (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60) : 0;
+            const gross = record.date && record.checkoutTime ? (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60) : 0;
             const personalBreaks = record.breaks
                 .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
                 .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
@@ -139,8 +139,8 @@ const getTeamOverview = async (req, res) => {
 
             let totalNetMinutes = 0;
             attendance.forEach(record => {
-                if (record.checkIn && record.checkOut) {
-                    const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                if (record.date && record.checkoutTime) {
+                    const gross = (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60);
                     const personalBreaks = record.breaks
                         .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
                         .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
