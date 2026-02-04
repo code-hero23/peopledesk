@@ -46,7 +46,9 @@ const Layout = () => {
     const isActive = (path) => location.pathname === path;
 
     const NavItem = ({ to, icon: Icon, label, exact = false }) => {
-        const active = exact ? location.pathname === to : location.pathname.startsWith(to);
+        const active = exact
+            ? location.pathname === to
+            : (location.pathname === to || location.pathname.startsWith(to + '/'));
 
         return (
             <Link
@@ -130,23 +132,26 @@ const Layout = () => {
                         <>
                             <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
 
+                            {/* Approvals: Admin, HR, BH, and AE_MANAGER */}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
+                            )}
+
+                            <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
+
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
+                            )}
+
+                            <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
+                            <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
+                            <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
+
                             {/* Only Admin and AE_MANAGER can manage employees */}
                             {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
                                 <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
                             )}
 
-                            {/* Approvals: Admin, HR, BH, and AE_MANAGER */}
-                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                                <>
-                                    <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
-                                    <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
-                                </>
-                            )}
-
-                            <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
-                            <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
-                            <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
-                            <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
                             {user?.role === 'ADMIN' && (
                                 <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
                             )}
