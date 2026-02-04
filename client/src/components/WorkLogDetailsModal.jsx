@@ -126,22 +126,78 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     )}
 
                     {/* LA Section */}
-                    {(WorkLog.la_projectLocation || WorkLog.la_number) && (
+                    {(WorkLog.la_projectLocation || WorkLog.la_number || WorkLog.la_opening_metrics || WorkLog.la_closing_metrics) && (
                         <div>
-                            <h3 className="text-lg font-bold text-blue-600 mb-3 pb-1 border-b">LA Project Report</h3>
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                                <DetailItem label="Project Location" value={WorkLog.la_projectLocation} />
-                                <DetailItem label="Number" value={WorkLog.la_number} />
-                                <DetailItem label="Mail ID" value={WorkLog.la_mailId} />
-                                <DetailItem label="Project Value" value={WorkLog.la_projectValue} />
-                                <DetailItem label="Site Status" value={WorkLog.la_siteStatus} />
-                                <DetailItem label="Special Note" value={WorkLog.la_specialNote} />
-                            </div>
+                            <h3 className="text-lg font-bold text-blue-600 mb-3 pb-1 border-b">LA Daily Report</h3>
 
-                            {/* Tables */}
-                            {renderTable("Online Meetings", WorkLog.la_onlineMeeting)}
-                            {renderTable("Showroom Meetings", WorkLog.la_showroomMeeting)}
-                            {renderTable("Measurements", WorkLog.la_measurements)}
+                            {/* Opening Metrics */}
+                            {WorkLog.la_opening_metrics && (
+                                <div className="mb-6">
+                                    <h4 className="text-md font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Opening Metrics
+                                    </h4>
+                                    {renderLAMetricsTable(typeof WorkLog.la_opening_metrics === 'string' ? JSON.parse(WorkLog.la_opening_metrics) : WorkLog.la_opening_metrics)}
+                                </div>
+                            )}
+
+                            {/* Closing Metrics */}
+                            {WorkLog.la_closing_metrics && (
+                                <div className="mb-6">
+                                    <h4 className="text-md font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Closing Metrics
+                                    </h4>
+                                    {renderLAMetricsTable(typeof WorkLog.la_closing_metrics === 'string' ? JSON.parse(WorkLog.la_closing_metrics) : WorkLog.la_closing_metrics)}
+                                </div>
+                            )}
+
+                            {/* Project Report Details */}
+                            {(WorkLog.la_projectLocation || WorkLog.la_number) && (
+                                <div className="mt-6 pt-4 border-t border-slate-100">
+                                    <h4 className="text-md font-bold text-slate-700 mb-3">Project Details</h4>
+                                    <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                                        <DetailItem label="Project Location" value={WorkLog.la_projectLocation} />
+                                        <DetailItem label="Number" value={WorkLog.la_number} />
+                                        <DetailItem label="Mail ID" value={WorkLog.la_mailId} />
+                                        <DetailItem label="Project Value" value={WorkLog.la_projectValue} />
+                                        <DetailItem label="Site Status" value={WorkLog.la_siteStatus} />
+                                        <DetailItem label="Special Note" value={WorkLog.la_specialNote} />
+                                    </div>
+
+                                    {/* Tables */}
+                                    {renderTable("Online Meetings", WorkLog.la_onlineMeeting)}
+                                    {renderTable("Showroom Meetings", WorkLog.la_showroomMeeting)}
+                                    {renderTable("Measurements", WorkLog.la_measurements)}
+                                </div>
+                            )}
+
+                            {/* Project Wise Tasks Log (New JSON Structure) */}
+                            {WorkLog.la_project_reports && (
+                                <div className="mt-6 pt-4 border-t border-slate-100">
+                                    <h4 className="text-md font-bold text-slate-700 mb-3">Project Task Logs</h4>
+                                    {(() => {
+                                        try {
+                                            const reports = typeof WorkLog.la_project_reports === 'string' ? JSON.parse(WorkLog.la_project_reports) : WorkLog.la_project_reports;
+                                            return reports.map((report, idx) => (
+                                                <div key={idx} className="bg-slate-50 p-4 rounded-xl mb-4 text-sm border border-slate-100">
+                                                    <div className="flex justify-between items-start mb-2">
+                                                        <h5 className="font-bold text-slate-800">{report.clientName}</h5>
+                                                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-bold">{report.process}</span>
+                                                    </div>
+                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                                        <DetailItem label="Time" value={`${report.startTime} - ${report.endTime}`} />
+                                                        <DetailItem label="Images (C/P)" value={`${report.completedImages} / ${report.pendingImages}`} />
+                                                        <DetailItem label="Hours" value={report.totalHours} />
+                                                        <DetailItem label="Site" value={report.site} />
+                                                    </div>
+                                                    {report.remarks && <p className="text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-3">{report.remarks}</p>}
+
+                                                    {/* Nested details support if needed */}
+                                                </div>
+                                            ));
+                                        } catch (e) { return <p className="text-red-400 text-xs">Error parsing project logs</p> }
+                                    })()}
+                                </div>
+                            )}
                         </div>
                     )}
 
