@@ -137,6 +137,7 @@ const Layout = () => {
                                 <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
                             )}
 
+                            <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
 
                             {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
