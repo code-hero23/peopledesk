@@ -221,8 +221,8 @@ const PerformanceAnalytics = () => {
                         </div>
                     </div>
                     <div className="overflow-x-auto custom-scrollbar pb-2">
-                        <div style={{ minWidth: Math.max(800, teamChartData.length * 60) }} className="h-[350px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div style={{ width: Math.max(800, teamChartData.length * 60) + 'px' }} className="h-[350px]">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={teamChartData} barSize={48}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
@@ -250,8 +250,8 @@ const PerformanceAnalytics = () => {
                         </div>
                     </div>
                     <div className="overflow-x-auto custom-scrollbar pb-2">
-                        <div style={{ minWidth: Math.max(800, teamChartData.length * 60) }} className="h-[350px]">
-                            <ResponsiveContainer width="100%" height="100%">
+                        <div style={{ width: Math.max(800, teamChartData.length * 60) + 'px' }} className="h-[350px]">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                 <BarChart data={teamChartData} barSize={48}>
                                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
