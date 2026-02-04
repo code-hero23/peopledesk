@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getTeamOverview, getEmployeeStats, reset } from '../../features/analytics/analyticsSlice';
-import { TrendingUp, Users, Clock, AlertTriangle, Calendar, Search, ArrowRight, Award, BarChart3, LineChart as LineIcon, Download } from 'lucide-react';
+import { TrendingUp, Users, Clock, AlertTriangle, Calendar, Search, ArrowRight, Award, BarChart3, LineChart as LineIcon, Download, Crown } from 'lucide-react';
 import axios from 'axios';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -288,48 +288,73 @@ const PerformanceAnalytics = () => {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
-                            {teamOverview.map((emp) => (
-                                <tr key={emp.id} className={`hover:bg-blue-50/40 transition-all duration-300 group ${selectedEmployee === emp.id ? 'bg-blue-50/60' : ''}`}>
-                                    <td className="pl-10 pr-6 py-6">
-                                        <div className="flex items-center gap-4">
-                                            <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br from-slate-100 to-slate-200 flex items-center justify-center text-slate-500 font-black text-sm group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white transition-all shadow-sm group-hover:shadow-lg group-hover:shadow-blue-200 group-hover:scale-110 duration-300`}>
-                                                {emp.name.charAt(0)}
+                            {teamOverview.map((emp) => {
+                                const isHighAchiever = emp.efficiency >= 100 && emp.consistency >= 100;
+                                return (
+                                    <tr key={emp.id} className={`transition-all duration-300 group 
+                                        ${selectedEmployee === emp.id ? 'bg-blue-50/60' : ''}
+                                        ${isHighAchiever ? 'bg-gradient-to-r from-amber-50 via-yellow-50 to-amber-50 border-amber-200 shadow-sm hover:shadow-amber-100 hover:scale-[1.01]' : 'hover:bg-blue-50/40'}
+                                    `}>
+                                        <td className="pl-10 pr-6 py-6">
+                                            <div className="flex items-center gap-4">
+                                                <div className={`relative w-11 h-11 rounded-2xl flex items-center justify-center font-black text-sm transition-all shadow-sm duration-300
+                                                    ${isHighAchiever
+                                                        ? 'bg-gradient-to-br from-yellow-400 to-amber-600 text-white shadow-amber-200 ring-2 ring-yellow-100 ring-offset-2'
+                                                        : 'bg-gradient-to-br from-slate-100 to-slate-200 text-slate-500 group-hover:from-blue-600 group-hover:to-indigo-600 group-hover:text-white group-hover:shadow-lg group-hover:shadow-blue-200 group-hover:scale-110'
+                                                    }
+                                                `}>
+                                                    {emp.name.charAt(0)}
+                                                    {isHighAchiever && (
+                                                        <div className="absolute -top-3 -right-3 bg-white p-1 rounded-full shadow-sm border border-yellow-100 animate-bounce">
+                                                            <Crown size={12} className="text-amber-500 fill-amber-500" />
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                <div>
+                                                    <div className="flex items-center gap-2">
+                                                        <p className={`font-extrabold text-sm transition-colors ${isHighAchiever ? 'text-amber-900' : 'text-slate-800 group-hover:text-blue-700'}`}>
+                                                            {emp.name}
+                                                        </p>
+                                                        {isHighAchiever && (
+                                                            <span className="text-[10px] font-bold bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full border border-amber-200 flex items-center gap-1">
+                                                                <Award size={10} /> Star Performer
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                    <p className={`text-[10px] font-bold uppercase tracking-wide mt-1 ${isHighAchiever ? 'text-amber-600/70' : 'text-slate-400'}`}>{emp.designation}</p>
+                                                </div>
                                             </div>
-                                            <div>
-                                                <p className="font-extrabold text-slate-800 text-sm group-hover:text-blue-700 transition-colors">{emp.name}</p>
-                                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mt-1">{emp.designation}</p>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex flex-col items-center">
+                                                <span className={`text-sm font-black mb-2 ${emp.efficiency >= 85 ? 'text-emerald-500' : emp.efficiency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.efficiency}%</span>
+                                                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                                    <div className={`h-full rounded-full transition-all duration-1000 ${emp.efficiency >= 85 ? 'bg-emerald-500' : emp.efficiency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.efficiency}%` }}></div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="flex flex-col items-center">
-                                            <span className={`text-sm font-black mb-2 ${emp.efficiency >= 85 ? 'text-emerald-500' : emp.efficiency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.efficiency}%</span>
-                                            <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                                <div className={`h-full rounded-full transition-all duration-1000 ${emp.efficiency >= 85 ? 'bg-emerald-500' : emp.efficiency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.efficiency}%` }}></div>
+                                        </td>
+                                        <td className="px-6 py-6">
+                                            <div className="flex flex-col items-center">
+                                                <span className={`text-sm font-black mb-2 ${emp.consistency >= 85 ? 'text-violet-500' : emp.consistency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.consistency}%</span>
+                                                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                                    <div className={`h-full rounded-full transition-all duration-1000 ${emp.consistency >= 85 ? 'bg-violet-500' : emp.consistency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.consistency}%` }}></div>
+                                                </div>
                                             </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6">
-                                        <div className="flex flex-col items-center">
-                                            <span className={`text-sm font-black mb-2 ${emp.consistency >= 85 ? 'text-violet-500' : emp.consistency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.consistency}%</span>
-                                            <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
-                                                <div className={`h-full rounded-full transition-all duration-1000 ${emp.consistency >= 85 ? 'bg-violet-500' : emp.consistency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.consistency}%` }}></div>
-                                            </div>
-                                        </div>
-                                    </td>
-                                    <td className="px-6 py-6 text-center">
-                                        <span className="text-xs font-bold text-slate-600 bg-slate-100 px-4 py-1.5 rounded-full border border-slate-200 group-hover:bg-white group-hover:border-blue-200 group-hover:text-blue-600 transition-all">{emp.daysPresent} Days</span>
-                                    </td>
-                                    <td className="px-6 py-6 text-right pr-10">
-                                        <button
-                                            onClick={() => handleEmployeeSelect(emp.id)}
-                                            className="p-3 bg-white border border-slate-200 text-slate-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-xl transition-all shadow-sm hover:shadow-lg hover:shadow-blue-200 transform group-hover:translate-x-1"
-                                        >
-                                            <ArrowRight size={18} strokeWidth={3} />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td className="px-6 py-6 text-center">
+                                            <span className="text-xs font-bold text-slate-600 bg-slate-100 px-4 py-1.5 rounded-full border border-slate-200 group-hover:bg-white group-hover:border-blue-200 group-hover:text-blue-600 transition-all">{emp.daysPresent} Days</span>
+                                        </td>
+                                        <td className="px-6 py-6 text-right pr-10">
+                                            <button
+                                                onClick={() => handleEmployeeSelect(emp.id)}
+                                                className="p-3 bg-white border border-slate-200 text-slate-400 hover:bg-blue-600 hover:text-white hover:border-blue-600 rounded-xl transition-all shadow-sm hover:shadow-lg hover:shadow-blue-200 transform group-hover:translate-x-1"
+                                            >
+                                                <ArrowRight size={18} strokeWidth={3} />
+                                            </button>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
