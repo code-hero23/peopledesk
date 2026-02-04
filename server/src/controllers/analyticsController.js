@@ -1,0 +1,175 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+// Helper to format minutes to "Xh Ym"
+const formatMinutes = (minutes) => {
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h}h ${m}m`;
+};
+
+// Calculate punctuality relative to 9:30 AM
+const calculatePunctuality = (checkInTime) => {
+    const checkIn = new Date(checkInTime);
+    const target = new Date(checkInTime);
+    target.setHours(9, 30, 0, 0);
+
+    const diffMinutes = (checkIn - target) / (1000 * 60);
+    return diffMinutes; // Positive means late, negative means early
+};
+
+const getEmployeeStats = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { startDate, endDate } = req.query;
+
+        const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const end = endDate ? new Date(endDate) : new Date();
+
+        const userId = parseInt(id);
+
+        // 1. Get Attendance Data
+        const attendance = await prisma.attendance.findMany({
+            where: {
+                userId,
+                date: { gte: start, lte: end }
+            },
+            include: { breaks: true }
+        });
+
+        // 2. Get Work Logs
+        const workLogs = await prisma.workLog.findMany({
+            where: {
+                userId,
+                createdAt: { gte: start, lte: end }
+            }
+        });
+
+        // 3. Get Requests (to check for flags)
+        const [leaves, permissions] = await Promise.all([
+            prisma.leaveRequest.findMany({ where: { userId, createdAt: { gte: start, lte: end } } }),
+            prisma.permissionRequest.findMany({ where: { userId, createdAt: { gte: start, lte: end } } })
+        ]);
+
+        // CALCULATIONS
+        const totalDaysPresent = attendance.length;
+        const daysWithLogs = new Set(workLogs.map(log => new Date(log.createdAt).toDateString())).size;
+
+        const consistencyScore = totalDaysPresent > 0 ? (daysWithLogs / totalDaysPresent) * 100 : 0;
+
+        let totalNetMinutes = 0;
+        let totalLateness = 0;
+        let punctualityCount = 0;
+
+        attendance.forEach(record => {
+            if (record.checkIn) {
+                totalLateness += calculatePunctuality(record.checkIn);
+                punctualityCount++;
+            }
+
+            if (record.checkIn && record.checkOut) {
+                const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                const personalBreaks = record.breaks
+                    .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                    .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
+
+                totalNetMinutes += (gross - personalBreaks);
+            }
+        });
+
+        const avgLateness = punctualityCount > 0 ? totalLateness / punctualityCount : 0;
+        const expectedMinutes = totalDaysPresent * 540; // 9 hours * 60 mins
+        const efficiencyScore = expectedMinutes > 0 ? (totalNetMinutes / expectedMinutes) * 100 : 0;
+
+        const limitExceededFlags = leaves.filter(r => r.isExceededLimit).length + permissions.filter(r => r.isExceededLimit).length;
+
+        // Daily Trends for Graph
+        const dailyTrends = attendance.map(record => {
+            const gross = record.checkIn && record.checkOut ? (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60) : 0;
+            const personalBreaks = record.breaks
+                .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
+
+            const net = Math.max(0, gross - personalBreaks);
+            const eff = Math.min(100, Math.round((net / 540) * 100));
+
+            return {
+                date: new Date(record.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
+                efficiency: eff
+            };
+        }).sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        res.json({
+            consistencyScore: Math.round(consistencyScore),
+            efficiencyScore: Math.round(efficiencyScore),
+            avgLateness: Math.round(avgLateness),
+            limitExceededFlags,
+            totalNetTime: formatMinutes(Math.round(totalNetMinutes)),
+            totalDaysPresent,
+            daysWithLogs,
+            dailyTrends
+        });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error calculating analytics' });
+    }
+};
+
+const getTeamOverview = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const end = endDate ? new Date(endDate) : new Date();
+
+        const employees = await prisma.user.findMany({
+            where: { role: 'EMPLOYEE', status: 'ACTIVE' },
+            select: { id: true, name: true, designation: true }
+        });
+
+        const stats = await Promise.all(employees.map(async (emp) => {
+            const attendance = await prisma.attendance.findMany({
+                where: { userId: emp.id, date: { gte: start, lte: end } },
+                include: { breaks: true }
+            });
+
+            const workLogs = await prisma.workLog.count({
+                where: { userId: emp.id, createdAt: { gte: start, lte: end } }
+            });
+
+            let totalNetMinutes = 0;
+            attendance.forEach(record => {
+                if (record.checkIn && record.checkOut) {
+                    const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                    const personalBreaks = record.breaks
+                        .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                        .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
+                    totalNetMinutes += (gross - personalBreaks);
+                }
+            });
+
+            const expectedMinutes = attendance.length * 540;
+            const efficiency = expectedMinutes > 0 ? (totalNetMinutes / expectedMinutes) * 100 : 0;
+            const consistency = attendance.length > 0 ? (workLogs / attendance.length) * 100 : 0;
+
+            return {
+                id: emp.id,
+                name: emp.name,
+                designation: emp.designation,
+                efficiency: Math.round(efficiency),
+                consistency: Math.round(consistency),
+                daysPresent: attendance.length
+            };
+        }));
+
+        res.json(stats);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Error fetching team overview' });
+    }
+};
+
+module.exports = {
+    getEmployeeStats,
+    getTeamOverview
+};

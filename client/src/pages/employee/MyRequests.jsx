@@ -1,6 +1,7 @@
 import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getMyRequests, reset } from '../../features/employee/employeeSlice';
+import { formatDate } from '../../utils/dateUtils';
 
 const MyRequests = () => {
     const dispatch = useDispatch();
@@ -35,7 +36,8 @@ const MyRequests = () => {
                                 {requests.leaves.map(req => (
                                     <tr key={req.id}>
                                         <td className="py-3 pl-2 font-medium text-slate-700">
-                                            {new Date(req.startDate).toLocaleDateString()} - {new Date(req.endDate).toLocaleDateString()}
+                                            {formatDate(req.startDate)} - {formatDate(req.endDate)}
+                                            <div className="text-[10px] font-bold text-slate-500 mt-1 flex items-center gap-1">🕒 Applied: {formatDate(req.createdAt)}</div>
                                         </td>
                                         <td className="py-3">{req.type}</td>
                                         <td className="py-3 text-slate-500 italic">
@@ -75,7 +77,12 @@ const MyRequests = () => {
                         {requests.permissions.map(req => (
                             <div key={req.id} className="p-4 rounded-lg border border-slate-100 flex justify-between items-center bg-slate-50 hover:bg-white hover:border-blue-100 transition-colors">
                                 <div>
-                                    <p className="font-bold text-slate-800">{new Date(req.date).toLocaleDateString()}</p>
+                                    <p className="font-bold text-slate-800 flex items-center gap-2">
+                                        {formatDate(req.date)}
+                                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">
+                                            Applied: {formatDate(req.createdAt)}
+                                        </span>
+                                    </p>
                                     <p className="text-sm text-slate-500">{req.startTime} - {req.endTime}</p>
                                     <p className="text-xs text-slate-400 mt-1 italic">"{req.reason}"</p>
                                     {req.isExceededLimit && (
@@ -108,7 +115,12 @@ const MyRequests = () => {
                         {requests.siteVisits?.map(req => (
                             <div key={req.id} className="p-4 rounded-lg border border-slate-100 flex justify-between items-center bg-slate-50 hover:bg-white hover:border-emerald-100 transition-colors">
                                 <div>
-                                    <p className="font-bold text-slate-800">{new Date(req.date).toLocaleDateString()} - {req.projectName}</p>
+                                    <p className="font-bold text-slate-800 flex items-center gap-2">
+                                        {formatDate(req.date)} - {req.projectName}
+                                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">
+                                            Applied: {formatDate(req.createdAt)}
+                                        </span>
+                                    </p>
                                     <p className="text-sm text-slate-500">{req.startTime} - {req.endTime} @ {req.location}</p>
                                     <p className="text-xs text-slate-400 mt-1">"{req.reason}"</p>
                                 </div>
@@ -132,7 +144,12 @@ const MyRequests = () => {
                         {requests.showroomVisits?.map(req => (
                             <div key={req.id} className="p-4 rounded-lg border border-slate-100 flex justify-between items-center bg-slate-50 hover:bg-white hover:border-indigo-100 transition-colors">
                                 <div>
-                                    <p className="font-bold text-slate-800">{new Date(req.date).toLocaleDateString()}</p>
+                                    <p className="font-bold text-slate-800 flex items-center gap-2">
+                                        {formatDate(req.date)}
+                                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">
+                                            Applied: {formatDate(req.createdAt)}
+                                        </span>
+                                    </p>
                                     <p className="text-sm text-slate-500">{req.sourceShowroom} ➔ {req.destinationShowroom}</p>
                                     <p className="text-xs text-slate-500">{req.startTime} - {req.endTime}</p>
                                     <p className="text-xs text-slate-400 mt-1">"{req.reason}"</p>

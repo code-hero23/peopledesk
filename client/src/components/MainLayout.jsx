@@ -16,7 +16,8 @@ import {
     X,
     RefreshCw,
     Camera,
-    MapPin
+    MapPin,
+    BarChart3
 } from 'lucide-react';
 import InspirationalPopup from './common/InspirationalPopup';
 import InstallApp from './InstallApp';
@@ -145,6 +146,7 @@ const Layout = () => {
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
                             <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
+                            <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
                             {user?.role === 'ADMIN' && (
                                 <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
                             )}

@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
 import { Download, Calendar, X, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
+import { formatDate } from '../../utils/dateUtils';
 
 const Approvals = () => {
     const dispatch = useDispatch();
@@ -164,7 +165,7 @@ const Approvals = () => {
             <div className="space-y-2 mb-6">
                 <p className="text-sm text-slate-600 flex items-center gap-2">
                     <span>🗓️</span>
-                    {req.date ? new Date(req.date).toLocaleDateString() : `${new Date(req.startDate).toLocaleDateString()} - ${new Date(req.endDate).toLocaleDateString()}`}
+                    {req.date ? formatDate(req.date) : `${formatDate(req.startDate)} - ${formatDate(req.endDate)}`}
                     {(req.startTime && req.endTime) && ` (${req.startTime} - ${req.endTime})`}
                 </p>
                 {req.location && <p className="text-sm text-slate-600">📍 {req.location} ({req.projectName})</p>}
@@ -175,9 +176,12 @@ const Approvals = () => {
                     <p className="text-sm font-bold text-slate-800 italic">"{req.reason}"</p>
                 </div>
 
-                {activeTab === 'history' && (
-                    <p className="text-xs text-slate-400 mt-2">Updated: {new Date(req.updatedAt || req.createdAt).toLocaleString()}</p>
-                )}
+                <div className="flex justify-between items-center text-xs font-semibold text-slate-500 mt-2 border-t border-slate-100 pt-2 bg-slate-50/50 -mx-6 px-6 -mb-6 pb-4 rounded-b-xl">
+                    <span className="flex items-center gap-1">📅 Applied: <span className="text-slate-700">{formatDate(req.createdAt)}</span></span>
+                    {activeTab === 'history' && (
+                        <span>Updated: {new Date(req.updatedAt || req.createdAt).toLocaleString()}</span>
+                    )}
+                </div>
             </div>
             {activeTab === 'pending' && canApprove && (
                 <div className="grid grid-cols-2 gap-3">

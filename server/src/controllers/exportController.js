@@ -536,4 +536,91 @@ const exportRequests = async (req, res) => {
     }
 };
 
-module.exports = { exportWorkLogs, exportAttendance, exportRequests };
+// @desc    Export Performance Analytics as CSV
+// @route   GET /api/export/analytics
+// @access  Private (Admin/HR/BH)
+const exportPerformanceAnalytics = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+        const end = endDate ? new Date(endDate) : new Date();
+
+        const employees = await prisma.user.findMany({
+            where: { role: 'EMPLOYEE', status: 'ACTIVE' },
+            select: { id: true, name: true, email: true, designation: true }
+        });
+
+        const stats = await Promise.all(employees.map(async (emp) => {
+            const [attendance, workLogs, leaves, permissions] = await Promise.all([
+                prisma.attendance.findMany({
+                    where: { userId: emp.id, date: { gte: start, lte: end } },
+                    include: { breaks: true }
+                }),
+                prisma.workLog.findMany({
+                    where: { userId: emp.id, createdAt: { gte: start, lte: end } }
+                }),
+                prisma.leaveRequest.findMany({ where: { userId: emp.id, createdAt: { gte: start, lte: end } } }),
+                prisma.permissionRequest.findMany({ where: { userId: emp.id, createdAt: { gte: start, lte: end } } })
+            ]);
+
+            const daysPresent = attendance.length;
+            const daysWithLogs = new Set(workLogs.map(log => new Date(log.createdAt).toDateString())).size;
+            const consistency = daysPresent > 0 ? Math.round((daysWithLogs / daysPresent) * 100) : 0;
+
+            let totalNetMinutes = 0;
+            let totalLateness = 0;
+            let punctualityCount = 0;
+
+            attendance.forEach(record => {
+                if (record.checkIn) {
+                    const checkIn = new Date(record.checkIn);
+                    const target = new Date(record.checkIn);
+                    target.setHours(9, 30, 0, 0);
+                    totalLateness += (checkIn - target) / (1000 * 60);
+                    punctualityCount++;
+                }
+
+                if (record.checkIn && record.checkOut) {
+                    const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                    const personalBreaks = record.breaks
+                        .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                        .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
+                    totalNetMinutes += (gross - personalBreaks);
+                }
+            });
+
+            const avgLateness = punctualityCount > 0 ? Math.round(totalLateness / punctualityCount) : 0;
+            const expectedMinutes = daysPresent * 540;
+            const efficiency = expectedMinutes > 0 ? Math.round((totalNetMinutes / expectedMinutes) * 100) : 0;
+            const limitExceeded = leaves.filter(r => r.isExceededLimit).length + permissions.filter(r => r.isExceededLimit).length;
+
+            return {
+                Employee: emp.name,
+                Email: emp.email,
+                Designation: emp.designation,
+                'Days Present': daysPresent,
+                'Days with Logs': daysWithLogs,
+                'Consistency %': `${consistency}%`,
+                'Efficiency %': `${efficiency}%`,
+                'Avg Punctuality (min)': avgLateness,
+                'Limit Exceeded Alerts': limitExceeded
+            };
+        }));
+
+        const csvFields = [
+            'Employee', 'Email', 'Designation', 'Days Present', 'Days with Logs',
+            'Consistency %', 'Efficiency %', 'Avg Punctuality (min)', 'Limit Exceeded Alerts'
+        ];
+        const csv = convertToCSV(stats, csvFields);
+
+        res.header('Content-Type', 'text/csv');
+        res.attachment(`performance_report_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.csv`);
+        res.send(csv);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { exportWorkLogs, exportAttendance, exportRequests, exportPerformanceAnalytics };

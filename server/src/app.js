@@ -29,6 +29,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/projects', require('./routes/projectRoutes'));
 app.use('/api/export', require('./routes/exportRoutes'));
 app.use('/api/popup', require('./routes/popupRoutes'));
+app.use('/api/analytics', require('./routes/analyticsRoutes'));
 
 app.get('/', (req, res) => {
     res.json({ message: 'Welcome to Cookscape WorkSphere API' }); // Server Restart Triggered v2
