@@ -97,7 +97,7 @@ const getEmployeeStats = async (req, res) => {
                 .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
 
             const net = Math.max(0, gross - personalBreaks);
-            const eff = Math.min(100, Math.round((net / 540) * 100));
+            const eff = Math.round((net / 540) * 100);
 
             return {
                 date: new Date(record.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),
