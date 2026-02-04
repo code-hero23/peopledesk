@@ -183,7 +183,11 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                     { label: 'Fresh 3D', data: laOpening.fresh3D },
                                     { label: 'Revised 3D', data: laOpening.revised3D },
                                     { label: 'Estimation', data: laOpening.estimation },
-                                ].filter(x => x.data?.count > 0).map((item, i) => (
+                                    { label: 'WOE', data: laOpening.woe },
+                                    { label: 'Online Discussion', data: laOpening.onlineDiscussion },
+                                    { label: 'Showroom Discussion', data: laOpening.showroomDiscussion },
+                                    { label: 'Sign Engineers', data: laOpening.signFromEngineer },
+                                ].filter(x => x.data?.count > 0 || x.data?.details).map((item, i) => (
                                     <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
@@ -404,51 +408,101 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                     { label: 'Revised 3D', data: laClosing.revised3D },
                                     { label: 'Estimation', data: laClosing.estimation },
                                     { label: 'WOE', data: laClosing.woe },
+                                    { label: 'Online Discussion', data: laClosing.onlineDiscussion },
+                                    { label: 'Showroom Discussion', data: laClosing.showroomDiscussion },
                                     { label: 'Sign Engineers', data: laClosing.signFromEngineer },
-                                ].filter(x => x.data?.count > 0).map((item, i) => (
+                                ].filter(x => x.data?.count > 0 || x.data?.details).map((item, i) => (
                                     <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
                                             <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
                                         </div>
+                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold truncate">{item.data.details}</p>}
                                     </div>
                                 ))}
                             </div>
                         </div>
                     )}
 
-                    {/* Project Reports Grid (Cleaner Table View) */}
+                    {/* Project Reports Grid (Detailed Table View) */}
                     {log.la_project_reports && (
                         <div className="mb-8">
                             <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3">Project Specific Reports</h4>
-                            <div className="overflow-hidden border border-slate-200 rounded-lg">
-                                <table className="w-full border-collapse text-xs">
-                                    <thead>
-                                        <tr className="bg-slate-100 border-b border-slate-200">
-                                            <th className="px-4 py-2 text-left font-black text-slate-600 uppercase">Client / Project</th>
-                                            <th className="px-4 py-2 text-left font-black text-slate-600 uppercase">Process</th>
-                                            <th className="px-4 py-2 text-center font-black text-slate-600 uppercase">Time</th>
-                                            <th className="px-4 py-2 text-center font-black text-slate-600 uppercase">Images</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white">
-                                        {(() => {
-                                            const reports = typeof log.la_project_reports === 'string' ? JSON.parse(log.la_project_reports) : log.la_project_reports;
-                                            return Array.isArray(reports) && reports.map((r, i) => (
-                                                <tr key={i} className="border-b border-slate-100 last:border-0 hover:bg-slate-50 transition-colors">
-                                                    <td className="px-4 py-3 font-black text-slate-800">{r.clientName}</td>
-                                                    <td className="px-4 py-3 text-slate-500 font-bold">{r.process}</td>
-                                                    <td className="px-4 py-3 text-center text-blue-600 font-bold">{r.startTime} - {r.endTime}</td>
-                                                    <td className="px-4 py-3 text-center">
-                                                        <span className="bg-slate-800 text-white px-2 py-0.5 rounded-full text-[10px] font-black">
-                                                            {r.completedImages} / {r.imageCount}
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ));
-                                        })()}
-                                    </tbody>
-                                </table>
+                            <div className="space-y-4">
+                                {(() => {
+                                    const reports = typeof log.la_project_reports === 'string' ? JSON.parse(log.la_project_reports) : log.la_project_reports;
+                                    return Array.isArray(reports) && reports.map((r, i) => (
+                                        <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm break-inside-avoid">
+                                            {/* Main Row */}
+                                            <div className="flex flex-wrap md:flex-nowrap border-b border-slate-100 bg-slate-50">
+                                                <div className="w-full md:w-1/3 p-4 border-b md:border-b-0 md:border-r border-slate-100">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Client / Project</p>
+                                                    <p className="text-sm font-black text-slate-800">{r.clientName}</p>
+                                                </div>
+                                                <div className="w-1/2 md:w-1/3 p-4 border-r border-slate-100">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Process</p>
+                                                    <p className="text-sm font-bold text-slate-700">{r.process}</p>
+                                                </div>
+                                                <div className="w-1/2 md:w-1/3 p-4">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Images (C / P)</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="text-sm font-black text-slate-800">{r.completedImages} / {r.imageCount}</span>
+                                                        <span className="text-[10px] text-slate-400 font-bold">({r.startTime} - {r.endTime})</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Nested Details */}
+                                            <div className="p-4">
+                                                {/* Remarks */}
+                                                {r.remarks && <p className="text-xs text-slate-600 italic mb-4 border-l-2 border-slate-300 pl-2">"{r.remarks}"</p>}
+
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {['onlineMeetings', 'showroomMeetings', 'measurements'].map(field => {
+                                                        const items = r[field];
+                                                        if (!items || items.length === 0) return null;
+                                                        return (
+                                                            <div key={field} className="border border-slate-100 rounded-lg overflow-hidden">
+                                                                <div className="bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase">
+                                                                    {field.replace(/([A-Z])/g, ' $1').trim()}
+                                                                </div>
+                                                                <table className="w-full text-[10px]">
+                                                                    <tbody className="divide-y divide-slate-50">
+                                                                        {items.map((item, idx) => (
+                                                                            <tr key={idx}>
+                                                                                {Object.keys(item).filter(k => k !== 'id').map(key => (
+                                                                                    <td key={key} className="px-3 py-1.5 max-w-[150px] truncate" title={item[key]}>{item[key]}</td>
+                                                                                ))}
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        );
+                                                    })}
+
+                                                    {/* Requirements & Colours */}
+                                                    {(r.requirements?.length > 0) && (
+                                                        <div className="border border-slate-100 rounded-lg p-3">
+                                                            <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Requirements</h5>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {r.requirements.map((req, idx) => <span key={idx} className="bg-pink-50 text-pink-700 px-2 py-0.5 rounded text-[10px] font-bold border border-pink-100">{req}</span>)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    {(r.colours?.length > 0) && (
+                                                        <div className="border border-slate-100 rounded-lg p-3">
+                                                            <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Colours</h5>
+                                                            <div className="flex flex-wrap gap-1.5">
+                                                                {r.colours.map((col, idx) => <span key={idx} className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded text-[10px] font-bold border border-teal-100">{col}</span>)}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ));
+                                })()}
                             </div>
                         </div>
                     )}
