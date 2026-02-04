@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
-import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap } from 'lucide-react';
+import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
@@ -97,7 +97,7 @@ const Attendance = () => {
     const getStatusStyles = (type) => {
         switch (type) {
             case 'TEA': return { bg: 'bg-amber-50', text: 'text-amber-600', icon: Coffee, label: 'Tea Break' };
-            case 'LUNCH': return { bg: 'bg-orange-50', text: 'text-orange-600', icon: Coffee, label: 'Lunch Break' };
+            case 'LUNCH': return { bg: 'bg-orange-50', text: 'text-orange-600', icon: Utensils, label: 'Lunch Break' };
             case 'CLIENT_MEETING': return { bg: 'bg-blue-50', text: 'text-blue-600', icon: Users, label: 'Client Meeting' };
             case 'BH_MEETING': return { bg: 'bg-purple-50', text: 'text-purple-600', icon: Zap, label: 'BH Meeting' };
             default: return { bg: 'bg-slate-50', text: 'text-slate-600', icon: Clock, label: 'On Break' };
