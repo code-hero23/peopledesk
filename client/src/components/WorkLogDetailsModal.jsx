@@ -1,9 +1,8 @@
 import { X, Printer } from 'lucide-react';
-import { useRef } from 'react';
-import { useReactToPrint } from 'react-to-print';
+
 
 const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
-    const componentRef = useRef();
+
 
     // We can use a library or a simple window.print approach. 
     // Since we don't want to install new deps if possible, let's use a simple distinct print window approach 
@@ -191,7 +190,38 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                                                     </div>
                                                     {report.remarks && <p className="text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-3">{report.remarks}</p>}
 
-                                                    {/* Nested details support if needed */}
+                                                    {report.remarks && <p className="text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-3">{report.remarks}</p>}
+
+                                                    {/* Nested Details */}
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        {report.onlineMeetings && report.onlineMeetings.length > 0 && renderTable("Online Meetings", report.onlineMeetings)}
+                                                        {report.showroomMeetings && report.showroomMeetings.length > 0 && renderTable("Showroom Meetings", report.showroomMeetings)}
+                                                        {report.measurements && report.measurements.length > 0 && renderTable("Measurements", report.measurements)}
+
+                                                        {/* Requirements List */}
+                                                        {report.requirements && report.requirements.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">Requirements</h5>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {report.requirements.map((req, rI) => (
+                                                                        <span key={rI} className="bg-pink-50 text-pink-700 px-2 py-1 rounded border border-pink-100 text-xs">{req}</span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Colours List */}
+                                                        {report.colours && report.colours.length > 0 && (
+                                                            <div className="mt-3">
+                                                                <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">Colours</h5>
+                                                                <div className="flex flex-wrap gap-2">
+                                                                    {report.colours.map((col, cI) => (
+                                                                        <span key={cI} className="bg-teal-50 text-teal-700 px-2 py-1 rounded border border-teal-100 text-xs">{col}</span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             ));
                                         } catch (e) { return <p className="text-red-400 text-xs">Error parsing project logs</p> }
@@ -319,23 +349,28 @@ const DetailItem = ({ label, value, sub }) => {
             {sub && <span className="block text-xs text-slate-500 italic mt-1">{sub}</span>}
         </div>
     );
+
 };
 
 const renderTable = (title, data) => {
     if (!data || !Array.isArray(data) || data.length === 0) return null;
     // Check if it's just a default empty row
-    if (data.length === 1 && !data[0].date && !data[0].discussedOn) return null;
+    if (data.length === 1 && !data[0].date && !data[0].discussedOn && !data[0].aeName && !data[0].discussion) return null;
 
     const headers = Object.keys(data[0]).filter(k => k !== 'slNo');
 
     return (
-        <div className="mt-4">
-            <h5 className="text-sm font-bold text-slate-700 mb-2">{title}</h5>
-            <div className="border rounded-lg overflow-hidden text-sm">
+        <div className="mt-3">
+            <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">{title}</h5>
+            <div className="border rounded-lg overflow-hidden text-xs bg-white">
                 <table className="w-full text-left">
-                    <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                    <thead className="bg-slate-50 text-slate-500 uppercase">
                         <tr>
-                            {headers.map(h => <th key={h} className="px-3 py-2">{h}</th>)}
+                            {headers.map(h => {
+                                // Format header: camelCase to Title Case
+                                const label = h.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase());
+                                return <th key={h} className="px-3 py-2">{label}</th>;
+                            })}
                         </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100">
@@ -349,6 +384,60 @@ const renderTable = (title, data) => {
             </div>
         </div>
     );
+};
+
+const renderLAMetricsTable = (metrics) => {
+    if (!metrics) return null;
+
+    // Mapping keys to labels (matching LAWorkLogForm)
+    const labels = {
+        initial2D: 'Initial 2D',
+        production2D: 'Production 2D',
+        revised2D: 'Revised 2D',
+        fresh3D: 'Fresh 3D',
+        revised3D: 'Revised 3D',
+        estimation: 'Estimation',
+        woe: 'W.O.E',
+        onlineDiscussion: 'Online Discussion',
+        showroomDiscussion: 'Showroom Discussion',
+        signFromEngineer: 'Sign From Engineer'
+    };
+
+    return (
+        <div className="border rounded-lg overflow-hidden text-sm bg-white">
+            <table className="w-full text-left">
+                <thead className="bg-slate-50 text-slate-500 text-xs uppercase">
+                    <tr>
+                        <th className="px-4 py-2 w-1/3">Category</th>
+                        <th className="px-4 py-2 w-24 text-center">Count</th>
+                        <th className="px-4 py-2">Details</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                    {Object.entries(metrics).map(([key, value]) => (
+                        <tr key={key}>
+                            <td className="px-4 py-2 font-bold text-slate-600 text-xs uppercase">{labels[key] || key}</td>
+                            <td className="px-4 py-2 text-center font-mono font-bold">{value.count || '-'}</td>
+                            <td className="px-4 py-2 text-slate-600">{value.details || '-'}</td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
+        </div>
+    );
+};
+
+const renderJsonList = (data) => {
+    if (!data) return null;
+    try {
+        const list = typeof data === 'string' ? JSON.parse(data) : data;
+        if (!Array.isArray(list)) return null;
+        return list.map((item, i) => (
+            <span key={i} className="bg-slate-100 px-2 py-1 rounded border text-xs text-slate-600">{item}</span>
+        ));
+    } catch (e) {
+        return null;
+    }
 };
 
 export default WorkLogDetailsModal;
