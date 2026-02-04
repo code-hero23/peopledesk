@@ -220,20 +220,22 @@ const PerformanceAnalytics = () => {
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Team-wide Efficiency Metrics</p>
                         </div>
                     </div>
-                    <div className="h-[350px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={teamChartData} barSize={48}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
-                                <YAxis hide />
-                                <Tooltip cursor={{ fill: '#f8fafc', radius: 16 }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px' }} itemStyle={{ fontSize: '13px', fontWeight: 'bold' }} />
-                                <Bar dataKey="Efficiency" radius={[12, 12, 12, 12]} animationDuration={1500}>
-                                    {teamChartData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.Efficiency > 85 ? '#10b981' : entry.Efficiency > 65 ? '#3b82f6' : '#f59e0b'} />
-                                    ))}
-                                </Bar>
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="overflow-x-auto custom-scrollbar pb-2">
+                        <div style={{ minWidth: Math.max(800, teamChartData.length * 60) }} className="h-[350px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={teamChartData} barSize={48}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
+                                    <YAxis hide />
+                                    <Tooltip cursor={{ fill: '#f8fafc', radius: 16 }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px' }} itemStyle={{ fontSize: '13px', fontWeight: 'bold' }} />
+                                    <Bar dataKey="Efficiency" radius={[12, 12, 12, 12]} animationDuration={1500}>
+                                        {teamChartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.Efficiency > 85 ? '#10b981' : entry.Efficiency > 65 ? '#3b82f6' : '#f59e0b'} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
 
@@ -247,16 +249,18 @@ const PerformanceAnalytics = () => {
                             <p className="text-xs text-slate-400 font-bold uppercase tracking-widest mt-1">Log Submission Consistency</p>
                         </div>
                     </div>
-                    <div className="h-[350px] w-full">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <BarChart data={teamChartData} barSize={48}>
-                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
-                                <YAxis hide />
-                                <Tooltip cursor={{ fill: '#f8fafc', radius: 16 }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px' }} itemStyle={{ fontSize: '13px', fontWeight: 'bold' }} />
-                                <Bar dataKey="Consistency" radius={[12, 12, 12, 12]} fill="#8b5cf6" animationDuration={1500} />
-                            </BarChart>
-                        </ResponsiveContainer>
+                    <div className="overflow-x-auto custom-scrollbar pb-2">
+                        <div style={{ minWidth: Math.max(800, teamChartData.length * 60) }} className="h-[350px]">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={teamChartData} barSize={48}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 11, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
+                                    <YAxis hide />
+                                    <Tooltip cursor={{ fill: '#f8fafc', radius: 16 }} contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)', padding: '12px' }} itemStyle={{ fontSize: '13px', fontWeight: 'bold' }} />
+                                    <Bar dataKey="Consistency" radius={[12, 12, 12, 12]} fill="#8b5cf6" animationDuration={1500} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
                 </div>
             </div>

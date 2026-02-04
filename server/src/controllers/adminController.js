@@ -148,6 +148,9 @@ const getAllPendingRequests = async (req, res) => {
 // @desc    Get request history (Approved/Rejected)
 // @route   GET /api/admin/requests/history
 // @access  Private (Admin, BH, HR)
+// @desc    Get request history (Approved/Rejected)
+// @route   GET /api/admin/requests/history
+// @access  Private (Admin, BH, HR)
 const getRequestHistory = async (req, res) => {
     try {
         const userRole = req.user.role;
@@ -173,40 +176,41 @@ const getRequestHistory = async (req, res) => {
             };
         }
 
-        let leaveWhere = leaveDateFilter;
-        let permissionWhere = generalDateFilter;
-        let visitWhere = generalDateFilter;
+        // Initialize where clauses with date filters
+        let leaveWhere = { ...leaveDateFilter };
+        let permissionWhere = { ...generalDateFilter };
+        let visitWhere = { ...generalDateFilter };
 
         if (userRole === 'BUSINESS_HEAD') {
-            leaveWhere = {
-                AND: [
-                    leaveWhere,
-                    {
-                        bhStatus: { not: 'PENDING' },
-                        OR: [{ targetBhId: userId }, { bhId: userId }]
-                    }
-                ]
+            const bhFilter = {
+                bhStatus: { not: 'PENDING' },
+                OR: [{ targetBhId: userId }, { bhId: userId }]
             };
-            permissionWhere = {
-                AND: [
-                    permissionWhere,
-                    {
-                        bhStatus: { not: 'PENDING' },
-                        OR: [{ targetBhId: userId }, { bhId: userId }]
-                    }
-                ]
-            };
+
+            leaveWhere = { AND: [leaveWhere, bhFilter] };
+            permissionWhere = { AND: [permissionWhere, bhFilter] };
+            visitWhere = { AND: [visitWhere, bhFilter] };
+
         } else if (userRole === 'HR' || userRole === 'ADMIN') {
-            leaveWhere = { AND: [leaveWhere, { status: { in: ['APPROVED', 'REJECTED'] } }] };
-            permissionWhere = { AND: [permissionWhere, { status: { in: ['APPROVED', 'REJECTED'] } }] };
+            const statusFilter = { status: { in: ['APPROVED', 'REJECTED'] } };
+
+            leaveWhere = { AND: [leaveWhere, statusFilter] };
+            permissionWhere = { AND: [permissionWhere, statusFilter] };
+            visitWhere = { AND: [visitWhere, statusFilter] };
+
         } else if (userRole === 'AE_MANAGER') {
-            leaveWhere = { AND: [leaveWhere, { status: { in: ['APPROVED', 'REJECTED'] }, user: { designation: 'AE' } }] };
-            permissionWhere = { AND: [permissionWhere, { status: { in: ['APPROVED', 'REJECTED'] }, user: { designation: 'AE' } }] };
+            const aeFilter = {
+                status: { in: ['APPROVED', 'REJECTED'] },
+                user: { designation: 'AE' }
+            };
+
+            leaveWhere = { AND: [leaveWhere, aeFilter] };
+            permissionWhere = { AND: [permissionWhere, aeFilter] };
+            visitWhere = { AND: [visitWhere, aeFilter] };
+
         } else {
             return res.json({ leaves: [], permissions: [], siteVisits: [], showroomVisits: [] });
         }
-
-        console.log("Leave Where Clause:", JSON.stringify(leaveWhere, null, 2));
 
         const leavesRaw = await prisma.leaveRequest.findMany({
             where: leaveWhere,
@@ -223,14 +227,14 @@ const getRequestHistory = async (req, res) => {
         });
 
         const siteVisitsRaw = await prisma.siteVisitRequest.findMany({
-            where: { AND: [visitWhere, permissionWhere.AND ? permissionWhere.AND[1] : {}] },
+            where: visitWhere,
             include: { user: { select: { name: true, email: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
         });
 
         const showroomVisitsRaw = await prisma.showroomVisitRequest.findMany({
-            where: { AND: [visitWhere, permissionWhere.AND ? permissionWhere.AND[1] : {}] },
+            where: visitWhere,
             include: { user: { select: { name: true, email: true } } },
             orderBy: { createdAt: 'desc' },
             take: 50
@@ -264,7 +268,7 @@ const getRequestHistory = async (req, res) => {
 
         res.json({ leaves, permissions, siteVisits, showroomVisits });
     } catch (error) {
-        console.error(error);
+        console.error("getRequestHistory Error:", error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
