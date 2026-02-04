@@ -148,7 +148,7 @@ const PerformanceAnalytics = () => {
                             title="Avg Arrival Time"
                             value={(() => {
                                 const date = new Date();
-                                date.setHours(9, 30, 0, 0);
+                                date.setHours(10, 0, 0, 0);
                                 date.setMinutes(date.getMinutes() + employeeStats.avgLateness);
                                 return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
                             })()}

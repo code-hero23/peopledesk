@@ -12,7 +12,7 @@ const formatMinutes = (minutes) => {
 const calculatePunctuality = (checkInTime) => {
     const checkIn = new Date(checkInTime);
     const target = new Date(checkInTime);
-    target.setHours(9, 30, 0, 0);
+    target.setHours(10, 0, 0, 0);
 
     const diffMinutes = (checkIn - target) / (1000 * 60);
     return diffMinutes; // Positive means late, negative means early
