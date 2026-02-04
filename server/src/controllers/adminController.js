@@ -182,14 +182,22 @@ const getRequestHistory = async (req, res) => {
         let visitWhere = { ...generalDateFilter };
 
         if (userRole === 'BUSINESS_HEAD') {
-            const bhFilter = {
+            const bhRequestsFilter = {
                 bhStatus: { not: 'PENDING' },
                 OR: [{ targetBhId: userId }, { bhId: userId }]
             };
 
-            leaveWhere = { AND: [leaveWhere, bhFilter] };
-            permissionWhere = { AND: [permissionWhere, bhFilter] };
-            visitWhere = { AND: [visitWhere, bhFilter] };
+            // Visits do not have 'bhId' field in schema
+            const bhVisitsFilter = {
+                bhStatus: { not: 'PENDING' },
+                targetBhId: userId
+            };
+
+            leaveWhere = { AND: [leaveWhere, bhRequestsFilter] };
+            permissionWhere = { AND: [permissionWhere, bhRequestsFilter] };
+
+            // Use visits-specific filter that doesn't check bhId
+            visitWhere = { AND: [visitWhere, bhVisitsFilter] };
 
         } else if (userRole === 'HR' || userRole === 'ADMIN') {
             const statusFilter = { status: { in: ['APPROVED', 'REJECTED'] } };
