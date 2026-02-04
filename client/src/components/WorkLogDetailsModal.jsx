@@ -319,6 +319,17 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
+                    {/* Dynamic / Custom Fields (e.g. Office Admin, Client Facilitator) */}
+                    {WorkLog.customFields && (
+                        <div className="space-y-6">
+                            {Object.entries(typeof WorkLog.customFields === 'string' ? JSON.parse(WorkLog.customFields) : WorkLog.customFields).map(([tableName, rows], idx) => (
+                                <div key={idx}>
+                                    {renderTable(tableName, rows)}
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
                     {/* Fallback for regular logs */}
                     {!WorkLog.cre_totalCalls && !WorkLog.fa_calls && !WorkLog.la_projectLocation && (
                         <div className="grid grid-cols-2 gap-4">

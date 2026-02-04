@@ -11,6 +11,19 @@ export const WORK_LOG_CONFIG = {
             }
         ]
     },
+    "OFFICE-ADMINISTRATION": {
+        title: "Office Admin Daily Report",
+        tables: [
+            {
+                label: "Daily Activities",
+                fields: [
+                    { name: "description", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "select", options: ["Pending", "In Progress", "Completed"] },
+                    { name: "remarks", label: "Remarks", type: "text" }
+                ]
+            }
+        ]
+    },
     "LEAD-OPERATION": {
         title: "Lead Operation Daily Report",
         tables: [

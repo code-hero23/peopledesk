@@ -450,7 +450,8 @@ const Overview = () => {
                             <span>⚡</span> Quick Actions
                         </h4>
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4 h-full">
-                            {user?.designation !== 'OFFICE-ADMINISTRATION' && (
+                            {(
+
                                 <button
                                     onClick={() => setActiveModal('worklog')}
                                     className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all group min-h-[100px] md:h-[120px]"
