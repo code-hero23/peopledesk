@@ -143,7 +143,6 @@ const Layout = () => {
                                 <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
                             )}
 
-                            <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
                             <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
                             <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
 
