@@ -11,6 +11,10 @@ const adminRoutes = require('./routes/adminRoutes');
 const app = express();
 
 const path = require('path');
+const initAttendanceCron = require('./cron/attendanceCron');
+
+// Initialize Cron Jobs
+initAttendanceCron();
 
 // Middlewares
 app.use(express.json());
