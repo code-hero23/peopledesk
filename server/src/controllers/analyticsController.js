@@ -8,13 +8,19 @@ const formatMinutes = (minutes) => {
     return `${h}h ${m}m`;
 };
 
-// Calculate punctuality relative to 9:30 AM
+// Calculate punctuality relative to 10:00 AM
 const calculatePunctuality = (checkInTime) => {
-    const checkIn = new Date(checkInTime);
-    const target = new Date(checkInTime);
+    // 1. Convert DB time (likely UTC) to IST by adding 5.5 hours
+    const utcDate = new Date(checkInTime);
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const checkInIST = new Date(utcDate.getTime() + istOffset);
+
+    // 2. Create Target Time (10:00 AM) on the SAME DATE as the check-in
+    const target = new Date(checkInIST);
     target.setHours(10, 0, 0, 0);
 
-    const diffMinutes = (checkIn - target) / (1000 * 60);
+    // 3. Compare difference
+    const diffMinutes = (checkInIST - target) / (1000 * 60);
     return diffMinutes; // Positive means late, negative means early
 };
 
