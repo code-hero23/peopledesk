@@ -193,7 +193,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
                                             <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
                                         </div>
-                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold truncate">{item.data.details}</p>}
+                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold break-words whitespace-pre-wrap">{item.data.details}</p>}
                                     </div>
                                 ))}
                             </div>
@@ -417,7 +417,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
                                             <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
                                         </div>
-                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold truncate">{item.data.details}</p>}
+                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold break-words whitespace-pre-wrap">{item.data.details}</p>}
                                     </div>
                                 ))}
                             </div>
@@ -471,7 +471,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                                         {items.map((item, idx) => (
                                                                             <tr key={idx}>
                                                                                 {Object.keys(item).filter(k => k !== 'id').map(key => (
-                                                                                    <td key={key} className="px-3 py-1.5 max-w-[150px] truncate" title={item[key]}>{item[key]}</td>
+                                                                                    <td key={key} className="px-3 py-1.5 font-medium text-slate-700 break-words whitespace-pre-wrap" title={item[key]}>{item[key]}</td>
                                                                                 ))}
                                                                             </tr>
                                                                         ))}
