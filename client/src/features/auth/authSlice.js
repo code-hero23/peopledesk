@@ -12,6 +12,7 @@ const initialState = {
     isSuccess: false,
     isLoading: false,
     message: '',
+    blockedUser: null,
 };
 
 // Login user
@@ -27,6 +28,14 @@ export const login = createAsyncThunk('auth/login', async (user, thunkAPI) => {
             (error.response && error.response.data && error.response.data.message) ||
             error.message ||
             error.toString();
+
+        if (error.response && error.response.status === 403) {
+            return thunkAPI.rejectWithValue({
+                message,
+                name: error.response.data.name,
+                isBlocked: true
+            });
+        }
         return thunkAPI.rejectWithValue(message);
     }
 });
@@ -83,6 +92,7 @@ export const authSlice = createSlice({
             state.isSuccess = false;
             state.isError = false;
             state.message = '';
+            state.blockedUser = null;
         },
     },
     extraReducers: (builder) => {
@@ -94,15 +104,23 @@ export const authSlice = createSlice({
                 state.isLoading = false;
                 state.isSuccess = true;
                 state.user = action.payload;
+                state.blockedUser = null;
             })
             .addCase(login.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
-                state.message = action.payload;
                 state.user = null;
+                if (typeof action.payload === 'object' && action.payload.isBlocked) {
+                    state.message = action.payload.message;
+                    state.blockedUser = action.payload.name;
+                } else {
+                    state.message = action.payload;
+                    state.blockedUser = null;
+                }
             })
             .addCase(logout.fulfilled, (state) => {
                 state.user = null;
+                state.blockedUser = null;
             })
             .addCase(googleLogin.pending, (state) => {
                 state.isLoading = true;
@@ -111,22 +129,20 @@ export const authSlice = createSlice({
                 state.isLoading = false;
                 state.isSuccess = true;
                 state.user = action.payload;
+                state.blockedUser = null;
             })
             .addCase(googleLogin.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;
                 state.user = null;
-                state.user = null;
+                state.blockedUser = null;
             })
             .addCase(getMe.fulfilled, (state, action) => {
                 state.user = action.payload;
                 localStorage.setItem('user', JSON.stringify(action.payload));
             })
             .addCase(getMe.rejected, (state, action) => {
-                // If token failed (e.g., 401), maybe we should logout?
-                // For now, just log the error but keep the old user state if beneficial
-                // Or if it's strictly Auth error, clear user.
                 if (action.payload === 'Not authorized, token failed') {
                     state.user = null;
                     localStorage.removeItem('user');

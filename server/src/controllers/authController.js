@@ -19,7 +19,10 @@ const loginUser = async (req, res) => {
 
         if (user && (await bcrypt.compare(password, user.password))) {
             if (user.status === 'BLOCKED') {
-                return res.status(403).json({ message: 'Account Blocked. You have been absent for 3+ days without approval. Contact HR.' });
+                return res.status(403).json({
+                    message: 'Account Blocked. You have been absent for 3+ days without approval. Contact HR.',
+                    name: user.name
+                });
             }
 
             res.json({

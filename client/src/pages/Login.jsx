@@ -16,15 +16,11 @@ function Login() {
     const navigate = useNavigate();
     const dispatch = useDispatch();
 
-    const { user, isLoading, isError, isSuccess, message } = useSelector(
+    const { user, isLoading, isError, isSuccess, message, blockedUser } = useSelector(
         (state) => state.auth
     );
 
     useEffect(() => {
-        if (isError) {
-            alert(message);
-        }
-
         if (isSuccess || user) {
             if (['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user.role)) {
                 navigate('/admin-dashboard');
@@ -34,7 +30,10 @@ function Login() {
         }
 
         dispatch(reset());
-    }, [user, isError, isSuccess, message, navigate, dispatch]);
+    }, [user, isSuccess, navigate, dispatch]);
+
+    // Error Display Logic
+    const isBlockedError = isError && message && message.toLowerCase().includes('blocked');
 
     const onChange = (e) => {
         setFormData((prevState) => ({
@@ -128,6 +127,34 @@ function Login() {
                             </div>
 
                             <form onSubmit={onSubmit} className="space-y-6">
+                                {isError && (
+                                    <div className={`p-4 rounded-xl border ${isBlockedError ? 'bg-red-500/10 border-red-500/50 text-red-400' : 'bg-orange-500/10 border-orange-500/50 text-orange-400'} text-sm font-medium animate-shake`}>
+                                        <p className="flex items-center gap-2">
+                                            <span>⚠️</span> {message}
+                                        </p>
+                                        {isBlockedError && (
+                                            <a
+                                                href={`https://mail.google.com/mail/?view=cm&fs=1&to=es.cookscape@gmail.com&su=${encodeURIComponent(`Account Unblock Request - ${blockedUser || email}`)}&body=${encodeURIComponent(`Dear HR Team,
+
+I am writing to formally request the unblocking of my PeopleDesk account.
+
+Employee Name: ${blockedUser || 'Employee'}
+Email: ${email}
+
+I understand my account was flagged due to absence. I am ready to resolve this and resume my duties.
+
+Regards,
+${blockedUser || 'Employee'}
+PeopleDesk User`)}`}
+                                                target="_blank"
+                                                rel="noreferrer"
+                                                className="mt-3 inline-flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-wider transition-colors"
+                                            >
+                                                <span>📧</span> Open in Gmail
+                                            </a>
+                                        )}
+                                    </div>
+                                )}
                                 <div className="space-y-4">
                                     <div className="group">
                                         <label className="block text-[10px] font-bold text-slate-500 uppercase tracking-widest mb-2 ml-1 transition-colors group-focus-within:text-[#d00000]">Email Address</label>
@@ -189,11 +216,11 @@ function Login() {
                                     />
                                 </div>
                             </form>
-                        </div>
-                    </div>
-                </motion.div>
-            </AnimatePresence>
-        </motion.div>
+                        </div >
+                    </div >
+                </motion.div >
+            </AnimatePresence >
+        </motion.div >
     );
 }
 
