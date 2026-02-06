@@ -4,12 +4,9 @@ import { useReactToPrint } from 'react-to-print';
 import { Printer } from 'lucide-react';
 
 const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
-    const printRef = useRef();
-
-    const handlePrint = useReactToPrint({
-        contentRef: printRef,
-        documentTitle: `WorkLog_${log?.user?.name}_${new Date(log?.date).toLocaleDateString().replace(/\//g, '-')}`,
-    });
+    const handlePrint = () => {
+        window.print();
+    };
 
     if (!isOpen || !log) return null;
 
@@ -59,7 +56,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                 </button>
             </div>
 
-            <div ref={printRef} className="p-8 bg-white text-slate-900 border border-slate-100 rounded-xl print:p-8 print:border-0 print:w-full">
+            <div id="printable-area" className="p-8 bg-white text-slate-900 border border-slate-100 rounded-xl print-only-visible">
                 <style type="text/css" media="print">
                     {`
                         @page { size: A4; margin: 15mm; }
@@ -251,7 +248,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                             <thead className="bg-slate-50 border-b border-slate-200">
                                                 <tr>
                                                     <th className="px-3 py-2 text-left font-bold text-slate-600 w-12">No.</th>
-                                                    {list.length > 0 && Object.keys(list[0]).map((headerKey) => (
+                                                    {list.length > 0 && Object.keys(list[0]).filter(k => !['_id', 'id', 'createdAt', 'updatedAt'].includes(k)).map((headerKey) => (
                                                         <th key={headerKey} className="px-3 py-2 text-left font-bold text-slate-600 capitalize">
                                                             {headerKey}
                                                         </th>
@@ -262,7 +259,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                 {list.map((item, idx) => (
                                                     <tr key={idx} className="hover:bg-slate-50">
                                                         <td className="px-3 py-2 text-slate-400 font-bold">{idx + 1}</td>
-                                                        {Object.keys(item).map((key) => (
+                                                        {Object.keys(item).filter(k => !['_id', 'id', 'createdAt', 'updatedAt'].includes(k)).map((key) => (
                                                             <td key={key} className="px-3 py-2 font-medium text-slate-800">
                                                                 {item[key]}
                                                             </td>
@@ -470,7 +467,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                                     <tbody className="divide-y divide-slate-50">
                                                                         {items.map((item, idx) => (
                                                                             <tr key={idx}>
-                                                                                {Object.keys(item).filter(k => k !== 'id').map(key => (
+                                                                                {Object.keys(item).filter(k => !['id', '_id', 'createdAt', 'updatedAt'].includes(k)).map(key => (
                                                                                     <td key={key} className="px-3 py-1.5 font-medium text-slate-700 break-words whitespace-pre-wrap" title={item[key]}>{item[key]}</td>
                                                                                 ))}
                                                                             </tr>

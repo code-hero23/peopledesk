@@ -11,9 +11,11 @@
   will-change: filter;
   transition: filter 300ms;
 }
+
 .logo:hover {
   filter: drop-shadow(0 0 2em #646cffaa);
 }
+
 .logo.react:hover {
   filter: drop-shadow(0 0 2em #61dafbaa);
 }
@@ -22,6 +24,7 @@
   from {
     transform: rotate(0deg);
   }
+
   to {
     transform: rotate(360deg);
   }
@@ -37,6 +40,54 @@
   padding: 2em;
 }
 
+
 .read-the-docs {
   color: #888;
+}
+
+/* Print Styling */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .print-only-visible,
+  .print-only-visible * {
+    visibility: visible;
+  }
+
+  .print-only-visible {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 0;
+    background: white;
+    overflow: visible !important;
+  }
+
+  /* Hide scrollbars and non-content elements */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-print,
+  .no-print-overlay {
+    background: none !important;
+    padding: 0 !important;
+  }
+}
+
+/* Support Widget Mobile Fix */
+@media (max-width: 768px) {
+  iframe[src*="freehelpdesk"] {
+    bottom: 80px !important;
+    /* Move up to avoid bottom nav overlap */
+    right: 16px !important;
+    /* Ensure not cut off */
+    max-width: 60px !important;
+    max-height: 60px !important;
+    /* Keep compact when closed */
+  }
 }

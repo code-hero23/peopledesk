@@ -9,39 +9,9 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
     // or just style the current modal for print media.
     // simpler: distinct print window.
 
-    const handlePrint = () => {
-        const printContent = document.getElementById('printable-area');
-        const windowUrl = 'about:blank';
-        const uniqueName = new Date();
-        const windowName = 'Print' + uniqueName.getTime();
-        const printWindow = window.open(windowUrl, windowName, 'left=50000,top=50000,width=0,height=0');
 
-        if (printWindow) {
-            printWindow.document.write(`
-                <html>
-                    <head>
-                        <title>Work Log Report - ${log?.user?.name || ''}</title>
-                        <script src="https://cdn.tailwindcss.com"></script>
-                        <style>
-                            body { font-family: sans-serif; padding: 20px; }
-                            @media print {
-                                .no-print { display: none; }
-                            }
-                        </style>
-                    </head>
-                    <body>
-                        ${printContent.innerHTML}
-                        <script>
-                            setTimeout(() => {
-                                window.print();
-                                window.close();
-                            }, 500);
-                        </script>
-                    </body>
-                </html>
-            `);
-            printWindow.document.close();
-        }
+    const handlePrint = () => {
+        window.print();
     };
 
     if (!isOpen || !log) return null;
@@ -67,7 +37,7 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     </div>
                 </div>
 
-                <div id="printable-area" className="p-6 overflow-y-auto space-y-6">
+                <div id="printable-area" className="p-6 overflow-y-auto space-y-6 print-only-visible">
                     {/* Header for Print only */}
                     <div className="hidden print:block mb-6 border-b pb-4">
                         <h1 className="text-2xl font-bold text-slate-800">Daily Work Log Report</h1>
@@ -368,7 +338,9 @@ const renderTable = (title, data) => {
     // Check if it's just a default empty row
     if (data.length === 1 && !data[0].date && !data[0].discussedOn && !data[0].aeName && !data[0].discussion) return null;
 
-    const headers = Object.keys(data[0]).filter(k => k !== 'slNo');
+    const headers = Object.keys(data[0]).filter(k =>
+        !['slNo', 'id', '_id', 'createdAt', 'updatedAt'].includes(k)
+    );
 
     return (
         <div className="mt-3">
