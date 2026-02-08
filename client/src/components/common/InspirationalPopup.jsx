@@ -32,12 +32,20 @@ const InspirationalPopup = () => {
             });
 
             if (res.data && res.data.isActive) {
-                // FREQUENCY CAP: Check if shown in the last hour
                 const lastShowTime = localStorage.getItem('last_popup_time');
+                const lastConfigUpdate = localStorage.getItem('last_popup_data_update'); // Track the version of content seen
+
                 const now = Date.now();
                 const oneHour = 60 * 60 * 1000;
 
-                if (lastShowTime && (now - parseInt(lastShowTime)) < oneHour) {
+                // Check if this is BRAND NEW content (based on updatedAt timestamp from server)
+                // If the config's updatedAt is newer than what we last saw, SHOW IT regardless of time.
+                const isNewContent = !lastConfigUpdate || (new Date(res.data.updatedAt).getTime() > new Date(lastConfigUpdate).getTime());
+
+                // Logic: 
+                // 1. If content is NEW -> Show immediately (bypass timer)
+                // 2. If content is OLD -> Check 1-hour timer
+                if (!isNewContent && lastShowTime && (now - parseInt(lastShowTime)) < oneHour) {
                     setIsVisible(false);
                     return;
                 }
@@ -47,8 +55,9 @@ const InspirationalPopup = () => {
                 // Show after a short delay
                 const timer = setTimeout(() => {
                     setIsVisible(true);
-                    // Mark as shown
+                    // Mark as shown & store the version we just showed
                     localStorage.setItem('last_popup_time', now.toString());
+                    localStorage.setItem('last_popup_data_update', res.data.updatedAt);
                 }, 2000);
 
                 return () => clearTimeout(timer);

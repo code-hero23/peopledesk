@@ -120,6 +120,13 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                             <span>2*: <span className="text-blue-600">{creOpening.uptoTodayCalls2?.twoStar || 0}</span></span>
                                         </div>
                                     </div>
+                                    {/* Additional Opening Metric */}
+                                    {creOpening?.siteMsmtDiscFixed && (
+                                        <div className="col-span-2 bg-slate-50 p-2 rounded border border-slate-100">
+                                            <p className="text-[9px] font-black text-slate-400 uppercase mb-0.5">Site Msmt/Disc Fixed</p>
+                                            <p className="text-sm font-bold text-slate-800">{creOpening.siteMsmtDiscFixed}</p>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -324,18 +331,27 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                             <DataGrid items={[
                                 { label: 'Floor Plans Rx', value: creClosing?.floorPlanReceived || log.cre_floorPlanReceived },
                                 { label: 'Showroom Visit', value: creClosing?.showroomVisit || log.cre_showroomVisits },
+                                { label: 'Online Discussion', value: creClosing?.onlineDiscussion },
                                 { label: 'Review Collection', value: creClosing?.reviewCollected || log.cre_reviewCollected },
                                 { label: 'Quotation Sent', value: creClosing?.quotesSent || log.cre_quotesSent },
+                                { label: 'First Quote Sent', value: creClosing?.firstQuotationSent },
                                 { label: 'No. of Orders', value: creClosing?.orderCount || log.cre_orderCount },
                                 { label: 'No. of Proposals', value: creClosing?.proposalCount || log.cre_proposalCount },
+                                { label: 'Site Msmt/Disc', value: creClosing?.siteMsmtDisc },
+                                { label: 'Calls (Upto Today)', value: creClosing?.uptoTodayCalls || creClosing?.uptoTodayCalls_A },
+                                { label: 'WhatsApp Sent', value: creClosing?.whatsappSent },
                             ]} />
                             {creClosing && (
                                 <div className="mt-4 bg-emerald-50/50 p-3 rounded border border-emerald-100">
-                                    <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Work Execution Quality</p>
-                                    <div className="flex gap-8 font-black text-slate-800">
+                                    <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Work Execution Quality (Star Ratings)</p>
+                                    <div className="flex flex-wrap gap-4 font-black text-slate-800">
                                         <span>8*: <span className="text-emerald-700">{creClosing.eightStar || 0}</span></span>
                                         <span>7*: <span className="text-emerald-700">{creClosing.sevenStar || 0}</span></span>
                                         <span>6*: <span className="text-emerald-700">{creClosing.sixStar || 0}</span></span>
+                                        <span>5*: <span className="text-emerald-700">{creClosing.fiveStar || 0}</span></span>
+                                        <span>4*: <span className="text-emerald-700">{creClosing.fourStar || 0}</span></span>
+                                        <span>3*: <span className="text-emerald-700">{creClosing.threeStar || 0}</span></span>
+                                        <span>2*: <span className="text-emerald-700">{creClosing.twoStar || 0}</span></span>
                                     </div>
                                 </div>
                             )}

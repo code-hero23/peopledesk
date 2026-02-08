@@ -48,7 +48,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
             showroomVisit: '',
             reviewCollected: '',
             quotesSent: '',
-            uptoTodayCalls_A: '',
+            uptoTodayCalls: '',
             proposalCount: '',
             firstQuotationSent: '',
             orderCount: '',
@@ -220,7 +220,10 @@ const CREWorkLogForm = ({ onSuccess }) => {
                     </MetricCard>
 
                     <MetricCard title="Client Interactions" icon={MessageSquare} color="blue">
-                        <InputGroup label="Online Discussion" name="onlineDiscussion" value={closingData.cre_closing_metrics.onlineDiscussion} onChange={handleClosingChange} />
+                        <div className="grid grid-cols-2 gap-3">
+                            <InputGroup label="Online Discussion" name="onlineDiscussion" value={closingData.cre_closing_metrics.onlineDiscussion} onChange={handleClosingChange} />
+                            <InputGroup label="Calls (Upto Today)" name="uptoTodayCalls" value={closingData.cre_closing_metrics.uptoTodayCalls} onChange={handleClosingChange} />
+                        </div>
                         <InputGroup label="Site Msmt/Disc" name="siteMsmtDisc" value={closingData.cre_closing_metrics.siteMsmtDisc} onChange={handleClosingChange} />
                         <InputGroup label="WhatsApp Sent" name="whatsappSent" value={closingData.cre_closing_metrics.whatsappSent} onChange={handleClosingChange} />
                     </MetricCard>
