@@ -4,9 +4,13 @@ import { useReactToPrint } from 'react-to-print';
 import { Printer } from 'lucide-react';
 
 const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
-    const handlePrint = () => {
-        window.print();
-    };
+    const componentRef = useRef();
+
+    const handlePrint = useReactToPrint({
+        content: null, // Ensure content is null to avoid conflict
+        contentRef: componentRef, // Use contentRef for older versions
+        documentTitle: `Work_Log_${log?.user?.name || 'Report'}_${new Date().toISOString().split('T')[0]}`,
+    });
 
     if (!isOpen || !log) return null;
 
@@ -56,7 +60,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                 </button>
             </div>
 
-            <div id="printable-area" className="p-8 bg-white text-slate-900 border border-slate-100 rounded-xl print-only-visible">
+            <div ref={componentRef} id="printable-area" className="p-8 bg-white text-slate-900 border border-slate-100 rounded-xl print-only-visible">
                 <style type="text/css" media="print">
                     {`
                         @page { size: A4; margin: 15mm; }

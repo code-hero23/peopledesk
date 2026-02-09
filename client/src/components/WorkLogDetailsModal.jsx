@@ -1,18 +1,16 @@
+import { useRef } from 'react';
+import { useReactToPrint } from 'react-to-print';
 import { X, Printer } from 'lucide-react';
 
 
 const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
+    const componentRef = useRef();
 
-
-    // We can use a library or a simple window.print approach. 
-    // Since we don't want to install new deps if possible, let's use a simple distinct print window approach 
-    // or just style the current modal for print media.
-    // simpler: distinct print window.
-
-
-    const handlePrint = () => {
-        window.print();
-    };
+    const handlePrint = useReactToPrint({
+        content: null,
+        contentRef: componentRef,
+        documentTitle: `Work_Log_${log?.user?.name || 'Report'}_${new Date().toISOString().split('T')[0]}`,
+    });
 
     if (!isOpen || !log) return null;
 
@@ -37,7 +35,7 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     </div>
                 </div>
 
-                <div id="printable-area" className="p-6 overflow-y-auto space-y-6 print-only-visible">
+                <div ref={componentRef} id="printable-area" className="p-6 overflow-y-auto space-y-6 print-only-visible">
                     {/* Header for Print only */}
                     <div className="hidden print:block mb-6 border-b pb-4">
                         <h1 className="text-2xl font-bold text-slate-800">Daily Work Log Report</h1>
