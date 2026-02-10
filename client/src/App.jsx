@@ -16,6 +16,7 @@ import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import Layout from './components/MainLayout';
 import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
+import SupportButton from './components/common/SupportButton';
 
 import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
 
@@ -23,6 +24,7 @@ function App() {
   return (
     <>
       <PWAFresher />
+      <SupportButton />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />
