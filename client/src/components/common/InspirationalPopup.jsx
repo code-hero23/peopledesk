@@ -126,35 +126,8 @@ const InspirationalPopup = () => {
                                 </div>
                             )}
 
-                            {/* Left Side: Author Cutout Image */}
-                            {config.imageUrl && (
-                                <div className="hidden sm:block w-[180px] relative flex-shrink-0 mt-auto self-end">
-                                    <motion.img
-                                        src={`${API_URL}${config.imageUrl}`}
-                                        alt={config.author}
-                                        className="w-full h-[240px] object-cover object-top mask-image-gradient"
-                                        style={{
-                                            maskImage: 'linear-gradient(to top, black 80%, transparent 100%)',
-                                            WebkitMaskImage: 'linear-gradient(to top, black 80%, transparent 100%)'
-                                        }}
-                                        initial={{ y: 20, opacity: 0 }}
-                                        animate={{ y: 0, opacity: 1 }}
-                                        transition={{ duration: 0.8 }}
-                                    />
-                                    {/* Glow behind image specifically for birthday */}
-                                    {isBirthday && (
-                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-purple-500/30 blur-[40px] -z-10" />
-                                    )}
-                                </div>
-                            )}
-
-                            {/* Mobile Image */}
-                            <div className={`sm:hidden w-16 h-16 rounded-2xl overflow-hidden border-2 ${isBirthday ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-blue-500/30'} m-5 flex-shrink-0 self-start`}>
-                                <img src={`${API_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
-                            </div>
-
-                            {/* Right Side: Content */}
-                            <div className="flex-1 p-8 pl-4 flex flex-col justify-center relative z-10 min-h-[220px]">
+                            {/* LEFT SIDE: Content */}
+                            <div className="flex-1 p-8 pr-4 flex flex-col justify-center relative z-10 min-h-[220px]">
                                 {/* Decorative Icon */}
                                 {isBirthday ? (
                                     <div className="absolute top-4 right-6 text-5xl animate-bounce-slow opacity-20 pointer-events-none filter blur-[1px]">
@@ -165,7 +138,7 @@ const InspirationalPopup = () => {
                                 )}
 
                                 <motion.div
-                                    initial={{ opacity: 0, x: 20 }}
+                                    initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.2, type: "spring" }}
                                     className="relative z-10 space-y-4"
@@ -193,6 +166,33 @@ const InspirationalPopup = () => {
                                         </div>
                                     </div>
                                 </motion.div>
+                            </div>
+
+                            {/* RIGHT SIDE: Author Cutout Image */}
+                            {config.imageUrl && (
+                                <div className="hidden sm:block w-[180px] relative flex-shrink-0 mt-auto self-end">
+                                    <motion.img
+                                        src={`${API_URL}${config.imageUrl}`}
+                                        alt={config.author}
+                                        className="w-full h-[240px] object-cover object-top mask-image-gradient"
+                                        style={{
+                                            maskImage: 'linear-gradient(to top, black 80%, transparent 100%)',
+                                            WebkitMaskImage: 'linear-gradient(to top, black 80%, transparent 100%)'
+                                        }}
+                                        initial={{ y: 20, opacity: 0 }}
+                                        animate={{ y: 0, opacity: 1 }}
+                                        transition={{ duration: 0.8 }}
+                                    />
+                                    {/* Glow behind image specifically for birthday */}
+                                    {isBirthday && (
+                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-purple-500/30 blur-[40px] -z-10" />
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Mobile Image (Now on right for mobile too due to order) */}
+                            <div className={`sm:hidden w-16 h-16 rounded-2xl overflow-hidden border-2 ${isBirthday ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-blue-500/30'} m-5 flex-shrink-0 self-start`}>
+                                <img src={`${API_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
                             </div>
 
                             {/* Close Button */}

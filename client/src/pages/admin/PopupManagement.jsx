@@ -45,8 +45,16 @@ const PopupManagement = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        if (file.type !== 'image/png') {
-            setMessage({ type: 'error', text: 'Please upload a PNG image with a transparent background.' });
+        // Valid types: PNG, JPG, JPEG, WEBP
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+        if (!validTypes.includes(file.type)) {
+            setMessage({ type: 'error', text: 'Please upload a PNG, JPG, or WEBP image.' });
+            return;
+        }
+
+        // 10MB Limit
+        if (file.size > 10 * 1024 * 1024) {
+            setMessage({ type: 'error', text: 'Image size must be less than 10MB.' });
             return;
         }
 
@@ -67,6 +75,7 @@ const PopupManagement = () => {
             setPreviewImage(`${API_URL}${res.data.imageUrl}`);
             setMessage({ type: 'success', text: 'Image uploaded successfully!' });
         } catch (error) {
+            console.error(error);
             setMessage({ type: 'error', text: 'Upload failed. Please try again.' });
         } finally {
             setIsUploading(false);
@@ -120,7 +129,7 @@ const PopupManagement = () => {
 
                     <div className="space-y-6">
                         <div className="group">
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Author PNG (Cutout)</label>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Author Image (PNG Recommended)</label>
                             <label className="relative flex flex-col items-center justify-center w-full h-48 border-2 border-dashed border-white/10 rounded-3xl bg-black/20 hover:border-red-600/50 hover:bg-red-600/5 transition-all cursor-pointer group/upload">
                                 {isUploading ? (
                                     <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
@@ -129,10 +138,13 @@ const PopupManagement = () => {
                                 ) : (
                                     <div className="flex flex-col items-center">
                                         <Upload className="w-8 h-8 text-slate-600 group-hover/upload:text-red-600 mb-2 transition-colors" />
-                                        <span className="text-xs font-black text-slate-600 group-hover/upload:text-slate-400">Click to upload PNG</span>
+                                        <div className="text-center">
+                                            <span className="text-xs font-black text-slate-600 group-hover/upload:text-slate-400 block">Click to upload Image</span>
+                                            <span className="text-[10px] font-bold text-slate-700 block mt-1">PNG, JPG, WEBP (Max 10MB)</span>
+                                        </div>
                                     </div>
                                 )}
-                                <input type="file" className="hidden" accept="image/png" onChange={handleImageUpload} />
+                                <input type="file" className="hidden" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={handleImageUpload} />
                             </label>
                         </div>
 
@@ -233,36 +245,40 @@ const PopupManagement = () => {
                                     animate={{ y: 0, opacity: 1 }}
                                     className="relative z-10 w-full max-w-lg mb-4"
                                 >
-                                    {/* Author PNG Cutout */}
-                                    {config.imageUrl && (
-                                        <motion.img
-                                            src={previewImage}
-                                            className="absolute -top-32 left-0 h-48 w-auto object-contain z-20"
-                                            initial={{ y: 20 }}
-                                            animate={{ y: 0 }}
-                                            transition={{ repeat: Infinity, duration: 3, repeatType: "reverse", ease: "easeInOut" }}
-                                        />
-                                    )}
-
                                     {/* Glass Quote Box */}
-                                    <div className={`backdrop-blur-2xl border p-8 pt-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden ${config.type === 'BIRTHDAY' ? 'bg-purple-900/40 border-purple-500/30' : 'bg-white/10 border-white/20'}`}>
-                                        {config.type === 'BIRTHDAY' ? (
-                                            <div className="absolute -top-2 -right-2 w-24 h-24 text-purple-500/10 -rotate-12 text-6xl flex justify-center items-center select-none pointer-events-none">
-                                                🎉
-                                            </div>
-                                        ) : (
-                                            <Quote className="absolute -top-2 -right-2 w-24 h-24 text-white/5 -rotate-12" />
-                                        )}
+                                    <div className={`backdrop-blur-2xl border p-8 rounded-[2.5rem] shadow-2xl relative overflow-hidden flex items-end gap-4 ${config.type === 'BIRTHDAY' ? 'bg-purple-900/40 border-purple-500/30' : 'bg-white/10 border-white/20'}`}>
 
-                                        <p className="text-lg font-bold leading-tight italic mb-4 text-white relative z-10">
-                                            "{config.quote || (config.type === 'BIRTHDAY' ? 'Wishing you a fantastic year ahead!' : 'Enter your visionary message to see it in action...')}"
-                                        </p>
-                                        <div className="flex items-center gap-3 relative z-10">
-                                            <div className={`w-8 h-[2px] rounded-full ${config.type === 'BIRTHDAY' ? 'bg-purple-500' : 'bg-red-600'}`} />
-                                            <p className={`text-xs font-black uppercase tracking-widest ${config.type === 'BIRTHDAY' ? 'text-purple-400' : 'text-red-500'}`}>
-                                                {config.author || (config.type === 'BIRTHDAY' ? 'Birthday Person' : 'Author Name')}
+                                        {/* Left Side: Content */}
+                                        <div className="flex-1 relative z-10">
+                                            {config.type === 'BIRTHDAY' ? (
+                                                <div className="absolute -top-6 -right-2 w-24 h-24 text-purple-500/10 -rotate-12 text-6xl flex justify-center items-center select-none pointer-events-none">
+                                                    🎉
+                                                </div>
+                                            ) : (
+                                                <Quote className="absolute -top-6 -right-2 w-24 h-24 text-white/5 -rotate-12" />
+                                            )}
+
+                                            <p className="text-lg font-bold leading-tight italic mb-4 text-white relative z-10">
+                                                "{config.quote || (config.type === 'BIRTHDAY' ? 'Wishing you a fantastic year ahead!' : 'Enter your visionary message to see it in action...')}"
                                             </p>
+                                            <div className="flex items-center gap-3 relative z-10">
+                                                <div className={`w-8 h-[2px] rounded-full ${config.type === 'BIRTHDAY' ? 'bg-purple-500' : 'bg-red-600'}`} />
+                                                <p className={`text-xs font-black uppercase tracking-widest ${config.type === 'BIRTHDAY' ? 'text-purple-400' : 'text-red-500'}`}>
+                                                    {config.author || (config.type === 'BIRTHDAY' ? 'Birthday Person' : 'Author Name')}
+                                                </p>
+                                            </div>
                                         </div>
+
+                                        {/* Right Side: Image */}
+                                        {config.imageUrl && (
+                                            <motion.img
+                                                src={previewImage}
+                                                className="h-32 w-auto object-contain z-20 relative -mb-8 -mr-4 mask-image-gradient"
+                                                initial={{ y: 20 }}
+                                                animate={{ y: 0 }}
+                                                transition={{ repeat: Infinity, duration: 3, repeatType: "reverse", ease: "easeInOut" }}
+                                            />
+                                        )}
                                     </div>
                                 </motion.div>
                             )}
