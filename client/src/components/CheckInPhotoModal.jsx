@@ -74,6 +74,13 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
 
         try {
             setError(null);
+
+            // Safety Check for Secure Context (HTTPS)
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                setError("Camera access requires a secure connection (HTTPS). Please check your server setup.");
+                return;
+            }
+
             const mediaStream = await navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: facingMode,
@@ -87,7 +94,7 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             }
         } catch (err) {
             console.error("Camera Error:", err);
-            setError("Unable to access camera. Please check permissions.");
+            setError("Unable to access camera. Please check permissions and ensure your site is running on HTTPS.");
         }
     };
 
@@ -96,21 +103,24 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
         setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
     };
 
-    // Restart camera whenever facingMode changes or Modal is opened
+    // 1. Effect to Handle Initialization (Reset states when modal opens)
     useEffect(() => {
         if (isOpen) {
-            // Reset state for new session
-            if (!stream) {
-                setPhoto(null);
-                setPreview(null);
-                setError(null);
-            }
-            if (!photo) {
-                startCamera();
-            }
+            setPhoto(null);
+            setPreview(null);
+            setError(null);
+            setLocation({ lat: null, lng: null, areaName: 'Fetching location...' });
         } else {
             stopCamera();
         }
+    }, [isOpen]);
+
+    // 2. Effect to Handle Camera Lifecycle
+    useEffect(() => {
+        if (isOpen && !photo) {
+            startCamera();
+        }
+        // No else/cleanup here to avoid interrupting state
     }, [facingMode, isOpen, photo]);
 
     // Stop Camera
