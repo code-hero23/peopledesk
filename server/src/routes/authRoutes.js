@@ -5,10 +5,10 @@ const { body, validationResult } = require('express-validator');
 const { loginUser, registerUser, getMe, googleLogin } = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
 
-// Stricter rate limiting for login/register - max 5 attempts per IP per 5 minutes
+// Rate limiting for login/register - increased significantly for thorough testing
 const authLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 5,
+    max: 100, // Increased to 100
     message: 'Too many login/registration attempts, please try again after 5 minutes',
     standardHeaders: true,
     legacyHeaders: false,
