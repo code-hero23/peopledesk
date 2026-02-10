@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Megaphone, Plus, Trash2, Edit2, AlertCircle, Info, ScrollText, Calendar, X, Save, Clock, User } from 'lucide-react';
+import { Megaphone, Plus, Trash2, Edit2, X, Save } from 'lucide-react';
 import axios from 'axios';
 
 const AnnouncementManagement = () => {
@@ -57,22 +57,20 @@ const AnnouncementManagement = () => {
             setEditingAnnouncement(null);
             setFormData({ title: '', content: '', type: 'INFO', priority: 'LOW', expiresAt: '' });
             fetchAnnouncements();
-            setTimeout(() => setMessage(null), 3000);
         } catch (error) {
             setMessage({ type: 'error', text: error.response?.data?.message || 'Error saving announcement' });
         }
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to deactivate this announcement?')) return;
+        if (!window.confirm('Are you sure you want to delete this announcement?')) return;
         try {
             const user = JSON.parse(localStorage.getItem('user'));
             await axios.delete(`${API_URL}/announcements/${id}`, {
                 headers: { Authorization: `Bearer ${user.token}` }
             });
-            setMessage({ type: 'success', text: 'Announcement deactivated successfully!' });
+            setMessage({ type: 'success', text: 'Announcement deleted successfully!' });
             fetchAnnouncements();
-            setTimeout(() => setMessage(null), 3000);
         } catch (error) {
             setMessage({ type: 'error', text: 'Error deleting announcement' });
         }
@@ -90,27 +88,12 @@ const AnnouncementManagement = () => {
         setIsModalOpen(true);
     };
 
-    const getIcon = (type) => {
-        switch (type) {
-            case 'RULE': return <ScrollText className="w-5 h-5" />;
-            case 'EVENT': return <Calendar className="w-5 h-5" />;
-            case 'NEWS': return <Megaphone className="w-5 h-5" />;
-            default: return <Info className="w-5 h-5" />;
-        }
-    };
-
     return (
-        <div className="space-y-8 animate-fade-in pb-20">
-            {/* Header Area */}
-            <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm flex flex-col md:flex-row justify-between items-center gap-6">
-                <div className="flex items-center gap-6">
-                    <div className="w-16 h-16 rounded-3xl bg-blue-600 flex items-center justify-center text-white shadow-xl shadow-blue-500/20">
-                        <Megaphone size={30} />
-                    </div>
-                    <div>
-                        <h2 className="text-3xl font-black text-slate-800 tracking-tight">Announcement Center</h2>
-                        <p className="text-slate-500 font-medium">Broadcast news, rules, and updates team-wide</p>
-                    </div>
+        <div className="space-y-6 animate-fade-in">
+            <div className="flex justify-between items-center bg-white p-6 rounded-2xl border border-slate-100 shadow-sm">
+                <div>
+                    <h2 className="text-2xl font-bold text-slate-800">Company Announcements</h2>
+                    <p className="text-slate-500 text-sm">Circulate news, rules, and updates to all employees</p>
                 </div>
                 <button
                     onClick={() => {
@@ -118,175 +101,91 @@ const AnnouncementManagement = () => {
                         setFormData({ title: '', content: '', type: 'INFO', priority: 'LOW', expiresAt: '' });
                         setIsModalOpen(true);
                     }}
-                    className="group bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-2xl flex items-center gap-3 shadow-2xl transition-all active:scale-95"
+                    className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl flex items-center gap-2 transition-all active:scale-95"
                 >
-                    <Plus size={20} className="group-hover:rotate-90 transition-transform" />
-                    <span className="font-bold">Post Update</span>
+                    <Plus size={20} />
+                    <span>New Announcement</span>
                 </button>
             </div>
 
             {message && (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.9, y: -20 }}
-                    animate={{ opacity: 1, scale: 1, y: 0 }}
-                    className={`p-6 rounded-[1.5rem] border flex items-center gap-4 ${message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}
-                >
-                    <div className={`w-10 h-10 rounded-full flex items-center justify-center ${message.type === 'success' ? 'bg-emerald-200' : 'bg-red-200'}`}>
-                        {message.type === 'success' ? '✓' : '!'}
-                    </div>
-                    <span className="font-bold">{message.text}</span>
-                </motion.div>
+                <div className={`p-4 rounded-xl border ${message.type === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' : 'bg-red-50 border-red-200 text-red-700'}`}>
+                    {message.text}
+                </div>
             )}
 
-            {/* List Grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                <AnimatePresence>
-                    {announcements.map((announcement) => (
-                        <motion.div
-                            key={announcement.id}
-                            layout
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, scale: 0.9 }}
-                            className="bg-white border-2 border-slate-50 rounded-[2rem] p-8 shadow-sm hover:shadow-xl hover:border-blue-100 transition-all group relative overflow-hidden h-full flex flex-col"
-                        >
-                            {/* Priority Badge */}
-                            <div className="flex justify-between items-start mb-6">
-                                <span className={`text-[10px] font-black uppercase tracking-[0.2em] px-3 py-1 rounded-full border 
-                                    ${announcement.priority === 'URGENT' ? 'bg-red-500 text-white border-red-400 animate-pulse' :
-                                        announcement.priority === 'HIGH' ? 'bg-orange-500 text-white border-orange-400' :
-                                            'bg-slate-100 text-slate-600 border-slate-200'}
-                                `}>
-                                    {announcement.priority}
-                                </span>
-
-                                <div className="flex gap-1">
-                                    <button onClick={() => openEditModal(announcement)} className="p-2 rounded-xl text-slate-400 hover:bg-blue-50 hover:text-blue-600 transition-all">
-                                        <Edit2 size={18} />
-                                    </button>
-                                    <button onClick={() => handleDelete(announcement.id)} className="p-2 rounded-xl text-slate-400 hover:bg-red-50 hover:text-red-600 transition-all">
-                                        <Trash2 size={18} />
-                                    </button>
-                                </div>
+                {announcements.map((announcement) => (
+                    <div key={announcement.id} className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm relative group">
+                        <div className="flex justify-between items-start mb-4">
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border 
+                                ${announcement.priority === 'URGENT' ? 'bg-red-50 border-red-200 text-red-600' : 'bg-slate-50 border-slate-200 text-slate-600'}
+                            `}>
+                                {announcement.priority}
+                            </span>
+                            <div className="flex gap-2">
+                                <button onClick={() => openEditModal(announcement)} className="p-1.5 text-slate-400 hover:text-blue-600 transition-colors">
+                                    <Edit2 size={16} />
+                                </button>
+                                <button onClick={() => handleDelete(announcement.id)} className="p-1.5 text-slate-400 hover:text-red-600 transition-colors">
+                                    <Trash2 size={16} />
+                                </button>
                             </div>
-
-                            <div className="flex items-center gap-4 mb-4">
-                                <div className="w-10 h-10 rounded-xl bg-slate-50 flex items-center justify-center text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">
-                                    {getIcon(announcement.type)}
-                                </div>
-                                <h4 className="font-black text-slate-800 text-lg leading-tight group-hover:text-blue-700 transition-colors">{announcement.title}</h4>
-                            </div>
-
-                            <p className="text-slate-500 text-sm leading-relaxed mb-8 flex-1 line-clamp-4 italic">
-                                "{announcement.content}"
-                            </p>
-
-                            <div className="mt-auto space-y-3 pt-6 border-t border-slate-50">
-                                <div className="flex items-center gap-2 text-slate-400">
-                                    <User size={14} />
-                                    <span className="text-[10px] font-bold uppercase tracking-widest">{announcement.author.name}</span>
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="flex items-center gap-2 text-slate-400">
-                                        <Clock size={14} />
-                                        <span className="text-[10px] font-bold uppercase tracking-widest">{new Date(announcement.createdAt).toLocaleDateString()}</span>
-                                    </div>
-                                    <span className="text-[10px] font-black text-blue-600/50 uppercase tracking-widest">{announcement.type}</span>
-                                </div>
-                            </div>
-                        </motion.div>
-                    ))}
-                </AnimatePresence>
+                        </div>
+                        <h4 className="font-bold text-slate-800 mb-2">{announcement.title}</h4>
+                        <p className="text-slate-600 text-sm mb-4 line-clamp-3 leading-relaxed">{announcement.content}</p>
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                            <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{announcement.type}</span>
+                        </div>
+                    </div>
+                ))}
             </div>
 
-            {/* Premium Post Modal */}
             <AnimatePresence>
                 {isModalOpen && (
-                    <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md"
-                    >
-                        <motion.div
-                            initial={{ scale: 0.95, y: 20, opacity: 0 }}
-                            animate={{ scale: 1, y: 0, opacity: 1 }}
-                            exit={{ scale: 0.95, y: 20, opacity: 0 }}
-                            className="bg-white rounded-[2.5rem] p-10 w-full max-w-xl shadow-2xl relative overflow-hidden"
-                        >
-                            <button onClick={() => setIsModalOpen(false)} className="absolute top-8 right-8 p-2 rounded-full hover:bg-slate-100 text-slate-400 transition-colors">
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                        <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }} className="bg-white rounded-3xl p-8 w-full max-w-lg shadow-2xl relative">
+                            <button onClick={() => setIsModalOpen(false)} className="absolute top-6 right-6 text-slate-400 hover:text-slate-600">
                                 <X size={24} />
                             </button>
-
-                            <div className="mb-8">
-                                <h3 className="text-3xl font-black text-slate-800 mb-2">{editingAnnouncement ? 'Edit Notice' : 'New Broadcast'}</h3>
-                                <p className="text-slate-500">Post an update that everyone will see.</p>
-                            </div>
-
-                            <form onSubmit={handleSave} className="space-y-6">
+                            <h3 className="text-2xl font-bold text-slate-800 mb-6">{editingAnnouncement ? 'Edit' : 'Post'} Announcement</h3>
+                            <form onSubmit={handleSave} className="space-y-4">
                                 <div>
-                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Notice Title</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all font-bold text-slate-800"
-                                        value={formData.title}
-                                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                                        placeholder="e.g. New Office Timings"
-                                    />
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Announcement Title</label>
+                                    <input type="text" required className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} />
                                 </div>
-
                                 <div>
-                                    <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Message Content</label>
-                                    <textarea
-                                        required
-                                        rows={4}
-                                        className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:bg-white focus:border-blue-500 outline-none transition-all font-medium text-slate-700"
-                                        value={formData.content}
-                                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                                        placeholder="What's the update?"
-                                    />
+                                    <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Notice Content</label>
+                                    <textarea required rows={4} className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 outline-none transition-all" value={formData.content} onChange={(e) => setFormData({ ...formData, content: e.target.value })} />
                                 </div>
-
-                                <div className="grid grid-cols-2 gap-6">
+                                <div className="grid grid-cols-2 gap-4">
                                     <div>
-                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Category</label>
-                                        <select
-                                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent outline-none font-bold text-slate-700"
-                                            value={formData.type}
-                                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                                        >
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Type</label>
+                                        <select className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.type} onChange={(e) => setFormData({ ...formData, type: e.target.value })}>
                                             <option value="INFO">Information</option>
-                                            <option value="RULE">Office Law/Rule</option>
-                                            <option value="NEWS">Big News</option>
-                                            <option value="EVENT">Event/Celebration</option>
+                                            <option value="RULE">New Rule</option>
+                                            <option value="NEWS">Company News</option>
+                                            <option value="EVENT">Upcoming Event</option>
                                         </select>
                                     </div>
                                     <div>
-                                        <label className="block text-xs font-black text-slate-400 uppercase tracking-[0.2em] mb-2">Priority</label>
-                                        <select
-                                            className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent outline-none font-bold text-slate-700"
-                                            value={formData.priority}
-                                            onChange={(e) => setFormData({ ...formData, priority: e.target.value })}
-                                        >
-                                            <option value="LOW">Low (Casual)</option>
-                                            <option value="MEDIUM">Medium (Normal)</option>
-                                            <option value="HIGH">High (Important)</option>
-                                            <option value="URGENT">Urgent (Flash Notice)</option>
+                                        <label className="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Priority</label>
+                                        <select className="w-full px-4 py-3 rounded-xl border border-slate-200 outline-none" value={formData.priority} onChange={(e) => setFormData({ ...formData, priority: e.target.value })}>
+                                            <option value="LOW">Low</option>
+                                            <option value="MEDIUM">Medium</option>
+                                            <option value="HIGH">High</option>
+                                            <option value="URGENT">Urgent</option>
                                         </select>
                                     </div>
                                 </div>
-
-                                <button
-                                    type="submit"
-                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-2xl shadow-xl shadow-blue-500/20 transition-all active:scale-95 flex items-center justify-center gap-3 mt-4"
-                                >
-                                    <Save size={20} />
-                                    <span>{editingAnnouncement ? 'Save Changes' : 'Broadcast Now'}</span>
+                                <button type="submit" className="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl transition-all active:scale-95 flex items-center justify-center gap-2 mt-4">
+                                    <Megaphone size={20} />
+                                    <span>{editingAnnouncement ? 'Update Notice' : 'Broadcast Announcement'}</span>
                                 </button>
                             </form>
                         </motion.div>
-                    </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
         </div>
