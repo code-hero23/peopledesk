@@ -1,6 +1,17 @@
+const express = require('express');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const initAttendanceCron = require('./cron/attendanceCron');
+
+// Route Imports
+const authRoutes = require('./routes/authRoutes');
+const attendanceRoutes = require('./routes/attendanceRoutes');
+const workLogRoutes = require('./routes/workLogRoutes');
+const requestRoutes = require('./routes/requestRoutes');
+const adminRoutes = require('./routes/adminRoutes');
 
 const app = express();
 

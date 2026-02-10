@@ -26,15 +26,22 @@ Navigate to the server folder and update dependencies + database.
 cd server
 npm install
 npx prisma generate
-# CRITICAL: Use 'deploy' not 'dev' to preserve data
+
+# 🛡️ SAFE DATA UPDATE: Applies migrations without affecting existing data
 npx prisma migrate deploy
 ```
 
-Restart the backend process (assuming you use PM2):
+**Restart Backend (Running on Port 5001):**
 ```bash
-pm2 restart server  # or 'api' or whatever ID your process has
+# Verify your PM2 process name first
+pm2 list
+
+# Restart specifically
+pm2 restart all 
+# OR if you have a specific name
+pm2 restart server
 ```
-*To check status: `pm2 status`*
+*To verify it's running on 5001: `pm2 logs server`*
 
 ## 5. Update Frontend (Client)
 Navigate to the client folder and rebuild the assets.
