@@ -251,7 +251,10 @@ const closeWorkLog = async (req, res) => {
                     : undefined,
 
                 // Generic Updates
-                customFields: customFields ? customFields : undefined, // Replace/Update customFields
+                customFields: customFields ? {
+                    ...(existingLog.customFields && typeof existingLog.customFields === 'object' ? existingLog.customFields : {}),
+                    ...customFields
+                } : undefined, // Merge customFields
                 process: process || undefined,
                 remarks: remarks || undefined
             }
