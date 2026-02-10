@@ -24,7 +24,6 @@ function App() {
   return (
     <>
       <PWAFresher />
-      <SupportButton />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />

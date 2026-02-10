@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import InspirationalPopup from './common/InspirationalPopup';
 import InstallApp from './InstallApp';
+import SupportButton from './common/SupportButton';
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -238,6 +239,7 @@ const Layout = () => {
             {/* Inspirational Popup */}
             <InspirationalPopup />
             <InstallApp />
+            <SupportButton />
         </div>
     );
 };

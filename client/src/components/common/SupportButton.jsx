@@ -10,7 +10,7 @@ const SupportButton = () => {
         <>
             <motion.button
                 onClick={() => setIsOpen(true)}
-                className="fixed bottom-6 left-6 z-[90] p-4 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-full text-white shadow-[0_0_30px_-5px_rgba(255,255,255,0.2)] hover:bg-slate-800 transition-all group overflow-hidden"
+                className="fixed bottom-24 right-6 z-[999] p-4 bg-slate-900/80 backdrop-blur-xl border border-white/10 rounded-full text-white shadow-[0_10px_30px_-5px_rgba(0,0,0,0.5)] hover:bg-slate-800 transition-all group overflow-hidden"
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 initial={{ opacity: 0, y: 20 }}

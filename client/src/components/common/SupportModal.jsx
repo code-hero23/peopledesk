@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Mail, Phone, MessageCircle, X, ExternalLink } from 'lucide-react';
+import { Mail, Phone, MessageCircle, X, ExternalLink, Headset } from 'lucide-react';
 
 const SupportModal = ({ onClose }) => {
     return (
@@ -7,7 +7,7 @@ const SupportModal = ({ onClose }) => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
             onClick={onClose}
         >
             <motion.div
@@ -41,7 +41,9 @@ const SupportModal = ({ onClose }) => {
 
                     <div className="space-y-3">
                         <a
-                            href="mailto:es.cookscape@gmail.com"
+                            href="https://mail.google.com/mail/?view=cm&fs=1&to=es.cookscape@gmail.com&su=Support Request - PeopleDesk&body=Hello Support Team,"
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="flex items-center gap-4 p-4 rounded-2xl bg-white/5 hover:bg-white/10 border border-white/5 hover:border-white/10 transition-all group"
                         >
                             <div className="p-3 rounded-full bg-red-500/10 text-red-400 group-hover:bg-red-500 group-hover:text-white transition-colors">
