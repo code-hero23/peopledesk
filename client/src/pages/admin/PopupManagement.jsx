@@ -8,7 +8,8 @@ const PopupManagement = () => {
         quote: '',
         author: '',
         imageUrl: '',
-        isActive: true
+        isActive: true,
+        type: 'INSPIRATIONAL'
     });
     const [previewImage, setPreviewImage] = useState(null);
     const [isUploading, setIsUploading] = useState(false);
@@ -136,17 +137,37 @@ const PopupManagement = () => {
                         </div>
 
                         <div>
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Inspirational Quote</label>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Popup Type</label>
+                            <div className="grid grid-cols-2 gap-4">
+                                <button
+                                    onClick={() => setConfig({ ...config, type: 'INSPIRATIONAL' })}
+                                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${config.type === 'INSPIRATIONAL' ? 'border-red-600 bg-red-600/10 text-white' : 'border-white/10 bg-black/20 text-slate-500 hover:border-white/20'}`}
+                                >
+                                    <Quote className="w-6 h-6" />
+                                    <span className="text-xs font-bold uppercase tracking-wider">Inspirational</span>
+                                </button>
+                                <button
+                                    onClick={() => setConfig({ ...config, type: 'BIRTHDAY' })}
+                                    className={`p-4 rounded-2xl border-2 transition-all flex flex-col items-center gap-2 ${config.type === 'BIRTHDAY' ? 'border-purple-500 bg-purple-500/10 text-white' : 'border-white/10 bg-black/20 text-slate-500 hover:border-white/20'}`}
+                                >
+                                    <span className="text-xl">🎉</span>
+                                    <span className="text-xs font-bold uppercase tracking-wider">Birthday Wish</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">{config.type === 'BIRTHDAY' ? 'Birthday Message' : 'Inspirational Quote'}</label>
                             <textarea
                                 value={config.quote}
                                 onChange={(e) => setConfig({ ...config, quote: e.target.value })}
                                 className="w-full p-6 bg-black/20 border border-white/10 rounded-3xl text-sm font-medium focus:border-red-600/50 outline-none transition-all h-32 resize-none"
-                                placeholder="Enter the visionary message here..."
+                                placeholder={config.type === 'BIRTHDAY' ? "Enter the birthday wish..." : "Enter the visionary message here..."}
                             />
                         </div>
 
                         <div>
-                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">Author Name</label>
+                            <label className="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-3 ml-1">{config.type === 'BIRTHDAY' ? 'Birthday Person Name' : 'Author Name'}</label>
                             <div className="relative">
                                 <User className="absolute left-6 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-600" />
                                 <input
@@ -154,7 +175,7 @@ const PopupManagement = () => {
                                     value={config.author}
                                     onChange={(e) => setConfig({ ...config, author: e.target.value })}
                                     className="w-full pl-14 pr-6 py-4 bg-black/20 border border-white/10 rounded-2xl text-sm font-bold focus:border-red-600/50 outline-none transition-all"
-                                    placeholder="Author Name"
+                                    placeholder={config.type === 'BIRTHDAY' ? "Name of the celebrant" : "Author Name"}
                                 />
                             </div>
                         </div>
@@ -224,14 +245,23 @@ const PopupManagement = () => {
                                     )}
 
                                     {/* Glass Quote Box */}
-                                    <div className="bg-white/10 backdrop-blur-2xl border border-white/20 p-8 pt-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden">
-                                        <Quote className="absolute -top-2 -right-2 w-24 h-24 text-white/5 -rotate-12" />
+                                    <div className={`backdrop-blur-2xl border p-8 pt-10 rounded-[2.5rem] shadow-2xl relative overflow-hidden ${config.type === 'BIRTHDAY' ? 'bg-purple-900/40 border-purple-500/30' : 'bg-white/10 border-white/20'}`}>
+                                        {config.type === 'BIRTHDAY' ? (
+                                            <div className="absolute -top-2 -right-2 w-24 h-24 text-purple-500/10 -rotate-12 text-6xl flex justify-center items-center select-none pointer-events-none">
+                                                🎉
+                                            </div>
+                                        ) : (
+                                            <Quote className="absolute -top-2 -right-2 w-24 h-24 text-white/5 -rotate-12" />
+                                        )}
+
                                         <p className="text-lg font-bold leading-tight italic mb-4 text-white relative z-10">
-                                            "{config.quote || 'Enter your visionary message to see it in action...'}"
+                                            "{config.quote || (config.type === 'BIRTHDAY' ? 'Wishing you a fantastic year ahead!' : 'Enter your visionary message to see it in action...')}"
                                         </p>
                                         <div className="flex items-center gap-3 relative z-10">
-                                            <div className="w-8 h-[2px] bg-red-600 rounded-full" />
-                                            <p className="text-xs font-black uppercase tracking-widest text-red-500">{config.author || 'Author Name'}</p>
+                                            <div className={`w-8 h-[2px] rounded-full ${config.type === 'BIRTHDAY' ? 'bg-purple-500' : 'bg-red-600'}`} />
+                                            <p className={`text-xs font-black uppercase tracking-widest ${config.type === 'BIRTHDAY' ? 'text-purple-400' : 'text-red-500'}`}>
+                                                {config.author || (config.type === 'BIRTHDAY' ? 'Birthday Person' : 'Author Name')}
+                                            </p>
                                         </div>
                                     </div>
                                 </motion.div>

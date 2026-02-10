@@ -15,7 +15,7 @@ exports.getPopupConfig = async (req, res) => {
 
 // Create or update popup config
 exports.updatePopupConfig = async (req, res) => {
-    const { quote, author, isActive, imageUrl } = req.body;
+    const { quote, author, isActive, imageUrl, type } = req.body;
     try {
         // We only keep one main config for now, but we can have history.
         // For simplicity, we find the first one or create a new one.
@@ -28,7 +28,8 @@ exports.updatePopupConfig = async (req, res) => {
                     quote: quote !== undefined ? quote : config.quote,
                     author: author !== undefined ? author : config.author,
                     isActive: isActive !== undefined ? isActive : config.isActive,
-                    imageUrl: imageUrl !== undefined ? imageUrl : config.imageUrl
+                    imageUrl: imageUrl !== undefined ? imageUrl : config.imageUrl,
+                    type: type !== undefined ? type : config.type
                 }
             });
         } else {
@@ -37,7 +38,8 @@ exports.updatePopupConfig = async (req, res) => {
                     quote: quote || "Inspiration of the day",
                     author: author || "Visionary",
                     isActive: isActive !== undefined ? isActive : true,
-                    imageUrl: imageUrl || ""
+                    imageUrl: imageUrl || "",
+                    type: type || "INSPIRATIONAL"
                 }
             });
         }
