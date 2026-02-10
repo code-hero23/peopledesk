@@ -23,6 +23,7 @@ import {
 import InspirationalPopup from './common/InspirationalPopup';
 import InstallApp from './InstallApp';
 import SupportButton from './common/SupportButton';
+import NoticeBoard from './common/NoticeBoard';
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -237,6 +238,7 @@ const Layout = () => {
                 </header>
 
                 <main className="flex-1 p-6 md:p-8 overflow-y-auto">
+                    {!['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && <NoticeBoard />}
                     <Outlet />
                 </main>
             </div>

@@ -20,7 +20,6 @@ import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm'
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { getDeviceType } from '../../utils/deviceUtils';
-import NoticeBoard from '../../components/common/NoticeBoard';
 
 const Overview = () => {
     const dispatch = useDispatch();
@@ -291,8 +290,6 @@ const Overview = () => {
                     {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
                 </div>
             </div>
-
-            <NoticeBoard />
 
             {/* Main Action Grid */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
