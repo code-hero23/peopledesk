@@ -17,7 +17,8 @@ import {
     RefreshCw,
     Camera,
     MapPin,
-    BarChart3
+    BarChart3,
+    Megaphone
 } from 'lucide-react';
 import InspirationalPopup from './common/InspirationalPopup';
 import InstallApp from './InstallApp';
@@ -155,6 +156,9 @@ const Layout = () => {
 
                             {user?.role === 'ADMIN' && (
                                 <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
+                            )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                                <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" />
                             )}
                         </>
                     ) : (

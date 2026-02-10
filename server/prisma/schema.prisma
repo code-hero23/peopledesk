@@ -27,6 +27,7 @@ model User {
   showroomVisitRequests ShowroomVisitRequest[]
   siteVisitRequests     SiteVisitRequest[]
   workLogs              WorkLog[]
+  announcements         Announcement[]         @relation("AuthorAnnouncements")
 }
 
 model SiteVisitRequest {
@@ -288,6 +289,34 @@ model PopupConfig {
 enum PopupType {
   INSPIRATIONAL
   BIRTHDAY
+}
+
+model Announcement {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  type      AnnouncementType @default(INFO)
+  priority  Priority @default(LOW)
+  isActive  Boolean  @default(true)
+  expiresAt DateTime?
+  authorId  Int
+  author    User     @relation("AuthorAnnouncements", fields: [authorId], references: [id])
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum AnnouncementType {
+  INFO
+  RULE
+  NEWS
+  EVENT
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
 }
 
 enum Role {
