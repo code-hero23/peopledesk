@@ -61,6 +61,27 @@ const NoticeBoard = () => {
         setCurrentIndex((prev) => (prev - 1 + announcements.length) % announcements.length);
     };
 
+    const renderContent = (content) => {
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        return content.split(urlRegex).map((part, i) => {
+            if (part.match(urlRegex)) {
+                return (
+                    <a
+                        key={i}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30 transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {part}
+                    </a>
+                );
+            }
+            return part;
+        });
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: -20 }}
@@ -97,8 +118,8 @@ const NoticeBoard = () => {
                                 {currentNotice.title}
                             </h3>
 
-                            <p className="text-slate-400 text-sm leading-relaxed line-clamp-2 md:line-clamp-none">
-                                {currentNotice.content}
+                            <p className="text-slate-400 text-sm leading-relaxed line-clamp-2 md:line-clamp-none whitespace-pre-wrap">
+                                {renderContent(currentNotice.content)}
                             </p>
                         </div>
 
