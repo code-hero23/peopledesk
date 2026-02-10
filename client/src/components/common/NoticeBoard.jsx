@@ -110,7 +110,7 @@ const NoticeBoard = () => {
                                     {currentNotice.priority}
                                 </span>
                                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                                    {new Date(currentNotice.createdAt).toLocaleDateString()} • By {currentNotice.author.name}
+                                    {new Date(currentNotice.createdAt).toLocaleDateString()}
                                 </span>
                             </div>
 
