@@ -77,112 +77,136 @@ const InspirationalPopup = () => {
         <AnimatePresence>
             {isVisible && (
                 <motion.div
-                    initial={{ y: 200, opacity: 0 }}
-                    animate={{ y: 0, opacity: 1 }}
-                    exit={{ y: 200, opacity: 0 }}
-                    transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                    className="fixed bottom-8 right-8 z-[100] w-[calc(100%-4rem)] max-w-[450px] pointer-events-none"
+                    initial={{ y: 100, opacity: 0, scale: 0.9 }}
+                    animate={{ y: 0, opacity: 1, scale: 1 }}
+                    exit={{ y: 100, opacity: 0, scale: 0.9 }}
+                    transition={{ type: "spring", damping: 20, stiffness: 300 }}
+                    className="fixed bottom-6 right-6 z-[100] w-[calc(100%-3rem)] max-w-[500px] pointer-events-none font-sans"
                 >
-                    <div className="relative pointer-events-auto">
-                        {/* Container */}
+                    <div className="relative pointer-events-auto group">
+                        {/* Premium Container */}
                         <div className={`
-                            ${isBirthday ? 'bg-purple-900/95 border-purple-500/30' : 'bg-slate-900/95 border-white/10'}
-                            backdrop-blur-3xl border rounded-[2rem] shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)] flex items-center ring-1 ring-white/10 relative overflow-hidden
+                            ${isBirthday
+                                ? 'bg-gradient-to-br from-purple-900/95 via-purple-800/95 to-indigo-900/95 border-purple-400/30 shadow-[0_0_50px_-10px_rgba(168,85,247,0.4)]'
+                                : 'bg-slate-900/95 border-white/10 shadow-[0_30px_60px_-15px_rgba(0,0,0,0.8)]'
+                            }
+                            backdrop-blur-3xl border rounded-[2.5rem] flex items-stretch ring-1 ring-white/10 relative overflow-hidden transition-all duration-500
                         `}>
 
-                            {/* Birthday Confetti/Sparkles Effect */}
+                            {/* Birthday Confetti Effect */}
                             {isBirthday && (
                                 <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                                    {[...Array(20)].map((_, i) => (
+                                    {[...Array(30)].map((_, i) => (
                                         <motion.div
                                             key={i}
-                                            className="absolute w-2 h-2 rounded-full"
+                                            className="absolute rounded-full"
                                             style={{
-                                                backgroundColor: ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32'][i % 4],
+                                                width: Math.random() * 6 + 4 + 'px',
+                                                height: Math.random() * 6 + 4 + 'px',
+                                                backgroundColor: ['#FFD700', '#FF69B4', '#00BFFF', '#32CD32', '#FFF'][i % 5],
                                                 left: `${Math.random() * 100}%`,
                                                 top: `${Math.random() * 100}%`,
+                                                borderRadius: i % 2 === 0 ? '50%' : '2px',
                                             }}
                                             animate={{
-                                                y: [0, -100],
+                                                y: [0, -120],
+                                                x: [0, (i % 2 === 0 ? 20 : -20)],
                                                 opacity: [0, 1, 0],
+                                                rotate: [0, 360],
                                                 scale: [0.5, 1.2, 0.5],
                                             }}
                                             transition={{
-                                                duration: 2 + Math.random() * 2,
+                                                duration: 3 + Math.random() * 2,
                                                 repeat: Infinity,
                                                 ease: "linear",
-                                                delay: Math.random() * 2
+                                                delay: Math.random() * 3
                                             }}
                                         />
                                     ))}
                                 </div>
                             )}
 
-                            {/* Left Side: Author Cutout Image Container */}
+                            {/* Left Side: Author Cutout Image */}
                             {config.imageUrl && (
-                                <div className="hidden sm:block w-1/3 relative h-48 ml-4 pointer-events-none">
+                                <div className="hidden sm:block w-[180px] relative flex-shrink-0 mt-auto self-end">
                                     <motion.img
                                         src={`${API_URL}${config.imageUrl}`}
                                         alt={config.author}
-                                        className="absolute bottom-0 left-0 h-52 object-contain z-20 drop-shadow-[0_10px_20px_rgba(0,0,0,0.5)] scale-110 origin-bottom"
+                                        className="w-full h-[240px] object-cover object-top mask-image-gradient"
+                                        style={{
+                                            maskImage: 'linear-gradient(to top, black 80%, transparent 100%)',
+                                            WebkitMaskImage: 'linear-gradient(to top, black 80%, transparent 100%)'
+                                        }}
                                         initial={{ y: 20, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ duration: 0.8 }}
                                     />
+                                    {/* Glow behind image specifically for birthday */}
+                                    {isBirthday && (
+                                        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-full h-1/2 bg-purple-500/30 blur-[40px] -z-10" />
+                                    )}
                                 </div>
                             )}
 
-                            {/* Mobile Image (Small & Circular) */}
-                            <div className={`sm:hidden w-16 h-16 rounded-full overflow-hidden border-2 ${isBirthday ? 'border-purple-400' : 'border-blue-500/30'} m-4 flex-shrink-0`}>
+                            {/* Mobile Image */}
+                            <div className={`sm:hidden w-16 h-16 rounded-2xl overflow-hidden border-2 ${isBirthday ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-blue-500/30'} m-5 flex-shrink-0 self-start`}>
                                 <img src={`${API_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
                             </div>
 
-                            {/* Right Side: Quote Content */}
-                            <div className="flex-1 p-6 md:p-8 relative z-10">
-                                {/* Decorative elements */}
+                            {/* Right Side: Content */}
+                            <div className="flex-1 p-8 pl-4 flex flex-col justify-center relative z-10 min-h-[220px]">
+                                {/* Decorative Icon */}
                                 {isBirthday ? (
-                                    <div className="absolute top-2 right-4 text-4xl animate-bounce pointer-events-none">
+                                    <div className="absolute top-4 right-6 text-5xl animate-bounce-slow opacity-20 pointer-events-none filter blur-[1px]">
                                         🎂
                                     </div>
                                 ) : (
-                                    <Quote className="absolute top-2 right-4 w-12 h-12 text-blue-500/5 -rotate-12 pointer-events-none" />
+                                    <Quote className="absolute top-6 right-8 w-16 h-16 text-white/5 -rotate-12 pointer-events-none" />
                                 )}
 
                                 <motion.div
-                                    initial={{ opacity: 0, x: 10 }}
+                                    initial={{ opacity: 0, x: 20 }}
                                     animate={{ opacity: 1, x: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="relative z-10"
+                                    transition={{ delay: 0.2, type: "spring" }}
+                                    className="relative z-10 space-y-4"
                                 >
-                                    <p className={`text-lg md:text-xl font-extrabold leading-tight italic ${isBirthday ? 'text-purple-100' : 'text-white'} mb-6 pr-6`}>
-                                        "{config.quote}"
-                                    </p>
+                                    {/* Quote/Message */}
+                                    <div className="relative">
+                                        <span className={`absolute -top-4 -left-2 text-4xl ${isBirthday ? 'text-purple-300' : 'text-slate-600'} opacity-30 font-serif`}>“</span>
+                                        <p className={`text-xl md:text-2xl font-bold leading-relaxed tracking-tight ${isBirthday ? 'text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-100 to-purple-200' : 'text-white'} drop-shadow-sm`}>
+                                            {config.quote}
+                                        </p>
+                                        <span className={`absolute -bottom-4 -right-2 text-4xl ${isBirthday ? 'text-purple-300' : 'text-slate-600'} opacity-30 font-serif`}>”</span>
+                                    </div>
 
-                                    <div className="flex items-center gap-3">
-                                        <div className={`h-[2px] w-8 ${isBirthday ? 'bg-purple-500' : 'bg-red-600'} rounded-full`} />
+                                    {/* Divider & Author */}
+                                    <div className="pt-2 flex items-center gap-4">
+                                        <div className={`h-[3px] w-12 ${isBirthday ? 'bg-gradient-to-r from-purple-400 to-pink-400' : 'bg-red-600'} rounded-full shadow-lg`} />
+
                                         <div className="flex flex-col">
-                                            <p className={`text-[11px] font-black uppercase tracking-[0.15em] ${isBirthday ? 'text-purple-400' : 'text-red-500'}`}>
+                                            <p className={`text-xs font-black uppercase tracking-[0.2em] ${isBirthday ? 'text-purple-300' : 'text-red-500'}`}>
                                                 {config.author}
                                             </p>
-                                            <p className="text-[9px] font-bold text-slate-500 uppercase tracking-widest">
-                                                {isBirthday ? 'Birthday Wish' : 'Visionary Spotlight'}
+                                            <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest mt-0.5">
+                                                {isBirthday ? '🎉 Birthday & Celebration' : '✨ Visionary Spotlight'}
                                             </p>
                                         </div>
                                     </div>
                                 </motion.div>
-
-                                {/* Improved Close Button */}
-                                <button
-                                    onClick={() => setIsVisible(false)}
-                                    className={`absolute top-4 right-4 p-2 rounded-full ${isBirthday ? 'bg-purple-500/20 text-purple-200 hover:bg-purple-500' : 'bg-white/5 text-white/30 hover:bg-red-600/80 hover:text-white'} transition-all z-30 border border-white/10`}
-                                    title="Close"
-                                >
-                                    <X size={14} />
-                                </button>
                             </div>
 
-                            {/* Animated Background Pulse */}
-                            <div className={`absolute top-0 right-0 w-32 h-32 ${isBirthday ? 'bg-purple-600/20' : 'bg-blue-600/5'} blur-[50px] -z-10 animate-pulse`} />
+                            {/* Close Button */}
+                            <button
+                                onClick={() => setIsVisible(false)}
+                                className={`absolute top-4 right-4 p-2.5 rounded-full ${isBirthday ? 'bg-black/20 text-white/60 hover:bg-white/20 hover:text-white' : 'bg-white/5 text-white/30 hover:bg-red-600 hover:text-white'} transition-all duration-300 z-50 backdrop-blur-sm opacity-0 group-hover:opacity-100`}
+                                title="Close"
+                            >
+                                <X size={16} />
+                            </button>
+
+                            {/* Background Atmosphere */}
+                            <div className={`absolute top-0 right-0 w-64 h-64 ${isBirthday ? 'bg-pink-600/20' : 'bg-blue-600/5'} blur-[80px] -z-10 animate-pulse-slow`} />
+                            <div className={`absolute bottom-0 left-0 w-48 h-48 ${isBirthday ? 'bg-purple-600/20' : 'bg-red-600/5'} blur-[60px] -z-10`} />
                         </div>
                     </div>
                 </motion.div>
