@@ -1,28 +1,54 @@
-const express = require('express');
-const cors = require('cors');
-const helmet = require('helmet');
-const morgan = require('morgan');
-const authRoutes = require('./routes/authRoutes');
-const attendanceRoutes = require('./routes/attendanceRoutes');
-const workLogRoutes = require('./routes/workLogRoutes');
-const requestRoutes = require('./routes/requestRoutes');
-const adminRoutes = require('./routes/adminRoutes');
-
-const app = express();
-
+const rateLimit = require('express-rate-limit');
 const path = require('path');
 const initAttendanceCron = require('./cron/attendanceCron');
+
+const app = express();
 
 // Initialize Cron Jobs
 initAttendanceCron();
 
-// Middlewares
+// Security Middlewares
+app.use(helmet({
+    contentSecurityPolicy: {
+        directives: {
+            defaultSrc: ["'self'"],
+            scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com"],
+            styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+            imgSrc: ["'self'", "data:", "blob:", "https://*.googleusercontent.com"],
+            connectSrc: ["'self'", "https://accounts.google.com"],
+            fontSrc: ["'self'", "https://fonts.gstatic.com"],
+            objectSrc: ["'none'"],
+            upgradeInsecureRequests: [],
+        },
+    },
+    referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+})); // Set security headers
+
+// Hardened CORS
+const corsOptions = {
+    origin: process.env.CLIENT_URL || '*', // In production, replace '*' with your actual frontend URL
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+};
+app.use(cors(corsOptions));
+
+// Global Rate Limiting
+const globalLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 100, // Limit each IP to 100 requests per windowMs
+    message: 'Too many requests from this IP, please try again after 15 minutes',
+    standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+    legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+app.use('/api/', globalLimiter);
+
+// Body Parser
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ limit: '10mb', extended: true }));
-app.use(cors());
+
 app.use('/uploads', express.static(path.join(__dirname, '../uploads')));
 app.use('/api/uploads', express.static(path.join(__dirname, '../uploads')));
-app.use(helmet());
 app.use(morgan('dev'));
 
 // Routes

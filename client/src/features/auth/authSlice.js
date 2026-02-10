@@ -24,10 +24,17 @@ export const login = createAsyncThunk('auth/login', async (user, thunkAPI) => {
         }
         return response.data;
     } catch (error) {
-        const message =
-            (error.response && error.response.data && error.response.data.message) ||
-            error.message ||
-            error.toString();
+        let message = '';
+        if (error.response && error.response.data) {
+            if (error.response.data.errors && Array.isArray(error.response.data.errors)) {
+                // Handle express-validator errors
+                message = error.response.data.errors.map(err => err.msg).join(', ');
+            } else {
+                message = error.response.data.message || error.message || error.toString();
+            }
+        } else {
+            message = error.message || error.toString();
+        }
 
         if (error.response && error.response.status === 403) {
             return thunkAPI.rejectWithValue({
