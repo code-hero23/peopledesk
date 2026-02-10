@@ -96,10 +96,20 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
         setFacingMode(prev => prev === 'user' ? 'environment' : 'user');
     };
 
-    // Restart camera whenever facingMode changes
+    // Restart camera whenever facingMode changes or Modal is opened
     useEffect(() => {
-        if (isOpen && !photo) {
-            startCamera();
+        if (isOpen) {
+            // Reset state for new session
+            if (!stream) {
+                setPhoto(null);
+                setPreview(null);
+                setError(null);
+            }
+            if (!photo) {
+                startCamera();
+            }
+        } else {
+            stopCamera();
         }
     }, [facingMode, isOpen, photo]);
 
