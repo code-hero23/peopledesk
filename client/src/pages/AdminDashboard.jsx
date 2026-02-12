@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAllEmployees, getPendingRequests, reset } from '../features/admin/adminSlice';
+import { getAllEmployees, getPendingRequests, getDailyAttendance, reset } from '../features/admin/adminSlice';
 import StatCard from '../components/StatCard';
 import { Link, useNavigate } from 'react-router-dom';
 
@@ -9,34 +9,18 @@ import axios from 'axios';
 const AdminDashboard = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { employees, pendingRequests } = useSelector((state) => state.admin);
+    const { employees, pendingRequests, dailyAttendance } = useSelector((state) => state.admin);
     const { user } = useSelector((state) => state.auth);
-    const [todayPresentCount, setTodayPresentCount] = useState(0);
 
     useEffect(() => {
         dispatch(getAllEmployees());
         dispatch(getPendingRequests());
+        dispatch(getDailyAttendance());
 
-        // Fetch today's attendance
-        const fetchTodayAttendance = async () => {
-            try {
-                const config = {
-                    headers: {
-                        Authorization: `Bearer ${user.token}`,
-                    },
-                };
-                const response = await axios.get('/api/admin/attendance/daily', config);
-                // Count employees who have checked in today
-                const presentCount = response.data.filter(att => att.status === 'PRESENT').length;
-                setTodayPresentCount(presentCount);
-            } catch (error) {
-                console.error('Failed to fetch today\'s attendance:', error);
-            }
-        };
-
-        fetchTodayAttendance();
         return () => { dispatch(reset()); };
-    }, [dispatch, user.token]);
+    }, [dispatch]);
+
+    const todayPresentCount = dailyAttendance.filter(att => att.status === 'PRESENT').length;
 
     const onDownload = async (type) => {
         try {
@@ -77,9 +61,11 @@ const AdminDashboard = () => {
             </div>
 
             <div className="flex gap-3 flex-wrap">
-                <button onClick={() => navigate('/admin/employees')} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2">
-                    <span>➕</span> Add Employee
-                </button>
+                {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
+                    <button onClick={() => navigate('/admin/employees')} className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2">
+                        <span>➕</span> Add Employee
+                    </button>
+                )}
                 {/* Export Buttons - Visible only to HR */}
                 {user?.role === 'HR' && (
                     <>
@@ -95,7 +81,7 @@ const AdminDashboard = () => {
 
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {user?.role === 'ADMIN' && (
+                {['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role) && (
                     <>
                         <StatCard
                             title="Total Employees"
@@ -141,10 +127,14 @@ const AdminDashboard = () => {
 
             {/* Quick Links */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {user?.role === 'ADMIN' && (
+                {['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role) && (
                     <Link to="/admin/employees" className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all group">
-                        <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">👥 Manage Employees</h3>
-                        <p className="text-slate-500 text-sm mt-1">Add, edit, or remove team members.</p>
+                        <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">
+                            {['ADMIN', 'AE_MANAGER'].includes(user?.role) ? '👥 Manage Employees' : '👥 View Employees'}
+                        </h3>
+                        <p className="text-slate-500 text-sm mt-1">
+                            {['ADMIN', 'AE_MANAGER'].includes(user?.role) ? 'Add, edit, or remove team members.' : 'View team members and their details.'}
+                        </p>
                     </Link>
                 )}
 
@@ -156,7 +146,7 @@ const AdminDashboard = () => {
                 )}
 
                 <Link to="/admin/worklogs" className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hover:shadow-md transition-all group">
-                    <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">📂 View Work Logs</h3>
+                    <h3 className="text-lg font-bold text-slate-800 group-hover:text-blue-600 transition-colors">📂 View Work Reports</h3>
                     <p className="text-slate-500 text-sm mt-1">Monitor daily work submissions from all employees.</p>
                 </Link>
             </div>

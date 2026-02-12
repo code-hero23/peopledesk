@@ -102,19 +102,23 @@ const ManageEmployees = () => {
                         onChange={handleFileChange}
                         className="hidden"
                     />
-                    <button
-                        onClick={() => fileInputRef.current.click()}
-                        disabled={uploading}
-                        className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
-                    >
-                        <span>📂</span> {uploading ? 'Importing...' : 'Import Excel'}
-                    </button>
-                    <button
-                        onClick={handleAdd}
-                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
-                    >
-                        <span>➕</span> Add New Employee
-                    </button>
+                    {user?.role === 'ADMIN' && (
+                        <button
+                            onClick={() => fileInputRef.current.click()}
+                            disabled={uploading}
+                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
+                        >
+                            <span>📂</span> {uploading ? 'Importing...' : 'Import Excel'}
+                        </button>
+                    )}
+                    {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
+                        <button
+                            onClick={handleAdd}
+                            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
+                        >
+                            <span>➕</span> Add New Employee
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -184,32 +188,34 @@ const ManageEmployees = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        <div className="flex justify-end gap-2">
-                                            <button
-                                                onClick={() => handleStatusToggle(emp.id, emp.status)}
-                                                className={`p-2 rounded-lg transition-colors ${emp.status === 'ACTIVE'
-                                                    ? 'text-orange-500 hover:bg-orange-50 hover:text-orange-600'
-                                                    : 'text-green-500 hover:bg-green-50 hover:text-green-600'
-                                                    }`}
-                                                title={emp.status === 'ACTIVE' ? 'Block Access' : 'Unblock Access'}
-                                            >
-                                                {emp.status === 'ACTIVE' ? '🚫' : '✅'}
-                                            </button>
-                                            <button
-                                                onClick={() => handleEdit(emp)}
-                                                className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                                title="Edit"
-                                            >
-                                                ✏️
-                                            </button>
-                                            <button
-                                                onClick={() => handleDelete(emp.id)}
-                                                className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-                                                title="Delete permenantly"
-                                            >
-                                                🗑️
-                                            </button>
-                                        </div>
+                                        {user?.role === 'ADMIN' && (
+                                            <div className="flex justify-end gap-2">
+                                                <button
+                                                    onClick={() => handleStatusToggle(emp.id, emp.status)}
+                                                    className={`p-2 rounded-lg transition-colors ${emp.status === 'ACTIVE'
+                                                        ? 'text-orange-500 hover:bg-orange-50 hover:text-orange-600'
+                                                        : 'text-green-500 hover:bg-green-50 hover:text-green-600'
+                                                        }`}
+                                                    title={emp.status === 'ACTIVE' ? 'Block Access' : 'Unblock Access'}
+                                                >
+                                                    {emp.status === 'ACTIVE' ? '🚫' : '✅'}
+                                                </button>
+                                                <button
+                                                    onClick={() => handleEdit(emp)}
+                                                    className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    ✏️
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(emp.id)}
+                                                    className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                    title="Delete permenantly"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            </div>
+                                        )}
                                     </td>
                                 </tr>
                             ))}

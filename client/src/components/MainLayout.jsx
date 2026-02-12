@@ -140,7 +140,7 @@ const Layout = () => {
                                 <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
                             )}
 
-                            <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Logs" />
+                            <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
 
                             {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
@@ -165,7 +165,7 @@ const Layout = () => {
                     ) : (
                         <>
                             <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" exact />
-                            <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Logs" />
+                            <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                         </>
                     )}

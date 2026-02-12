@@ -440,7 +440,7 @@ const Overview = () => {
                 <div className="lg:col-span-2 flex flex-col gap-6">
                     {/* Stats Row */}
                     <div className="grid grid-cols-2 gap-4">
-                        <StatCard title="Total Logs" value={workLogs.length} icon="📝" color="blue" />
+                        <StatCard title="Total Reports" value={workLogs.length} icon="📝" color="blue" />
                         <StatCard title="Approved Leaves" value={requests.leaves.filter(l => l.status === 'APPROVED').length} icon="🏖️" color="orange" />
                     </div>
 

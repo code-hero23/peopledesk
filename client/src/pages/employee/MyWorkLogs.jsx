@@ -34,7 +34,7 @@ const MyWorkLogs = () => {
         <div className="space-y-6 animate-fade-in pb-20">
             <div className="flex justify-between items-center">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-800">My Work Logs</h2>
+                    <h2 className="text-3xl font-bold text-slate-800">My Work Reports</h2>
                     <p className="text-slate-500">History of your daily submitted reports.</p>
                 </div>
             </div>

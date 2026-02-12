@@ -188,7 +188,7 @@ const WorkLogs = () => {
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-800">Daily Work Logs</h2>
+                    <h2 className="text-3xl font-bold text-slate-800">Daily Work Reports</h2>
                     <p className="text-slate-500">Monitor employee work submissions.</p>
                 </div>
                 <div className="flex items-center gap-4">
