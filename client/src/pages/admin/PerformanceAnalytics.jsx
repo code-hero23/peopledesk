@@ -305,7 +305,7 @@ const PerformanceAnalytics = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {teamOverview.map((emp) => {
-                                const isHighAchiever = emp.efficiency >= 85 && emp.consistency >= 90;
+                                const isHighAchiever = emp.efficiency >= 97 && emp.consistency >= 95;
                                 const isLowPerformer = emp.efficiency < 50;
 
                                 return (
