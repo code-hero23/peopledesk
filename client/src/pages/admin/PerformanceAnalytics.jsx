@@ -281,8 +281,12 @@ const PerformanceAnalytics = () => {
                         <thead>
                             <tr className="bg-slate-50/50">
                                 <th className="pl-10 pr-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest">Employee</th>
-                                <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Efficiency Score</th>
-                                <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Consistency</th>
+                                <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                    Efficiency Score<br /><span className="inline-block mt-1 text-[10px] text-emerald-700 bg-emerald-100 border border-emerald-200 px-2 py-0.5 rounded-md font-black shadow-sm tracking-wide">WORKING HOURS</span>
+                                </th>
+                                <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">
+                                    Consistency<br /><span className="inline-block mt-1 text-[10px] text-violet-700 bg-violet-100 border border-violet-200 px-2 py-0.5 rounded-md font-black shadow-sm tracking-wide">LOGS & PUNCTUALITY</span>
+                                </th>
                                 <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-center">Presence</th>
                                 <th className="px-6 py-6 text-[11px] font-black text-slate-400 uppercase tracking-widest text-right pr-10">Detailed View</th>
                             </tr>
@@ -343,17 +347,24 @@ const PerformanceAnalytics = () => {
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="flex flex-col items-center">
-                                                <span className={`text-sm font-black mb-2 ${emp.efficiency >= 85 ? 'text-emerald-500' : emp.efficiency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.efficiency}%</span>
-                                                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                                <span className={`text-sm font-black mb-1 ${emp.efficiency >= 85 ? 'text-emerald-500' : emp.efficiency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.efficiency}%</span>
+                                                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mb-2">
                                                     <div className={`h-full rounded-full transition-all duration-1000 ${emp.efficiency >= 85 ? 'bg-emerald-500' : emp.efficiency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.efficiency}%` }}></div>
                                                 </div>
+                                                <span className="text-xs font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded-md">
+                                                    {emp.totalHours ? `${emp.totalHours} hrs` : '0 hrs'}
+                                                </span>
                                             </div>
                                         </td>
                                         <td className="px-6 py-6">
                                             <div className="flex flex-col items-center">
-                                                <span className={`text-sm font-black mb-2 ${emp.consistency >= 85 ? 'text-violet-500' : emp.consistency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.consistency}%</span>
-                                                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner">
+                                                <span className={`text-sm font-black mb-1 ${emp.consistency >= 85 ? 'text-violet-500' : emp.consistency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.consistency}%</span>
+                                                <div className="w-28 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mb-2">
                                                     <div className={`h-full rounded-full transition-all duration-1000 ${emp.consistency >= 85 ? 'bg-violet-500' : emp.consistency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.consistency}%` }}></div>
+                                                </div>
+                                                <div className="text-xs font-bold text-slate-600 text-center flex flex-col gap-1 w-full">
+                                                    <span className="bg-slate-100 px-2 py-0.5 rounded-md">{emp.logsSubmitted || 0}/{emp.daysPresent || 0} Logs</span>
+                                                    {emp.avgLateness > 0 && <span className="text-red-600 bg-red-50 px-2 py-0.5 rounded-md font-black">{emp.avgLateness}m Late Avg</span>}
                                                 </div>
                                             </div>
                                         </td>
