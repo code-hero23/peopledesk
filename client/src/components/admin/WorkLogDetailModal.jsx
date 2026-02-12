@@ -197,7 +197,9 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                     { label: 'Online Discussion', data: laOpening.onlineDiscussion },
                                     { label: 'Showroom Discussion', data: laOpening.showroomDiscussion },
                                     { label: 'Sign Engineers', data: laOpening.signFromEngineer },
-                                ].filter(x => x.data?.count > 0 || x.data?.details).map((item, i) => (
+                                    { label: 'Site Visit', data: laOpening.siteVisit },
+                                    { label: 'Infurnia', data: laOpening.infurnia },
+                                ].filter(x => x && (x.data?.count > 0 || x.data?.details)).map((item, i) => (
                                     <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
@@ -430,7 +432,9 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                     { label: 'Online Discussion', data: laClosing.onlineDiscussion },
                                     { label: 'Showroom Discussion', data: laClosing.showroomDiscussion },
                                     { label: 'Sign Engineers', data: laClosing.signFromEngineer },
-                                ].filter(x => x.data?.count > 0 || x.data?.details).map((item, i) => (
+                                    { label: 'Site Visit', data: laClosing.siteVisit },
+                                    { label: 'Infurnia', data: laClosing.infurnia },
+                                ].filter(x => x && (x.data?.count > 0 || x.data?.details)).map((item, i) => (
                                     <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>

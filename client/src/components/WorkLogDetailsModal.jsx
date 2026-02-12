@@ -366,7 +366,9 @@ const renderLAMetricsTable = (metrics) => {
         woe: 'W.O.E',
         onlineDiscussion: 'Online Discussion',
         showroomDiscussion: 'Showroom Discussion',
-        signFromEngineer: 'Sign From Engineer'
+        signFromEngineer: 'Sign From Engineer',
+        siteVisit: 'Site Visit',
+        infurnia: 'Infurnia'
     };
 
     return (

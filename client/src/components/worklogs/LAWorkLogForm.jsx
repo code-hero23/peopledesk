@@ -7,7 +7,7 @@ import ConfirmationModal from '../ConfirmationModal';
 import {
     FileText, Box, PenTool, Layout, DollarSign,
     MessageCircle, Users, CheckSquare, Plus, Clock,
-    Image as ImageIcon, Briefcase, Calendar, ChevronRight
+    Image as ImageIcon, Briefcase, Calendar, ChevronRight, MapPin, Monitor
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -44,7 +44,9 @@ const LAWorkLogForm = ({ onSuccess }) => {
         woe: { count: '', details: '' },
         onlineDiscussion: { count: '', details: '' },
         showroomDiscussion: { count: '', details: '' },
-        signFromEngineer: { count: '', details: '' }
+        signFromEngineer: { count: '', details: '' },
+        siteVisit: { count: '', details: '' },
+        infurnia: { count: '', details: '' }
     };
 
     const [openingData, setOpeningData] = useState({ ...initialMetrics });
@@ -648,6 +650,8 @@ const MetricsForm = ({ data, setData, onSubmit, type }) => {
         { key: 'onlineDiscussion', label: 'Online Disc.', icon: MessageCircle },
         { key: 'showroomDiscussion', label: 'Showroom Disc.', icon: Users },
         { key: 'signFromEngineer', label: 'Sign Engineers', icon: FileText },
+        { key: 'siteVisit', label: 'Site Visit', icon: MapPin },
+        { key: 'infurnia', label: 'Infurnia', icon: Monitor },
     ];
 
     return (
