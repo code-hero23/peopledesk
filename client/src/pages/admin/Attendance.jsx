@@ -114,12 +114,16 @@ const Attendance = () => {
             };
 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            const response = await axios.get(`${baseUrl}/export/attendance`, config);
+            let apiUrl = `${baseUrl}/export/attendance?date=${selectedDate}`;
+            if (searchTerm) {
+                apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+            const response = await axios.get(apiUrl, config);
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `attendance_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `attendance_${new Date().toISOString().split('T')[0]}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -152,7 +156,7 @@ const Attendance = () => {
                     </div>
 
                     <button onClick={onDownload} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2 whitespace-nowrap">
-                        <span>📅</span> Export CSV
+                        <span>📅</span> Export Excel
                     </button>
                     <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />

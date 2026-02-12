@@ -94,15 +94,15 @@ const PerformanceAnalytics = () => {
         try {
             const token = JSON.parse(localStorage.getItem('user')).token;
             const response = await axios.get(`http://localhost:5000/api/export/analytics`, {
-                params: dateRange,
+                params: { ...dateRange, userId: selectedEmployee },
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
             });
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `Performance_Report_${dateRange.startDate}_to_${dateRange.endDate}.csv`);
+            link.setAttribute('download', `Performance_Report_${dateRange.startDate}_to_${dateRange.endDate}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -171,7 +171,7 @@ const PerformanceAnalytics = () => {
                         className="group flex items-center justify-center gap-3 bg-slate-900 hover:bg-blue-600 text-white px-8 py-4 rounded-[24px] shadow-2xl shadow-slate-300 hover:shadow-blue-200 transition-all duration-500 font-black text-sm active:scale-95"
                     >
                         <Download size={20} className="group-hover:animate-bounce" />
-                        <span>Export CSV</span>
+                        <span>Export Excel</span>
                     </button>
                 </div>
             </div>

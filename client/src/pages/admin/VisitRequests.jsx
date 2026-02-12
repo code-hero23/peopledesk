@@ -43,10 +43,10 @@ const VisitRequests = () => {
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
             const response = await axios.get(`${baseUrl}/export/requests?filter=visits`, config);
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `visit_requests_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `visit_requests_${new Date().toISOString().split('T')[0]}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -161,7 +161,7 @@ const VisitRequests = () => {
 
                 <div className="flex flex-wrap gap-3 items-center">
                     <button onClick={handleExport} className="bg-emerald-100 text-emerald-700 px-4 py-2 rounded-lg font-bold text-xs hover:bg-emerald-200 flex items-center gap-2 border border-emerald-200 h-9">
-                        <Download size={14} /> EXPORT
+                        <Download size={14} /> EXPORT EXCEL
                     </button>
 
                     {/* Ultra-Premium Date Picker */}

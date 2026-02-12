@@ -57,6 +57,37 @@ const WorkLogs = () => {
         };
     }, [user, isError, message, dispatch, selectedDate]);
 
+    const onExportDaily = async () => {
+        try {
+            const user = JSON.parse(localStorage.getItem('user'));
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            let apiUrl = `${baseUrl}/export/worklogs?date=${selectedDate}`;
+            if (selectedDesignation) {
+                apiUrl += `&designation=${selectedDesignation}`;
+            }
+            if (searchTerm) {
+                apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `worklog_daily_${selectedDate}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Export failed:", error);
+            alert("Failed to export daily worklogs.");
+        }
+    };
+
     const onExportMonth = async () => {
         try {
             const date = new Date(selectedDate);
@@ -76,12 +107,15 @@ const WorkLogs = () => {
             if (selectedDesignation) {
                 apiUrl += `&designation=${selectedDesignation}`;
             }
+            if (searchTerm) {
+                apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
+            }
             const response = await axios.get(apiUrl, config);
 
-            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `worklogs_${year}_${month}.csv`);
+            link.setAttribute('download', `worklogs_${year}_${month}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -189,9 +223,13 @@ const WorkLogs = () => {
                         <option value="ESCALATION">Escalation</option>
                         <option value="CLIENT-FACILITATOR">Client Facilitator</option>
                     </select>
-                    <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2">
-                        <Download size={18} />
-                        <span>Export Month</span>
+                    <button onClick={onExportDaily} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-2 border border-blue-500/20">
+                        <Download size={14} />
+                        <span>DAILY EXCEL</span>
+                    </button>
+                    <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-2 border border-emerald-500/20">
+                        <Download size={14} />
+                        <span>MONTHLY EXCEL</span>
                     </button>
                     <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />

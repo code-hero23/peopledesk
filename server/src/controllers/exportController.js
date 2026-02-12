@@ -1,17 +1,55 @@
 const { PrismaClient } = require('@prisma/client');
+const XLSX = require('xlsx');
 const prisma = new PrismaClient();
 
-// Helper to convert JSON to CSV
-const convertToCSV = (data, fields) => {
-    const header = fields.join(',') + '\n';
-    const rows = data.map(row => {
-        return fields.map(field => {
-            const value = row[field] || '';
-            // Escape quotes and wrap in quotes if contains comma
-            return `"${String(value).replace(/"/g, '""')}"`;
-        }).join(',');
-    }).join('\n');
-    return header + rows;
+// Helper to safely parse JSON
+const safeParse = (data) => {
+    if (!data) return null;
+    if (typeof data === 'object') return data;
+    try { return JSON.parse(data); } catch (e) { return null; }
+};
+
+// Helper to format values for Excel
+const formatValue = (val) => {
+    if (val === null || val === undefined) return '';
+    if (Array.isArray(val)) {
+        return val.map(item => {
+            if (typeof item === 'object' && item !== null) {
+                // If it's a typical task/log item like {description: "...", status: "..."}
+                const desc = item.description || item.task || item.projectName || item.clientName || '';
+                const extra = item.status || item.count || '';
+                return `${desc}${extra ? ` (${extra})` : ''}`;
+            }
+            return String(item);
+        }).filter(Boolean).join('; ');
+    }
+    if (typeof val === 'object') {
+        const entries = Object.entries(val).filter(([k]) => !k.startsWith('_'));
+        if (entries.length === 0) return '';
+        return entries.map(([k, v]) => `${k.replace(/([A-Z])/g, ' $1').trim()}: ${v}`).join(' | ');
+    }
+    return String(val);
+};
+
+// Helper to set column widths based on content
+const setAutoWidth = (data) => {
+    if (!data || data.length === 0) return [];
+    const keys = Object.keys(data[0]);
+    return keys.map(key => {
+        let maxLen = key.length;
+        data.forEach(row => {
+            const val = String(row[key] || '');
+            if (val.length > maxLen) maxLen = val.length;
+        });
+        return { wch: Math.min(maxLen + 2, 50) }; // Cap at 50 chars
+    });
+};
+
+// Helper to get unique keys from array of objects for Excel header
+const getHeaders = (arr) => {
+    const keys = new Set();
+    arr.forEach(obj => Object.keys(obj).forEach(k => keys.add(k)));
+    return Array.from(keys);
 };
 
 // @desc    Export Work Logs as CSV
@@ -19,274 +57,171 @@ const convertToCSV = (data, fields) => {
 // @access  Private (Admin)
 const exportWorkLogs = async (req, res) => {
     try {
-        const { month, year, designation } = req.query;
+        const { month, year, designation, userId, search, date } = req.query;
         let where = {};
+        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
 
-        if (month && year) {
-            const startDate = new Date(year, month - 1, 1);
-            const endDate = new Date(year, month, 0, 23, 59, 59, 999);
-            where = {
-                date: {
-                    gte: startDate,
-                    lte: endDate
-                }
-            };
+        let startDate, endDate;
+
+        if (date) {
+            const d = new Date(date);
+            startDate = new Date(d.setHours(0, 0, 0, 0));
+            endDate = new Date(d.setHours(23, 59, 59, 999));
+        } else if (month && year) {
+            startDate = new Date(year, month - 1, 1);
+            endDate = new Date(year, month, 0, 23, 59, 59, 999);
+        }
+
+        if (startDate && endDate) {
+            where.date = { gte: startDate, lte: endDate };
+        }
+
+        if (userId) {
+            where.userId = parseInt(userId);
+            userWhere.id = parseInt(userId);
         }
 
         if (req.user.role === 'AE_MANAGER') {
             where.user = { designation: 'AE' };
+            userWhere.designation = 'AE';
         } else if (designation) {
-            where.user = {
-                designation: designation
-            };
+            where.user = { designation: designation };
+            userWhere.designation = designation;
         }
 
-        const logs = await prisma.workLog.findMany({
-            where,
-            include: { user: { select: { name: true, email: true, designation: true } } },
-            orderBy: { date: 'desc' },
-        });
+        if (search) {
+            where.OR = [
+                { projectName: { contains: search, mode: 'insensitive' } },
+                { clientName: { contains: search, mode: 'insensitive' } },
+                { remarks: { contains: search, mode: 'insensitive' } },
+                { user: { name: { contains: search, mode: 'insensitive' } } }
+            ];
+            userWhere.name = { contains: search, mode: 'insensitive' };
+        }
 
-        const flattenedLogs = logs.map(log => {
-            // Helper to format JSON lists/tables
-            const formatList = (list) => Array.isArray(list) ? list.join('; ') : '';
-            const formatTable = (table) => Array.isArray(table) ? JSON.stringify(table) : '';
+        const [logs, users] = await Promise.all([
+            prisma.workLog.findMany({
+                where,
+                include: { user: { select: { id: true, name: true, email: true, designation: true } } },
+                orderBy: { date: 'desc' },
+            }),
+            prisma.user.findMany({
+                where: userWhere,
+                select: { id: true, name: true, email: true, designation: true }
+            })
+        ]);
 
-            // Helper to safely parse JSON
-            const safeParse = (data) => {
-                if (!data) return null;
-                if (typeof data === 'object') return data;
-                try { return JSON.parse(data); } catch (e) { return null; }
-            };
+        // Initialize Workbook
+        const wb = XLSX.utils.book_new();
 
+        // 1. Prepare Data for Each Sheet
+        const roleLogs = { CRE: [], FA: [], LA: [], AE: [] };
+        const allSummary = [];
 
-            const customFields = log.customFields || {};
-            let genericOpening = [];
-            let genericClosing = [];
+        // Helper to process a log or create a placeholder
+        const processEntries = (targetUsers, targetLogs, targetDates) => {
+            targetDates.forEach(dateStr => {
+                targetUsers.forEach(user => {
+                    const userLogs = targetLogs.filter(l => l.userId === user.id && new Date(l.date).toLocaleDateString() === dateStr);
 
-            // Helper to format complex custom field values
-            const formatCustomValue = (val) => {
-                if (Array.isArray(val)) {
-                    // It's a list/table (e.g. Tasks, Leads)
-                    return val.map(item => {
-                        // Join values of the object: "Task Name (Done)" or just "Task Name - Done"
-                        // Try to find meaningful description/task fields
-                        const desc = item.description || item.task || Object.values(item)[0];
-                        const status = item.status || item.count || '';
-                        const extra = item.remark || item.details || item.bhWork || '';
-                        return `${desc} ${status ? `(${status})` : ''} ${extra ? `[${extra}]` : ''}`;
-                    }).join('; ');
-                } else if (typeof val === 'object' && val !== null) {
-                    return JSON.stringify(val);
-                }
-                return val;
-            };
-
-            Object.entries(customFields).forEach(([key, value]) => {
-                const lowerKey = key.toLowerCase();
-                if (lowerKey.startsWith('opening')) {
-                    // Remove "Opening" prefix for cleaner CSV check if desired, but keeping key is safer
-                    genericOpening.push(`${key.replace(/opening/i, '').trim().replace(/^-/, '').trim()}: ${formatCustomValue(value)}`);
-                } else if (lowerKey.startsWith('closing')) {
-                    genericClosing.push(`${key.replace(/closing/i, '').trim().replace(/^-/, '').trim()}: ${formatCustomValue(value)}`);
-                }
+                    if (userLogs.length > 0) {
+                        userLogs.forEach(log => {
+                            const entries = mapLogToEntries(log, user, dateStr);
+                            allSummary.push(entries.common);
+                            if (roleLogs[entries.desig]) roleLogs[entries.desig].push(entries.role);
+                        });
+                    } else {
+                        // Placeholder for Not Submitted
+                        const placeholder = {
+                            Employee: user.name,
+                            Email: user.email,
+                            Designation: user.designation,
+                            Date: dateStr,
+                            'Log Status': 'NOT SUBMITTED',
+                            Project: '-', Client: '-', Site: '-', Hours: '-', StartTime: '-', EndTime: '-', Notes: '-', SubmittedAt: '-'
+                        };
+                        allSummary.push(placeholder);
+                    }
+                });
             });
+        };
 
-
-            const aeOpening = safeParse(log.ae_opening_metrics);
-            const aeClosing = safeParse(log.ae_closing_metrics);
-
-            const creOpening = safeParse(log.cre_opening_metrics);
-            const creClosing = safeParse(log.cre_closing_metrics);
-
-            const faOpening = safeParse(log.fa_opening_metrics);
-            const faClosing = safeParse(log.fa_closing_metrics);
-
-            const laOpening = safeParse(log.la_opening_metrics);
-            const laClosing = safeParse(log.la_closing_metrics);
-            const laReports = safeParse(log.la_project_reports);
-            const aeReports = safeParse(log.ae_project_reports);
-
-
-            return {
-                Employee: log.user.name,
-                Email: log.user.email,
-                Designation: log.user.designation,
-                Date: new Date(log.date).toLocaleDateString(),
-
-                // Common / Legacy
+        const mapLogToEntries = (log, user, dateStr) => {
+            const desig = user.designation || 'OTHER';
+            const common = {
+                Employee: user.name,
+                Email: user.email,
+                Designation: desig,
+                Date: dateStr,
+                'Log Status': 'SUBMITTED',
                 Project: log.projectName || log.project?.name || '',
                 Client: log.clientName || '',
                 Site: log.site || '',
-                Process: log.process || log.tasks || '', // Legacy
                 Hours: log.hours || '',
                 StartTime: log.startTime || '',
                 EndTime: log.endTime || '',
-                ImageCount: log.imageCount || '',
-
-                // --- GENERIC CUSTOM FIELDS (New Roles) ---
-                'Opening Report': genericOpening.join(' | '),
-                'Closing Report': genericClosing.join(' | '),
-
-                // --- OPENING (START OF DAY) ---
-                'Op_PlannedWork': aeOpening?.ae_plannedWork || log.ae_plannedWork || '',
-                'Op_SiteLocation': aeOpening?.ae_siteLocation || log.ae_siteLocation || '',
-                'Op_SiteStatus': aeOpening?.ae_siteStatus || log.ae_siteStatus || '',
-                'Op_GPS': aeOpening?.ae_gpsCoordinates || log.ae_gpsCoordinates || '',
-
-                // CRE Opening
-                'Op_CRE_ShowroomVisit': creOpening?.showroomVisit || '',
-                'Op_CRE_OnlineDisc': creOpening?.onlineDiscussion || '',
-                'Op_CRE_FPReceived': creOpening?.fpReceived || '',
-                'Op_CRE_FQSent': creOpening?.fqSent || '',
-                'Op_CRE_Orders': creOpening?.noOfOrder || '',
-                'Op_CRE_Proposals': creOpening?.noOfProposalIQ || '',
-
-                // FA Opening
-                'Op_FA_ShowroomVisit': faOpening?.showroomVisit || '',
-                'Op_FA_OnlineDisc': faOpening?.onlineDiscussion || '',
-                'Op_FA_QuotesPending': faOpening?.quotationPending || '',
-                'Op_FA_9Star': faOpening?.calls?.nineStar || '',
-
-                // LA Opening
-                'Op_LA_Initial2D': laOpening?.initial2D?.count || '',
-                'Op_LA_Prod2D': laOpening?.production2D?.count || '',
-                'Op_LA_Fresh3D': laOpening?.fresh3D?.count || '',
-
-                // --- CLOSING (END OF DAY) ---
-                'Cl_VisitType': (() => {
-                    if (aeClosing?.ae_visitType) return Array.isArray(aeClosing.ae_visitType) ? aeClosing.ae_visitType.join(', ') : aeClosing.ae_visitType;
-                    if (log.ae_visitType) return Array.isArray(log.ae_visitType) ? log.ae_visitType.join(', ') : log.ae_visitType;
-                    return '';
-                })(),
-                'Cl_WorkStage': aeClosing?.ae_workStage || log.ae_workStage || '',
-                'Cl_Measurements': aeClosing?.ae_measurements || log.ae_measurements || '',
-                'Cl_ItemsInstalled': aeClosing?.ae_itemsInstalled || log.ae_itemsInstalled || '',
-                'Cl_HasIssues': aeClosing?.ae_hasIssues ? 'Yes' : 'No',
-                'Cl_IssueDesc': aeClosing?.ae_issueDescription || log.ae_issueDescription || '',
-                'Cl_ClientFeedback': aeClosing?.ae_clientFeedback || log.ae_clientFeedback || '',
-                'Cl_AE_ProjectReports': (() => {
-                    if (!aeReports) return '';
-                    if (Array.isArray(aeReports)) {
-                        return aeReports.map(r => `${r.clientName} (${r.process}): ${r.status || r.ae_siteStatus || ''}`).join('; ');
-                    }
-                    return '';
-                })(),
-                'Cl_Remarks': log.remarks || '',
-
-                // CRE Closing
-                'Cl_CRE_FloorPlanRx': creClosing?.floorPlanReceived || '',
-                'Cl_CRE_ShowroomVisit': creClosing?.showroomVisit || '',
-                'Cl_CRE_Reviews': creClosing?.reviewCollected || '',
-                'Cl_CRE_QuotesSent': creClosing?.quotesSent || '',
-                'Cl_CRE_Proposals': creClosing?.proposalCount || '',
-                'Cl_CRE_Orders': creClosing?.orderCount || '',
-                'Cl_CRE_8Star': creClosing?.eightStar || '',
-
-                // FA Closing
-                'Cl_FA_ShowroomVisit': faClosing?.showroomVisit || '',
-                'Cl_FA_OnlineDisc': faClosing?.onlineDiscussion || '',
-                'Cl_FA_QuotesPending': faClosing?.quotationPending || '',
-                'Cl_FA_InfurniaCount': faClosing?.infurniaPending?.count || '',
-                'Cl_FA_Call9Star': faClosing?.calls?.nineStar || '',
-
-                // LA Closing
-                'Cl_LA_Initial2D': laClosing?.initial2D?.count || '',
-                'Cl_LA_Prod2D': laClosing?.production2D?.count || '',
-                'Cl_LA_Fresh3D': laClosing?.fresh3D?.count || '',
-                'Cl_LA_ProjectReports': (() => {
-                    if (!laReports) return '';
-                    if (Array.isArray(laReports)) {
-                        return laReports.map(r => `${r.clientName} (${r.process}): ${r.completedImages}/${r.imageCount}`).join('; ');
-                    }
-                    return '';
-                })(),
-
-                // Legacy Field Fallbacks (Keep just in case)
-                CRE_TotalCalls: log.cre_totalCalls || '',
-                CRE_CallBreakdown: log.cre_callBreakdown || '',
-                FA_Calls: log.fa_calls || '',
-
-                FA_SiteVisits: log.fa_siteVisits || '',
-                FA_DesignPending: log.fa_designPending || '',
-                FA_DesignPendingClients: log.fa_designPendingClients || '',
-                FA_QuotePending: log.fa_quotePending || '',
-                FA_QuotePendingClients: log.fa_quotePendingClients || '',
-
-                // LA Fields
-                LA_Number: log.la_number || '',
-                LA_Location: log.la_projectLocation || '',
-                LA_Value: log.la_projectValue || '',
-                LA_Status: log.la_siteStatus || '',
-                LA_Requirements: formatList(log.la_requirements),
-                LA_Colours: formatList(log.la_colours),
-
+                Notes: log.notes || log.remarks || '',
                 SubmittedAt: new Date(log.createdAt).toLocaleString(),
             };
-        });
 
+            if (log.customFields) {
+                const cf = safeParse(log.customFields);
+                Object.entries(cf).forEach(([key, val]) => {
+                    common[key.replace(/([A-Z])/g, ' $1').trim()] = formatValue(val);
+                });
+            }
 
-        // Define Column Groups
-        const baseColumns = ['Employee', 'Email', 'Designation', 'Date', 'Project', 'Client', 'Site', 'Hours', 'StartTime', 'EndTime', 'ImageCount', 'SubmittedAt'];
-        const genericColumns = ['Opening Report', 'Closing Report'];
+            let roleEntry = { Employee: common.Employee, Date: common.Date, 'Log Status': common['Log Status'] };
 
-        const aeColumns = [
-            'Op_PlannedWork', 'Op_SiteLocation', 'Op_SiteStatus', 'Op_GPS',
-            'Cl_VisitType', 'Cl_WorkStage', 'Cl_Measurements', 'Cl_ItemsInstalled',
-            'Cl_HasIssues', 'Cl_IssueDesc', 'Cl_ClientFeedback', 'Cl_AE_ProjectReports', 'Cl_Remarks'
-        ];
+            if (desig === 'CRE') {
+                const m = safeParse(log.cre_closing_metrics);
+                roleEntry = { ...roleEntry, 'Total Calls': log.cre_totalCalls || '', 'Showroom Visits': log.cre_showroomVisits || m?.showroomVisit || '', 'Floor Plan Rx': m?.floorPlanReceived || '', 'Reviews': m?.reviewCollected || '', 'Quotes Sent': m?.quotesSent || log.cre_fqSent || '', 'Proposals': m?.proposalCount || log.cre_proposals || '', 'Orders': m?.orderCount || log.cre_orders || '', '8 Star Calls': m?.eightStar || '' };
+            } else if (desig === 'FA') {
+                const m = safeParse(log.fa_closing_metrics);
+                roleEntry = { ...roleEntry, 'Call 9 Star': m?.calls?.nineStar || log.fa_calls || '', 'Showroom Visits': m?.showroomVisit || log.fa_showroomVisits || '', 'Site Visits': log.fa_siteVisits || '', 'Online Disc': m?.onlineDiscussion || log.fa_onlineDiscussion || '', 'Quotes Pending': m?.quotationPending || log.fa_quotePending || '', 'Infurnia Count': m?.infurniaPending?.count || '' };
+            } else if (desig === 'LA') {
+                const m = safeParse(log.la_closing_metrics);
+                roleEntry = { ...roleEntry, 'LA Number': log.la_number || '', 'Project Location': log.la_projectLocation || '', 'Project Value': log.la_projectValue || '', 'Site Status': log.la_siteStatus || '', 'Initial 2D': m?.initial2D?.count || '', 'Prod 2D': m?.production2D?.count || '', 'Fresh 3D': m?.fresh3D?.count || '', 'Revised 3D': m?.revised3D?.count || '', 'Estimation': m?.estimation?.count || '' };
+            } else if (desig === 'AE') {
+                const m = safeParse(log.ae_closing_metrics);
+                roleEntry = { ...roleEntry, 'Visit Type': Array.isArray(m?.ae_visitType) ? m.ae_visitType.join(', ') : (m?.ae_visitType || log.ae_visitType || ''), 'Work Stage': m?.ae_workStage || log.ae_workStage || '', 'Measurements': m?.ae_measurements || log.ae_measurements || '', 'Items Installed': m?.ae_itemsInstalled || log.ae_itemsInstalled || '', 'Has Issues': m?.ae_hasIssues ? 'Yes' : (log.ae_hasIssues ? 'Yes' : 'No'), 'Feedback': m?.ae_clientFeedback || log.ae_clientFeedback || '' };
+            }
 
-        const creColumns = [
-            'Op_CRE_ShowroomVisit', 'Op_CRE_OnlineDisc', 'Op_CRE_FPReceived', 'Op_CRE_FQSent', 'Op_CRE_Orders', 'Op_CRE_Proposals',
-            'Cl_CRE_FloorPlanRx', 'Cl_CRE_ShowroomVisit', 'Cl_CRE_Reviews', 'Cl_CRE_QuotesSent', 'Cl_CRE_Proposals', 'Cl_CRE_Orders', 'Cl_CRE_8Star',
-            'CRE_TotalCalls', 'CRE_CallBreakdown'
-        ];
+            return { common, role: roleEntry, desig };
+        };
 
-        const faColumns = [
-            'Op_FA_ShowroomVisit', 'Op_FA_OnlineDisc', 'Op_FA_QuotesPending', 'Op_FA_9Star',
-            'Cl_FA_ShowroomVisit', 'Cl_FA_OnlineDisc', 'Cl_FA_QuotesPending', 'Cl_FA_InfurniaCount', 'Cl_FA_Call9Star',
-            'FA_Calls', 'FA_SiteVisits'
-        ];
-
-        const laColumns = [
-            'Op_LA_Initial2D', 'Op_LA_Prod2D', 'Op_LA_Fresh3D',
-            'Cl_LA_Initial2D', 'Cl_LA_Prod2D', 'Cl_LA_Fresh3D', 'Cl_LA_ProjectReports',
-            'LA_Number', 'LA_Location', 'LA_Value', 'LA_Status', 'LA_Requirements', 'LA_Colours'
-        ];
-
-        // Determine which fields to include
-        let csvFields = [];
-
-        // Check the effective designation filter (from query or role)
-        const effectiveDesignation = (req.user.role === 'AE_MANAGER') ? 'AE' : designation;
-
-        if (effectiveDesignation === 'AE') {
-            csvFields = [...baseColumns, ...aeColumns];
-        } else if (effectiveDesignation === 'CRE') {
-            csvFields = [...baseColumns, ...creColumns];
-        } else if (effectiveDesignation === 'FA') {
-            csvFields = [...baseColumns, ...faColumns];
-        } else if (effectiveDesignation === 'LA') {
-            csvFields = [...baseColumns, ...laColumns];
+        // Determine Dates to show
+        let datesToShow = [];
+        if (date) {
+            datesToShow = [new Date(date).toLocaleDateString()];
         } else {
-            // Default: Include All (but maybe grouped logically)
-            // Added genericColumns for newer roles
-            csvFields = [
-                ...baseColumns,
-                ...genericColumns,
-                ...aeColumns,
-                ...creColumns,
-                ...faColumns,
-                ...laColumns
-            ];
+            // Unique dates from logs or the range
+            const logDates = new Set(logs.map(l => new Date(l.date).toLocaleDateString()));
+            datesToShow = Array.from(logDates).sort((a, b) => new Date(b) - new Date(a));
         }
 
-        const csv = convertToCSV(flattenedLogs, csvFields);
+        processEntries(users, logs, datesToShow);
 
-        res.header('Content-Type', 'text/csv');
-        const filename = month && year ? `worklogs_${year}_${month}.csv` : 'worklogs_all.csv';
+        // 2. Add Sheets to Workbook
+        const addSheet = (data, name) => {
+            if (!data || data.length === 0) return;
+            const ws = XLSX.utils.json_to_sheet(data, { header: getHeaders(data) });
+            ws['!cols'] = setAutoWidth(data);
+            XLSX.utils.book_append_sheet(wb, ws, name);
+        };
+
+        addSheet(allSummary, "All_Logs_Summary");
+        addSheet(roleLogs.CRE, "CRE_Logs");
+        addSheet(roleLogs.FA, "FA_Logs");
+        addSheet(roleLogs.LA, "LA_Logs");
+        addSheet(roleLogs.AE, "AE_Logs");
+
+        // 3. Write and Send
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        const filename = month && year ? `worklogs_${year}_${month}.xlsx` : 'worklogs_all.xlsx';
         res.attachment(filename);
-        res.send(csv);
+        res.send(buf);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
@@ -301,19 +236,36 @@ const exportWorkLogs = async (req, res) => {
 // @access  Private (Admin)
 const exportAttendance = async (req, res) => {
     try {
+        const { date, month, year, userId, search } = req.query;
         let attendanceWhere = {};
         let userWhere = { status: 'ACTIVE' };
 
+        if (date) {
+            const d = new Date(date);
+            attendanceWhere.date = { gte: new Date(d.setHours(0, 0, 0, 0)), lte: new Date(d.setHours(23, 59, 59, 999)) };
+        } else if (month && year) {
+            attendanceWhere.date = { gte: new Date(year, month - 1, 1), lte: new Date(year, month, 0, 23, 59, 59) };
+        }
+
+        if (userId) {
+            attendanceWhere.userId = parseInt(userId);
+            userWhere.id = parseInt(userId);
+        }
+
         if (req.user.role === 'AE_MANAGER') {
-            attendanceWhere = { user: { designation: 'AE' } };
+            attendanceWhere.user = { designation: 'AE' };
             userWhere.designation = 'AE';
+        }
+
+        if (search) {
+            userWhere.name = { contains: search, mode: 'insensitive' };
         }
 
         const [records, activeUsers] = await Promise.all([
             prisma.attendance.findMany({
                 where: attendanceWhere,
                 include: {
-                    user: { select: { name: true, email: true, designation: true } },
+                    user: { select: { id: true, name: true, email: true, designation: true } },
                     breaks: true
                 },
                 orderBy: { date: 'asc' },
@@ -457,16 +409,18 @@ const exportAttendance = async (req, res) => {
         // Sort by Date Descending
         flattenedRecords.sort((a, b) => new Date(b.Date) - new Date(a.Date));
 
-        const csvFields = [
-            'Employee', 'Email', 'Designation', 'Date', 'Log In', 'Log Out',
-            'Net Working Hours', 'Total Breaks', 'Total Meetings',
-            'Sessions', 'Session Details', 'Photo Evidence', 'Status'
-        ];
-        const csv = convertToCSV(flattenedRecords, csvFields);
+        // Initialize Workbook
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(flattenedRecords);
+        ws['!cols'] = setAutoWidth(flattenedRecords);
+        XLSX.utils.book_append_sheet(wb, ws, "Attendance");
 
-        res.header('Content-Type', 'text/csv');
-        res.attachment('attendance_export.csv');
-        res.send(csv);
+        // Write and Send
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        const filename = date ? `attendance_report_${date}.xlsx` : 'attendance_report.xlsx';
+        res.attachment(filename);
+        res.send(buf);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
@@ -530,14 +484,14 @@ const exportRequests = async (req, res) => {
             };
         });
 
-        const csv = convertToCSV(flattened, [
-            'Type', 'Employee', 'Email', 'Date / Duration', 'Details', 'Reason', 'Overall Status', 'BH Status', 'HR Status', 'RequestedAt'
-        ]);
+        const ws = XLSX.utils.json_to_sheet(flattened);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Requests");
 
-        res.header('Content-Type', 'text/csv');
-        res.attachment('requests_export.csv');
-        res.send(csv);
-
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment('requests_export.xlsx');
+        res.send(buf);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
@@ -568,7 +522,11 @@ const exportPerformanceAnalytics = async (req, res) => {
         const end = endDate ? new Date(endDate) : defaultEnd;
 
         const employees = await prisma.user.findMany({
-            where: { role: 'EMPLOYEE', status: 'ACTIVE' },
+            where: {
+                role: 'EMPLOYEE',
+                status: 'ACTIVE',
+                id: req.query.userId ? parseInt(req.query.userId) : undefined
+            },
             select: { id: true, name: true, email: true, designation: true }
         });
 
@@ -629,16 +587,16 @@ const exportPerformanceAnalytics = async (req, res) => {
             };
         }));
 
-        const csvFields = [
-            'Employee', 'Email', 'Designation', 'Days Present', 'Days with Logs',
-            'Consistency %', 'Efficiency %', 'Avg Punctuality (min)', 'Limit Exceeded Alerts'
-        ];
-        const csv = convertToCSV(stats, csvFields);
+        const ws = XLSX.utils.json_to_sheet(stats);
+        ws['!cols'] = setAutoWidth(stats);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, "Performance");
 
-        res.header('Content-Type', 'text/csv');
-        res.attachment(`performance_report_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.csv`);
-        res.send(csv);
-
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        const title = req.query.userId ? `performance_detail` : `team_performance`;
+        res.attachment(`${title}_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.xlsx`);
+        res.send(buf);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });
