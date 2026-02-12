@@ -51,9 +51,25 @@ const PerformanceAnalytics = () => {
     const dispatch = useDispatch();
     const { teamOverview, employeeStats, isLoading } = useSelector((state) => state.analytics);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [dateRange, setDateRange] = useState({
-        startDate: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0],
+    const [dateRange, setDateRange] = useState(() => {
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDate = today.getDate();
+
+        let start, end;
+        if (currentDate >= 26) {
+            start = new Date(currentYear, currentMonth, 26);
+            end = new Date(currentYear, currentMonth + 1, 25);
+        } else {
+            start = new Date(currentYear, currentMonth - 1, 26);
+            end = new Date(currentYear, currentMonth, 25);
+        }
+
+        return {
+            startDate: start.toISOString().split('T')[0],
+            endDate: end.toISOString().split('T')[0],
+        };
     });
 
     useEffect(() => {

@@ -8,16 +8,16 @@ const formatMinutes = (minutes) => {
     return `${h}h ${m}m`;
 };
 
-// Calculate punctuality relative to 10:00 AM
+// Calculate punctuality relative to 10:20 AM
 const calculatePunctuality = (checkInTime) => {
     // 1. Convert DB time (likely UTC) to IST by adding 5.5 hours
     const utcDate = new Date(checkInTime);
     const istOffset = 5.5 * 60 * 60 * 1000;
     const checkInIST = new Date(utcDate.getTime() + istOffset);
 
-    // 2. Create Target Time (10:00 AM) on the SAME DATE as the check-in
+    // 2. Create Target Time (10:20 AM) on the SAME DATE as the check-in
     const target = new Date(checkInIST);
-    target.setHours(10, 0, 0, 0);
+    target.setHours(10, 20, 0, 0);
 
     // 3. Compare difference
     const diffMinutes = (checkInIST - target) / (1000 * 60);
@@ -29,8 +29,25 @@ const getEmployeeStats = async (req, res) => {
         const { id } = req.params;
         const { startDate, endDate } = req.query;
 
-        const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const end = endDate ? new Date(endDate) : new Date();
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDate = today.getDate();
+
+        let defaultStart, defaultEnd;
+
+        if (currentDate >= 26) {
+            // Cycle: 26th of current month to 25th of next month
+            defaultStart = new Date(currentYear, currentMonth, 26);
+            defaultEnd = new Date(currentYear, currentMonth + 1, 25, 23, 59, 59);
+        } else {
+            // Cycle: 26th of previous month to 25th of current month
+            defaultStart = new Date(currentYear, currentMonth - 1, 26);
+            defaultEnd = new Date(currentYear, currentMonth, 25, 23, 59, 59);
+        }
+
+        const start = startDate ? new Date(startDate) : defaultStart;
+        const end = endDate ? new Date(endDate) : defaultEnd;
 
         const userId = parseInt(id);
 
@@ -84,7 +101,7 @@ const getEmployeeStats = async (req, res) => {
         });
 
         const avgLateness = punctualityCount > 0 ? totalLateness / punctualityCount : 0;
-        const expectedMinutes = totalDaysPresent * 540; // 9 hours * 60 mins
+        const expectedMinutes = totalDaysPresent * 520; // 10:20 AM to 07:00 PM = 8h 40m = 520 mins
         const efficiencyScore = expectedMinutes > 0 ? (totalNetMinutes / expectedMinutes) * 100 : 0;
 
         const limitExceededFlags = leaves.filter(r => r.isExceededLimit).length + permissions.filter(r => r.isExceededLimit).length;
@@ -97,7 +114,7 @@ const getEmployeeStats = async (req, res) => {
                 .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
 
             const net = Math.max(0, gross - personalBreaks);
-            const eff = Math.round((net / 540) * 100);
+            const eff = Math.round((net / 520) * 100);
 
             return {
                 date: new Date(record.date).toLocaleDateString('en-US', { day: '2-digit', month: 'short' }),

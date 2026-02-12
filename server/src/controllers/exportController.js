@@ -550,8 +550,22 @@ const exportRequests = async (req, res) => {
 const exportPerformanceAnalytics = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const end = endDate ? new Date(endDate) : new Date();
+        const today = new Date();
+        const currentYear = today.getFullYear();
+        const currentMonth = today.getMonth();
+        const currentDate = today.getDate();
+
+        let defaultStart, defaultEnd;
+        if (currentDate >= 26) {
+            defaultStart = new Date(currentYear, currentMonth, 26);
+            defaultEnd = new Date(currentYear, currentMonth + 1, 25, 23, 59, 59);
+        } else {
+            defaultStart = new Date(currentYear, currentMonth - 1, 26);
+            defaultEnd = new Date(currentYear, currentMonth, 25, 23, 59, 59);
+        }
+
+        const start = startDate ? new Date(startDate) : defaultStart;
+        const end = endDate ? new Date(endDate) : defaultEnd;
 
         const employees = await prisma.user.findMany({
             where: { role: 'EMPLOYEE', status: 'ACTIVE' },
@@ -583,7 +597,7 @@ const exportPerformanceAnalytics = async (req, res) => {
                 if (record.checkIn) {
                     const checkIn = new Date(record.checkIn);
                     const target = new Date(record.checkIn);
-                    target.setHours(9, 30, 0, 0);
+                    target.setHours(10, 20, 0, 0); // Unified to 10:20 AM
                     totalLateness += (checkIn - target) / (1000 * 60);
                     punctualityCount++;
                 }
@@ -598,7 +612,7 @@ const exportPerformanceAnalytics = async (req, res) => {
             });
 
             const avgLateness = punctualityCount > 0 ? Math.round(totalLateness / punctualityCount) : 0;
-            const expectedMinutes = daysPresent * 540;
+            const expectedMinutes = daysPresent * 520; // 8h 40m = 520 mins
             const efficiency = expectedMinutes > 0 ? Math.round((totalNetMinutes / expectedMinutes) * 100) : 0;
             const limitExceeded = leaves.filter(r => r.isExceededLimit).length + permissions.filter(r => r.isExceededLimit).length;
 
