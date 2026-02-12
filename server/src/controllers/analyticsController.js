@@ -139,32 +139,52 @@ const getTeamOverview = async (req, res) => {
                 include: { breaks: true }
             });
 
-            const workLogs = await prisma.workLog.count({
-                where: { userId: emp.id, createdAt: { gte: start, lte: end } }
+            const workLogsData = await prisma.workLog.findMany({
+                where: { userId: emp.id, createdAt: { gte: start, lte: end } },
+                select: { createdAt: true }
             });
 
+            const uniqueDaysWithLogs = new Set(workLogsData.map(log => new Date(log.createdAt).toDateString())).size;
+            const logsCount = workLogsData.length; // Total reports submitted
+
             let totalNetMinutes = 0;
+            let totalLateness = 0;
+            let punctualityCount = 0;
+
             attendance.forEach(record => {
-                if (record.date && record.checkoutTime) {
-                    const gross = (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60);
-                    const personalBreaks = record.breaks
-                        .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
-                        .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
-                    totalNetMinutes += (gross - personalBreaks);
+                if (record.date) {
+                    totalLateness += calculatePunctuality(record.date);
+                    punctualityCount++;
+
+                    if (record.checkoutTime) {
+                        const gross = (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60);
+                        // Calculate breaks
+                        const breakTime = record.breaks
+                            ? record.breaks
+                                .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                                .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0)
+                            : 0;
+                        totalNetMinutes += (gross - breakTime);
+                    }
                 }
             });
 
-            const expectedMinutes = attendance.length * 540;
+            const expectedMinutes = attendance.length * 540; // 9 hours * 60 mins
             const efficiency = expectedMinutes > 0 ? (totalNetMinutes / expectedMinutes) * 100 : 0;
-            const consistency = attendance.length > 0 ? (workLogs / attendance.length) * 100 : 0;
+            const consistency = attendance.length > 0 ? (uniqueDaysWithLogs / attendance.length) * 100 : 0;
+            const avgLateness = punctualityCount > 0 ? Math.round(totalLateness / punctualityCount) : 0;
+            const totalHours = Math.round((totalNetMinutes / 60) * 10) / 10; // 1 decimal place
 
             return {
                 id: emp.id,
                 name: emp.name,
                 designation: emp.designation,
-                efficiency: Math.round(efficiency),
-                consistency: Math.round(consistency),
-                daysPresent: attendance.length
+                efficiency: Math.min(100, Math.round(efficiency)), // Cap at 100 for display
+                consistency: Math.min(100, Math.round(consistency)), // Cap at 100
+                daysPresent: attendance.length,
+                totalHours: totalHours,
+                logsSubmitted: logsCount, // Show actual number of reports
+                avgLateness: avgLateness > 0 ? avgLateness : 0
             };
         }));
 
