@@ -105,12 +105,18 @@ const getEmployeeStats = async (req, res) => {
             };
         }).sort((a, b) => new Date(a.date) - new Date(b.date));
 
+        const totalNetMinutesNormalized = Math.round(totalNetMinutes);
+        const totalHours = Math.round((totalNetMinutes / 60) * 10) / 10;
+        const expectedHours = totalDaysPresent * 9;
+
         res.json({
             consistencyScore: Math.round(consistencyScore),
             efficiencyScore: Math.round(efficiencyScore),
             avgLateness: Math.round(avgLateness),
             limitExceededFlags,
-            totalNetTime: formatMinutes(Math.round(totalNetMinutes)),
+            totalNetTime: formatMinutes(totalNetMinutesNormalized),
+            totalHours,
+            expectedHours,
             totalDaysPresent,
             daysWithLogs,
             dailyTrends
@@ -169,21 +175,23 @@ const getTeamOverview = async (req, res) => {
                 }
             });
 
-            const expectedMinutes = attendance.length * 540; // 9 hours * 60 mins
-            const efficiency = expectedMinutes > 0 ? (totalNetMinutes / expectedMinutes) * 100 : 0;
+            const expectedMinutesTotal = attendance.length * 540; // 9 hours * 60 mins
+            const efficiency = expectedMinutesTotal > 0 ? (totalNetMinutes / expectedMinutesTotal) * 100 : 0;
             const consistency = attendance.length > 0 ? (uniqueDaysWithLogs / attendance.length) * 100 : 0;
             const avgLateness = punctualityCount > 0 ? Math.round(totalLateness / punctualityCount) : 0;
-            const totalHours = Math.round((totalNetMinutes / 60) * 10) / 10; // 1 decimal place
+            const totalHours = Math.round((totalNetMinutes / 60) * 10) / 10;
+            const expectedHours = attendance.length * 9;
 
             return {
                 id: emp.id,
                 name: emp.name,
                 designation: emp.designation,
-                efficiency: Math.min(100, Math.round(efficiency)), // Cap at 100 for display
-                consistency: Math.min(100, Math.round(consistency)), // Cap at 100
+                efficiency: Math.round(efficiency),
+                consistency: Math.min(100, Math.round(consistency)),
                 daysPresent: attendance.length,
                 totalHours: totalHours,
-                logsSubmitted: logsCount, // Show actual number of reports
+                expectedHours: expectedHours,
+                logsSubmitted: logsCount,
                 avgLateness: avgLateness > 0 ? avgLateness : 0
             };
         }));

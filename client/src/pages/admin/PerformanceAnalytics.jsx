@@ -349,10 +349,10 @@ const PerformanceAnalytics = () => {
                                                     <span className={`text-2xl font-black leading-none ${emp.efficiency >= 85 ? 'text-emerald-500' : emp.efficiency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.efficiency}%</span>
                                                 </div>
                                                 <div className="w-32 h-2.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mb-3">
-                                                    <div className={`h-full rounded-full transition-all duration-[1500ms] ${emp.efficiency >= 85 ? 'bg-emerald-500' : emp.efficiency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.efficiency}%` }}></div>
+                                                    <div className={`h-full rounded-full transition-all duration-[1500ms] ${emp.efficiency >= 85 ? 'bg-emerald-500' : emp.efficiency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(100, emp.efficiency)}%` }}></div>
                                                 </div>
-                                                <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-sm uppercase tracking-widest">
-                                                    {emp.totalHours || 0} Working Hrs
+                                                <span className="text-[10px] font-black text-slate-500 bg-slate-50 px-3 py-1 rounded-full border border-slate-100 shadow-sm uppercase tracking-widest whitespace-nowrap">
+                                                    {emp.totalHours || 0} / {emp.expectedHours || 0} Hrs
                                                 </span>
                                             </div>
                                         </td>
