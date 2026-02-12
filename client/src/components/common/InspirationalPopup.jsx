@@ -127,26 +127,26 @@ const InspirationalPopup = () => {
                             )}
 
                             {/* LEFT SIDE: Content */}
-                            <div className="flex-1 p-8 pr-4 flex flex-col justify-center relative z-10 min-h-[220px]">
+                            <div className="flex-1 p-5 md:p-8 md:pr-4 flex flex-col justify-center relative z-10 min-h-[180px] md:min-h-[220px]">
                                 {/* Decorative Icon */}
                                 {isBirthday ? (
-                                    <div className="absolute top-4 right-6 text-5xl animate-bounce-slow opacity-20 pointer-events-none filter blur-[1px]">
+                                    <div className="absolute top-4 right-6 text-4xl md:text-5xl animate-bounce-slow opacity-20 pointer-events-none filter blur-[1px]">
                                         🎂
                                     </div>
                                 ) : (
-                                    <Quote className="absolute top-6 right-8 w-16 h-16 text-white/5 -rotate-12 pointer-events-none" />
+                                    <Quote className="absolute top-6 right-8 w-12 h-12 md:w-16 md:h-16 text-white/5 -rotate-12 pointer-events-none" />
                                 )}
 
                                 <motion.div
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: 0.2, type: "spring" }}
-                                    className="relative z-10 space-y-4"
+                                    className="relative z-10 space-y-3 md:space-y-4"
                                 >
                                     {/* Quote/Message */}
                                     <div className="relative">
-                                        <span className={`absolute -top-4 -left-2 text-4xl ${isBirthday ? 'text-purple-300' : 'text-slate-600'} opacity-30 font-serif`}>“</span>
-                                        <p className={`text-xl md:text-2xl font-bold leading-relaxed tracking-tight ${isBirthday ? 'text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-100 to-purple-200' : 'text-white'} drop-shadow-sm`}>
+                                        <span className={`absolute -top-4 -left-2 text-3xl md:text-4xl ${isBirthday ? 'text-purple-300' : 'text-slate-600'} opacity-30 font-serif`}>“</span>
+                                        <p className={`text-base md:text-2xl font-bold leading-relaxed tracking-tight ${isBirthday ? 'text-transparent bg-clip-text bg-gradient-to-r from-white via-purple-100 to-purple-200' : 'text-white'} drop-shadow-sm`}>
                                             {config.quote}
                                         </p>
                                         <span className={`absolute -bottom-4 -right-2 text-4xl ${isBirthday ? 'text-purple-300' : 'text-slate-600'} opacity-30 font-serif`}>”</span>
@@ -195,13 +195,13 @@ const InspirationalPopup = () => {
                                 <img src={`${API_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
                             </div>
 
-                            {/* Close Button */}
+                            {/* Close Button - Always visible for better UX, especially on mobile */}
                             <button
                                 onClick={() => setIsVisible(false)}
-                                className={`absolute top-4 right-4 p-2.5 rounded-full ${isBirthday ? 'bg-black/20 text-white/60 hover:bg-white/20 hover:text-white' : 'bg-white/5 text-white/30 hover:bg-red-600 hover:text-white'} transition-all duration-300 z-50 backdrop-blur-sm opacity-0 group-hover:opacity-100`}
+                                className={`absolute top-3 right-3 md:top-4 md:right-4 p-3 md:p-2.5 rounded-full ${isBirthday ? 'bg-white/10 text-white/80 hover:bg-white/20 hover:text-white' : 'bg-white/10 text-white/60 hover:bg-red-600 hover:text-white'} transition-all duration-300 z-50 backdrop-blur-md border border-white/10 shadow-lg`}
                                 title="Close"
                             >
-                                <X size={16} />
+                                <X size={20} className="md:w-4 md:h-4" />
                             </button>
 
                             {/* Background Atmosphere */}

@@ -93,18 +93,35 @@ const NoticeBoard = () => {
                 ${currentNotice.priority === 'URGENT' ? 'from-red-600/50 via-orange-500/30 to-red-600/50 animate-pulse' : 'from-blue-600/30 via-slate-700/30 to-blue-600/30'}
                 backdrop-blur-xl shadow-2xl
             `}>
-                <div className="bg-slate-900/90 rounded-[1.8rem] p-6 text-white relative overflow-hidden group">
+                <div className="bg-slate-900/90 rounded-[1.8rem] p-4 md:p-6 text-white relative overflow-hidden group">
                     <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/5 blur-[80px] -z-10 group-hover:bg-blue-500/10 transition-all duration-700" />
 
-                    <div className="flex items-start gap-4">
-                        <div className={`
-                            p-3 rounded-2xl flex items-center justify-center
-                            ${getPriorityColor(currentNotice.priority)}
-                        `}>
-                            {getIcon(currentNotice.type)}
+                    <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                        <div className="flex items-center gap-4 w-full md:w-auto">
+                            <div className={`
+                                p-2.5 md:p-3 rounded-xl md:rounded-2xl flex items-center justify-center flex-shrink-0
+                                ${getPriorityColor(currentNotice.priority)}
+                            `}>
+                                {getIcon(currentNotice.type)}
+                            </div>
+
+                            <div className="flex-1 min-w-0 md:hidden">
+                                <div className="flex flex-wrap items-center gap-2 mb-0.5">
+                                    <span className={`text-[8px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-full border ${getPriorityColor(currentNotice.priority)}`}>
+                                        {currentNotice.priority}
+                                    </span>
+                                    <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
+                                        {new Date(currentNotice.createdAt).toLocaleDateString()}
+                                    </span>
+                                </div>
+                                <h3 className="text-base font-bold text-white truncate">
+                                    {currentNotice.title}
+                                </h3>
+                            </div>
                         </div>
 
-                        <div className="flex-1 min-w-0">
+                        {/* Desktop Description */}
+                        <div className="hidden md:block flex-1 min-w-0">
                             <div className="flex items-center gap-3 mb-1">
                                 <span className={`text-[10px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full border ${getPriorityColor(currentNotice.priority)}`}>
                                     {currentNotice.priority}
@@ -123,16 +140,23 @@ const NoticeBoard = () => {
                             </p>
                         </div>
 
+                        {/* Mobile Description */}
+                        <div className="md:hidden w-full">
+                            <p className="text-slate-400 text-xs leading-relaxed line-clamp-4 whitespace-pre-wrap mb-4 px-1">
+                                {renderContent(currentNotice.content)}
+                            </p>
+                        </div>
+
                         {announcements.length > 1 && (
-                            <div className="flex flex-col gap-2 ml-4">
-                                <button onClick={prevNotice} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                                    <ChevronLeft className="w-4 h-4" />
+                            <div className="flex md:flex-col items-center justify-between md:justify-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-4 md:pt-2 border-t border-white/5 md:border-t-0 md:ml-4">
+                                <button onClick={prevNotice} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 active:scale-90 transition-all text-slate-400 hover:text-white">
+                                    <ChevronLeft size={18} />
                                 </button>
-                                <div className="text-[10px] font-mono text-center text-slate-500">
-                                    {currentIndex + 1}/{announcements.length}
+                                <div className="text-[10px] font-mono text-center text-slate-400 bg-white/5 px-3 py-1.5 rounded-full border border-white/5">
+                                    {currentIndex + 1} <span className="opacity-30">/</span> {announcements.length}
                                 </div>
-                                <button onClick={nextNotice} className="p-2 rounded-full bg-white/5 hover:bg-white/10 transition-colors">
-                                    <ChevronRight className="w-4 h-4" />
+                                <button onClick={nextNotice} className="p-2.5 rounded-full bg-white/5 hover:bg-white/10 active:scale-90 transition-all text-slate-400 hover:text-white">
+                                    <ChevronRight size={18} />
                                 </button>
                             </div>
                         )}

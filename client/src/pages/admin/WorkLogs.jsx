@@ -250,6 +250,8 @@ const WorkLogs = () => {
                         <thead>
                             <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
                                 <th className="px-6 py-4 font-semibold">Employee</th>
+                                <th className="px-6 py-4 font-semibold">Project/Site</th>
+                                <th className="px-6 py-4 font-semibold">Activity Details</th>
                                 <th className="px-6 py-4 font-semibold text-center">Status</th>
                                 <th className="px-6 py-4 font-semibold text-center">Actions</th>
                             </tr>
@@ -290,6 +292,15 @@ const WorkLogs = () => {
                                                     <span className="text-xs text-slate-400 font-normal">{record.user.email}</span>
                                                     <span className="text-xs text-slate-400 font-normal uppercase mt-0.5">{record.user.designation}</span>
                                                 </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                <div className="flex flex-col">
+                                                    <span className="text-sm font-bold text-slate-700">{log?.projectName || log?.project?.name || '-'}</span>
+                                                    <span className="text-[10px] text-slate-400 italic leading-tight">{log?.site || '-'}</span>
+                                                </div>
+                                            </td>
+                                            <td className="px-6 py-4">
+                                                {log ? renderWorkDescription(log) : <span className="text-slate-300 italic text-xs">Waiting for submission...</span>}
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${statusColor}`}>

@@ -307,16 +307,38 @@ const PerformanceAnalytics = () => {
                 <div className="overflow-x-auto custom-scrollbar">
                     <table className="w-full text-left border-separate border-spacing-0">
                         <thead>
-                            <tr className="bg-slate-50/50">
-                                <th className="pl-12 pr-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">Employee Profile</th>
-                                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100">
-                                    Efficiency <span className="text-emerald-500 ml-1">Score</span>
+                            <tr className="bg-slate-900 shadow-2xl relative z-10">
+                                <th className="pl-12 pr-6 py-10 text-sm font-black text-slate-400 uppercase tracking-[0.1em] rounded-tl-[32px]">
+                                    <div className="flex flex-col">
+                                        <span className="text-white mb-1.5 text-base">Employee Profile</span>
+                                        <span className="text-[11px] text-slate-500 font-bold lowercase tracking-wider">Details & Role</span>
+                                    </div>
                                 </th>
-                                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100">
-                                    Consistency <span className="text-violet-500 ml-1">Index</span>
+                                <th className="px-6 py-10 text-center">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-sm font-black text-white uppercase tracking-[0.15em] mb-2">Efficiency</span>
+                                        <div className="text-[11px] font-black text-emerald-400 bg-emerald-400/10 px-4 py-2 rounded-xl border border-emerald-400/20 uppercase tracking-wider shadow-sm">
+                                            (Working Hours)
+                                        </div>
+                                    </div>
                                 </th>
-                                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-center border-b border-slate-100">Total Presence</th>
-                                <th className="px-6 py-7 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] text-right pr-12 border-b border-slate-100">Action</th>
+                                <th className="px-6 py-10 text-center">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-sm font-black text-white uppercase tracking-[0.15em] mb-2">Consistency</span>
+                                        <div className="text-[11px] font-black text-violet-400 bg-violet-400/10 px-4 py-2 rounded-xl border border-violet-400/20 uppercase tracking-wider shadow-sm">
+                                            (Logs & Punctuality)
+                                        </div>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-9 text-center">
+                                    <div className="flex flex-col items-center">
+                                        <span className="text-sm font-black text-white uppercase tracking-[0.15em] mb-1">Presence</span>
+                                        <span className="text-[11px] text-slate-500 font-black mt-1 uppercase tracking-widest">Total Days</span>
+                                    </div>
+                                </th>
+                                <th className="px-6 py-9 text-right pr-12 rounded-tr-[32px]">
+                                    <span className="text-sm font-black text-slate-400 uppercase tracking-[0.15em]">Action</span>
+                                </th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
