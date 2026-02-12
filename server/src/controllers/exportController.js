@@ -138,7 +138,7 @@ const exportWorkLogs = async (req, res) => {
                             Designation: user.designation,
                             Date: dateStr,
                             'Log Status': 'NOT SUBMITTED',
-                            Project: '-', Client: '-', Site: '-', Hours: '-', StartTime: '-', EndTime: '-', Notes: '-', SubmittedAt: '-'
+                            'Start Time': '-', 'End Time': '-', 'Total Hours': '-', 'Daily Notes': '-', 'Submitted At': '-'
                         };
                         allSummary.push(placeholder);
                     }
@@ -153,17 +153,15 @@ const exportWorkLogs = async (req, res) => {
                 Email: user.email,
                 Designation: desig,
                 Date: dateStr,
-                'Log Status': 'SUBMITTED',
-                Project: log.projectName || log.project?.name || '',
-                Client: log.clientName || '',
-                Site: log.site || '',
-                Hours: log.hours || '',
-                StartTime: log.startTime || '',
-                EndTime: log.endTime || '',
-                Notes: log.notes || log.remarks || '',
-                SubmittedAt: new Date(log.createdAt).toLocaleString(),
+                'Log Status': log.logStatus || 'SUBMITTED',
+                'Start Time': log.startTime || '',
+                'End Time': log.endTime || '',
+                'Total Hours': log.hours || '',
+                'Daily Notes': log.remarks || log.notes || '',
+                'Submitted At': new Date(log.createdAt).toLocaleString(),
             };
 
+            // Custom Fields (Dynamic)
             if (log.customFields) {
                 const cf = safeParse(log.customFields);
                 Object.entries(cf).forEach(([key, val]) => {
@@ -171,20 +169,116 @@ const exportWorkLogs = async (req, res) => {
                 });
             }
 
+            // Project Reports (If any)
+            const reportsField = desig === 'AE' ? 'ae_project_reports' : (desig === 'LA' ? 'la_project_reports' : null);
+            if (reportsField && log[reportsField]) {
+                const reports = safeParse(log[reportsField]);
+                if (Array.isArray(reports)) {
+                    common['Details (Projects)'] = reports.map(report => {
+                        const r = typeof report === 'string' ? safeParse(report) : report;
+                        if (desig === 'AE') {
+                            const tasks = Array.isArray(r.ae_tasksCompleted) ? r.ae_tasksCompleted.join(', ') : (r.ae_tasksCompleted || '');
+                            return `${r.clientName || 'Site'}: ${r.process || ''} - ${tasks} [${r.ae_siteStatus || ''}] (${r.startTime}-${r.endTime})`;
+                        } else {
+                            return `${r.clientName || 'Project'}: ${r.process || r.tasks || ''} - ${r.completedImages || 0}/${r.imageCount || 0} img (${r.startTime}-${r.endTime})`;
+                        }
+                    }).join(' | ');
+                }
+            }
+
             let roleEntry = { Employee: common.Employee, Date: common.Date, 'Log Status': common['Log Status'] };
 
             if (desig === 'CRE') {
-                const m = safeParse(log.cre_closing_metrics);
-                roleEntry = { ...roleEntry, 'Total Calls': log.cre_totalCalls || '', 'Showroom Visits': log.cre_showroomVisits || m?.showroomVisit || '', 'Floor Plan Rx': m?.floorPlanReceived || '', 'Reviews': m?.reviewCollected || '', 'Quotes Sent': m?.quotesSent || log.cre_fqSent || '', 'Proposals': m?.proposalCount || log.cre_proposals || '', 'Orders': m?.orderCount || log.cre_orders || '', '8 Star Calls': m?.eightStar || '' };
+                const op = safeParse(log.cre_opening_metrics);
+                const cl = safeParse(log.cre_closing_metrics);
+                roleEntry = {
+                    ...roleEntry,
+                    'Op: 7 Star': op?.uptoTodayCalls1?.sevenStar || '',
+                    'Cl: 7 Star': cl?.sevenStar || '',
+                    'Op: 6 Star': op?.uptoTodayCalls1?.sixStar || '',
+                    'Cl: 6 Star': cl?.sixStar || '',
+                    'Op: 5 Star': op?.uptoTodayCalls1?.fiveStar || '',
+                    'Cl: 5 Star': cl?.fiveStar || '',
+                    'Op: 4 Star': op?.uptoTodayCalls2?.fourStar || '',
+                    'Cl: 4 Star': cl?.fourStar || '',
+                    'Op: 3 Star': op?.uptoTodayCalls2?.threeStar || '',
+                    'Cl: 3 Star': cl?.threeStar || '',
+                    'Op: 2 Star': op?.uptoTodayCalls2?.twoStar || '',
+                    'Cl: 2 Star': cl?.twoStar || '',
+                    'Op: Showroom Visits': op?.showroomVisit || '',
+                    'Cl: Showroom Visits': cl?.showroomVisit || '',
+                    'Op: Online Disc': op?.onlineDiscussion || '',
+                    'Cl: Online Disc': cl?.onlineDiscussion || '',
+                    'Op: Site Msmt Fixed': op?.siteMsmtDiscFixed || '',
+                    'Cl: Site Msmt Done': cl?.siteMsmtDisc || '',
+                    'Op: FP Received': op?.fpReceived || '',
+                    'Cl: FP Received': cl?.floorPlanReceived || '',
+                    'Op: FQ Sent': op?.fqSent || '',
+                    'Cl: FQ Sent': cl?.quotesSent || cl?.firstQuotationSent || '',
+                    'Op: Orders': op?.noOfOrder || '',
+                    'Cl: Orders': cl?.orderCount || '',
+                    'Op: Proposals': op?.noOfProposalIQ || '',
+                    'Cl: Proposals': cl?.proposalCount || '',
+                    'Total Today Calls': cl?.uptoTodayCalls || log.cre_totalCalls || '',
+                    'Reviews Collected': cl?.reviewCollected || '',
+                    'WhatsApp Sent': cl?.whatsappSent || '',
+                    '8 Star Calls': cl?.eightStar || ''
+                };
             } else if (desig === 'FA') {
-                const m = safeParse(log.fa_closing_metrics);
-                roleEntry = { ...roleEntry, 'Call 9 Star': m?.calls?.nineStar || log.fa_calls || '', 'Showroom Visits': m?.showroomVisit || log.fa_showroomVisits || '', 'Site Visits': log.fa_siteVisits || '', 'Online Disc': m?.onlineDiscussion || log.fa_onlineDiscussion || '', 'Quotes Pending': m?.quotationPending || log.fa_quotePending || '', 'Infurnia Count': m?.infurniaPending?.count || '' };
+                const op = safeParse(log.fa_opening_metrics);
+                const cl = safeParse(log.fa_closing_metrics);
+                roleEntry = {
+                    ...roleEntry,
+                    'Op: 9 Star': op?.calls?.nineStar || '',
+                    'Cl: 9 Star': cl?.calls?.nineStar || '',
+                    'Op: 8 Star': op?.calls?.eightStar || '',
+                    'Cl: 8 Star': cl?.calls?.eightStar || '',
+                    'Op: 7 Star': op?.calls?.sevenStar || '',
+                    'Cl: 7 Star': cl?.calls?.sevenStar || '',
+                    'Op: Showroom Visits': op?.showroomVisit || '',
+                    'Cl: Showroom Visits': cl?.showroomVisit || '',
+                    'Op: Online Disc': op?.onlineDiscussion || '',
+                    'Cl: Online Disc': cl?.onlineDiscussion || '',
+                    'Op: Infurnia Pending': op?.infurniaPending?.count || '',
+                    'Cl: Infurnia Done': cl?.infurniaPending?.count || '',
+                    'Op: Quotation Pending': op?.quotationPending || '',
+                    'Cl: Quotation Done': cl?.quotationPending || '',
+                    'Op: Initial Quote': op?.initialQuote?.count || '',
+                    'Cl: Initial Quote': cl?.initialQuote?.count || '',
+                    'Cl: Initial Quote Details': cl?.initialQuote?.text || '',
+                    'Op: Revised Quote': op?.revisedQuote?.count || '',
+                    'Cl: Revised Quote': cl?.revisedQuote?.count || '',
+                    'Cl: Revised Quote Details': cl?.revisedQuote?.text || '',
+                    'Site Visits': log.fa_siteVisits || ''
+                };
             } else if (desig === 'LA') {
-                const m = safeParse(log.la_closing_metrics);
-                roleEntry = { ...roleEntry, 'LA Number': log.la_number || '', 'Project Location': log.la_projectLocation || '', 'Project Value': log.la_projectValue || '', 'Site Status': log.la_siteStatus || '', 'Initial 2D': m?.initial2D?.count || '', 'Prod 2D': m?.production2D?.count || '', 'Fresh 3D': m?.fresh3D?.count || '', 'Revised 3D': m?.revised3D?.count || '', 'Estimation': m?.estimation?.count || '' };
+                const op = safeParse(log.la_opening_metrics);
+                const cl = safeParse(log.la_closing_metrics);
+                const fields = [
+                    { k: 'initial2D', l: 'Initial 2D' }, { k: 'production2D', l: 'Prod 2D' },
+                    { k: 'revised2D', l: 'Revised 2D' }, { k: 'fresh3D', l: 'Fresh 3D' },
+                    { k: 'revised3D', l: 'Revised 3D' }, { k: 'estimation', l: 'Estimation' },
+                    { k: 'woe', l: 'WOE' }, { k: 'onlineDiscussion', l: 'Online Disc' },
+                    { k: 'showroomDiscussion', l: 'Showroom Disc' }, { k: 'signFromEngineer', l: 'Sign Engr' },
+                    { k: 'siteVisit', l: 'Site Visit' }, { k: 'infurnia', l: 'Infurnia' }
+                ];
+                fields.forEach(f => {
+                    roleEntry[`Op: ${f.l}`] = op?.[f.k]?.count || '';
+                    roleEntry[`Cl: ${f.l}`] = cl?.[f.k]?.count || '';
+                    roleEntry[`Op: ${f.l} Details`] = op?.[f.k]?.details || '';
+                    roleEntry[`Cl: ${f.l} Details`] = cl?.[f.k]?.details || '';
+                });
             } else if (desig === 'AE') {
-                const m = safeParse(log.ae_closing_metrics);
-                roleEntry = { ...roleEntry, 'Visit Type': Array.isArray(m?.ae_visitType) ? m.ae_visitType.join(', ') : (m?.ae_visitType || log.ae_visitType || ''), 'Work Stage': m?.ae_workStage || log.ae_workStage || '', 'Measurements': m?.ae_measurements || log.ae_measurements || '', 'Items Installed': m?.ae_itemsInstalled || log.ae_itemsInstalled || '', 'Has Issues': m?.ae_hasIssues ? 'Yes' : (log.ae_hasIssues ? 'Yes' : 'No'), 'Feedback': m?.ae_clientFeedback || log.ae_clientFeedback || '' };
+                const op = safeParse(log.ae_opening_metrics);
+                const cl = safeParse(log.ae_closing_metrics);
+                roleEntry = {
+                    ...roleEntry,
+                    'Op: Site Location': op?.ae_siteLocation || log.ae_siteLocation || '',
+                    'Op: Site Status': op?.ae_siteStatus || log.ae_siteStatus || '',
+                    'Op: Planned Work': op?.ae_plannedWork || log.ae_plannedWork || '',
+                    'Cl: Daily Remarks': log.remarks || log.notes || '',
+                };
+                // AE work is mostly in project reports, which is handled in the summary column 'Details (Projects)'
             }
 
             return { common, role: roleEntry, desig };
