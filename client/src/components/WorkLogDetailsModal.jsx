@@ -80,18 +80,41 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     )}
 
                     {/* FA Section */}
-                    {(WorkLog.fa_calls !== null || WorkLog.fa_designPending !== null) && (
+                    {(WorkLog.fa_opening_metrics || WorkLog.fa_closing_metrics || WorkLog.fa_calls !== null || WorkLog.fa_designPending !== null) && (
                         <div>
-                            <h3 className="text-lg font-bold text-blue-600 mb-3 pb-1 border-b">FA Report</h3>
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
-                                <DetailItem label="Follow-up Calls" value={WorkLog.fa_calls} />
-                                <DetailItem label="Site Visits" value={WorkLog.fa_siteVisits} />
-                                <DetailItem label="Design Pending" value={WorkLog.fa_designPending} sub={WorkLog.fa_designPendingClients} />
-                                <DetailItem label="Quote Pending" value={WorkLog.fa_quotePending} sub={WorkLog.fa_quotePendingClients} />
-                                <DetailItem label="Initial Quote (RN)" value={WorkLog.fa_initialQuoteRn} />
-                                <DetailItem label="Revised Quote (RN)" value={WorkLog.fa_revisedQuoteRn} />
-                                <DetailItem label="Booking Freezed" value={WorkLog.fa_bookingFreezed} sub={WorkLog.fa_bookingFreezedClients} />
-                            </div>
+                            <h3 className="text-lg font-bold text-blue-600 mb-3 pb-1 border-b">FA Daily Report</h3>
+
+                            {/* New JSON Structure Handling */}
+                            {WorkLog.fa_opening_metrics && (
+                                <div className="mb-6">
+                                    <h4 className="text-md font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-blue-500"></span> Opening Targets
+                                    </h4>
+                                    {renderFAMetrics(typeof WorkLog.fa_opening_metrics === 'string' ? JSON.parse(WorkLog.fa_opening_metrics) : WorkLog.fa_opening_metrics)}
+                                </div>
+                            )}
+
+                            {WorkLog.fa_closing_metrics && (
+                                <div className="mb-6">
+                                    <h4 className="text-md font-bold text-slate-700 mb-2 flex items-center gap-2">
+                                        <span className="w-2 h-2 rounded-full bg-emerald-500"></span> Closing Achievements
+                                    </h4>
+                                    {renderFAMetrics(typeof WorkLog.fa_closing_metrics === 'string' ? JSON.parse(WorkLog.fa_closing_metrics) : WorkLog.fa_closing_metrics)}
+                                </div>
+                            )}
+
+                            {/* Legacy Structure Support */}
+                            {(!WorkLog.fa_opening_metrics && !WorkLog.fa_closing_metrics) && (
+                                <div className="grid grid-cols-2 lg:grid-cols-3 gap-4">
+                                    <DetailItem label="Follow-up Calls" value={WorkLog.fa_calls} />
+                                    <DetailItem label="Site Visits" value={WorkLog.fa_siteVisits} />
+                                    <DetailItem label="Design Pending" value={WorkLog.fa_designPending} sub={WorkLog.fa_designPendingClients} />
+                                    <DetailItem label="Quote Pending" value={WorkLog.fa_quotePending} sub={WorkLog.fa_quotePendingClients} />
+                                    <DetailItem label="Initial Quote (RN)" value={WorkLog.fa_initialQuoteRn} />
+                                    <DetailItem label="Revised Quote (RN)" value={WorkLog.fa_revisedQuoteRn} />
+                                    <DetailItem label="Booking Freezed" value={WorkLog.fa_bookingFreezed} sub={WorkLog.fa_bookingFreezedClients} />
+                                </div>
+                            )}
                         </div>
                     )}
 
@@ -391,6 +414,40 @@ const renderLAMetricsTable = (metrics) => {
                     ))}
                 </tbody>
             </table>
+        </div>
+    );
+};
+
+const renderFAMetrics = (metrics) => {
+    if (!metrics) return null;
+
+    return (
+        <div className="space-y-4">
+            {/* Call Star Ratings */}
+            {metrics.calls && (
+                <div className="bg-slate-50 p-3 rounded-lg border border-slate-100">
+                    <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Call Star Ratings</h5>
+                    <div className="flex flex-wrap gap-4 font-mono font-bold text-slate-700">
+                        {Object.entries(metrics.calls)
+                            .filter(([_, count]) => count && count !== '0')
+                            .map(([key, count]) => {
+                                const starNum = key.replace('Star', '*');
+                                return <span key={key} className="text-xs">{starNum}: <span className="text-blue-600">{count}</span></span>;
+                            })}
+                        {Object.values(metrics.calls).every(v => !v || v === '0') && <span className="text-[10px] text-slate-300 italic">No calls logged</span>}
+                    </div>
+                </div>
+            )}
+
+            {/* Other Metrics */}
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                <DetailItem label="Showroom Visits" value={metrics.showroomVisit} />
+                <DetailItem label="Online Discussion" value={metrics.onlineDiscussion} />
+                <DetailItem label="Quotation Pending" value={metrics.quotationPending} />
+                <DetailItem label="Initial Quote" value={metrics.initialQuote?.count} sub={metrics.initialQuote?.text} />
+                <DetailItem label="Revised Quote" value={metrics.revisedQuote?.count} sub={metrics.revisedQuote?.text} />
+                <DetailItem label="Infurnia Pending" value={metrics.infurniaPending?.count} sub={`${metrics.infurniaPending?.text1 || ''} ${metrics.infurniaPending?.text2 || ''}`.trim()} />
+            </div>
         </div>
     );
 };

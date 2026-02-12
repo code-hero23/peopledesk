@@ -44,6 +44,14 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
         </div>
     );
 
+    const renderFAStars = (calls) => {
+        if (!calls) return null;
+        const starOrder = ['nine', 'eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one'];
+        return starOrder.filter(s => calls[`${s}Star`]).map(s => (
+            <span key={s}>{s.charAt(0).toUpperCase() + s.slice(1)} ★: <span className="text-blue-600">{calls[`${s}Star`]}</span></span>
+        ));
+    };
+
     const SectionHeader = ({ title, colorClass }) => (
         <div className={`mt-8 mb-4 flex items-center gap-3`}>
             <div className={`h-6 w-1 ${colorClass}`}></div>
@@ -148,18 +156,28 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                     {(faOpening || log.fa_calls || log.fa_showroomVisits) && (
                         <div className="mb-6">
                             <DataGrid items={[
-                                { label: 'Calls', value: faOpening?.calls?.total || log.fa_calls },
                                 { label: 'Showroom Visit', value: faOpening?.showroomVisit || log.fa_showroomVisits },
                                 { label: 'Online Discussion', value: faOpening?.onlineDiscussion || log.fa_onlineDiscussion },
                                 { label: 'Quotation Pending', value: faOpening?.quotationPending || log.fa_quotePending },
+                                { label: 'Initial Quote', value: faOpening?.initialQuote?.count },
+                                { label: 'Revised Quote', value: faOpening?.revisedQuote?.count },
                             ]} />
-                            {faOpening && (
+
+                            {faOpening?.calls && (
+                                <div className="mt-4 p-3 bg-slate-50 rounded border border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Target Call Ratings</p>
+                                    <div className="flex flex-wrap gap-x-6 gap-y-2 font-black text-[11px] text-slate-800">
+                                        {renderFAStars(faOpening.calls)}
+                                    </div>
+                                </div>
+                            )}
+
+                            {faOpening?.infurniaPending && (
                                 <div className="mt-3 bg-slate-50 p-3 rounded border border-slate-100">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Target Metrics</p>
-                                    <div className="flex gap-6 font-black text-slate-800">
-                                        <span>9*: {faOpening.calls?.nineStar || 0}</span>
-                                        <span>8*: {faOpening.calls?.eightStar || 0}</span>
-                                        <span>7*: {faOpening.calls?.sevenStar || 0}</span>
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Infurnia Targets</p>
+                                    <div className="flex justify-between items-center font-bold">
+                                        <span className="text-sm text-blue-600">Count: {faOpening.infurniaPending.count || 0}</span>
+                                        <span className="text-[10px] text-slate-500 italic">({faOpening.infurniaPending.text1})</span>
                                     </div>
                                 </div>
                             )}
@@ -373,25 +391,31 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                 { label: 'Showroom Visit', value: faClosing?.showroomVisit || log.fa_showroomVisits },
                                 { label: 'Online Discussion', value: faClosing?.onlineDiscussion || log.fa_onlineDiscussion },
                                 { label: 'Quotation Pending', value: faClosing?.quotationPending || log.fa_quotePending },
+                                { label: 'Initial Quote', value: faClosing?.initialQuote?.count },
+                                { label: 'Revised Quote', value: faClosing?.revisedQuote?.count },
                             ]} />
-                            <div className="mt-4 grid grid-cols-2 gap-4">
-                                <div className="bg-slate-50 p-3 rounded border">
-                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Infurnia Pending</p>
-                                    <div className="flex justify-between items-center font-bold">
-                                        <span className="text-sm">Count: {faClosing?.infurniaPending?.count || log.fa_infurniaPending || 0}</span>
-                                        <span className="text-xs text-slate-500 italic">({faClosing?.infurniaPending?.text1 || 'N/A'})</span>
+
+                            {faClosing?.calls && (
+                                <div className="mt-4 bg-slate-50 p-3 rounded border border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Execution Star Ratings</p>
+                                    <div className="flex flex-wrap gap-x-6 gap-y-2 font-black text-[11px] text-slate-800">
+                                        {renderFAStars(faClosing.calls)}
                                     </div>
                                 </div>
-                                {faClosing && (
-                                    <div className="bg-slate-50 p-3 rounded border">
-                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Execution Score</p>
-                                        <div className="flex gap-4 font-bold text-slate-800">
-                                            <span>9*: {faClosing.calls?.nineStar || 0}</span>
-                                            <span>8*: {faClosing.calls?.eightStar || 0}</span>
+                            )}
+
+                            {faClosing?.infurniaPending && (
+                                <div className="mt-3 bg-slate-50 p-3 rounded border border-slate-100">
+                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Infurnia Achievements</p>
+                                    <div className="flex justify-between items-center font-bold">
+                                        <span className="text-sm text-emerald-600">Count: {faClosing.infurniaPending.count || 0}</span>
+                                        <div className="text-right">
+                                            <p className="text-[10px] text-slate-500 italic">({faClosing.infurniaPending.text1})</p>
+                                            <p className="text-[10px] text-slate-500 italic">({faClosing.infurniaPending.text2})</p>
                                         </div>
                                     </div>
-                                )}
-                            </div>
+                                </div>
+                            )}
                         </div>
                     )}
 
