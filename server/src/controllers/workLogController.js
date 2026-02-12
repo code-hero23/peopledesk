@@ -203,6 +203,7 @@ const closeWorkLog = async (req, res) => {
         fa_closing_metrics,
         la_closing_metrics,
         ae_closing_metrics, // NEW AE CLOSING
+        cre_totalCalls, // Added this
         customFields, // Generic
         process, // Generic
         remarks, // Generic
