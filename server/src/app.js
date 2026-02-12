@@ -33,6 +33,7 @@ app.use(helmet({
         },
     },
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
+    crossOriginResourcePolicy: { policy: "cross-origin" },
 })); // Set security headers
 
 // Hardened CORS

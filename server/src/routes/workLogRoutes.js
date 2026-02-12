@@ -7,7 +7,7 @@ const { upload } = require('../middlewares/uploadMiddleware');
 
 router.post('/', protect, upload.array('ae_photos', 5), createWorkLog);
 router.put('/close', protect, upload.array('ae_photos', 5), closeWorkLog);
-router.put('/project-report', protect, addProjectReport);
+router.put('/project-report', protect, upload.array('ae_photos', 5), addProjectReport);
 router.get('/', protect, getMyWorkLogs);
 
 module.exports = router;

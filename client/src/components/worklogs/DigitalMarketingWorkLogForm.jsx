@@ -23,7 +23,8 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
         hoursSpent: '',
         status: 'In Progress',
         fileLink: '',
-        remarks: ''
+        remarks: '',
+        notes: ''
     });
 
     const handleChange = (e) => {
@@ -49,14 +50,15 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
                         "Status": formData.status,
                         "File Link": formData.fileLink
                     },
-                    remarks: formData.remarks
+                    remarks: formData.remarks,
+                    notes: formData.notes
                 };
 
                 dispatch(createWorkLog(payload)).then((res) => {
                     if (!res.error) {
                         setFormData({
                             work: '', workGivenBy: '', hoursSpent: '',
-                            status: 'In Progress', fileLink: '', remarks: ''
+                            status: 'In Progress', fileLink: '', remarks: '', notes: ''
                         });
                         setShowSuccess(true);
                     }
@@ -179,6 +181,22 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
                         rows="2"
                         className="w-full px-4 py-3 bg-slate-50 border border-slate-100 rounded-xl focus:bg-white focus:ring-2 focus:ring-purple-100 focus:border-purple-300 outline-none text-sm font-medium transition-all resize-none"
                         placeholder="Any blockers or additional notes..."
+                    ></textarea>
+                </div>
+
+                {/* Daily Notes */}
+                <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 space-y-3">
+                    <div className="flex items-center gap-2">
+                        <Clock size={16} className="text-blue-500" />
+                        <label className="text-[10px] font-bold text-blue-500 uppercase">Daily Notes (for Admin & HR)</label>
+                    </div>
+                    <textarea
+                        name="notes"
+                        value={formData.notes}
+                        onChange={handleChange}
+                        rows="2"
+                        className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm font-medium transition-all resize-none placeholder:text-slate-300"
+                        placeholder="Share daily summary, campaign insights, or updates for Admin and HR..."
                     ></textarea>
                 </div>
             </div>

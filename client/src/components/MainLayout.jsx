@@ -164,7 +164,7 @@ const Layout = () => {
                         </>
                     ) : (
                         <>
-                            <NavItem to="/dashboard" icon={LayoutDashboard} label="Overview" exact />
+                            <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" exact />
                             <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Logs" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                         </>

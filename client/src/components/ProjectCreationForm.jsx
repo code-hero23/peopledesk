@@ -5,12 +5,15 @@ import { createProject } from '../features/projects/projectSlice';
 const ProjectCreationForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.projects);
+    const { user } = useSelector((state) => state.auth);
 
     const [formData, setFormData] = useState({
-        name: '', // Required field
-        number: '',
+        name: '', // Required field (Project Name)
+        clientName: '', // AE Field
+        number: '', // Client Contact No
+        googleMapLink: '', // AE Field
+        location: '', // Area
         mailId: '',
-        location: '',
         freezingAmount: '',
         variant: '',
         projectValue: '',
@@ -53,31 +56,35 @@ const ProjectCreationForm = ({ onSuccess }) => {
         <form onSubmit={handleSubmit} className="space-y-6 text-sm text-slate-700 max-h-[80vh] overflow-y-auto pr-2">
 
             {/* Project Name / Client Name is mandatory */}
-            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100">
-                <InputField label="Name (Client/Project)" name="name" value={formData.name} onChange={handleChange} required />
+            <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 space-y-4">
+                <InputField label="Project Name" name="name" value={formData.name} onChange={handleChange} required />
+                <InputField label="Area" name="location" value={formData.location} onChange={handleChange} />
+                <InputField label="GMap Location Link" name="googleMapLink" value={formData.googleMapLink} onChange={handleChange} />
+                <InputField label="Client Name" name="clientName" value={formData.clientName} onChange={handleChange} />
+                <InputField label="Client Contact No" name="number" value={formData.number} onChange={handleChange} />
             </div>
 
-            {/* Basic Info Section - 2 Cols */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-4">
-                    <InputField label="Number" name="number" value={formData.number} onChange={handleChange} />
-                    <InputField label="Mail ID" name="mailId" value={formData.mailId} onChange={handleChange} />
-                    <InputField label="Project / Location" name="location" value={formData.location} onChange={handleChange} />
-                    <InputField label="Freezing Amount" name="freezingAmount" value={formData.freezingAmount} onChange={handleChange} />
-                    <InputField label="Variant" name="variant" value={formData.variant} onChange={handleChange} />
-                    <InputField label="Project Value" name="projectValue" value={formData.projectValue} onChange={handleChange} />
-                    <InputField label="Woodwork" name="woodwork" value={formData.woodwork} onChange={handleChange} />
+            {/* Additional Info Section - Collapsible or just below - HIDDEN FOR AE */}
+            {user?.designation !== 'AE' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-slate-100">
+                    <div className="space-y-4">
+                        <InputField label="Mail ID" name="mailId" value={formData.mailId} onChange={handleChange} />
+                        <InputField label="Freezing Amount" name="freezingAmount" value={formData.freezingAmount} onChange={handleChange} />
+                        <InputField label="Variant" name="variant" value={formData.variant} onChange={handleChange} />
+                        <InputField label="Project Value" name="projectValue" value={formData.projectValue} onChange={handleChange} />
+                        <InputField label="Woodwork" name="woodwork" value={formData.woodwork} onChange={handleChange} />
+                    </div>
+                    <div className="space-y-4">
+                        <InputField label="Add Ons" name="addOns" value={formData.addOns} onChange={handleChange} />
+                        <InputField label="CP Code" name="cpCode" value={formData.cpCode} onChange={handleChange} />
+                        <InputField label="Source" name="source" value={formData.source} onChange={handleChange} />
+                        <InputField label="FA" name="fa" value={formData.fa} onChange={handleChange} />
+                        <InputField label="Referral Bonus" name="referalBonus" value={formData.referalBonus} onChange={handleChange} />
+                        <InputField label="Site Status" name="siteStatus" value={formData.siteStatus} onChange={handleChange} />
+                        <InputField label="Special Note" name="specialNote" value={formData.specialNote} onChange={handleChange} />
+                    </div>
                 </div>
-                <div className="space-y-4">
-                    <InputField label="Add Ons" name="addOns" value={formData.addOns} onChange={handleChange} />
-                    <InputField label="CP Code" name="cpCode" value={formData.cpCode} onChange={handleChange} />
-                    <InputField label="Source" name="source" value={formData.source} onChange={handleChange} />
-                    <InputField label="FA" name="fa" value={formData.fa} onChange={handleChange} />
-                    <InputField label="Referral Bonus" name="referalBonus" value={formData.referalBonus} onChange={handleChange} />
-                    <InputField label="Site Status" name="siteStatus" value={formData.siteStatus} onChange={handleChange} />
-                    <InputField label="Special Note" name="specialNote" value={formData.specialNote} onChange={handleChange} />
-                </div>
-            </div>
+            )}
 
 
 

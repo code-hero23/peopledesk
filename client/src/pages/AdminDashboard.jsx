@@ -11,12 +11,32 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const { employees, pendingRequests } = useSelector((state) => state.admin);
     const { user } = useSelector((state) => state.auth);
+    const [todayPresentCount, setTodayPresentCount] = useState(0);
 
     useEffect(() => {
         dispatch(getAllEmployees());
         dispatch(getPendingRequests());
+
+        // Fetch today's attendance
+        const fetchTodayAttendance = async () => {
+            try {
+                const config = {
+                    headers: {
+                        Authorization: `Bearer ${user.token}`,
+                    },
+                };
+                const response = await axios.get('/api/admin/attendance/daily', config);
+                // Count employees who have checked in today
+                const presentCount = response.data.filter(att => att.status === 'PRESENT').length;
+                setTodayPresentCount(presentCount);
+            } catch (error) {
+                console.error('Failed to fetch today\'s attendance:', error);
+            }
+        };
+
+        fetchTodayAttendance();
         return () => { dispatch(reset()); };
-    }, [dispatch]);
+    }, [dispatch, user.token]);
 
     const onDownload = async (type) => {
         try {
@@ -76,7 +96,22 @@ const AdminDashboard = () => {
             {/* Stats Overview */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {user?.role === 'ADMIN' && (
-                    <StatCard title="Total Employees" value={employees.length} icon="👥" color="blue" />
+                    <>
+                        <StatCard
+                            title="Total Employees"
+                            value={employees.length}
+                            icon="👥"
+                            color="blue"
+                            onClick={() => navigate('/admin/employees')}
+                        />
+                        <StatCard
+                            title="Today Present"
+                            value={todayPresentCount}
+                            icon="✓"
+                            color="teal"
+                            onClick={() => navigate('/admin/attendance')}
+                        />
+                    </>
                 )}
 
                 {/* Admin does not see Pending Requests */}
@@ -86,8 +121,20 @@ const AdminDashboard = () => {
 
                 {user?.role === 'ADMIN' && (
                     <>
-                        <StatCard title="Active Users" value={employees.filter(e => e.status === 'ACTIVE').length} icon="✅" color="green" />
-                        <StatCard title="Blocked Users" value={employees.filter(e => e.status === 'BLOCKED').length} icon="🚫" color="purple" />
+                        <StatCard
+                            title="Active Users"
+                            value={employees.filter(e => e.status === 'ACTIVE').length}
+                            icon="✅"
+                            color="amber"
+                            onClick={() => navigate('/admin/employees')}
+                        />
+                        <StatCard
+                            title="Blocked Users"
+                            value={employees.filter(e => e.status === 'BLOCKED').length}
+                            icon="🚫"
+                            color="purple"
+                            onClick={() => navigate('/admin/employees')}
+                        />
                     </>
                 )}
             </div>

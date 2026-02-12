@@ -28,7 +28,9 @@ const createProject = async (req, res) => {
             showroomMeeting,
             measurements,
             latitude,
-            longitude
+            longitude,
+            clientName,
+            googleMapLink
         } = req.body;
 
         if (!name) {
@@ -59,6 +61,8 @@ const createProject = async (req, res) => {
                 measurements,
                 latitude: latitude ? parseFloat(latitude) : null,
                 longitude: longitude ? parseFloat(longitude) : null,
+                clientName,
+                googleMapLink,
                 managerId: req.user.id // Assign creator as manager? or just track distinct createdBy if schema supports
             }
         });

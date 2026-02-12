@@ -62,7 +62,8 @@ const CREWorkLogForm = ({ onSuccess }) => {
             onlineDiscussion: '',
             siteMsmtDisc: '',
             whatsappSent: ''
-        }
+        },
+        notes: ''
     });
 
     const handleOpeningChange = (e, section) => {
@@ -88,24 +89,22 @@ const CREWorkLogForm = ({ onSuccess }) => {
         }
     };
 
-    const handleClosingChange = (e, section) => {
-        if (section) {
+    const handleClosingChange = (e) => {
+        const { name, value } = e.target;
+
+        // Check if this is the notes field (top-level) or a metric field (nested)
+        if (name === 'notes') {
             setClosingData(prev => ({
                 ...prev,
-                cre_closing_metrics: {
-                    ...prev.cre_closing_metrics,
-                    [section]: {
-                        ...prev.cre_closing_metrics[section],
-                        [e.target.name]: e.target.value
-                    }
-                }
+                notes: value
             }));
         } else {
+            // All other fields are part of cre_closing_metrics
             setClosingData(prev => ({
                 ...prev,
                 cre_closing_metrics: {
                     ...prev.cre_closing_metrics,
-                    [e.target.name]: e.target.value
+                    [name]: value
                 }
             }));
         }
@@ -142,7 +141,8 @@ const CREWorkLogForm = ({ onSuccess }) => {
             message: 'Are you sure you want to submit your final metrics for today?',
             onConfirm: () => {
                 const payload = {
-                    cre_closing_metrics: closingData.cre_closing_metrics
+                    cre_closing_metrics: closingData.cre_closing_metrics,
+                    notes: closingData.notes
                 };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {
@@ -228,7 +228,19 @@ const CREWorkLogForm = ({ onSuccess }) => {
                         <InputGroup label="WhatsApp Sent" name="whatsappSent" value={closingData.cre_closing_metrics.whatsappSent} onChange={handleClosingChange} />
                     </MetricCard>
 
-
+                    <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex flex-col gap-3">
+                        <div className="flex items-center gap-2 text-blue-600">
+                            <MessageSquare size={18} />
+                            <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
+                        </div>
+                        <textarea
+                            name="notes"
+                            value={closingData.notes}
+                            onChange={handleClosingChange}
+                            className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                            placeholder="Share daily summary, insights, or site updates for Admin and HR..."
+                        ></textarea>
+                    </div>
                 </div>
 
                 <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">

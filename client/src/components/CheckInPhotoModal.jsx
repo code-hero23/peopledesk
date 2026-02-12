@@ -1,7 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import { Camera, X, CheckCircle, RefreshCcw } from 'lucide-react';
+import { useSelector } from 'react-redux';
 
 const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut }) => {
+    const { user } = useSelector((state) => state.auth);
     const [photo, setPhoto] = useState(null);
     const [preview, setPreview] = useState(null);
     const [stream, setStream] = useState(null);
@@ -11,13 +13,45 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
     const canvasRef = useRef(null);
 
     const [location, setLocation] = useState({ lat: null, lng: null, areaName: 'Fetching location...' });
+    const [countdown, setCountdown] = useState(0);
+    const [isLocationReady, setIsLocationReady] = useState(false);
+
+    const isAE = user?.designation === 'AE' || user?.role === 'AE';
 
     // Start Camera & Get Location
     const startCamera = async () => {
         // Stop any existing stream first
-        if (stream) {
-            stream.getTracks().forEach(track => track.stop());
-        }
+        stopCamera();
+
+        // Reset States
+        setError(null);
+        setIsLocationReady(false);
+        setLocation({ lat: null, lng: null, areaName: 'Fetching location...' });
+
+        const initCameraStream = async () => {
+            try {
+                // Safety Check for Secure Context (HTTPS)
+                if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                    setError("Camera access requires a secure connection (HTTPS). Please check your server setup.");
+                    return;
+                }
+
+                const mediaStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        facingMode: facingMode,
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 }
+                    }
+                });
+                setStream(mediaStream);
+                if (videoRef.current) {
+                    videoRef.current.srcObject = mediaStream;
+                }
+            } catch (err) {
+                console.error("Camera Error:", err);
+                setError("Unable to access camera. Please check permissions.");
+            }
+        };
 
         // Get Location & Reverse Geocode
         if (navigator.geolocation) {
@@ -42,19 +76,33 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
                         const data = await response.json();
                         const addr = data.address;
 
-                        // Prioritize more granular address components to avoid 20km generalization
-                        const primaryArea = addr.road || addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || addr.residential || addr.city_district || addr.town || 'Local Area';
-                        const secondaryArea = addr.city || addr.town || addr.state_district || addr.county || '';
+                        let formattedArea = '';
 
-                        const formattedArea = secondaryArea && primaryArea !== secondaryArea
-                            ? `${primaryArea}, ${secondaryArea}`
-                            : primaryArea;
+                        if (isAE && data.display_name) {
+                            // AE Requirement: Full Address
+                            formattedArea = data.display_name;
+                        } else {
+                            // Default: More granular address components
+                            const primaryArea = addr.road || addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || addr.residential || addr.city_district || addr.town || 'Local Area';
+                            const secondaryArea = addr.city || addr.town || addr.state_district || addr.county || '';
+
+                            formattedArea = secondaryArea && primaryArea !== secondaryArea
+                                ? `${primaryArea}, ${secondaryArea}`
+                                : primaryArea;
+                        }
 
                         setLocation({
                             lat: lat.toFixed(4),
                             lng: lng.toFixed(4),
                             areaName: formattedArea
                         });
+                        setIsLocationReady(true);
+
+                        // If AE, start camera ONLY after location is ready
+                        if (isAE) {
+                            initCameraStream();
+                        }
+
                     } catch (err) {
                         console.error("Reverse geocoding failed:", err);
                         setLocation({
@@ -62,39 +110,34 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
                             lng: lng.toFixed(4),
                             areaName: 'Location Name Unavailable'
                         });
+                        // Even if address name fails, we have coords, so allow camera
+                        setIsLocationReady(true);
+                        if (isAE) initCameraStream();
                     }
                 },
                 (err) => {
                     console.warn("Location access denied or unavailable:", err);
                     setLocation({ lat: null, lng: null, areaName: 'Location Access Denied' });
+
+                    if (isAE) {
+                        setError("Location access is mandatory for AE attendance. Please enable GPS and try again.");
+                    } else {
+                        // Non-AE can proceed without location (technically, though usually we want it)
+                        // But previous logic allowed it. 
+                        // If logic was standard parallel, we invoke camera now.
+                    }
                 },
-                { enableHighAccuracy: true, timeout: 5000 }
+                { enableHighAccuracy: true, timeout: 10000 }
             );
+        } else {
+            if (isAE) {
+                setError("Geolocation is not supported by this browser.");
+            }
         }
 
-        try {
-            setError(null);
-
-            // Safety Check for Secure Context (HTTPS)
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-                setError("Camera access requires a secure connection (HTTPS). Please check your server setup.");
-                return;
-            }
-
-            const mediaStream = await navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: facingMode,
-                    width: { ideal: 1280 },
-                    height: { ideal: 720 }
-                }
-            });
-            setStream(mediaStream);
-            if (videoRef.current) {
-                videoRef.current.srcObject = mediaStream;
-            }
-        } catch (err) {
-            console.error("Camera Error:", err);
-            setError("Unable to access camera. Please check permissions and ensure your site is running on HTTPS.");
+        // For non-AE, start camera immediately while location fetches in background
+        if (!isAE) {
+            initCameraStream();
         }
     };
 
@@ -109,6 +152,8 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             setPhoto(null);
             setPreview(null);
             setError(null);
+            setCountdown(0);
+            setIsLocationReady(false);
             setLocation({ lat: null, lng: null, areaName: 'Fetching location...' });
         } else {
             stopCamera();
@@ -122,6 +167,15 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
         }
         // No else/cleanup here to avoid interrupting state
     }, [facingMode, isOpen, photo]);
+
+    // Countdown Timer Effect
+    useEffect(() => {
+        let timer;
+        if (countdown > 0) {
+            timer = setTimeout(() => setCountdown(countdown - 1), 1000);
+        }
+        return () => clearTimeout(timer);
+    }, [countdown]);
 
     // Stop Camera
     const stopCamera = () => {
@@ -165,9 +219,12 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             const coordStr = location.lat ? `${location.lat}, ${location.lng}` : '';
 
             // Overlay Bar Design (Premium)
-            const barHeight = 160;
+            // AE Full address usually requires more height or smaller font. 
+            // We'll adjust dynamically or use textWrapping if needed, but for canvas simple text:
+
+            const barHeight = isAE ? 200 : 160; // More space for AE full address
             const fontSizeLarge = 40;
-            const fontSizeSmall = 28;
+            const fontSizeSmall = isAE ? 24 : 28; // Smaller font for long address
 
             context.fillStyle = 'rgba(0, 0, 0, 0.75)';
             context.fillRect(0, canvas.height - barHeight, canvas.width, barHeight);
@@ -184,21 +241,37 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
             context.font = `bold ${fontSizeLarge}px sans-serif`;
             context.fillText(`${dateStr} | ${timeStr}`, 24, canvas.height - barHeight + 25);
 
-            // 2. Draw Area Name (Bottom Left of Bar) - NOW BOLD
+            // 2. Draw Area Name (Bottom Left of Bar)
             context.font = `bold ${fontSizeSmall}px sans-serif`;
-            context.fillStyle = '#ffffff'; // Changed to white for better legibility when bolded
-            context.fillText(`📍 ${areaStr}`, 24, canvas.height - barHeight + 85);
+            context.fillStyle = '#ffffff';
+
+            // Handle potentially long address for AE
+            if (isAE && areaStr.length > 50) {
+                // Simple wrap for 2 lines
+                const splitIdx = areaStr.lastIndexOf(' ', 50);
+                const line1 = areaStr.substring(0, splitIdx);
+                const line2 = areaStr.substring(splitIdx + 1);
+                context.fillText(`📍 ${line1}`, 24, canvas.height - barHeight + 85);
+                context.fillText(`   ${line2}`, 24, canvas.height - barHeight + 85 + 30);
+            } else {
+                context.fillText(`📍 ${areaStr}`, 24, canvas.height - barHeight + 85);
+            }
 
             // 3. Draw Coordinates (Align Right)
             if (coordStr) {
                 context.font = `bold ${fontSizeSmall - 4}px monospace`;
                 context.fillStyle = '#60a5fa'; // blue-400
                 const coordWidth = context.measureText(coordStr).width;
-                context.fillText(coordStr, canvas.width - coordWidth - 24, canvas.height - barHeight + 85);
+                context.fillText(coordStr, canvas.width - coordWidth - 24, canvas.height - barHeight + (isAE ? 130 : 85));
             }
 
             // Convert to blob/file
             canvas.toBlob((blob) => {
+                if (!blob) {
+                    console.error("Failed to generate photo blob");
+                    setError("Capture failed: Direct camera stream conversion failed.");
+                    return;
+                }
                 const file = new File([blob], "checkin-photo.jpg", { type: "image/jpeg" });
                 setPhoto(file);
 
@@ -207,6 +280,11 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
 
                 // Stop stream after capture
                 stopCamera();
+
+                // AE Countdown
+                if (isAE) {
+                    setCountdown(5); // 5 seconds mandatory wait
+                }
             }, 'image/jpeg', 0.8);
         }
     };
@@ -219,6 +297,7 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
     const handleRetake = () => {
         setPhoto(null);
         setPreview(null);
+        setCountdown(0);
         // Camera will auto-start due to useEffect dependency on !photo
     };
 
@@ -230,7 +309,7 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
                 {/* Header */}
                 <div className="absolute top-0 left-0 right-0 z-10 p-4 flex justify-between items-center bg-gradient-to-b from-black/50 to-transparent">
                     <h3 className="font-bold text-white text-sm bg-black/30 px-3 py-1 rounded-full backdrop-blur-sm flex items-center gap-2">
-                        {isCheckingOut ? 'Check-Out' : 'Check-In'}
+                        {isCheckingOut ? 'Check-Out' : 'Check-In'} {isAE && <span className="bg-blue-500 text-[10px] px-1.5 py-0.5 rounded ml-1">AE</span>}
                     </h3>
                     <button onClick={onClose} className="p-2 bg-black/30 hover:bg-black/50 text-white rounded-full backdrop-blur-sm transition-colors">
                         <X size={20} />
@@ -247,20 +326,28 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
                     ) : (
                         <>
                             {!preview ? (
-                                <video
-                                    ref={videoRef}
-                                    autoPlay
-                                    playsInline
-                                    muted
-                                    className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
-                                />
+                                isAE && !isLocationReady ? (
+                                    <div className="flex flex-col items-center justify-center text-white">
+                                        <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                                        <p className="text-sm font-bold">Verifying Location...</p>
+                                        <p className="text-xs text-slate-400 mt-1">Please wait</p>
+                                    </div>
+                                ) : (
+                                    <video
+                                        ref={videoRef}
+                                        autoPlay
+                                        playsInline
+                                        muted
+                                        className={`w-full h-full object-cover ${facingMode === 'user' ? 'scale-x-[-1]' : ''}`}
+                                    />
+                                )
                             ) : (
                                 <img src={preview} alt="Preview" className="w-full h-full object-cover" />
                             )}
                             <canvas ref={canvasRef} className="hidden" />
 
                             {/* Switch Camera Button (Only visible when camera is active) */}
-                            {!photo && !error && (
+                            {!photo && !error && (isAE ? isLocationReady : true) && (
                                 <button
                                     onClick={toggleCamera}
                                     className="absolute bottom-4 right-4 p-3 bg-black/40 hover:bg-black/60 text-white rounded-full backdrop-blur-sm transition-colors border border-white/20"
@@ -278,21 +365,32 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
                         <div className="w-full flex flex-col items-center gap-2">
                             <button
                                 onClick={capturePhoto}
-                                className="w-20 h-20 rounded-full border-4 border-blue-500 p-1 flex items-center justify-center hover:scale-105 transition-transform active:scale-95"
+                                disabled={isAE && !isLocationReady}
+                                className={`w-20 h-20 rounded-full border-4 p-1 flex items-center justify-center transition-transform active:scale-95 ${isAE && !isLocationReady
+                                        ? 'border-slate-300 bg-slate-100 cursor-not-allowed opacity-50'
+                                        : 'border-blue-500 hover:scale-105 cursor-pointer'
+                                    }`}
                             >
-                                <div className="w-full h-full bg-blue-500 rounded-full"></div>
+                                <div className={`w-full h-full rounded-full ${isAE && !isLocationReady ? 'bg-slate-300' : 'bg-blue-500'}`}></div>
                             </button>
-                            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mt-2">Tap to Capture</p>
+                            <p className="text-slate-400 text-xs font-medium uppercase tracking-wider mt-2">
+                                {isAE && !isLocationReady ? 'Waiting for GPS...' : 'Tap to Capture'}
+                            </p>
                         </div>
                     ) : (
                         <div className="w-full space-y-3">
                             <button
                                 onClick={() => onSubmit(photo)}
-                                disabled={isLoading}
-                                className="w-full py-4 rounded-xl font-bold text-white bg-blue-600 hover:bg-blue-700 shadow-lg shadow-blue-200 transition-all flex items-center justify-center gap-2 active:scale-95"
+                                disabled={isLoading || countdown > 0}
+                                className={`w-full py-4 rounded-xl font-bold text-white shadow-lg transition-all flex items-center justify-center gap-2 active:scale-95 ${isLoading || countdown > 0
+                                        ? 'bg-slate-400 shadow-none cursor-not-allowed'
+                                        : 'bg-blue-600 hover:bg-blue-700 shadow-blue-200'
+                                    }`}
                             >
                                 {isLoading ? (
                                     <span>Uploading...</span>
+                                ) : countdown > 0 ? (
+                                    <span>Please wait... ({countdown}s)</span>
                                 ) : (
                                     <>
                                         <CheckCircle size={20} />

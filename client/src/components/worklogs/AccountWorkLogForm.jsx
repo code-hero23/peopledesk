@@ -17,9 +17,6 @@ const AccountWorkLogForm = ({ onSuccess }) => {
         onConfirm: () => { }
     });
 
-    // Determine phase
-    const isOpening = !todayLog;
-    const isClosing = todayLog && todayLog.logStatus === 'OPEN';
     const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [rows, setRows] = useState([
@@ -29,6 +26,7 @@ const AccountWorkLogForm = ({ onSuccess }) => {
     ]);
 
     const [remarks, setRemarks] = useState('');
+    const [notes, setNotes] = useState('');
 
     const handleRowChange = (index, field, value) => {
         const newRows = [...rows];
@@ -51,34 +49,19 @@ const AccountWorkLogForm = ({ onSuccess }) => {
 
         setConfirmationConfig({
             isOpen: true,
-            title: isOpening ? 'Submit Opening Report' : 'Submit Closing Report',
-            message: `Are you sure you want to submit this ${isOpening ? 'opening' : 'closing'} report?`,
+            title: 'Submit Daily Report',
+            message: `Are you sure you want to submit this daily work report?`,
             onConfirm: () => {
-                if (isOpening) {
-                    const payload = {
-                        logStatus: 'OPEN',
-                        process: 'Account Opening Report Submitted',
-                        customFields: { openingTasks: validRows },
-                        remarks: remarks
-                    };
-                    dispatch(createWorkLog(payload)).then((res) => {
-                        if (!res.error) setShowSuccess(true);
-                    });
-                } else if (isClosing) {
-                    const existingFields = todayLog.customFields || {};
-                    const payload = {
-                        logStatus: 'CLOSED',
-                        process: 'Account Daily Reports Completed',
-                        customFields: {
-                            ...existingFields,
-                            closingTasks: validRows
-                        },
-                        remarks: remarks || todayLog.remarks
-                    };
-                    dispatch(closeWorkLog(payload)).then((res) => {
-                        if (!res.error) setShowSuccess(true);
-                    });
-                }
+                const payload = {
+                    logStatus: 'CLOSED',
+                    process: 'Account Daily Report Submitted',
+                    customFields: { tasks: validRows },
+                    remarks: remarks,
+                    notes: notes
+                };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) setShowSuccess(true);
+                });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
@@ -97,10 +80,10 @@ const AccountWorkLogForm = ({ onSuccess }) => {
         );
     }
 
-    const themeColor = isOpening ? 'blue' : 'amber';
-    const ThemeIcon = isOpening ? Clock : TrendingUp;
-    const title = isOpening ? 'Opening Report' : 'Closing Report';
-    const subtitle = isOpening ? 'Plan your ledger for today' : 'Finalize today\'s entries';
+    const themeColor = 'blue';
+    const ThemeIcon = TrendingUp;
+    const title = 'Daily Report';
+    const subtitle = 'Finalize today\'s entries';
 
     return (
         <motion.form
@@ -194,12 +177,27 @@ const AccountWorkLogForm = ({ onSuccess }) => {
                 ></textarea>
             </div>
 
+            {/* Daily Notes */}
+            <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-blue-500" />
+                    <label className="text-xs font-bold text-blue-500 uppercase">Daily Notes (for Admin & HR)</label>
+                </div>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows="2"
+                    className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm font-medium transition-all resize-none placeholder:text-slate-300"
+                    placeholder="Share daily summary, insights, or site updates for Admin and HR..."
+                ></textarea>
+            </div>
+
             <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onSuccess} className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider">
                     Cancel
                 </button>
                 <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider bg-slate-900 hover:bg-black`}>
-                    {isLoading ? 'Submitting...' : (isOpening ? 'Submit Opening Report' : 'Submit Closing Report')}
+                    {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
             </div>
 
@@ -209,7 +207,7 @@ const AccountWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
+                message="Report Submitted"
                 subMessage="Account entry recorded successfully."
             />
             <ConfirmationModal

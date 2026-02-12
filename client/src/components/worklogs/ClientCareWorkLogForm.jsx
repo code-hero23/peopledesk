@@ -17,8 +17,6 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
         onConfirm: () => { }
     });
 
-    const isOpening = !todayLog;
-    const isClosing = todayLog && todayLog.logStatus === 'OPEN';
     const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [rows, setRows] = useState([
@@ -28,6 +26,7 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
     ]);
 
     const [generalRemarks, setGeneralRemarks] = useState('');
+    const [notes, setNotes] = useState('');
 
     const handleRowChange = (index, field, value) => {
         const newRows = [...rows];
@@ -50,34 +49,19 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
 
         setConfirmationConfig({
             isOpen: true,
-            title: isOpening ? 'Submit Opening Report' : 'Submit Closing Report',
-            message: `Are you sure you want to submit this ${isOpening ? 'opening' : 'closing'} report?`,
+            title: 'Submit Daily Report',
+            message: `Are you sure you want to submit this daily care report?`,
             onConfirm: () => {
-                if (isOpening) {
-                    const payload = {
-                        logStatus: 'OPEN',
-                        process: 'Client Care Opening Report',
-                        customFields: { openingStats: validRows },
-                        remarks: generalRemarks
-                    };
-                    dispatch(createWorkLog(payload)).then((res) => {
-                        if (!res.error) setShowSuccess(true);
-                    });
-                } else if (isClosing) {
-                    const existingFields = todayLog.customFields || {};
-                    const payload = {
-                        logStatus: 'CLOSED',
-                        process: 'Client Care Daily Reports Completed',
-                        customFields: {
-                            ...existingFields,
-                            closingStats: validRows
-                        },
-                        remarks: generalRemarks || todayLog.remarks
-                    };
-                    dispatch(closeWorkLog(payload)).then((res) => {
-                        if (!res.error) setShowSuccess(true);
-                    });
-                }
+                const payload = {
+                    logStatus: 'CLOSED',
+                    process: 'Client Care Daily Report Submitted',
+                    customFields: { careMetrics: validRows },
+                    remarks: generalRemarks,
+                    notes: notes
+                };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) setShowSuccess(true);
+                });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
@@ -96,10 +80,10 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
         );
     }
 
-    const themeColor = isOpening ? 'pink' : 'purple';
-    const ThemeIcon = isOpening ? Clock : TrendingUp;
-    const title = isOpening ? 'Opening Care Report' : 'Closing Care Report';
-    const subtitle = isOpening ? 'Plan client interactions' : 'Review daily support stats';
+    const themeColor = 'purple';
+    const ThemeIcon = TrendingUp;
+    const title = 'Daily Care Report';
+    const subtitle = 'Review daily support stats';
 
     return (
         <motion.form
@@ -208,12 +192,27 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
                 ></textarea>
             </div>
 
+            {/* Daily Notes */}
+            <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-blue-500" />
+                    <label className="text-xs font-bold text-blue-500 uppercase">Daily Notes (for Admin & HR)</label>
+                </div>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows="2"
+                    className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm font-medium transition-all resize-none placeholder:text-slate-300"
+                    placeholder="Share daily summary, insights, or updates for Admin and HR..."
+                ></textarea>
+            </div>
+
             <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onSuccess} className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider">
                     Cancel
                 </button>
                 <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider bg-slate-900 hover:bg-black`}>
-                    {isLoading ? 'Submitting...' : (isOpening ? 'Submit Opening' : 'Submit Closing')}
+                    {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
             </div>
 
@@ -223,7 +222,7 @@ const ClientCareWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
+                message="Report Submitted"
                 subMessage="Client Care entry recorded successfully."
             />
             <ConfirmationModal

@@ -8,7 +8,6 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
     const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    const isOpening = !todayLog;
     const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
 
     // Initial State for Fixed Fields
@@ -30,6 +29,7 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
     });
 
     const [remarks, setRemarks] = useState('');
+    const [notes, setNotes] = useState('');
 
     const handleChange = (e) => {
         const { name, value } = e.target;
@@ -39,30 +39,8 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Flatten data for Admin Modal (Key-Value Display)
-        // We prefix keys to distinguish Opening vs Closing in the single JSON object if needed, 
-        // OR we just overwrite/merge. 
-        // For distinct Opening/Closing view in Admin, we should probably stick to the pattern 
-        // of "openingMetrics" object and "closingMetrics" object if we want them grouped.
-        // However, the previous "Dynamic Rows" used `openingTasks` array. 
-        // Here we have a flat object.
-        // Let's wrap them in `openingMetrics` and `closingMetrics` objects so the Admin Modal 
-        // can iterate them nicely if we tweak it, OR just dump them as flat keys with "Opening" prefix.
-        // CURRENT ADMIN MODAL behavior:
-        // 1. Iterates `customFields` entries.
-        // 2. If value is NOT object/null, displays as Simple Key-Value Card.
-        // 3. If value IS Array, displays as Table.
-        // 4. It does NOT recursively go into Objects.
-
-        // SO: To display these nicely without changing Admin Modal, we should prefix them OR flat them?
-        // If we put them in an object `openingStart`, the modal won't show them (it filters out objects).
-        // WE MUST FLATTEN THEM for the current Admin Modal to show them as cards.
-        // e.g. "Opening Online Leads": "5"
-
-        const prefix = isOpening ? "Opening" : "Closing";
         const customFieldsPayload = {};
 
-        // Map descriptive labels
         const labelMap = {
             onlineLeads: 'Online Leads',
             ashwinLeads: 'Ashwin Leads',
@@ -71,10 +49,10 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
             feedbackDone: 'Feedback Done',
             groupFollowUp: 'Group Follow Up',
             followUpCalls: 'Follow Up Calls',
-            calls9Star: '9 Star Calls (Upto Today)',
-            calls8Star: '8 Star Calls (Upto Today)',
-            calls7Star: '7 Star Calls (Upto Today)',
-            calls6Star: '6 Star Calls (Upto Today)',
+            calls9Star: '9 Star Calls',
+            calls8Star: '8 Star Calls',
+            calls7Star: '7 Star Calls',
+            calls6Star: '6 Star Calls',
             quotesSent: 'Quotes Sent',
             revisedQuotesSent: 'Revised Quotes Sent',
             noOfOrders: 'No of Orders'
@@ -82,42 +60,27 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
 
         Object.keys(formData).forEach(key => {
             if (formData[key]) {
-                customFieldsPayload[`${prefix} - ${labelMap[key]}`] = formData[key];
+                customFieldsPayload[labelMap[key]] = formData[key];
             }
         });
 
-        if (isOpening) {
-            const payload = {
-                logStatus: 'OPEN',
-                process: 'Client Facilitator Opening Report',
-                customFields: customFieldsPayload,
-                remarks: remarks
-            };
-            dispatch(createWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        } else {
-            const existingFields = todayLog.customFields || {};
-            const payload = {
-                logStatus: 'CLOSED',
-                process: 'Client Facilitator Daily Reports Completed',
-                customFields: {
-                    ...existingFields,
-                    ...customFieldsPayload
-                },
-                remarks: remarks || todayLog.remarks
-            };
-            dispatch(closeWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        }
+        const payload = {
+            logStatus: 'CLOSED',
+            process: 'Client Facilitator Daily Report Submitted',
+            customFields: customFieldsPayload,
+            remarks: remarks,
+            notes: notes
+        };
+        dispatch(createWorkLog(payload)).then((res) => {
+            if (!res.error) setShowSuccess(true);
+        });
     };
 
     if (isCompleted) {
         return (
             <div className="text-center p-8 bg-green-50 rounded-xl border border-green-100">
                 <h3 className="text-lg font-black text-green-700 mb-2">Daily Reports Submitted</h3>
-                <p className="text-green-600">You have completed both Opening and Closing reports for today.</p>
+                <p className="text-green-600">You have completed your daily report for today.</p>
                 <button onClick={onSuccess} className="mt-4 text-green-800 underline font-bold">Close</button>
             </div>
         );
@@ -125,12 +88,12 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto px-1">
-            <div className={`p-4 rounded-lg border mb-4 ${isOpening ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
-                <h4 className={`font-bold text-sm uppercase ${isOpening ? 'text-blue-800' : 'text-orange-800'}`}>
-                    {isOpening ? 'Client Facilitator - Opening Report' : 'Client Facilitator - Closing Report'}
+            <div className={`p-4 rounded-lg border mb-4 bg-indigo-50 border-indigo-100`}>
+                <h4 className={`font-bold text-sm uppercase text-indigo-800`}>
+                    Client Facilitator - Daily Report
                 </h4>
                 <p className="text-xs opacity-75">
-                    {isOpening ? 'Enter the planned numbers/targets for today.' : 'Enter the actual numbers achieved today.'}
+                    Enter the actual numbers achieved today.
                 </p>
             </div>
 
@@ -171,12 +134,27 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
                 ></textarea>
             </div>
 
+            {/* Daily Notes */}
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2 text-blue-600">
+                    <Clock size={16} />
+                    <label className="text-xs font-bold uppercase">Daily Notes (for Admin & HR)</label>
+                </div>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-blue-100 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-sm placeholder:text-slate-300"
+                    placeholder="Share daily summary, insights, or updates for Admin and HR..."
+                ></textarea>
+            </div>
+
             <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
                     Cancel
                 </button>
-                <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95 ${isOpening ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                    {isLoading ? 'Submitting...' : (isOpening ? 'Submit Opening' : 'Submit Closing')}
+                <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95 bg-indigo-600 hover:bg-indigo-700`}>
+                    {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
             </div>
 
@@ -186,7 +164,7 @@ const ClientFacilitatorWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
+                message="Report Submitted"
                 subMessage="Client Facilitator entry recorded."
             />
         </form>

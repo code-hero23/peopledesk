@@ -50,6 +50,7 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 15000000 }, // 15MB limit
     fileFilter: function (req, file, cb) {
+        console.log('Multer fileFilter evaluating file:', file.originalname, file.mimetype);
         checkFileType(file, cb);
     }
 });

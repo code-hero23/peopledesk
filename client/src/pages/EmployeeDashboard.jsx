@@ -313,7 +313,8 @@ const EmployeeDashboard = () => {
                                 <span className="font-bold text-sm">Permission</span>
                             </button>
 
-                            {(user?.designation === 'LA' || !user?.designation) && (
+                            {/* Create Project - LA & AE Only */}
+                            {['LA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && (
                                 <button
                                     onClick={() => setActiveModal('project')}
                                     className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group h-[120px]"

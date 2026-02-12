@@ -2,12 +2,10 @@ import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
 import { X, Printer } from 'lucide-react';
 
-
 const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
     const componentRef = useRef();
 
     const handlePrint = useReactToPrint({
-        content: null,
         contentRef: componentRef,
         documentTitle: `Work_Log_${log?.user?.name || 'Report'}_${new Date().toISOString().split('T')[0]}`,
     });
@@ -54,7 +52,12 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                             <p className="text-slate-700">{WorkLog.remarks}</p>
                         </div>
                     )}
-
+                    {WorkLog.notes && (
+                        <div className="bg-blue-50/50 p-4 rounded-lg break-inside-avoid border border-blue-100">
+                            <h4 className="text-xs font-bold text-blue-500 uppercase mb-2">Daily Notes (for Admin & HR)</h4>
+                            <p className="text-slate-700 whitespace-pre-wrap">{WorkLog.notes}</p>
+                        </div>
+                    )}
 
                     {/* CRE Section */}
                     {(WorkLog.cre_totalCalls !== null || WorkLog.cre_callBreakdown) && (
@@ -144,54 +147,54 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                                     {(() => {
                                         try {
                                             const reports = typeof WorkLog.la_project_reports === 'string' ? JSON.parse(WorkLog.la_project_reports) : WorkLog.la_project_reports;
-                                            return reports.map((report, idx) => (
-                                                <div key={idx} className="bg-slate-50 p-4 rounded-xl mb-4 text-sm border border-slate-100">
-                                                    <div className="flex justify-between items-start mb-2">
-                                                        <h5 className="font-bold text-slate-800">{report.clientName}</h5>
-                                                        <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-bold">{report.process}</span>
-                                                    </div>
-                                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
-                                                        <DetailItem label="Time" value={`${report.startTime} - ${report.endTime}`} />
-                                                        <DetailItem label="Images (C/P)" value={`${report.completedImages} / ${report.pendingImages}`} />
-                                                        <DetailItem label="Hours" value={report.totalHours} />
-                                                        <DetailItem label="Site" value={report.site} />
-                                                    </div>
-                                                    {report.remarks && <p className="text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-3">{report.remarks}</p>}
+                                            return reports.map((report, idx) => {
+                                                return (
+                                                    <div key={idx} className="bg-slate-50 p-4 rounded-xl mb-4 text-sm border border-slate-100">
+                                                        <div className="flex justify-between items-start mb-2">
+                                                            <h5 className="font-bold text-slate-800">{report.clientName}</h5>
+                                                            <span className="bg-blue-100 text-blue-700 text-xs px-2 py-0.5 rounded font-bold">{report.process}</span>
+                                                        </div>
+                                                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-3">
+                                                            <DetailItem label="Time" value={`${report.startTime} - ${report.endTime}`} />
+                                                            <DetailItem label="Images (C/P)" value={`${report.completedImages} / ${report.pendingImages}`} />
+                                                            <DetailItem label="Hours" value={report.totalHours} />
+                                                            <DetailItem label="Site" value={report.site} />
+                                                        </div>
+                                                        {report.remarks && <p className="text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-3">{report.remarks}</p>}
 
-                                                    {report.remarks && <p className="text-slate-600 italic border-l-2 border-slate-300 pl-2 mb-3">{report.remarks}</p>}
+                                                        {/* Nested Details */}
+                                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                            {report.onlineMeetings && report.onlineMeetings.length > 0 && renderTable("Online Meetings", report.onlineMeetings)}
+                                                            {report.showroomMeetings && report.showroomMeetings.length > 0 && renderTable("Showroom Meetings", report.showroomMeetings)}
+                                                            {report.measurements && report.measurements.length > 0 && renderTable("Measurements", report.measurements)}
 
-                                                    {/* Nested Details */}
-                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                        {report.onlineMeetings && report.onlineMeetings.length > 0 && renderTable("Online Meetings", report.onlineMeetings)}
-                                                        {report.showroomMeetings && report.showroomMeetings.length > 0 && renderTable("Showroom Meetings", report.showroomMeetings)}
-                                                        {report.measurements && report.measurements.length > 0 && renderTable("Measurements", report.measurements)}
-
-                                                        {/* Requirements List */}
-                                                        {report.requirements && report.requirements.length > 0 && (
-                                                            <div className="mt-3">
-                                                                <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">Requirements</h5>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {report.requirements.map((req, rI) => (
-                                                                        <span key={rI} className="bg-pink-50 text-pink-700 px-2 py-1 rounded border border-pink-100 text-xs">{req}</span>
-                                                                    ))}
+                                                            {/* Requirements List */}
+                                                            {report.requirements && report.requirements.length > 0 && (
+                                                                <div className="mt-3">
+                                                                    <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">Requirements</h5>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {report.requirements.map((req, rI) => (
+                                                                            <span key={rI} className="bg-pink-50 text-pink-700 px-2 py-1 rounded border border-pink-100 text-xs">{req}</span>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
+                                                            )}
 
-                                                        {/* Colours List */}
-                                                        {report.colours && report.colours.length > 0 && (
-                                                            <div className="mt-3">
-                                                                <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">Colours</h5>
-                                                                <div className="flex flex-wrap gap-2">
-                                                                    {report.colours.map((col, cI) => (
-                                                                        <span key={cI} className="bg-teal-50 text-teal-700 px-2 py-1 rounded border border-teal-100 text-xs">{col}</span>
-                                                                    ))}
+                                                            {/* Colours List */}
+                                                            {report.colours && report.colours.length > 0 && (
+                                                                <div className="mt-3">
+                                                                    <h5 className="text-xs font-bold text-slate-500 uppercase mb-1">Colours</h5>
+                                                                    <div className="flex flex-wrap gap-2">
+                                                                        {report.colours.map((col, cI) => (
+                                                                            <span key={cI} className="bg-teal-50 text-teal-700 px-2 py-1 rounded border border-teal-100 text-xs">{col}</span>
+                                                                        ))}
+                                                                    </div>
                                                                 </div>
-                                                            </div>
-                                                        )}
+                                                            )}
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            ));
+                                                );
+                                            });
                                         } catch (e) { return <p className="text-red-400 text-xs">Error parsing project logs</p> }
                                     })()}
                                 </div>
@@ -199,91 +202,74 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
-                    {/* AE Section */}
-                    {(WorkLog.ae_siteLocation || WorkLog.ae_siteStatus) && (
-                        <div>
-                            <h3 className="text-lg font-bold text-blue-600 mb-3 pb-1 border-b">AE Report</h3>
-                            <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                                <DetailItem label="Site Location" value={WorkLog.ae_siteLocation} />
-                                <DetailItem label="GPS Coordinates" value={WorkLog.ae_gpsCoordinates} />
-                                <DetailItem label="Site Status" value={WorkLog.ae_siteStatus} />
-                                <DetailItem label="Work Stage" value={WorkLog.ae_workStage} />
-                                <DetailItem label="Client Met?" value={WorkLog.ae_clientMet ? 'Yes' : 'No'} />
-                                <DetailItem label="Client Feedback" value={WorkLog.ae_clientFeedback} />
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                                <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Visit Type</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {renderJsonList(WorkLog.ae_visitType)}
-                                    </div>
-                                </div>
-                                <div>
-                                    <h4 className="text-xs font-bold text-slate-500 uppercase mb-2">Tasks Completed</h4>
-                                    <div className="flex flex-wrap gap-2">
-                                        {renderJsonList(WorkLog.ae_tasksCompleted)}
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 bg-slate-50 p-4 rounded-lg">
-                                <DetailItem label="Measurements" value={WorkLog.ae_measurements} />
-                                <DetailItem label="Items Installed" value={WorkLog.ae_itemsInstalled} />
-                                <DetailItem label="Issues Raised" value={WorkLog.ae_issuesRaised} />
-                                <DetailItem label="Issues Resolved" value={WorkLog.ae_issuesResolved} />
-                            </div>
-
-                            {WorkLog.ae_hasIssues && (
-                                <div className="bg-red-50 p-4 rounded-lg border border-red-100 mb-6 break-inside-avoid">
-                                    <h5 className="font-bold text-red-700 mb-2 flex items-center gap-2">⚠️ Issue Reported</h5>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <DetailItem label="Type" value={WorkLog.ae_issueType} />
-                                        <div>
-                                            <span className="block text-xs font-bold text-slate-400 uppercase">Description</span>
-                                            <p className="text-slate-800">{WorkLog.ae_issueDescription}</p>
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {WorkLog.ae_nextVisitRequired && (
-                                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-6">
-                                    <h5 className="font-bold text-blue-700 mb-2">📅 Next Visit Plan</h5>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <DetailItem label="Date" value={WorkLog.ae_nextVisitDate ? new Date(WorkLog.ae_nextVisitDate).toLocaleDateString() : '-'} />
-                                        <DetailItem label="Planned Work" value={WorkLog.ae_plannedWork} />
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Photos */}
-                            {WorkLog.ae_photos && (
-                                <div>
-                                    <h4 className="text-sm font-bold text-slate-700 mb-3">Site Photos</h4>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                        {(() => {
-                                            try {
-                                                const photos = typeof WorkLog.ae_photos === 'string' ? JSON.parse(WorkLog.ae_photos) : WorkLog.ae_photos;
-                                                return Array.isArray(photos) ? photos.map((photo, index) => (
-                                                    <a key={index} href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${photo}`} target="_blank" rel="noopener noreferrer" className="block group relative overflow-hidden rounded-lg aspect-square border border-slate-200">
-                                                        <img
-                                                            src={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000'}${photo}`}
-                                                            alt={`Site Photo ${index + 1}`}
-                                                            className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                                                        />
-                                                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                                            <span className="bg-white/90 px-3 py-1 rounded text-xs font-bold shadow-sm">View</span>
+                    {/* AE Project Task Logs */}
+                    {WorkLog.ae_project_reports && (
+                        <div className="mt-6 pt-4 border-t border-slate-100">
+                            <h4 className="text-md font-bold text-slate-100 mb-3 bg-blue-600 px-3 py-1 rounded">Project Task Logs</h4>
+                            {(() => {
+                                try {
+                                    const reports = typeof WorkLog.ae_project_reports === 'string' ? JSON.parse(WorkLog.ae_project_reports) : WorkLog.ae_project_reports;
+                                    return reports.map((report, idx) => {
+                                        const r = typeof report === 'string' ? JSON.parse(report) : report;
+                                        return (
+                                            <div key={idx} className="bg-blue-50/30 p-4 rounded-xl mb-4 text-sm border border-blue-100/50 break-inside-avoid shadow-sm">
+                                                <div className="flex justify-between items-start mb-3 border-b border-blue-100 pb-2">
+                                                    <div>
+                                                        <p className="text-[10px] font-black uppercase text-blue-400 mb-0.5">Project Site Visit #{idx + 1}</p>
+                                                        <h5 className="font-black text-slate-800 text-base">{r.clientName || r.projectName}</h5>
+                                                        <div className="flex items-center gap-2 mt-1">
+                                                            <span className="bg-blue-100 text-blue-700 text-[10px] px-2 py-0.5 rounded font-black uppercase">{r.process}</span>
+                                                            <span className="text-[10px] text-slate-400 font-bold tracking-tight">({r.startTime} - {r.endTime})</span>
                                                         </div>
-                                                    </a>
-                                                )) : <p className="text-sm text-slate-500">Invalid photo data</p>;
-                                            } catch (e) {
-                                                return <p className="text-sm text-slate-500">Error loading photos</p>;
-                                            }
-                                        })()}
-                                    </div>
-                                </div>
-                            )}
+                                                    </div>
+                                                    <span className={`text-[10px] font-black px-2 py-0.5 rounded ${r.status === 'Completed' || r.ae_siteStatus === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                        {r.status || r.ae_siteStatus || 'N/A'}
+                                                    </span>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                                                    <DetailItem label="Work Stage" value={r.ae_workStage || r.workStage} />
+                                                    <DetailItem label="Measurements" value={r.ae_measurements || r.measurements} />
+                                                    <DetailItem label="Items Installed" value={r.ae_itemsInstalled || r.itemsInstalled} />
+                                                    <div className="col-span-2 md:col-span-1">
+                                                        <span className="block text-[10px] font-bold text-slate-400 uppercase">Tasks</span>
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {Array.isArray(r.ae_tasksCompleted || r.tasksCompleted) ? (r.ae_tasksCompleted || r.tasksCompleted).map((t, ti) => (
+                                                                <span key={ti} className="bg-white border text-[10px] px-1.5 py-0.5 rounded text-slate-600">{t}</span>
+                                                            )) : <span className="text-slate-700">{r.ae_tasksCompleted || r.tasksCompleted}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {(r.ae_hasIssues || r.hasIssues) && (
+                                                    <div className="bg-red-50 p-3 rounded-lg border border-red-100 mb-3">
+                                                        <p className="text-[10px] font-black text-red-400 uppercase mb-1">Alert: Site Issues</p>
+                                                        <p className="text-xs font-semibold text-red-700 italic">"{r.ae_issueDescription || r.issueDescription}"</p>
+                                                    </div>
+                                                )}
+
+                                                {/* Photos for this project */}
+                                                {report.ae_photos && report.ae_photos.length > 0 && (
+                                                    <div className="mt-3">
+                                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-2">Project Photos</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {report.ae_photos.map((photo, pIdx) => (
+                                                                <div key={pIdx} className="w-12 h-12 rounded border border-slate-200 overflow-hidden bg-white shadow-sm">
+                                                                    <img
+                                                                        src={`${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}${photo}`}
+                                                                        alt={`Site ${idx + 1} Photo ${pIdx + 1}`}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    });
+                                } catch (e) { return <p className="text-red-400 text-xs">Error parsing project logs</p> }
+                            })()}
                         </div>
                     )}
 
@@ -299,7 +285,7 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     )}
 
                     {/* Fallback for regular logs */}
-                    {!WorkLog.cre_totalCalls && !WorkLog.fa_calls && !WorkLog.la_projectLocation && (
+                    {!WorkLog.cre_totalCalls && !WorkLog.fa_calls && !WorkLog.la_projectLocation && !WorkLog.ae_project_reports && (
                         <div className="grid grid-cols-2 gap-4">
                             <DetailItem label="Client Name" value={WorkLog.clientName} />
                             <DetailItem label="Site" value={WorkLog.site} />
@@ -315,7 +301,7 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                     </button>
                 </div>
             </div>
-        </div >
+        </div>
     );
 };
 
@@ -328,7 +314,6 @@ const DetailItem = ({ label, value, sub }) => {
             {sub && <span className="block text-xs text-slate-500 italic mt-1">{sub}</span>}
         </div>
     );
-
 };
 
 const renderTable = (title, data) => {
@@ -406,19 +391,6 @@ const renderLAMetricsTable = (metrics) => {
             </table>
         </div>
     );
-};
-
-const renderJsonList = (data) => {
-    if (!data) return null;
-    try {
-        const list = typeof data === 'string' ? JSON.parse(data) : data;
-        if (!Array.isArray(list)) return null;
-        return list.map((item, i) => (
-            <span key={i} className="bg-slate-100 px-2 py-1 rounded border text-xs text-slate-600">{item}</span>
-        ));
-    } catch (e) {
-        return null;
-    }
 };
 
 export default WorkLogDetailsModal;

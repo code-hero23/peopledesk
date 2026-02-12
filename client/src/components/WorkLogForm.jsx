@@ -18,7 +18,8 @@ const WorkLogForm = ({ onSuccess }) => {
         endTime: '',
         completedImages: '',
         pendingImages: '',
-        remarks: ''
+        remarks: '',
+        notes: ''
     });
 
     const handleChange = (e) => {
@@ -57,7 +58,8 @@ const WorkLogForm = ({ onSuccess }) => {
                 endTime: '',
                 completedImages: '',
                 pendingImages: '',
-                remarks: ''
+                remarks: '',
+                notes: ''
             });
             setShowSuccess(true);
         });
@@ -115,7 +117,11 @@ const WorkLogForm = ({ onSuccess }) => {
             </div>
             <div>
                 <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Remarks</label>
-                <textarea name="remarks" value={formData.remarks} onChange={handleChange} rows="2" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Any issues or notes..."></textarea>
+                <textarea name="remarks" value={formData.remarks} onChange={handleChange} rows="1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Any issues..."></textarea>
+            </div>
+            <div>
+                <label className="block text-xs font-bold text-blue-500 uppercase mb-1">Daily Notes (for Admin & HR)</label>
+                <textarea name="notes" value={formData.notes} onChange={handleChange} rows="2" className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50/20" placeholder="Share daily insights, site conditions, or important updates..."></textarea>
             </div>
             <div className="flex gap-3">
                 <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors">

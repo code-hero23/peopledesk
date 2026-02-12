@@ -48,7 +48,8 @@ const LAWorkLogForm = ({ onSuccess }) => {
     };
 
     const [openingData, setOpeningData] = useState({ ...initialMetrics });
-    const [closingData, setClosingData] = useState({ ...initialMetrics });
+    const [closingData, setClosingData] = useState({ ...initialMetrics, notes: '' });
+    const [dailyNotes, setDailyNotes] = useState(''); // Separate state for easier management
 
     // Project Report State
     const [projectReport, setProjectReport] = useState({
@@ -127,7 +128,10 @@ const LAWorkLogForm = ({ onSuccess }) => {
             title: 'Submit Closing Report',
             message: 'Are you sure you want to end your day and submit these closing metrics?',
             onConfirm: () => {
-                const payload = { la_closing_metrics: closingData };
+                const payload = {
+                    la_closing_metrics: closingData,
+                    notes: dailyNotes
+                };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {
                         setModalMessage("Closing Report Submitted! Day ended.");
@@ -292,6 +296,18 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                         </div>
                                     </div>
                                     <MetricsForm data={closingData} setData={setClosingData} onSubmit={handleClosingSubmit} type="closing" />
+                                    <div className="mt-6 bg-blue-50/50 p-6 rounded-[1.5rem] border border-blue-100 space-y-3">
+                                        <div className="flex items-center gap-2 text-blue-600 mb-2">
+                                            <MessageCircle size={18} />
+                                            <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
+                                        </div>
+                                        <textarea
+                                            value={dailyNotes}
+                                            onChange={(e) => setDailyNotes(e.target.value)}
+                                            className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                                            placeholder="Share daily summary, insights, or site updates for Admin and HR..."
+                                        ></textarea>
+                                    </div>
                                 </div>
                             </div>
                         ) : (

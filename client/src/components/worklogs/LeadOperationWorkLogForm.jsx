@@ -17,8 +17,6 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
         onConfirm: () => { }
     });
 
-    const isOpening = !todayLog;
-    const isClosing = todayLog && todayLog.logStatus === 'OPEN';
     const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [rows, setRows] = useState([
@@ -28,6 +26,7 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
     ]);
 
     const [remarks, setRemarks] = useState('');
+    const [notes, setNotes] = useState('');
 
     const handleRowChange = (index, field, value) => {
         const newRows = [...rows];
@@ -51,36 +50,21 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
 
         setConfirmationConfig({
             isOpen: true,
-            title: isOpening ? 'Submit Opening Report' : 'Submit Closing Report',
-            message: `Are you sure you want to submit this ${isOpening ? 'opening' : 'closing'} report?`,
+            title: 'Submit Daily Report',
+            message: `Are you sure you want to submit this daily report?`,
             onConfirm: () => {
-                if (isOpening) {
-                    const payload = {
-                        logStatus: 'OPEN',
-                        process: 'Lead Operation Opening Report',
-                        customFields: {
-                            openingTasks: standardizedRows
-                        },
-                        remarks: remarks
-                    };
-                    dispatch(createWorkLog(payload)).then((res) => {
-                        if (!res.error) setShowSuccess(true);
-                    });
-                } else if (isClosing) {
-                    const existingFields = todayLog.customFields || {};
-                    const payload = {
-                        logStatus: 'CLOSED',
-                        process: 'Lead Operation Daily Reports Completed',
-                        customFields: {
-                            ...existingFields,
-                            closingTasks: standardizedRows
-                        },
-                        remarks: remarks || todayLog.remarks
-                    };
-                    dispatch(closeWorkLog(payload)).then((res) => {
-                        if (!res.error) setShowSuccess(true);
-                    });
-                }
+                const payload = {
+                    logStatus: 'CLOSED',
+                    process: 'Lead Operation Daily Report Submitted',
+                    customFields: {
+                        tasks: standardizedRows
+                    },
+                    remarks: remarks,
+                    notes: notes
+                };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) setShowSuccess(true);
+                });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
         });
@@ -93,16 +77,16 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
             <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
                 <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
                 <h3 className="text-2xl font-black text-emerald-800 mb-2">Operations Logged!</h3>
-                <p className="text-emerald-600 font-bold">Your daily operation reports are submitted.</p>
+                <p className="text-emerald-600 font-bold">Your daily report has been submitted.</p>
                 <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 underline">Okay, close</button>
             </div>
         );
     }
 
-    const themeColor = isOpening ? 'blue' : 'cyan';
-    const ThemeIcon = isOpening ? Clock : TrendingUp;
-    const title = isOpening ? 'Opening Ops Report' : 'Closing Ops Report';
-    const subtitle = isOpening ? 'Plan your operations' : 'Update operation status';
+    const themeColor = 'cyan';
+    const ThemeIcon = TrendingUp;
+    const title = 'Daily Ops Report';
+    const subtitle = 'Update operation status';
 
     return (
         <motion.form
@@ -196,12 +180,27 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
                 ></textarea>
             </div>
 
+            {/* Daily Notes */}
+            <div className="bg-blue-50/50 p-5 rounded-2xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2">
+                    <Clock size={16} className="text-blue-500" />
+                    <label className="text-xs font-bold text-blue-500 uppercase">Daily Notes (for Admin & HR)</label>
+                </div>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows="2"
+                    className="w-full px-4 py-3 bg-white border border-blue-100 rounded-xl focus:ring-2 focus:ring-blue-100 focus:border-blue-300 outline-none text-sm font-medium transition-all resize-none placeholder:text-slate-300"
+                    placeholder="Share daily summary, insights, or site updates for Admin and HR..."
+                ></textarea>
+            </div>
+
             <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onSuccess} className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider">
                     Cancel
                 </button>
                 <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider bg-slate-900 hover:bg-black`}>
-                    {isLoading ? 'Submitting...' : (isOpening ? 'Submit Opening' : 'Submit Closing')}
+                    {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
             </div>
 
@@ -211,7 +210,7 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
+                message="Report Submitted"
                 subMessage="Lead Operation entry recorded successfully."
             />
             <ConfirmationModal

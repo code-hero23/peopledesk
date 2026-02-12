@@ -5,7 +5,7 @@ import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import {
     Phone, Star, Briefcase, FileText, Globe, CheckSquare,
-    TrendingUp, Clock, MapPin, Layout
+    TrendingUp, Clock, MapPin, Layout, MessageCircle
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -40,7 +40,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
     };
 
     const [openingData, setOpeningData] = useState({ ...initialMetrics });
-    const [closingData, setClosingData] = useState({ ...initialMetrics });
+    const [closingData, setClosingData] = useState({ ...initialMetrics, notes: '' });
 
     // Helper to update deeply nested state
     const updateState = (setter, path, value) => {
@@ -90,7 +90,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
             message: 'Are you sure you want to submit your final achievements for today?',
             onConfirm: () => {
                 const payload = {
-                    fa_closing_metrics: closingData
+                    fa_closing_metrics: closingData,
+                    notes: closingData.notes
                 };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {
@@ -268,6 +269,22 @@ const FormLayout = ({ data, handleChange, title, onSubmit, btnText, isOpening })
                         </div>
                     </MetricCard>
                 </div>
+
+                {/* Daily Notes - Only for Closing Report */}
+                {!isOpening && (
+                    <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex flex-col gap-3">
+                        <div className="flex items-center gap-2 text-blue-600">
+                            <MessageCircle size={18} />
+                            <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
+                        </div>
+                        <textarea
+                            value={data.notes || ''}
+                            onChange={(e) => handleChange('notes', e.target.value)}
+                            className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                            placeholder="Share daily summary, insights, or updates for Admin and HR..."
+                        ></textarea>
+                    </div>
+                )}
             </div>
 
             <button type="submit" className={`w-full bg-${themeColor}-600 hover:bg-${themeColor}-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2`}>

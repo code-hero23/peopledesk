@@ -29,6 +29,8 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
     const faClosing = safelyParseJson(log.fa_closing_metrics);
     const laOpening = safelyParseJson(log.la_opening_metrics);
     const laClosing = safelyParseJson(log.la_closing_metrics);
+    const laReports = safelyParseJson(log.la_project_reports);
+    const aeReports = safelyParseJson(log.ae_project_reports);
 
     // Common styling for metric cards
     const DataGrid = ({ items }) => (
@@ -441,85 +443,88 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
-                    {/* Project Reports Grid (Detailed Table View) */}
-                    {log.la_project_reports && (
+                    {/* AE Project Reports Grid */}
+                    {aeReports && Array.isArray(aeReports) && aeReports.length > 0 && (
                         <div className="mb-8">
-                            <h4 className="text-[10px] font-black text-slate-400 uppercase mb-3">Project Specific Reports</h4>
+                            <h4 className="text-[10px] font-black text-blue-600 uppercase mb-3">Site Visit Reports (Project Wise)</h4>
                             <div className="space-y-4">
-                                {(() => {
-                                    const reports = typeof log.la_project_reports === 'string' ? JSON.parse(log.la_project_reports) : log.la_project_reports;
-                                    return Array.isArray(reports) && reports.map((r, i) => (
+                                {aeReports.map((report, i) => {
+                                    const r = typeof report === 'string' ? JSON.parse(report) : report;
+                                    return (
                                         <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm break-inside-avoid">
-                                            {/* Main Row */}
-                                            <div className="flex flex-wrap md:flex-nowrap border-b border-slate-100 bg-slate-50">
+                                            <div className="flex flex-wrap md:flex-nowrap border-b border-slate-100 bg-blue-50/30">
                                                 <div className="w-full md:w-1/3 p-4 border-b md:border-b-0 md:border-r border-slate-100">
                                                     <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Client / Project</p>
-                                                    <p className="text-sm font-black text-slate-800">{r.clientName}</p>
+                                                    <p className="text-sm font-black text-slate-800">{r.clientName || r.projectName}</p>
                                                 </div>
                                                 <div className="w-1/2 md:w-1/3 p-4 border-r border-slate-100">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Process</p>
-                                                    <p className="text-sm font-bold text-slate-700">{r.process}</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Process / Visit Type</p>
+                                                    <p className="text-sm font-bold text-slate-700">{r.process} {r.ae_visitType ? `(${Array.isArray(r.ae_visitType) ? r.ae_visitType.join(', ') : r.ae_visitType})` : ''}</p>
                                                 </div>
                                                 <div className="w-1/2 md:w-1/3 p-4">
-                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Images (C / P)</p>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Status / Timeline</p>
                                                     <div className="flex items-center gap-2">
-                                                        <span className="text-sm font-black text-slate-800">{r.completedImages} / {r.imageCount}</span>
+                                                        <span className={`text-[10px] font-black px-2 py-0.5 rounded ${r.status === 'Completed' || r.ae_siteStatus === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                            {r.status || r.ae_siteStatus || 'N/A'}
+                                                        </span>
                                                         <span className="text-[10px] text-slate-400 font-bold">({r.startTime} - {r.endTime})</span>
                                                     </div>
                                                 </div>
                                             </div>
-
-                                            {/* Nested Details */}
-                                            <div className="p-4">
-                                                {/* Remarks */}
-                                                {r.remarks && <p className="text-xs text-slate-600 italic mb-4 border-l-2 border-slate-300 pl-2">"{r.remarks}"</p>}
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                                    {['onlineMeetings', 'showroomMeetings', 'measurements'].map(field => {
-                                                        const items = r[field];
-                                                        if (!items || items.length === 0) return null;
-                                                        return (
-                                                            <div key={field} className="border border-slate-100 rounded-lg overflow-hidden">
-                                                                <div className="bg-slate-100 px-3 py-1.5 text-[10px] font-black text-slate-500 uppercase">
-                                                                    {field.replace(/([A-Z])/g, ' $1').trim()}
-                                                                </div>
-                                                                <table className="w-full text-[10px]">
-                                                                    <tbody className="divide-y divide-slate-50">
-                                                                        {items.map((item, idx) => (
-                                                                            <tr key={idx}>
-                                                                                {Object.keys(item).filter(k => !['id', '_id', 'createdAt', 'updatedAt'].includes(k)).map(key => (
-                                                                                    <td key={key} className="px-3 py-1.5 font-medium text-slate-700 break-words whitespace-pre-wrap" title={item[key]}>{item[key]}</td>
-                                                                                ))}
-                                                                            </tr>
-                                                                        ))}
-                                                                    </tbody>
-                                                                </table>
-                                                            </div>
-                                                        );
-                                                    })}
-
-                                                    {/* Requirements & Colours */}
-                                                    {(r.requirements?.length > 0) && (
-                                                        <div className="border border-slate-100 rounded-lg p-3">
-                                                            <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Requirements</h5>
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                {r.requirements.map((req, idx) => <span key={idx} className="bg-pink-50 text-pink-700 px-2 py-0.5 rounded text-[10px] font-bold border border-pink-100">{req}</span>)}
-                                                            </div>
+                                            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1 text-xs">Work Details</p>
+                                                    <div className="space-y-2">
+                                                        <div>
+                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">Stage:</span>
+                                                            <span className="ml-2 text-xs font-bold text-slate-800">{r.ae_workStage || r.workStage || r.stage || 'N/A'}</span>
                                                         </div>
-                                                    )}
-                                                    {(r.colours?.length > 0) && (
-                                                        <div className="border border-slate-100 rounded-lg p-3">
-                                                            <h5 className="text-[10px] font-black text-slate-400 uppercase mb-2">Colours</h5>
-                                                            <div className="flex flex-wrap gap-1.5">
-                                                                {r.colours.map((col, idx) => <span key={idx} className="bg-teal-50 text-teal-700 px-2 py-0.5 rounded text-[10px] font-bold border border-teal-100">{col}</span>)}
-                                                            </div>
+                                                        <div>
+                                                            <span className="text-[10px] font-bold text-slate-500 uppercase">Tasks:</span>
+                                                            <p className="text-xs text-slate-700 leading-relaxed font-medium">
+                                                                {Array.isArray(r.ae_tasksCompleted || r.tasksCompleted) ? (r.ae_tasksCompleted || r.tasksCompleted).join(', ') : (r.ae_tasksCompleted || r.tasksCompleted || 'N/A')}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="space-y-3">
+                                                    <div className="grid grid-cols-2 gap-2">
+                                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                                            <p className="text-[8px] font-black text-slate-400 uppercase">Measurements</p>
+                                                            <p className="text-[11px] font-bold text-slate-800">{r.ae_measurements || r.measurements || '-'}</p>
+                                                        </div>
+                                                        <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                                            <p className="text-[8px] font-black text-slate-400 uppercase">Items Installed</p>
+                                                            <p className="text-[11px] font-bold text-slate-800">{r.ae_itemsInstalled || r.itemsInstalled || '-'}</p>
+                                                        </div>
+                                                    </div>
+                                                    {(r.ae_hasIssues || r.hasIssues) && (
+                                                        <div className="bg-red-50 p-2 rounded border border-red-100">
+                                                            <p className="text-[8px] font-black text-red-400 uppercase">Issues Reported</p>
+                                                            <p className="text-[11px] font-semibold text-red-700 italic">"{r.ae_issueDescription || r.issueDescription}"</p>
                                                         </div>
                                                     )}
                                                 </div>
+                                                {r.ae_photos && (Array.isArray(r.ae_photos) ? r.ae_photos : []).length > 0 && (
+                                                    <div className="col-span-1 md:col-span-2 mt-2">
+                                                        <p className="text-[9px] font-black text-slate-400 uppercase mb-2">Captured Photos ({r.ae_photos.length})</p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {r.ae_photos.map((photo, pIdx) => (
+                                                                <div key={pIdx} className="w-16 h-16 rounded border border-slate-200 overflow-hidden bg-slate-100 shadow-sm">
+                                                                    <img
+                                                                        src={photo.startsWith('http') ? photo : `${import.meta.env.VITE_API_BASE_URL.replace('/api', '')}${photo}`}
+                                                                        alt={`Site ${i + 1} Photo ${pIdx + 1}`}
+                                                                        className="w-full h-full object-cover"
+                                                                    />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                    ));
-                                })()}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}
@@ -529,6 +534,12 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                         <div className="mt-6 p-4 bg-slate-50 rounded-xl border-l-4 border-slate-800">
                             <p className="text-[10px] font-black text-slate-400 uppercase mb-1">Final Remarks / Coordinator Notes</p>
                             <p className="text-sm font-bold text-slate-700 italic">"{log.remarks}"</p>
+                        </div>
+                    )}
+                    {log.notes && (
+                        <div className="mt-4 p-4 bg-blue-50/50 rounded-xl border-l-4 border-blue-600">
+                            <p className="text-[10px] font-black text-blue-600 uppercase mb-1">Daily Notes (for Admin & HR)</p>
+                            <p className="text-sm font-bold text-slate-700 whitespace-pre-wrap">{log.notes}</p>
                         </div>
                     )}
                 </div>

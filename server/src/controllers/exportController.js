@@ -105,6 +105,7 @@ const exportWorkLogs = async (req, res) => {
             const laOpening = safeParse(log.la_opening_metrics);
             const laClosing = safeParse(log.la_closing_metrics);
             const laReports = safeParse(log.la_project_reports);
+            const aeReports = safeParse(log.ae_project_reports);
 
 
             return {
@@ -164,6 +165,13 @@ const exportWorkLogs = async (req, res) => {
                 'Cl_HasIssues': aeClosing?.ae_hasIssues ? 'Yes' : 'No',
                 'Cl_IssueDesc': aeClosing?.ae_issueDescription || log.ae_issueDescription || '',
                 'Cl_ClientFeedback': aeClosing?.ae_clientFeedback || log.ae_clientFeedback || '',
+                'Cl_AE_ProjectReports': (() => {
+                    if (!aeReports) return '';
+                    if (Array.isArray(aeReports)) {
+                        return aeReports.map(r => `${r.clientName} (${r.process}): ${r.status || r.ae_siteStatus || ''}`).join('; ');
+                    }
+                    return '';
+                })(),
                 'Cl_Remarks': log.remarks || '',
 
                 // CRE Closing
@@ -225,7 +233,7 @@ const exportWorkLogs = async (req, res) => {
         const aeColumns = [
             'Op_PlannedWork', 'Op_SiteLocation', 'Op_SiteStatus', 'Op_GPS',
             'Cl_VisitType', 'Cl_WorkStage', 'Cl_Measurements', 'Cl_ItemsInstalled',
-            'Cl_HasIssues', 'Cl_IssueDesc', 'Cl_ClientFeedback', 'Cl_Remarks'
+            'Cl_HasIssues', 'Cl_IssueDesc', 'Cl_ClientFeedback', 'Cl_AE_ProjectReports', 'Cl_Remarks'
         ];
 
         const creColumns = [

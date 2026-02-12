@@ -25,31 +25,13 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
     const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
 
-    // Decide which tables to use based on phase
-    const getActiveTables = () => {
-        if (!config) return [];
-        if (!isTodayOpen) {
-            // Opening Phase
-            return config.openingTables || [
-                {
-                    label: "Opening Plan",
-                    fields: [
-                        { name: "plan", label: "Plan for Today", type: "text" },
-                        { name: "target", label: "Targets/Goals", type: "text" }
-                    ]
-                }
-            ];
-        } else {
-            // Closing Phase
-            return config.closingTables || config.tables || [];
-        }
-    };
-
-    const activeTables = getActiveTables();
+    // Simplified: Always show all tables for a single report
+    const activeTables = config.tables || [...(config.openingTables || []), ...(config.closingTables || [])];
 
     const [tableData, setTableData] = useState({});
+    const [notes, setNotes] = useState('');
 
-    // Reset table data whenever the phase or role changes
+    // Reset table data whenever the role changes
     useEffect(() => {
         if (!activeTables.length) return;
         const initial = {};
@@ -59,7 +41,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 : [{ _id: crypto.randomUUID() }];
         });
         setTableData(initial);
-    }, [isTodayOpen, role]);
+    }, [role]);
 
     if (!config) {
         return <div className="p-4 text-red-500 font-bold bg-red-50 rounded-xl">Configuration not found for role: {role}</div>;
@@ -105,27 +87,19 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             customFields[table.label] = tableData[index];
         });
 
-        if (!isTodayOpen) {
-            // Opening Submit
-            dispatch(createWorkLog({ customFields, logStatus: 'OPEN' })).then(() => {
-                setModalMessage("Opening Report Submitted! Day started.");
-                setShowSuccess(true);
-            });
-        } else {
-            // Closing Submit
-            dispatch(closeWorkLog({ customFields })).then(() => {
-                setModalMessage("Closing Report Submitted! Day ended.");
-                setShowSuccess(true);
-            });
-        }
+        // Always Submit as CLOSED for simplified roles
+        dispatch(createWorkLog({ customFields, notes, logStatus: 'CLOSED' })).then(() => {
+            setModalMessage("Daily Report Submitted! Successfully recorded.");
+            setShowSuccess(true);
+        });
     };
 
     const onSubmit = (e) => {
         e.preventDefault();
         setConfirmationConfig({
             isOpen: true,
-            title: !isTodayOpen ? "Start Day" : "End Day",
-            message: !isTodayOpen ? "Submit opening plan and start your day?" : "Submit final closing report and end your day?",
+            title: "Submit Daily Report",
+            message: "Are you sure you want to submit your daily work log and finalize the report?",
             onConfirm: handleConfirmSubmit
         });
     };
@@ -135,15 +109,15 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2"
         >
-            <div className={`bg-gradient-to-r ${!isTodayOpen ? 'from-indigo-500 to-violet-500' : 'from-emerald-500 to-teal-500'} p-6 rounded-2xl text-white shadow-lg sticky top-0 z-10`}>
+            <div className={`bg-gradient-to-r from-indigo-500 to-violet-500 p-6 rounded-2xl text-white shadow-lg sticky top-0 z-10`}>
                 <div className="flex items-center gap-4">
                     <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                        {!isTodayOpen ? <Clock size={24} /> : <TrendingUp size={24} />}
+                        <TrendingUp size={24} />
                     </div>
                     <div>
                         <h3 className="font-black text-2xl tracking-tight">{config.title}</h3>
                         <p className="text-white/80 text-sm font-medium opacity-90">
-                            {!isTodayOpen ? "Opening Report (Target/Plan)" : "Closing Report (Achievements)"}
+                            Daily Activity & Achievements
                         </p>
                     </div>
                 </div>
@@ -233,6 +207,19 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 </div>
             ))}
 
+            <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2 text-blue-600 mb-2">
+                    <Clock size={18} />
+                    <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
+                </div>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                    placeholder="Share daily summary, insights, or site updates for Admin and HR..."
+                ></textarea>
+            </div>
+
             <div className="flex gap-3 pt-4 border-t border-slate-100 bg-white sticky bottom-0">
                 <button
                     type="button"
@@ -244,9 +231,9 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className={`flex-1 ${!isTodayOpen ? 'bg-indigo-600 hover:bg-indigo-700' : 'bg-emerald-600 hover:bg-emerald-700'} text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider`}
+                    className={`flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider`}
                 >
-                    {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> {!isTodayOpen ? 'Submit Opening' : 'Submit Closing'}</>}
+                    {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Submit Report</>}
                 </button>
             </div>
 

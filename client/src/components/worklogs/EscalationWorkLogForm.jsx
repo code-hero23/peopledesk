@@ -9,8 +9,6 @@ const EscalationWorkLogForm = ({ onSuccess }) => {
     const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
 
-    const isOpening = !todayLog;
-    const isClosing = todayLog && todayLog.logStatus === 'OPEN';
     const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [rows, setRows] = useState([
@@ -20,6 +18,7 @@ const EscalationWorkLogForm = ({ onSuccess }) => {
     ]);
 
     const [generalRemarks, setGeneralRemarks] = useState('');
+    const [notes, setNotes] = useState('');
 
     const handleRowChange = (index, field, value) => {
         const newRows = [...rows];
@@ -40,40 +39,25 @@ const EscalationWorkLogForm = ({ onSuccess }) => {
         e.preventDefault();
         const validRows = rows.filter(r => r.description.trim() !== '');
 
-        if (isOpening) {
-            const payload = {
-                logStatus: 'OPEN',
-                process: 'Escalation Opening Report',
-                customFields: {
-                    openingEscalations: validRows
-                },
-                remarks: generalRemarks
-            };
-            dispatch(createWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        } else if (isClosing) {
-            const existingFields = todayLog.customFields || {};
-            const payload = {
-                logStatus: 'CLOSED',
-                process: 'Escalation Daily Reports Completed',
-                customFields: {
-                    ...existingFields,
-                    closingEscalations: validRows
-                },
-                remarks: generalRemarks || todayLog.remarks
-            };
-            dispatch(closeWorkLog(payload)).then((res) => {
-                if (!res.error) setShowSuccess(true);
-            });
-        }
+        const payload = {
+            logStatus: 'CLOSED',
+            process: 'Escalation Daily Report Submitted',
+            customFields: {
+                escalations: validRows
+            },
+            remarks: generalRemarks,
+            notes: notes
+        };
+        dispatch(createWorkLog(payload)).then((res) => {
+            if (!res.error) setShowSuccess(true);
+        });
     };
 
     if (isCompleted) {
         return (
             <div className="text-center p-8 bg-green-50 rounded-xl border border-green-100">
                 <h3 className="text-lg font-black text-green-700 mb-2">Daily Reports Submitted</h3>
-                <p className="text-green-600">You have completed both Opening and Closing reports for today.</p>
+                <p className="text-green-600">You have completed your daily report for today.</p>
                 <button onClick={onSuccess} className="mt-4 text-green-800 underline font-bold">Close</button>
             </div>
         );
@@ -81,12 +65,12 @@ const EscalationWorkLogForm = ({ onSuccess }) => {
 
     return (
         <form onSubmit={handleSubmit} className="space-y-4 max-h-[80vh] overflow-y-auto px-1">
-            <div className={`p-4 rounded-lg border mb-4 ${isOpening ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'}`}>
-                <h4 className={`font-bold text-sm uppercase ${isOpening ? 'text-blue-800' : 'text-orange-800'}`}>
-                    {isOpening ? 'Escalation - Opening Report' : 'Escalation - Closing Report'}
+            <div className={`p-4 rounded-lg border mb-4 bg-red-50 border-red-100`}>
+                <h4 className={`font-bold text-sm uppercase text-red-800`}>
+                    Escalation - Daily Report
                 </h4>
                 <p className="text-xs opacity-75">
-                    {isOpening ? 'List the escalation targets/plans for today.' : 'Update the escalation stats/results for the day.'}
+                    Update the escalation stats/results for the day.
                 </p>
             </div>
 
@@ -162,12 +146,27 @@ const EscalationWorkLogForm = ({ onSuccess }) => {
                 ></textarea>
             </div>
 
+            {/* Daily Notes */}
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2 text-blue-600">
+                    <Clock size={16} />
+                    <label className="text-xs font-bold uppercase">Daily Notes (for Admin & HR)</label>
+                </div>
+                <textarea
+                    value={notes}
+                    onChange={(e) => setNotes(e.target.value)}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-blue-100 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-sm placeholder:text-slate-300"
+                    placeholder="Share daily summary, insights, or updates for Admin and HR..."
+                ></textarea>
+            </div>
+
             <div className="flex gap-3 pt-2">
                 <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
                     Cancel
                 </button>
-                <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95 ${isOpening ? 'bg-blue-600 hover:bg-blue-700' : 'bg-orange-600 hover:bg-orange-700'}`}>
-                    {isLoading ? 'Submitting...' : (isOpening ? 'Submit Opening' : 'Submit Closing')}
+                <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95 bg-red-600 hover:bg-red-700`}>
+                    {isLoading ? 'Submitting...' : 'Submit Report'}
                 </button>
             </div>
 
@@ -177,7 +176,7 @@ const EscalationWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message={isOpening ? "Opening Report Submitted" : "Closing Report Submitted"}
+                message="Report Submitted"
                 subMessage="Escalation entry recorded."
             />
         </form>

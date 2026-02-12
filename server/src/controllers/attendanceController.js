@@ -45,6 +45,12 @@ const markAttendance = async (req, res) => {
             // If AE, and checked out, ALLOW creating new record (Fall through)
         }
 
+        if (req.file) {
+            console.log('File uploaded successfully:', req.file);
+        } else {
+            console.warn('No file received for check-in');
+        }
+
         const attendance = await prisma.attendance.create({
             data: {
                 userId,
@@ -92,6 +98,12 @@ const checkoutAttendance = async (req, res) => {
 
         if (attendance.checkoutTime) {
             return res.status(400).json({ message: 'Already checked out' });
+        }
+
+        if (req.file) {
+            console.log('Checkout file uploaded successfully:', req.file);
+        } else {
+            console.warn('No file received for check-out');
         }
 
         const updatedAttendance = await prisma.attendance.update({

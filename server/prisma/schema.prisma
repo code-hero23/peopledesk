@@ -182,8 +182,10 @@ model WorkLog {
   la_closing_metrics         Json?
   la_opening_metrics         Json?
   la_project_reports         Json?
+  ae_project_reports         Json?
   ae_closing_metrics         Json?
   ae_opening_metrics         Json?
+  notes                      String?
   project                    Project?  @relation(fields: [projectId], references: [id])
   user                       User      @relation(fields: [userId], references: [id])
 }
@@ -263,6 +265,8 @@ model Project {
   updatedAt       DateTime  @default(now()) @updatedAt
   variant         String?
   woodwork        String?
+  clientName      String?
+  googleMapLink   String?
   manager         User?     @relation(fields: [managerId], references: [id])
   workLogs        WorkLog[]
 }

@@ -31,7 +31,7 @@ const createWorkLog = async (req, res) => {
 
         ae_plannedWork, ae_clientMet, ae_clientFeedback, ae_photos,
         // Generic
-        customFields
+        customFields, notes
     } = req.body;
 
 
@@ -174,6 +174,7 @@ const createWorkLog = async (req, res) => {
 
                 // Generic
                 customFields: customFields ? customFields : undefined,
+                notes: notes,
 
                 date: new Date(),
                 logStatus: req.body.logStatus || 'CLOSED', // Default to CLOSED if not specified
@@ -204,7 +205,8 @@ const closeWorkLog = async (req, res) => {
         ae_closing_metrics, // NEW AE CLOSING
         customFields, // Generic
         process, // Generic
-        remarks // Generic
+        remarks, // Generic
+        notes
     } = req.body;
 
     try {
@@ -256,7 +258,8 @@ const closeWorkLog = async (req, res) => {
                     ...customFields
                 } : undefined, // Merge customFields
                 process: process || undefined,
-                remarks: remarks || undefined
+                remarks: remarks || undefined,
+                notes: notes || undefined
             }
         });
 
@@ -292,26 +295,44 @@ const addProjectReport = async (req, res) => {
             return res.status(404).json({ message: 'No open work log found for today.' });
         }
 
-        // Parse existing reports array
-        let currentReports = [];
-        if (existingLog.la_project_reports) {
-            // Prisma might return it as object or string depending on version, safely parse if string
-            currentReports = typeof existingLog.la_project_reports === 'string'
-                ? JSON.parse(existingLog.la_project_reports)
-                : existingLog.la_project_reports;
+        // Determine which field to update based on user designation
+        const updateData = {};
+        const designation = req.user.designation;
+
+        // Parse projectReport if it comes as a string (FormData upload)
+        let report = projectReport;
+        if (typeof report === 'string') {
+            try {
+                report = JSON.parse(report);
+            } catch (e) {
+                console.error("Error parsing projectReport string:", e);
+            }
         }
 
-        // Ensure it's an array (handle case where it might be empty or null initially)
-        if (!Array.isArray(currentReports)) currentReports = [];
+        // Attach photos if uploaded
+        if (req.files && req.files.length > 0) {
+            const photoPaths = req.files.map(file => `/uploads/${file.filename}`);
+            report.ae_photos = [...(report.ae_photos || []), ...photoPaths];
+        }
 
-        // Append new report
-        currentReports.push(projectReport);
+        if (designation === 'AE') {
+            let existingAE = existingLog.ae_project_reports || [];
+            if (typeof existingAE === 'string') existingAE = JSON.parse(existingAE);
+            if (!Array.isArray(existingAE)) existingAE = [];
+            existingAE.push(report);
+            updateData.ae_project_reports = existingAE;
+        } else {
+            // Default to LA for backward compatibility or LA role
+            let existingLA = existingLog.la_project_reports || [];
+            if (typeof existingLA === 'string') existingLA = JSON.parse(existingLA);
+            if (!Array.isArray(existingLA)) existingLA = [];
+            existingLA.push(report);
+            updateData.la_project_reports = existingLA;
+        }
 
         const updatedLog = await prisma.workLog.update({
             where: { id: existingLog.id },
-            data: {
-                la_project_reports: JSON.stringify(currentReports)
-            }
+            data: updateData
         });
 
         res.json(updatedLog);

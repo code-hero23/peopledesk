@@ -19,7 +19,8 @@ const CustomerRelationshipWorkLogForm = ({ onSuccess }) => {
         factorySheet: '',
         collectionReport: '',
         loadedReports: '',
-        remarks: ''
+        remarks: '',
+        notes: ''
     });
 
     const handleChange = (e) => {
@@ -45,7 +46,8 @@ const CustomerRelationshipWorkLogForm = ({ onSuccess }) => {
                 "Collection Report": formData.collectionReport,
                 "Loaded Reports": formData.loadedReports
             },
-            remarks: formData.remarks
+            remarks: formData.remarks,
+            notes: formData.notes
         };
 
         dispatch(createWorkLog(payload)).then((res) => {
@@ -53,7 +55,7 @@ const CustomerRelationshipWorkLogForm = ({ onSuccess }) => {
                 setFormData({
                     fmrmClients: '', dailySheets: '', delayClients: '', refundClients: '',
                     aeReports: '', fourC: '', fmSheet: '', factorySheet: '',
-                    collectionReport: '', loadedReports: '', remarks: ''
+                    collectionReport: '', loadedReports: '', remarks: '', notes: ''
                 });
                 setShowSuccess(true);
             }
@@ -109,6 +111,22 @@ const CustomerRelationshipWorkLogForm = ({ onSuccess }) => {
                     rows="2"
                     className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
                     placeholder="Any additional updates..."
+                ></textarea>
+            </div>
+
+            {/* Daily Notes */}
+            <div className="bg-blue-50/50 p-4 rounded-xl border border-blue-100 space-y-3">
+                <div className="flex items-center gap-2 text-blue-600">
+                    <Clock size={16} />
+                    <label className="text-xs font-bold uppercase">Daily Notes (for Admin & HR)</label>
+                </div>
+                <textarea
+                    name="notes"
+                    value={formData.notes}
+                    onChange={handleChange}
+                    rows="2"
+                    className="w-full px-3 py-2 border border-blue-100 rounded-lg focus:ring-2 focus:ring-blue-100 outline-none text-sm placeholder:text-slate-300"
+                    placeholder="Share daily summary, insights, or updates for Admin and HR..."
                 ></textarea>
             </div>
 
