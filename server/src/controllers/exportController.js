@@ -57,13 +57,18 @@ const getHeaders = (arr) => {
 // @access  Private (Admin)
 const exportWorkLogs = async (req, res) => {
     try {
-        const { month, year, designation, userId, search, date } = req.query;
+        const { month, year, designation, userId, search, date, startDate: queryStartDate, endDate: queryEndDate } = req.query;
         let where = {};
         let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
 
         let startDate, endDate;
 
-        if (date) {
+        if (queryStartDate && queryEndDate) {
+            startDate = new Date(queryStartDate);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(queryEndDate);
+            endDate.setHours(23, 59, 59, 999);
+        } else if (date) {
             const d = new Date(date);
             startDate = new Date(d.setHours(0, 0, 0, 0));
             endDate = new Date(d.setHours(23, 59, 59, 999));
@@ -697,4 +702,62 @@ const exportPerformanceAnalytics = async (req, res) => {
     }
 };
 
-module.exports = { exportWorkLogs, exportAttendance, exportRequests, exportPerformanceAnalytics };
+// @desc    Export Employees as CSV
+// @route   GET /api/export/employees
+// @access  Private (Admin)
+const exportEmployees = async (req, res) => {
+    try {
+        const { designation, status, search } = req.query;
+        let where = {};
+
+        if (designation) where.designation = designation;
+        if (status) where.status = status;
+        if (search) {
+            where.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } }
+            ];
+        }
+
+        const employees = await prisma.user.findMany({
+            where,
+            orderBy: { createdAt: 'desc' },
+            select: {
+                id: true,
+                name: true,
+                email: true,
+                designation: true,
+                role: true,
+                status: true,
+                createdAt: true,
+                lastWorkLogDate: true
+            }
+        });
+
+        const flattened = employees.map(emp => ({
+            ID: emp.id,
+            Name: emp.name,
+            Email: emp.email,
+            Designation: emp.designation,
+            Role: emp.role,
+            Status: emp.status,
+            'Joined Date': new Date(emp.createdAt).toLocaleDateString(),
+            'Last Work Log': emp.lastWorkLogDate ? new Date(emp.lastWorkLogDate).toLocaleDateString() : 'Never'
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(flattened);
+        ws['!cols'] = setAutoWidth(flattened);
+        XLSX.utils.book_append_sheet(wb, ws, "Employees");
+
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment('employees_export.xlsx');
+        res.send(buf);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = { exportWorkLogs, exportAttendance, exportRequests, exportPerformanceAnalytics, exportEmployees };

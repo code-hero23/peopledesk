@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
-import { UserPlus } from 'lucide-react'; // Assuming UserPlus was used or I will use it
+import { UserPlus, Download } from 'lucide-react';
 import { getAllEmployees, deleteEmployee, updateUserStatus, reset } from '../../features/admin/adminSlice';
 import CreateEmployeeModal from '../../components/CreateEmployeeModal';
 
@@ -12,8 +12,38 @@ const ManageEmployees = () => {
     const [showModal, setShowModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [uploading, setUploading] = useState(false);
+    const [exporting, setExporting] = useState(false);
     const fileInputRef = useRef(null);
     const { user } = useSelector((state) => state.auth);
+
+    const handleDownloadExcel = async () => {
+        try {
+            setExporting(true);
+            const token = user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/employees?search=${encodeURIComponent(searchTerm)}`;
+
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `employees_export_${new Date().toISOString().split('T')[0]}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Export failed:", error);
+            alert("Failed to export employees.");
+        } finally {
+            setExporting(false);
+        }
+    };
 
     const handleFileChange = async (e) => {
         const file = e.target.files[0];
@@ -103,13 +133,22 @@ const ManageEmployees = () => {
                         className="hidden"
                     />
                     {user?.role === 'ADMIN' && (
-                        <button
-                            onClick={() => fileInputRef.current.click()}
-                            disabled={uploading}
-                            className="bg-green-600 hover:bg-green-700 text-white px-4 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2"
-                        >
-                            <span>📂</span> {uploading ? 'Importing...' : 'Import Excel'}
-                        </button>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => fileInputRef.current.click()}
+                                disabled={uploading}
+                                className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm"
+                            >
+                                <span>📂</span> {uploading ? 'Importing...' : 'Import'}
+                            </button>
+                            <button
+                                onClick={handleDownloadExcel}
+                                disabled={exporting}
+                                className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2.5 rounded-lg font-bold shadow-md transition-colors flex items-center gap-2 text-sm"
+                            >
+                                <Download size={18} /> {exporting ? 'Exporting...' : 'Export'}
+                            </button>
+                        </div>
                     )}
                     {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
                         <button

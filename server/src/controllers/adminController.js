@@ -461,14 +461,22 @@ const getAllWorkLogs = async (req, res) => {
 // @access  Private (Admin)
 const getDailyWorkLogs = async (req, res) => {
     try {
-        const { date } = req.query;
+        const { date, startDate, endDate } = req.query;
 
-        // Parse date or use today (start of day)
-        const queryDate = date ? new Date(date) : new Date();
-        const startOfDay = new Date(queryDate.setHours(0, 0, 0, 0));
-        const endOfDay = new Date(queryDate.setHours(23, 59, 59, 999));
+        let start, end;
 
-        // 1. Get all active users
+        if (startDate && endDate) {
+            start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            const queryDate = date ? new Date(date) : new Date();
+            start = new Date(queryDate.setHours(0, 0, 0, 0));
+            end = new Date(queryDate.setHours(23, 59, 59, 999));
+        }
+
+        // 1. Get all active users (needed for single-day "Not Submitted" view)
         let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
@@ -479,27 +487,40 @@ const getDailyWorkLogs = async (req, res) => {
             select: { id: true, name: true, email: true, designation: true }
         });
 
-        // 2. Get work logs for the date
+        // 2. Get work logs for the range
         const logs = await prisma.workLog.findMany({
             where: {
                 date: {
-                    gte: startOfDay,
-                    lte: endOfDay
+                    gte: start,
+                    lte: end
                 }
-            }
+            },
+            include: { user: { select: { id: true, name: true, email: true, designation: true } } },
+            orderBy: { date: 'desc' }
         });
 
         // 3. Merge data
-        const dailyReport = users.map(user => {
-            const log = logs.find(l => l.userId === user.id);
-            return {
-                user: user,
-                status: log ? 'SUBMITTED' : 'PENDING',
-                workLog: log || null
-            };
-        });
+        // If it's a specific single day, we show ALL employees (Submitted/Pending)
+        if (!startDate || (startDate === endDate)) {
+            const dailyReport = users.map(user => {
+                const log = logs.find(l => l.userId === user.id);
+                return {
+                    user: user,
+                    status: log ? 'SUBMITTED' : 'PENDING',
+                    workLog: log || null
+                };
+            });
+            return res.json(dailyReport);
+        }
 
-        res.json(dailyReport);
+        // If it's a range, we only show SUBMITTED logs
+        const rangeReport = logs.map(log => ({
+            user: log.user,
+            status: 'SUBMITTED',
+            workLog: log
+        }));
+
+        res.json(rangeReport);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

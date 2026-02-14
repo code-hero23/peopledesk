@@ -11,12 +11,18 @@ const WorkLogs = () => {
     const { dailyWorkLogs, employees, isLoading, isError, message } = useSelector((state) => state.admin);
 
     // Default to today's date formatted as YYYY-MM-DD
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
+    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDesignation, setSelectedDesignation] = useState('');
 
     // Filtering Logic
     const filteredLogs = dailyWorkLogs.filter((record) => {
+        // Match Designation
+        if (selectedDesignation && record.user.designation !== selectedDesignation) {
+            return false;
+        }
+
         if (!searchTerm) return true;
         const lowerTerm = searchTerm.toLowerCase();
 
@@ -49,13 +55,17 @@ const WorkLogs = () => {
         }
 
         if (user && user.token) {
-            dispatch(getDailyWorkLogs(selectedDate));
+            if (startDate === endDate) {
+                dispatch(getDailyWorkLogs({ date: startDate }));
+            } else {
+                dispatch(getDailyWorkLogs({ startDate, endDate }));
+            }
         }
 
         return () => {
             dispatch(reset());
         };
-    }, [user, isError, message, dispatch, selectedDate]);
+    }, [user, isError, message, dispatch, startDate, endDate]);
 
     const onExportDaily = async () => {
         try {
@@ -66,7 +76,14 @@ const WorkLogs = () => {
             };
 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            let apiUrl = `${baseUrl}/export/worklogs?date=${selectedDate}`;
+            let apiUrl = `${baseUrl}/export/worklogs?`;
+
+            if (startDate === endDate) {
+                apiUrl += `date=${startDate}`;
+            } else {
+                apiUrl += `startDate=${startDate}&endDate=${endDate}`;
+            }
+
             if (selectedDesignation) {
                 apiUrl += `&designation=${selectedDesignation}`;
             }
@@ -78,7 +95,8 @@ const WorkLogs = () => {
             const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `worklog_daily_${selectedDate}.xlsx`);
+            const fileName = startDate === endDate ? `worklog_${startDate}.xlsx` : `worklog_${startDate}_to_${endDate}.xlsx`;
+            link.setAttribute('download', fileName);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -90,7 +108,7 @@ const WorkLogs = () => {
 
     const onExportMonth = async () => {
         try {
-            const date = new Date(selectedDate);
+            const date = new Date(startDate);
             const month = date.getMonth() + 1; // 1-12
             const year = date.getFullYear();
 
@@ -191,7 +209,7 @@ const WorkLogs = () => {
                     <h2 className="text-3xl font-bold text-slate-800">Daily Work Reports</h2>
                     <p className="text-slate-500">Monitor employee work submissions.</p>
                 </div>
-                <div className="flex items-center gap-4">
+                <div className="flex flex-wrap items-center gap-4">
                     <div className="relative">
                         <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <input
@@ -225,20 +243,32 @@ const WorkLogs = () => {
                     </select>
                     <button onClick={onExportDaily} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-2 border border-blue-500/20">
                         <Download size={14} />
-                        <span>DAILY EXCEL</span>
+                        <span>EXPORT RANGE</span>
                     </button>
                     <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-2 border border-emerald-500/20">
                         <Download size={14} />
                         <span>MONTHLY EXCEL</span>
                     </button>
-                    <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"
-                        />
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
+                        <div className="relative">
+                            <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 w-3 h-3" />
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="pl-7 pr-2 py-1 text-xs focus:outline-none text-slate-600 font-medium border-none"
+                            />
+                        </div>
+                        <span className="text-slate-400 pt-1">→</span>
+                        <div className="relative">
+                            <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 w-3 h-3" />
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="pl-7 pr-2 py-1 text-xs focus:outline-none text-slate-600 font-medium border-none"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>
@@ -315,10 +345,11 @@ const WorkLogs = () => {
                                                             e.stopPropagation();
                                                             handleViewDetails(record);
                                                         }}
-                                                        className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors relative z-10 cursor-pointer"
+                                                        className="inline-flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-bold text-xs group mx-auto"
                                                         title="View & Print Details"
                                                     >
-                                                        <Eye size={20} />
+                                                        <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                                                        <span>View Report</span>
                                                     </button>
                                                 ) : (
                                                     <span className="text-slate-300">-</span>

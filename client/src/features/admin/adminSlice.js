@@ -103,7 +103,7 @@ export const getDailyAttendance = createAsyncThunk(
 // Get Daily Work Logs
 export const getDailyWorkLogs = createAsyncThunk(
     'admin/getDailyWorkLogs',
-    async (date, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
@@ -111,8 +111,17 @@ export const getDailyWorkLogs = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            // Pass date as query param if it exists
-            const query = date ? `?date=${date}` : '';
+
+            let query = '';
+            if (params) {
+                const { date, startDate, endDate } = params;
+                if (startDate && endDate) {
+                    query = `?startDate=${startDate}&endDate=${endDate}`;
+                } else if (date) {
+                    query = `?date=${date}`;
+                }
+            }
+
             const response = await axios.get(API_URL + `worklogs/daily${query}`, config);
             return response.data;
         } catch (error) {
