@@ -187,7 +187,7 @@ const createWorkLog = async (req, res) => {
             data: { lastWorkLogDate: new Date() },
         });
 
-        res.status(201).json(workLog);
+        res.json(workLog);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

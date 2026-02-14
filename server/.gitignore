@@ -2,3 +2,5 @@ node_modules
 .env
 logs
 *.log
+google-credentials.json
+.env.example
