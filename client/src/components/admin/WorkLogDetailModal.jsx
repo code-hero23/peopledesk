@@ -492,7 +492,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                         <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
                                                             <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Measurements</p>
                                                             <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
-                                                                {r.measurements.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                                {r.measurements.map((m, idx) => <li key={idx}>{m.discussion || m.details}</li>)}
                                                             </ul>
                                                         </div>
                                                     )}
@@ -501,25 +501,31 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                         <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
                                                             <p className="text-[9px] font-black text-orange-600 uppercase mb-2">Requirements</p>
                                                             <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
-                                                                {r.requirements.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                                {r.requirements.map((m, idx) => <li key={idx}>{typeof m === 'string' ? m : (m.details || m.discussion)}</li>)}
                                                             </ul>
                                                         </div>
                                                     )}
                                                     {/* Online Meetings */}
-                                                    {r.onlineMeeting && r.onlineMeeting.length > 0 && (
+                                                    {(r.onlineMeetings || r.onlineMeeting) && (r.onlineMeetings || r.onlineMeeting).length > 0 && (
                                                         <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
                                                             <p className="text-[9px] font-black text-blue-600 uppercase mb-2">Online Meetings</p>
                                                             <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
-                                                                {r.onlineMeeting.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                                {(r.onlineMeetings || r.onlineMeeting).map((m, idx) => <li key={idx}>
+                                                                    {m.date && <span className="text-[8px] text-slate-400 mr-1">{m.date}</span>}
+                                                                    {m.discussion || m.details}
+                                                                </li>)}
                                                             </ul>
                                                         </div>
                                                     )}
                                                     {/* Showroom Meetings */}
-                                                    {r.showroomMeeting && r.showroomMeeting.length > 0 && (
+                                                    {(r.showroomMeetings || r.showroomMeeting) && (r.showroomMeetings || r.showroomMeeting).length > 0 && (
                                                         <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-100">
                                                             <p className="text-[9px] font-black text-purple-600 uppercase mb-2">Showroom Meetings</p>
                                                             <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
-                                                                {r.showroomMeeting.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                                {(r.showroomMeetings || r.showroomMeeting).map((m, idx) => <li key={idx}>
+                                                                    {m.date && <span className="text-[8px] text-slate-400 mr-1">{m.date}</span>}
+                                                                    {m.discussion || m.details}
+                                                                </li>)}
                                                             </ul>
                                                         </div>
                                                     )}
@@ -528,7 +534,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                         <div className="bg-pink-50/50 p-3 rounded-lg border border-pink-100">
                                                             <p className="text-[9px] font-black text-pink-600 uppercase mb-2">Colours / Selection</p>
                                                             <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
-                                                                {r.colours.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                                {r.colours.map((m, idx) => <li key={idx}>{typeof m === 'string' ? m : (m.details || m.discussion)}</li>)}
                                                             </ul>
                                                         </div>
                                                     )}
