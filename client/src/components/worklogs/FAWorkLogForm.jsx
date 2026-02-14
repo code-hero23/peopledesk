@@ -637,18 +637,18 @@ const MetricsFormLayout = ({ title, subtitle, icon: Icon, color, children }) => 
 );
 
 // FA Specific Metrics Form (Adapted to LA Style Table/Grid)
+const InputItem = ({ label, value, path, handleChange, placeholder = "0", type = "number" }) => (
+    <div className="flex flex-col">
+        <span className="text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">{label}</span>
+        <input
+            type={type} value={value} onChange={(e) => handleChange(path, e.target.value)}
+            placeholder={placeholder}
+            className="w-full bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 font-bold text-slate-700 text-sm outline-none focus:bg-white focus:border-blue-200 focus:shadow-sm transition-all text-center"
+        />
+    </div>
+);
+
 const FAMetricsForm = ({ data, handleChange }) => {
-    // Helper to render Input Group
-    const InputItem = ({ label, value, path, placeholder = "0", type = "number" }) => (
-        <div className="flex flex-col">
-            <span className="text-[9px] font-black text-slate-400 uppercase mb-1 ml-1">{label}</span>
-            <input
-                type={type} value={value} onChange={(e) => handleChange(path, e.target.value)}
-                placeholder={placeholder}
-                className="bg-slate-50 border border-slate-100 rounded-xl px-3 py-2 font-bold text-slate-700 text-sm outline-none focus:bg-white focus:border-blue-200 focus:shadow-sm transition-all text-center"
-            />
-        </div>
-    );
 
     return (
         <div className="space-y-6">
@@ -660,7 +660,7 @@ const FAMetricsForm = ({ data, handleChange }) => {
                 </div>
                 <div className="grid grid-cols-3 md:grid-cols-9 gap-3">
                     {['nine', 'eight', 'seven', 'six', 'five', 'four', 'three', 'two', 'one'].map((num) => (
-                        <InputItem key={num} label={`${num} ☆`} value={data.calls[`${num}Star`]} path={`calls.${num}Star`} />
+                        <InputItem key={num} label={`${num} ☆`} value={data.calls[`${num}Star`]} path={`calls.${num}Star`} handleChange={handleChange} />
                     ))}
                 </div>
             </div>
@@ -674,10 +674,10 @@ const FAMetricsForm = ({ data, handleChange }) => {
                         <h4 className="text-xs font-black uppercase tracking-widest">Infurnia Pending</h4>
                     </div>
                     <div className="space-y-3">
-                        <InputItem label="Count" value={data.infurniaPending.count} path="infurniaPending.count" />
+                        <InputItem label="Count" value={data.infurniaPending.count} path="infurniaPending.count" handleChange={handleChange} />
                         <div className="grid grid-cols-2 gap-3">
-                            <InputItem label="Detail 1" value={data.infurniaPending.text1} path="infurniaPending.text1" type="text" placeholder="..." />
-                            <InputItem label="Detail 2" value={data.infurniaPending.text2} path="infurniaPending.text2" type="text" placeholder="..." />
+                            <InputItem label="Detail 1" value={data.infurniaPending.text1} path="infurniaPending.text1" type="text" placeholder="..." handleChange={handleChange} />
+                            <InputItem label="Detail 2" value={data.infurniaPending.text2} path="infurniaPending.text2" type="text" placeholder="..." handleChange={handleChange} />
                         </div>
                     </div>
                 </div>
@@ -689,14 +689,14 @@ const FAMetricsForm = ({ data, handleChange }) => {
                         <h4 className="text-xs font-black uppercase tracking-widest">Quotations</h4>
                     </div>
                     <div className="space-y-3">
-                        <InputItem label="Pending Count" value={data.quotationPending} path="quotationPending" />
+                        <InputItem label="Pending Count" value={data.quotationPending} path="quotationPending" handleChange={handleChange} />
                         <div className="grid grid-cols-2 gap-3">
-                            <InputItem label="Initial (Count)" value={data.initialQuote.count} path="initialQuote.count" />
-                            <InputItem label="Initial (Text)" value={data.initialQuote.text} path="initialQuote.text" type="text" placeholder="..." />
+                            <InputItem label="Initial (Count)" value={data.initialQuote.count} path="initialQuote.count" handleChange={handleChange} />
+                            <InputItem label="Initial (Text)" value={data.initialQuote.text} path="initialQuote.text" type="text" placeholder="..." handleChange={handleChange} />
                         </div>
                         <div className="grid grid-cols-2 gap-3">
-                            <InputItem label="Revised (Count)" value={data.revisedQuote.count} path="revisedQuote.count" />
-                            <InputItem label="Revised (Text)" value={data.revisedQuote.text} path="revisedQuote.text" type="text" placeholder="..." />
+                            <InputItem label="Revised (Count)" value={data.revisedQuote.count} path="revisedQuote.count" handleChange={handleChange} />
+                            <InputItem label="Revised (Text)" value={data.revisedQuote.text} path="revisedQuote.text" type="text" placeholder="..." handleChange={handleChange} />
                         </div>
                     </div>
                 </div>
@@ -709,8 +709,8 @@ const FAMetricsForm = ({ data, handleChange }) => {
                     <h4 className="text-xs font-black uppercase tracking-widest">Visits & Discussions</h4>
                 </div>
                 <div className="grid grid-cols-2 gap-6">
-                    <InputItem label="Showroom Visits" value={data.showroomVisit} path="showroomVisit" />
-                    <InputItem label="Online Discussions" value={data.onlineDiscussion} path="onlineDiscussion" />
+                    <InputItem label="Showroom Visits" value={data.showroomVisit} path="showroomVisit" handleChange={handleChange} />
+                    <InputItem label="Online Discussions" value={data.onlineDiscussion} path="onlineDiscussion" handleChange={handleChange} />
                 </div>
             </div>
         </div>
