@@ -30,6 +30,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
     const laOpening = safelyParseJson(log.la_opening_metrics);
     const laClosing = safelyParseJson(log.la_closing_metrics);
     const laReports = safelyParseJson(log.la_project_reports);
+    const faReports = safelyParseJson(log.fa_project_reports);
     const aeReports = safelyParseJson(log.ae_project_reports);
 
     // Common styling for metric cards
@@ -441,32 +442,101 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
-                    {/* LA Closing / End of Day Metrics */}
-                    {laClosing && (
-                        <div className="mb-6">
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-                                {[
-                                    { label: 'Initial 2D', data: laClosing.initial2D },
-                                    { label: 'Production 2D', data: laClosing.production2D },
-                                    { label: 'Revised 2D', data: laClosing.revised2D },
-                                    { label: 'Fresh 3D', data: laClosing.fresh3D },
-                                    { label: 'Revised 3D', data: laClosing.revised3D },
-                                    { label: 'Estimation', data: laClosing.estimation },
-                                    { label: 'WOE', data: laClosing.woe },
-                                    { label: 'Online Discussion', data: laClosing.onlineDiscussion },
-                                    { label: 'Showroom Discussion', data: laClosing.showroomDiscussion },
-                                    { label: 'Sign Engineers', data: laClosing.signFromEngineer },
-                                    { label: 'Site Visit', data: laClosing.siteVisit },
-                                    { label: 'Infurnia', data: laClosing.infurnia },
-                                ].filter(x => x && (x.data?.count > 0 || x.data?.details)).map((item, i) => (
-                                    <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
-                                        <div className="flex justify-between items-center mb-1">
-                                            <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
-                                            <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
+                    {/* LA & FA Project Reports Grid (NEW ADDITION) */}
+                    {((laReports && Array.isArray(laReports) && laReports.length > 0) || (faReports && Array.isArray(faReports) && faReports.length > 0)) && (
+                        <div className="mb-8 print-no-break">
+                            <SectionHeader title="PROJECT WISE REPORTS (DETAILED)" colorClass="bg-indigo-600" />
+                            <div className="space-y-6">
+                                {[...(laReports || []), ...(faReports || [])].map((report, i) => {
+                                    const r = typeof report === 'string' ? JSON.parse(report) : report;
+                                    return (
+                                        <div key={i} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm break-inside-avoid">
+                                            {/* Header */}
+                                            <div className="flex flex-wrap md:flex-nowrap border-b border-slate-100 bg-indigo-50/30">
+                                                <div className="w-full md:w-1/3 p-4 border-b md:border-b-0 md:border-r border-slate-100">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Client Name</p>
+                                                    <p className="text-sm font-black text-slate-800">{r.clientName || 'N/A'}</p>
+                                                </div>
+                                                <div className="w-1/2 md:w-1/3 p-4 border-r border-slate-100">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Site Location</p>
+                                                    <p className="text-sm font-bold text-slate-700">{r.site || 'N/A'}</p>
+                                                </div>
+                                                <div className="w-1/2 md:w-1/3 p-4">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Timeline</p>
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="bg-indigo-100 text-indigo-700 text-[10px] font-black px-2 py-0.5 rounded">
+                                                            {r.startTime || '--:--'} - {r.endTime || '--:--'}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Body */}
+                                            <div className="p-4 space-y-4">
+                                                <div>
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Process / Description</p>
+                                                    <p className="text-sm font-medium text-slate-800 leading-relaxed italic">"{r.process || 'No description provided'}"</p>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    <div className="bg-slate-50 p-2 rounded border border-slate-100">
+                                                        <p className="text-[8px] font-black text-slate-400 uppercase">Image Count</p>
+                                                        <p className="text-[11px] font-bold text-slate-800">{r.imageCount || '-'}</p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Dynamic Section Grids */}
+                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                    {/* Measurements */}
+                                                    {r.measurements && r.measurements.length > 0 && (
+                                                        <div className="bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+                                                            <p className="text-[9px] font-black text-emerald-600 uppercase mb-2">Measurements</p>
+                                                            <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
+                                                                {r.measurements.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                    {/* Requirements */}
+                                                    {r.requirements && r.requirements.length > 0 && (
+                                                        <div className="bg-orange-50/50 p-3 rounded-lg border border-orange-100">
+                                                            <p className="text-[9px] font-black text-orange-600 uppercase mb-2">Requirements</p>
+                                                            <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
+                                                                {r.requirements.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                    {/* Online Meetings */}
+                                                    {r.onlineMeeting && r.onlineMeeting.length > 0 && (
+                                                        <div className="bg-blue-50/50 p-3 rounded-lg border border-blue-100">
+                                                            <p className="text-[9px] font-black text-blue-600 uppercase mb-2">Online Meetings</p>
+                                                            <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
+                                                                {r.onlineMeeting.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                    {/* Showroom Meetings */}
+                                                    {r.showroomMeeting && r.showroomMeeting.length > 0 && (
+                                                        <div className="bg-purple-50/50 p-3 rounded-lg border border-purple-100">
+                                                            <p className="text-[9px] font-black text-purple-600 uppercase mb-2">Showroom Meetings</p>
+                                                            <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
+                                                                {r.showroomMeeting.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                    {/* Colours */}
+                                                    {r.colours && r.colours.length > 0 && (
+                                                        <div className="bg-pink-50/50 p-3 rounded-lg border border-pink-100">
+                                                            <p className="text-[9px] font-black text-pink-600 uppercase mb-2">Colours / Selection</p>
+                                                            <ul className="list-disc list-inside text-[10px] font-bold text-slate-700 space-y-1">
+                                                                {r.colours.map((m, idx) => <li key={idx}>{m.details}</li>)}
+                                                            </ul>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
                                         </div>
-                                        {item.data.details && <p className="text-[10px] text-slate-600 font-bold break-words whitespace-pre-wrap">{item.data.details}</p>}
-                                    </div>
-                                ))}
+                                    );
+                                })}
                             </div>
                         </div>
                     )}

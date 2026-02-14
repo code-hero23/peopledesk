@@ -182,6 +182,7 @@ model WorkLog {
   la_closing_metrics         Json?
   la_opening_metrics         Json?
   la_project_reports         Json?
+  fa_project_reports         Json?
   ae_project_reports         Json?
   ae_closing_metrics         Json?
   ae_opening_metrics         Json?

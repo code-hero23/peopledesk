@@ -322,6 +322,12 @@ const addProjectReport = async (req, res) => {
             if (!Array.isArray(existingAE)) existingAE = [];
             existingAE.push(report);
             updateData.ae_project_reports = existingAE;
+        } else if (designation === 'FA') {
+            let existingFA = existingLog.fa_project_reports || [];
+            if (typeof existingFA === 'string') existingFA = JSON.parse(existingFA);
+            if (!Array.isArray(existingFA)) existingFA = [];
+            existingFA.push(report);
+            updateData.fa_project_reports = existingFA;
         } else {
             // Default to LA for backward compatibility or LA role
             let existingLA = existingLog.la_project_reports || [];
