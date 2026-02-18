@@ -33,7 +33,7 @@ const Overview = () => {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
     const [permissionInitialData, setPermissionInitialData] = useState(null);
-    const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
+    const [isAutoPermission, setIsAutoPermission] = useState(false);
 
 
     // Confirmation Modal State
@@ -52,22 +52,16 @@ const Overview = () => {
         return () => { dispatch(reset()); };
     }, [dispatch]);
 
-    const checkLatenessAndRedirect = (checkInTimeRaw) => {
-        console.log('checkLatenessAndRedirect called with:', checkInTimeRaw);
+    const checkLatenessAndRedirect = (checkInTimeRaw, isAuto = false) => {
         // Exempt AE (Area Engineers) from this restriction
-        if (user?.designation === 'AE') {
-            console.log('Exempting AE from redirection');
-            return;
-        }
+        if (user?.designation === 'AE') return;
 
         const checkInTime = new Date(checkInTimeRaw);
         const hours = checkInTime.getHours();
         const minutes = checkInTime.getMinutes();
-        console.log(`Check-in Time detected: ${hours}:${minutes}`);
 
         // 10:30 AM = 10 * 60 + 30 = 630 minutes
         if (hours * 60 + minutes > 630) {
-            console.log('Lateness detected (> 10:30 AM). Triggering redirection...');
             // Use local date (YYYY-MM-DD format for input[type="date"])
             const date = checkInTime.toLocaleDateString('en-CA');
 
@@ -85,38 +79,37 @@ const Overview = () => {
             const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
             const endTime = formatTime(endTimeObj);
 
-            console.log(`Pre-filling Permission: Date=${date}, Start=${startTime}, End=${endTime}`);
-
             setPermissionInitialData({
                 date,
                 startTime,
                 endTime,
                 reason: 'Late Check-In (After 10:30 AM)'
             });
+            setIsAutoPermission(isAuto);
             setActiveModal('permission');
-        } else {
-            console.log('Not late enough for auto-permission (< 10:30 AM)');
         }
     };
 
     // Robust Lateness Check
     useEffect(() => {
-        if (attendance?.status === 'PRESENT' && !hasCheckedLateness && requests?.permissions) {
-            console.log('--- Robust Lateness Check Triggered ---');
-            const todayLocal = new Date().toLocaleDateString('en-CA');
+        if (attendance?.status === 'PRESENT' && requests?.permissions && activeModal !== 'permission' && user?.designation !== 'AE') {
+            const checkInTime = new Date(attendance.date);
+            const hours = checkInTime.getHours();
+            const minutes = checkInTime.getMinutes();
 
-            // Check if permission already exists for today
-            const hasPermissionForToday = requests.permissions.some(p => {
-                const pDate = new Date(p.date).toLocaleDateString('en-CA');
-                return pDate === todayLocal;
-            });
+            if (hours * 60 + minutes > 630) {
+                const todayLocal = new Date().toLocaleDateString('en-CA');
+                const hasPermissionForToday = requests.permissions.some(p => {
+                    const pDate = new Date(p.date).toLocaleDateString('en-CA');
+                    return pDate === todayLocal;
+                });
 
-            if (!hasPermissionForToday) {
-                checkLatenessAndRedirect(attendance.date);
+                if (!hasPermissionForToday) {
+                    checkLatenessAndRedirect(attendance.date, true);
+                }
             }
-            setHasCheckedLateness(true);
         }
-    }, [attendance, requests, hasCheckedLateness, user]);
+    }, [attendance, requests, activeModal, user]);
 
     const executeAttendanceAction = (actionName) => {
         const deviceInfo = navigator.userAgent;
@@ -142,8 +135,8 @@ const Overview = () => {
                     if (!res.error) {
                         dispatch(getAttendanceStatus());
                         // Auto-redirect if late
-                        const checkInTime = res.payload?.date ? new Date(res.payload.date) : new Date();
-                        checkLatenessAndRedirect(checkInTime);
+                        const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
+                        checkLatenessAndRedirect(checkInDate, true);
                     } else {
                         alert(res.payload || "Check-in failed. You might be already checked in.");
                     }
@@ -237,8 +230,8 @@ const Overview = () => {
                 dispatch(getAttendanceStatus());
                 // Auto-redirect if late and it was a check-in
                 if (!isCheckingOut) {
-                    const checkInTime = res.payload?.date ? new Date(res.payload.date) : new Date();
-                    checkLatenessAndRedirect(checkInTime);
+                    const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
+                    checkLatenessAndRedirect(checkInDate, true);
                 }
             } else {
                 alert(res.payload || "Action failed.");
@@ -286,6 +279,7 @@ const Overview = () => {
     const closeModal = () => {
         setActiveModal(null);
         setPermissionInitialData(null);
+        setIsAutoPermission(false);
     };
 
     const renderWorkLogForm = () => {
@@ -321,14 +315,18 @@ const Overview = () => {
                 <Modal title={
                     activeModal === 'worklog' ? 'Submit Daily Work Log' :
                         activeModal === 'leave' ? 'Request Leave' :
-                            activeModal === 'permission' ? 'Request Permission' :
+                            activeModal === 'permission' ? (isAutoPermission ? 'Mandatory Permission Request' : 'Request Permission') :
                                 activeModal === 'site-visit' ? 'Update Site Visit' :
                                     activeModal === 'showroom-visit' ? 'Cross-Showroom Visit' :
                                         'Create New Project'
-                } onClose={closeModal}>
+                }
+                    onClose={closeModal}
+                    showClose={!isAutoPermission}
+                    closeOnClickOutside={!isAutoPermission}
+                >
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
-                    {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} />}
+                    {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} isMandatory={isAutoPermission} />}
                     {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}
@@ -560,6 +558,7 @@ const Overview = () => {
                             <button
                                 onClick={() => {
                                     setPermissionInitialData(null);
+                                    setIsAutoPermission(false);
                                     setActiveModal('permission');
                                 }}
                                 className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group min-h-[100px] md:h-[120px]"

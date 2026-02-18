@@ -52,7 +52,7 @@ const TimePicker = ({ label, value, onChange }) => {
     );
 };
 
-const PermissionRequestForm = ({ onSuccess, initialData }) => {
+const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const dispatch = useDispatch();
     const { businessHeads, requests } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -179,13 +179,15 @@ const PermissionRequestForm = ({ onSuccess, initialData }) => {
                 />
             </div>
             <div className="flex gap-3 pt-2">
-                <button
-                    type="button"
-                    onClick={onSuccess}
-                    className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
-                >
-                    Cancel
-                </button>
+                {!isMandatory && (
+                    <button
+                        type="button"
+                        onClick={onSuccess}
+                        className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                )}
                 <button
                     type="submit"
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
