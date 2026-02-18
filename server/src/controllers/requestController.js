@@ -86,6 +86,18 @@ const createPermissionRequest = async (req, res) => {
             where: { userId, createdAt: { gte: startOfMonth } }
         });
 
+        // Check if a permission already exists for this date
+        const existingPermission = await prisma.permissionRequest.findFirst({
+            where: {
+                userId,
+                date: new Date(date)
+            }
+        });
+
+        if (existingPermission) {
+            return res.status(400).json({ message: 'You have already raised a permission request for this date.' });
+        }
+
         const permissionRequest = await prisma.permissionRequest.create({
             data: {
                 userId,

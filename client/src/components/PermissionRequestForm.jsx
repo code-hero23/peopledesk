@@ -52,7 +52,7 @@ const TimePicker = ({ label, value, onChange }) => {
     );
 };
 
-const PermissionRequestForm = ({ onSuccess }) => {
+const PermissionRequestForm = ({ onSuccess, initialData }) => {
     const dispatch = useDispatch();
     const { businessHeads, requests } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -69,10 +69,10 @@ const PermissionRequestForm = ({ onSuccess }) => {
     const isLimitExceeded = monthlyPermissions >= 4;
 
     const [formData, setFormData] = useState({
-        date: '',
-        startTime: '09:00 AM',
-        endTime: '06:00 PM',
-        reason: '',
+        date: initialData?.date || '',
+        startTime: initialData?.startTime || '09:00 AM',
+        endTime: initialData?.endTime || '11:00 AM',
+        reason: initialData?.reason || '',
         targetBhId: '',
     });
 
@@ -89,7 +89,7 @@ const PermissionRequestForm = ({ onSuccess }) => {
         return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
     };
 
-    const onSubmit = (e) => {
+    const onSubmit = async (e) => {
         e.preventDefault();
 
         const startMinutes = parseTime(formData.startTime);
@@ -106,8 +106,12 @@ const PermissionRequestForm = ({ onSuccess }) => {
             return;
         }
 
-        dispatch(createPermissionRequest(formData));
-        setShowSuccess(true);
+        try {
+            await dispatch(createPermissionRequest(formData)).unwrap();
+            setShowSuccess(true);
+        } catch (error) {
+            alert(error || "Failed to submit permission request");
+        }
     };
 
     return (

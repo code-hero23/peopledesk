@@ -41,7 +41,44 @@ const EmployeeDashboard = () => {
     // UI State
     const [activeTab, setActiveTab] = useState(user?.designation === 'OFFICE-ADMINISTRATION' ? 'leaves' : 'logs');
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
+    const [permissionInitialData, setPermissionInitialData] = useState(null);
     const [showCheckInModal, setShowCheckInModal] = useState(false);
+
+    const checkLatenessAndRedirect = (checkInTimeRaw) => {
+        // Exempt AE (Area Engineers) from this restriction
+        if (user?.designation === 'AE') return;
+
+        const checkInTime = new Date(checkInTimeRaw);
+        const hours = checkInTime.getHours();
+        const minutes = checkInTime.getMinutes();
+
+        // 10:30 AM = 10 * 60 + 30 = 630 minutes
+        if (hours * 60 + minutes > 630) {
+            const date = checkInTime.toISOString().split('T')[0];
+
+            const formatTime = (dateObj) => {
+                let h = dateObj.getHours();
+                const m = dateObj.getMinutes().toString().padStart(2, '0');
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12;
+                h = h ? h : 12; // the hour '0' should be '12'
+                return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+            };
+
+            const startTime = formatTime(checkInTime);
+
+            const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
+            const endTime = formatTime(endTimeObj);
+
+            setPermissionInitialData({
+                date,
+                startTime,
+                endTime,
+                reason: 'Late Check-In (After 10:30 AM)'
+            });
+            setActiveModal('permission');
+        }
+    };
     const [isCheckingOut, setIsCheckingOut] = useState(false); // Track if current action is check-out
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
 
@@ -94,7 +131,13 @@ const EmployeeDashboard = () => {
                 setShowCheckInModal(true);
             } else {
                 console.log('Action: Standard Check-In (No Photo)');
-                dispatch(markAttendance()).then(() => dispatch(getAttendanceStatus()));
+                dispatch(markAttendance()).then((res) => {
+                    if (!res.error) {
+                        dispatch(getAttendanceStatus());
+                        // Auto-redirect if late
+                        checkLatenessAndRedirect(new Date());
+                    }
+                });
             }
         }
     };
@@ -109,11 +152,18 @@ const EmployeeDashboard = () => {
             if (!res.error) {
                 setShowCheckInModal(false);
                 dispatch(getAttendanceStatus());
+                // Auto-redirect if late and it was a check-in
+                if (!isCheckingOut) {
+                    checkLatenessAndRedirect(new Date());
+                }
             }
         });
     };
 
-    const closeModal = () => setActiveModal(null);
+    const closeModal = () => {
+        setActiveModal(null);
+        setPermissionInitialData(null);
+    };
 
     const renderWorkLogForm = () => {
         switch (user?.designation) {
@@ -167,7 +217,7 @@ const EmployeeDashboard = () => {
                 } onClose={closeModal}>
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
-                    {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} />}
+                    {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} />}
                     {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}
@@ -306,7 +356,10 @@ const EmployeeDashboard = () => {
                             </button>
 
                             <button
-                                onClick={() => setActiveModal('permission')}
+                                onClick={() => {
+                                    setPermissionInitialData(null);
+                                    setActiveModal('permission');
+                                }}
                                 className="flex flex-col items-center justify-center p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group h-[120px]"
                             >
                                 <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🕑</div>
