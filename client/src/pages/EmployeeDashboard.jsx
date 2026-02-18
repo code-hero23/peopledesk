@@ -60,8 +60,8 @@ const EmployeeDashboard = () => {
         // 10:30 AM = 10 * 60 + 30 = 630 minutes
         if (hours * 60 + minutes > 630) {
             console.log('Lateness detected (> 10:30 AM). Triggering redirection...');
-            // Use local date instead of ISO (UTC) string
-            const date = `${checkInTime.getFullYear()}-${(checkInTime.getMonth() + 1).toString().padStart(2, '0')}-${checkInTime.getDate().toString().padStart(2, '0')}`;
+            // Use local date (YYYY-MM-DD format for input[type="date"])
+            const date = checkInTime.toLocaleDateString('en-CA');
 
             const formatTime = (dateObj) => {
                 let h = dateObj.getHours();
@@ -92,6 +92,7 @@ const EmployeeDashboard = () => {
     };
     const [isCheckingOut, setIsCheckingOut] = useState(false); // Track if current action is check-out
     const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
+    const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
 
     useEffect(() => {
         dispatch(getAttendanceStatus());
@@ -99,6 +100,33 @@ const EmployeeDashboard = () => {
         dispatch(getMyRequests());
         return () => { dispatch(reset()); };
     }, [dispatch]);
+
+    // Robust Lateness Check
+    useEffect(() => {
+        if (attendance?.status === 'PRESENT' && !hasCheckedLateness && requests?.permissions) {
+            console.log('--- Robust Lateness Check Triggered ---');
+            const checkInTime = new Date(attendance.date);
+            const todayLocal = new Date().toLocaleDateString('en-CA');
+
+            console.log('Check-in Date (UTC):', attendance.date);
+            console.log('Today Local (en-CA):', todayLocal);
+
+            // Check if permission already exists for today
+            const hasPermissionForToday = requests.permissions.some(p => {
+                const pDate = new Date(p.date).toLocaleDateString('en-CA');
+                return pDate === todayLocal;
+            });
+
+            console.log('Existing Permission for today:', hasPermissionForToday);
+
+            if (!hasPermissionForToday) {
+                checkLatenessAndRedirect(attendance.date);
+            } else {
+                console.log('Permission already exists for today, skipping auto-redirect.');
+            }
+            setHasCheckedLateness(true);
+        }
+    }, [attendance, requests, hasCheckedLateness, user]);
 
     // Mobile Detection
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
