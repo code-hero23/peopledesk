@@ -45,16 +45,23 @@ const EmployeeDashboard = () => {
     const [showCheckInModal, setShowCheckInModal] = useState(false);
 
     const checkLatenessAndRedirect = (checkInTimeRaw) => {
+        console.log('checkLatenessAndRedirect called with:', checkInTimeRaw);
         // Exempt AE (Area Engineers) from this restriction
-        if (user?.designation === 'AE') return;
+        if (user?.designation === 'AE') {
+            console.log('Exempting AE from redirection');
+            return;
+        }
 
         const checkInTime = new Date(checkInTimeRaw);
         const hours = checkInTime.getHours();
         const minutes = checkInTime.getMinutes();
+        console.log(`Check-in Time detected: ${hours}:${minutes}`);
 
         // 10:30 AM = 10 * 60 + 30 = 630 minutes
         if (hours * 60 + minutes > 630) {
-            const date = checkInTime.toISOString().split('T')[0];
+            console.log('Lateness detected (> 10:30 AM). Triggering redirection...');
+            // Use local date instead of ISO (UTC) string
+            const date = `${checkInTime.getFullYear()}-${(checkInTime.getMonth() + 1).toString().padStart(2, '0')}-${checkInTime.getDate().toString().padStart(2, '0')}`;
 
             const formatTime = (dateObj) => {
                 let h = dateObj.getHours();
@@ -70,6 +77,8 @@ const EmployeeDashboard = () => {
             const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
             const endTime = formatTime(endTimeObj);
 
+            console.log(`Pre-filling Permission: Date=${date}, Start=${startTime}, End=${endTime}`);
+
             setPermissionInitialData({
                 date,
                 startTime,
@@ -77,6 +86,8 @@ const EmployeeDashboard = () => {
                 reason: 'Late Check-In (After 10:30 AM)'
             });
             setActiveModal('permission');
+        } else {
+            console.log('Not late enough for auto-permission (< 10:30 AM)');
         }
     };
     const [isCheckingOut, setIsCheckingOut] = useState(false); // Track if current action is check-out
@@ -132,10 +143,15 @@ const EmployeeDashboard = () => {
             } else {
                 console.log('Action: Standard Check-In (No Photo)');
                 dispatch(markAttendance()).then((res) => {
+                    console.log('markAttendance result:', res);
                     if (!res.error) {
                         dispatch(getAttendanceStatus());
-                        // Auto-redirect if late
-                        checkLatenessAndRedirect(new Date());
+                        // Auto-redirect if late - use time from payload if available
+                        const checkInTime = res.payload?.date ? new Date(res.payload.date) : new Date();
+                        checkLatenessAndRedirect(checkInTime);
+                    } else {
+                        console.error('Check-in failed:', res.error);
+                        alert(res.payload || "Check-in failed. You might be already checked in.");
                     }
                 });
             }
@@ -149,13 +165,17 @@ const EmployeeDashboard = () => {
         const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
 
         dispatch(action).then((res) => {
+            console.log('Photo check-in action result:', res);
             if (!res.error) {
                 setShowCheckInModal(false);
                 dispatch(getAttendanceStatus());
                 // Auto-redirect if late and it was a check-in
                 if (!isCheckingOut) {
-                    checkLatenessAndRedirect(new Date());
+                    const checkInTime = res.payload?.date ? new Date(res.payload.date) : new Date();
+                    checkLatenessAndRedirect(checkInTime);
                 }
+            } else {
+                console.error('Photo check-in failed:', res.error);
             }
         });
     };
