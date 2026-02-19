@@ -13,12 +13,19 @@ const LeaveRequestForm = ({ onSuccess }) => {
     const currentMonth = new Date().getMonth();
     const currentYear = new Date().getFullYear();
 
-    const monthlyLeaves = requests.leaves.filter(req => {
-        const d = new Date(req.createdAt);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    }).length;
+    const calculateDays = (start, end, type) => {
+        if (!start || !end) return 0;
+        if (type === 'HALF_DAY') return 0.5;
+        const diffTime = Math.abs(new Date(end) - new Date(start));
+        return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+    };
 
-    const isLimitExceeded = monthlyLeaves >= 4;
+    const totalExistingDays = requests.leaves
+        .filter(req => {
+            const d = new Date(req.startDate);
+            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+        })
+        .reduce((sum, req) => sum + calculateDays(req.startDate, req.endDate, req.type), 0);
 
     const [formData, setFormData] = useState({
         type: 'CASUAL',
@@ -27,6 +34,9 @@ const LeaveRequestForm = ({ onSuccess }) => {
         reason: '',
         targetBhId: '',
     });
+
+    const newRequestDays = calculateDays(formData.startDate, formData.endDate, formData.type);
+    const isLimitExceeded = (totalExistingDays + newRequestDays) > 4;
 
     useEffect(() => {
         dispatch(getBusinessHeads());
@@ -46,9 +56,9 @@ const LeaveRequestForm = ({ onSuccess }) => {
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
                     <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
                     <div>
-                        <p className="text-sm font-bold text-amber-800">Monthly Leave Limit Reached</p>
+                        <p className="text-sm font-bold text-amber-800">Monthly Leave Limit Alert</p>
                         <p className="text-xs text-amber-600 font-medium">
-                            You have already submitted {monthlyLeaves} leave requests this month. This request will be flagged for review.
+                            Your total leave for this month (including this request) will be {(totalExistingDays + newRequestDays).toFixed(1)} days. This exceeds the 4-day threshold and will be flagged for review.
                         </p>
                     </div>
                 </div>

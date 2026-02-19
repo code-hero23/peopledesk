@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
 import { Download, Calendar, X, AlertTriangle } from 'lucide-react';
@@ -216,13 +217,15 @@ const Approvals = () => {
                     </button>
 
                     <div className="relative flex items-center group gap-2">
-                        <button
+                        <motion.button
+                            whileHover={{ scale: 1.02, y: -1 }}
+                            whileTap={{ scale: 0.98 }}
                             onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
-                            className="h-10 px-4 bg-blue-50 text-blue-600 rounded-xl font-bold text-xs hover:bg-blue-100 transition-all border border-blue-100 flex items-center gap-2 whitespace-nowrap"
+                            className="h-10 px-5 bg-gradient-to-br from-blue-600 to-indigo-700 text-white rounded-xl font-bold text-xs shadow-[0_4px_15px_-3px_rgba(59,130,246,0.4)] hover:shadow-[0_8px_20px_-4px_rgba(59,130,246,0.5)] transition-all flex items-center gap-2 whitespace-nowrap border border-white/10"
                         >
-                            <Calendar size={14} />
+                            <Calendar size={14} strokeWidth={2.5} />
                             TODAY
-                        </button>
+                        </motion.button>
 
                         <div className="relative flex items-center group">
                             <div className="absolute left-3.5 text-slate-400 group-focus-within:text-blue-500 transition-all duration-300 transform group-hover:scale-110">

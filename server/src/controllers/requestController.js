@@ -35,14 +35,29 @@ const createLeaveRequest = async (req, res) => {
             return res.status(400).json({ message: 'End date cannot be before start date' });
         }
 
-        // Check for 4+ LEAVE requests this month (The 5th will be flagged)
+        // Check for 4+ LEAVE DAYS this month (The 5th day will be flagged)
         const startOfMonth = new Date();
         startOfMonth.setDate(1);
         startOfMonth.setHours(0, 0, 0, 0);
 
-        const leaveCount = await prisma.leaveRequest.count({
-            where: { userId, createdAt: { gte: startOfMonth } }
+        const monthlyLeaves = await prisma.leaveRequest.findMany({
+            where: {
+                userId,
+                startDate: { gte: startOfMonth }
+            }
         });
+
+        const calculateDays = (start, end, type) => {
+            if (type === 'HALF_DAY') return 0.5;
+            const diffTime = Math.abs(new Date(end) - new Date(start));
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        };
+
+        const totalExistingDays = monthlyLeaves.reduce((sum, req) => {
+            return sum + calculateDays(req.startDate, req.endDate, req.type);
+        }, 0);
+
+        const newRequestDays = calculateDays(startDate, endDate, type);
 
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
@@ -53,7 +68,7 @@ const createLeaveRequest = async (req, res) => {
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING',
-                isExceededLimit: leaveCount >= 4
+                isExceededLimit: (totalExistingDays + newRequestDays) > 4
             },
         });
 
