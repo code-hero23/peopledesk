@@ -164,30 +164,39 @@ const VisitRequests = () => {
                         <Download size={14} /> EXPORT EXCEL
                     </button>
 
-                    {/* Ultra-Premium Date Picker */}
-                    <div className="relative flex items-center group">
-                        <div className="absolute left-3 text-slate-400 group-focus-within:text-blue-500 transition-all duration-300 group-hover:scale-110">
-                            <Calendar size={14} strokeWidth={2.5} />
-                        </div>
-                        <input
-                            type="date"
-                            value={filterDate}
-                            onChange={(e) => setFilterDate(e.target.value)}
-                            className="bg-white/80 backdrop-blur-sm pl-9 pr-8 h-10 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-700 font-black text-[11px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-blue-300 w-[160px] appearance-none"
-                        />
-                        {filterDate ? (
-                            <button
-                                onClick={() => setFilterDate('')}
-                                className="absolute right-2.5 p-1 rounded-lg bg-slate-100/50 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all duration-300 hover:rotate-90"
-                                title="Clear filter"
-                            >
-                                <X size={12} strokeWidth={3} />
-                            </button>
-                        ) : (
-                            <div className="absolute right-3.5 text-[9px] font-black text-slate-300 uppercase tracking-tighter pointer-events-none group-focus-within:opacity-0 transition-opacity">
-                                DATE
+                    <div className="flex gap-2 items-center">
+                        <button
+                            onClick={() => setFilterDate(new Date().toISOString().split('T')[0])}
+                            className="bg-blue-50 text-blue-600 h-10 px-4 rounded-xl font-bold text-[11px] hover:bg-blue-100 transition-all border border-blue-100 flex items-center gap-2 whitespace-nowrap"
+                        >
+                            <Calendar size={14} />
+                            TODAY
+                        </button>
+
+                        <div className="relative flex items-center group">
+                            <div className="absolute left-3 text-slate-400 group-focus-within:text-blue-500 transition-all duration-300 group-hover:scale-110">
+                                <Calendar size={14} strokeWidth={2.5} />
                             </div>
-                        )}
+                            <input
+                                type="date"
+                                value={filterDate}
+                                onChange={(e) => setFilterDate(e.target.value)}
+                                className="bg-white/80 backdrop-blur-sm pl-9 pr-8 h-10 border border-slate-200/60 rounded-2xl focus:outline-none focus:ring-4 focus:ring-blue-500/10 focus:border-blue-500 text-slate-700 font-black text-[11px] shadow-[0_2px_15px_-3px_rgba(0,0,0,0.07),0_4px_6px_-2px_rgba(0,0,0,0.02)] transition-all duration-300 hover:border-blue-300 w-[160px] appearance-none"
+                            />
+                            {filterDate ? (
+                                <button
+                                    onClick={() => setFilterDate('')}
+                                    className="absolute right-2.5 p-1 rounded-lg bg-slate-100/50 hover:bg-red-50 text-slate-400 hover:text-red-500 transition-all duration-300 hover:rotate-90"
+                                    title="Clear filter"
+                                >
+                                    <X size={12} strokeWidth={3} />
+                                </button>
+                            ) : (
+                                <div className="absolute right-3.5 text-[9px] font-black text-slate-300 uppercase tracking-tighter pointer-events-none group-focus-within:opacity-0 transition-opacity">
+                                    DATE
+                                </div>
+                            )}
+                        </div>
                     </div>
 
                     <div className="flex bg-slate-100 p-1 rounded-lg border border-slate-200 h-9">
