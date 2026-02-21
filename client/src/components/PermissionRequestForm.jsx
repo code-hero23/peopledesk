@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createPermissionRequest, getBusinessHeads, getMyRequests } from '../features/employee/employeeSlice';
 import { AlertCircle } from 'lucide-react';
 import SuccessModal from './SuccessModal';
+import { parseTimeToMinutes } from '../utils/timeUtils';
 
 const TimePicker = ({ label, value, onChange }) => {
     // Parse the 12h time string (e.g. "09:30 AM") or default
@@ -81,19 +82,11 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
         dispatch(getMyRequests());
     }, [dispatch]);
 
-    const parseTime = (timeStr) => {
-        const [time, modifier] = timeStr.split(' ');
-        let [hours, minutes] = time.split(':');
-        if (hours === '12') hours = '00';
-        if (modifier === 'PM') hours = parseInt(hours, 10) + 12;
-        return parseInt(hours, 10) * 60 + parseInt(minutes, 10);
-    };
-
     const onSubmit = async (e) => {
         e.preventDefault();
 
-        const startMinutes = parseTime(formData.startTime);
-        const endMinutes = parseTime(formData.endTime);
+        const startMinutes = parseTimeToMinutes(formData.startTime);
+        const endMinutes = parseTimeToMinutes(formData.endTime);
         const durationMinutes = endMinutes - startMinutes;
 
         if (durationMinutes > 120) {

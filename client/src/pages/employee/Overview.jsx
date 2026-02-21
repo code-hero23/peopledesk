@@ -20,6 +20,7 @@ import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm'
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import { getDeviceType } from '../../utils/deviceUtils';
+import { isTimeCoveredByPermission } from '../../utils/timeUtils';
 
 const Overview = () => {
     const dispatch = useDispatch();
@@ -62,6 +63,15 @@ const Overview = () => {
 
         // 10:30 AM = 10 * 60 + 30 = 630 minutes
         if (hours * 60 + minutes > 630) {
+            // Check if user already has a valid permission for this time
+            const todayLocal = checkInTime.toLocaleDateString('en-CA');
+            const hasValidPermission = requests?.permissions?.some(p => {
+                const pDate = new Date(p.date).toLocaleDateString('en-CA');
+                return pDate === todayLocal && isTimeCoveredByPermission(checkInTime, p.startTime, p.endTime);
+            });
+
+            if (hasValidPermission) return;
+
             // Use local date (YYYY-MM-DD format for input[type="date"])
             const date = checkInTime.toLocaleDateString('en-CA');
 
@@ -93,21 +103,7 @@ const Overview = () => {
     // Robust Lateness Check
     useEffect(() => {
         if (attendance?.status === 'PRESENT' && requests?.permissions && activeModal !== 'permission' && user?.designation !== 'AE') {
-            const checkInTime = new Date(attendance.date);
-            const hours = checkInTime.getHours();
-            const minutes = checkInTime.getMinutes();
-
-            if (hours * 60 + minutes > 630) {
-                const todayLocal = new Date().toLocaleDateString('en-CA');
-                const hasPermissionForToday = requests.permissions.some(p => {
-                    const pDate = new Date(p.date).toLocaleDateString('en-CA');
-                    return pDate === todayLocal;
-                });
-
-                if (!hasPermissionForToday) {
-                    checkLatenessAndRedirect(attendance.date, true);
-                }
-            }
+            checkLatenessAndRedirect(attendance.date, true);
         }
     }, [attendance, requests, activeModal, user]);
 
