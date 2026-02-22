@@ -8,6 +8,7 @@ const SiteVisitRequestForm = ({ onSuccess }) => {
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
 
+    const { user } = useSelector((state) => state.auth);
     const [formData, setFormData] = useState({
         projectName: '',
         location: '',
@@ -15,7 +16,7 @@ const SiteVisitRequestForm = ({ onSuccess }) => {
         startTime: '',
         endTime: '',
         reason: '',
-        targetBhId: '',
+        targetBhId: user?.reportingBhId || '',
     });
 
     useEffect(() => {

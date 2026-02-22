@@ -184,6 +184,7 @@ const ManageEmployees = () => {
                             <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider font-bold">
                                 <th className="px-6 py-4">Employee Details</th>
                                 <th className="px-6 py-4">Designation</th>
+                                <th className="px-6 py-4">Reporting To</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -216,6 +217,13 @@ const ManageEmployees = () => {
                                             <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded">
                                                 {emp.designation}
                                             </span>
+                                        )}
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        {emp.reportingBh ? (
+                                            <div className="text-sm font-medium text-slate-700">{emp.reportingBh.name}</div>
+                                        ) : (
+                                            <div className="text-xs text-slate-400 italic">Not Assigned</div>
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-center">

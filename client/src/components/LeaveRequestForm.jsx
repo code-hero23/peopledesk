@@ -7,6 +7,7 @@ import SuccessModal from './SuccessModal';
 const LeaveRequestForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { businessHeads, requests } = useSelector((state) => state.employee);
+    const { user } = useSelector((state) => state.auth);
     const [showSuccess, setShowSuccess] = useState(false);
 
     // Calculate combined request count for the current month
@@ -32,7 +33,7 @@ const LeaveRequestForm = ({ onSuccess }) => {
         startDate: '',
         endDate: '',
         reason: '',
-        targetBhId: '',
+        targetBhId: user?.reportingBhId || '',
     });
 
     const newRequestDays = calculateDays(formData.startDate, formData.endDate, formData.type);

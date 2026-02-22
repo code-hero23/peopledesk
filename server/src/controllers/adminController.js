@@ -11,6 +11,8 @@ const getAllEmployees = async (req, res) => {
         let where = {};
         if (req.user.role === 'AE_MANAGER') {
             where = { designation: 'AE' };
+        } else if (req.user.role === 'BUSINESS_HEAD') {
+            where = { reportingBhId: req.user.id };
         }
 
         const users = await prisma.user.findMany({
@@ -23,6 +25,8 @@ const getAllEmployees = async (req, res) => {
                 status: true,
                 designation: true,
                 lastWorkLogDate: true,
+                reportingBhId: true,
+                reportingBh: { select: { name: true } }
             },
         });
         res.json(users);
@@ -423,8 +427,13 @@ const createEmployee = async (req, res) => {
                 password: hashedPassword,
                 role: newRole,
                 designation: newDesignation,
+                reportingBhId: req.body.reportingBhId ? parseInt(req.body.reportingBhId) : undefined,
             },
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true },
+            select: {
+                id: true, name: true, email: true, role: true, status: true, designation: true, lastWorkLogDate: true,
+                reportingBhId: true,
+                reportingBh: { select: { name: true } }
+            },
         });
 
         res.status(201).json(user);
@@ -442,6 +451,8 @@ const getAllWorkLogs = async (req, res) => {
         let where = {};
         if (req.user.role === 'AE_MANAGER') {
             where = { user: { designation: 'AE' } };
+        } else if (req.user.role === 'BUSINESS_HEAD') {
+            where = { user: { reportingBhId: req.user.id } };
         }
 
         const logs = await prisma.workLog.findMany({
@@ -480,11 +491,13 @@ const getDailyWorkLogs = async (req, res) => {
         let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
+        } else if (req.user.role === 'BUSINESS_HEAD') {
+            userWhere.reportingBhId = req.user.id;
         }
 
         const users = await prisma.user.findMany({
             where: userWhere,
-            select: { id: true, name: true, email: true, designation: true }
+            select: { id: true, name: true, email: true, designation: true, reportingBhId: true }
         });
 
         // 2. Get work logs for the range
@@ -495,7 +508,7 @@ const getDailyWorkLogs = async (req, res) => {
                     lte: end
                 }
             },
-            include: { user: { select: { id: true, name: true, email: true, designation: true } } },
+            include: { user: { select: { id: true, name: true, email: true, designation: true, reportingBhId: true } } },
             orderBy: { date: 'desc' }
         });
 
@@ -535,6 +548,8 @@ const getAllAttendance = async (req, res) => {
         let where = {};
         if (req.user.role === 'AE_MANAGER') {
             where = { user: { designation: 'AE' } };
+        } else if (req.user.role === 'BUSINESS_HEAD') {
+            where = { user: { reportingBhId: req.user.id } };
         }
 
         const attendance = await prisma.attendance.findMany({
@@ -566,11 +581,13 @@ const getDailyAttendance = async (req, res) => {
         let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
+        } else if (req.user.role === 'BUSINESS_HEAD') {
+            userWhere.reportingBhId = req.user.id;
         }
 
         const users = await prisma.user.findMany({
             where: userWhere,
-            select: { id: true, name: true, email: true, designation: true }
+            select: { id: true, name: true, email: true, designation: true, reportingBhId: true }
         });
 
         // 2. Get attendance for the date
@@ -727,7 +744,8 @@ const updateEmployee = async (req, res) => {
             name,
             email,
             designation,
-            role: role || undefined
+            role: role || undefined,
+            reportingBhId: req.body.reportingBhId !== undefined ? (req.body.reportingBhId ? parseInt(req.body.reportingBhId) : null) : undefined
         };
 
         // If password is provided, hash it and add to update data
@@ -739,7 +757,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true }
+            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true }
         });
         res.json(user);
     } catch (error) {

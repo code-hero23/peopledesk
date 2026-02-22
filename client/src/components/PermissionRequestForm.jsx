@@ -56,6 +56,7 @@ const TimePicker = ({ label, value, onChange }) => {
 const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const dispatch = useDispatch();
     const { businessHeads, requests } = useSelector((state) => state.employee);
+    const { user } = useSelector((state) => state.auth);
     const [showSuccess, setShowSuccess] = useState(false);
 
     // Calculate combined request count for the current month
@@ -74,7 +75,7 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
         startTime: initialData?.startTime || '09:00 AM',
         endTime: initialData?.endTime || '11:00 AM',
         reason: initialData?.reason || '',
-        targetBhId: '',
+        targetBhId: user?.reportingBhId || '',
     });
 
     useEffect(() => {

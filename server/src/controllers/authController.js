@@ -31,6 +31,7 @@ const loginUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 designation: user.designation,
+                reportingBhId: user.reportingBhId,
                 token: generateToken(user.id, user.role),
             });
         } else {
@@ -96,6 +97,7 @@ const getMe = async (req, res) => {
         email: req.user.email,
         role: req.user.role,
         designation: req.user.designation,
+        reportingBhId: req.user.reportingBhId,
     };
     res.json(user);
 };
@@ -127,6 +129,7 @@ const googleLogin = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 designation: user.designation,
+                reportingBhId: user.reportingBhId,
                 token: generateToken(user.id),
             });
         } else {

@@ -19,6 +19,9 @@ model User {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   designation           String                 @default("LA")
+  reportingBhId        Int?
+  reportingBh          User?                  @relation("ReportingLink", fields: [reportingBhId], references: [id])
+  subordinates         User[]                 @relation("ReportingLink")
   attendance            Attendance[]
   leaveRequests         LeaveRequest[]
   loginAccessRequests   LoginAccessRequest[]

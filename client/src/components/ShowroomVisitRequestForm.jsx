@@ -63,6 +63,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
 
+    const { user } = useSelector((state) => state.auth);
     const [formData, setFormData] = useState({
         date: '',
         startTime: '09:00 AM',
@@ -70,7 +71,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
         sourceShowroom: '',
         destinationShowroom: '',
         reason: '',
-        targetBhId: '',
+        targetBhId: user?.reportingBhId || '',
     });
 
     useEffect(() => {
