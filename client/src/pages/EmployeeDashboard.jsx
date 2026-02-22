@@ -46,6 +46,19 @@ const EmployeeDashboard = () => {
 
     const checkLatenessAndRedirect = (checkInTimeRaw) => {
         console.log('checkLatenessAndRedirect called with:', checkInTimeRaw);
+
+        // Check if permission already exists for today to avoid redundant requests
+        const todayLocal = new Date().toLocaleDateString('en-CA');
+        const hasPermissionForToday = requests?.permissions?.some(p => {
+            const pDate = new Date(p.date).toLocaleDateString('en-CA');
+            return pDate === todayLocal;
+        });
+
+        if (hasPermissionForToday) {
+            console.log('Permission already exists for today, skipping late login check.');
+            return;
+        }
+
         // Exempt AE (Area Engineers) from this restriction
         if (user?.designation === 'AE') {
             console.log('Exempting AE from redirection');
@@ -105,25 +118,7 @@ const EmployeeDashboard = () => {
     useEffect(() => {
         if (attendance?.status === 'PRESENT' && !hasCheckedLateness && requests?.permissions) {
             console.log('--- Robust Lateness Check Triggered ---');
-            const checkInTime = new Date(attendance.date);
-            const todayLocal = new Date().toLocaleDateString('en-CA');
-
-            console.log('Check-in Date (UTC):', attendance.date);
-            console.log('Today Local (en-CA):', todayLocal);
-
-            // Check if permission already exists for today
-            const hasPermissionForToday = requests.permissions.some(p => {
-                const pDate = new Date(p.date).toLocaleDateString('en-CA');
-                return pDate === todayLocal;
-            });
-
-            console.log('Existing Permission for today:', hasPermissionForToday);
-
-            if (!hasPermissionForToday) {
-                checkLatenessAndRedirect(attendance.date);
-            } else {
-                console.log('Permission already exists for today, skipping auto-redirect.');
-            }
+            checkLatenessAndRedirect(attendance.date);
             setHasCheckedLateness(true);
         }
     }, [attendance, requests, hasCheckedLateness, user]);
