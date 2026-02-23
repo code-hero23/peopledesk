@@ -186,8 +186,18 @@ const Approvals = () => {
             </div>
             {activeTab === 'pending' && canApprove && (
                 <div className="grid grid-cols-2 gap-3">
-                    <button onClick={() => onUpdateStatus(type, req.id, 'APPROVED')} className="w-full py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-bold text-sm transition-colors">Approve</button>
-                    <button onClick={() => onUpdateStatus(type, req.id, 'REJECTED')} className="w-full py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-bold text-sm transition-colors">Reject</button>
+                    {/* Security Check: Only show buttons if authorized (either target BH or reporting BH) */}
+                    {(user.role !== 'BUSINESS_HEAD' && user.role !== 'AE_MANAGER' ||
+                        (req.targetBhId === user.id || req.user.reportingBhId === user.id)) ? (
+                        <>
+                            <button onClick={() => onUpdateStatus(type, req.id, 'APPROVED')} className="w-full py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-bold text-sm transition-colors">Approve</button>
+                            <button onClick={() => onUpdateStatus(type, req.id, 'REJECTED')} className="w-full py-2 rounded-lg bg-red-50 text-red-700 hover:bg-red-100 font-bold text-sm transition-colors">Reject</button>
+                        </>
+                    ) : (
+                        <div className="col-span-2 py-2.5 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
+                            👁️ Monitoring Only
+                        </div>
+                    )}
                 </div>
             )}
             {activeTab === 'pending' && !canApprove && (

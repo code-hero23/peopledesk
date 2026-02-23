@@ -12,7 +12,9 @@ const getAllEmployees = async (req, res) => {
         if (req.user.role === 'AE_MANAGER') {
             where = { designation: 'AE' };
         } else if (req.user.role === 'BUSINESS_HEAD') {
-            where = { reportingBhId: req.user.id };
+            if (!req.user.isGlobalAccess) {
+                where = { reportingBhId: req.user.id };
+            }
         }
 
         const users = await prisma.user.findMany({
@@ -70,12 +72,12 @@ const getAllPendingRequests = async (req, res) => {
 
         if (userRole === 'BUSINESS_HEAD') {
             const userId = req.user.id;
-            const bhCondition = {
+            const bhCondition = (!req.user.isGlobalAccess) ? {
                 OR: [
                     { targetBhId: userId },
                     { targetBhId: null }
                 ]
-            };
+            } : {};
             leaveWhere = { AND: [leaveWhere, { bhStatus: 'PENDING', status: 'PENDING' }, bhCondition] };
             permissionWhere = { AND: [permissionWhere, { bhStatus: 'PENDING', status: 'PENDING' }, bhCondition] };
         } else if (userRole === 'HR') {
@@ -186,16 +188,16 @@ const getRequestHistory = async (req, res) => {
         let visitWhere = { ...generalDateFilter };
 
         if (userRole === 'BUSINESS_HEAD') {
-            const bhRequestsFilter = {
+            const bhRequestsFilter = (!req.user.isGlobalAccess) ? {
                 bhStatus: { not: 'PENDING' },
                 OR: [{ targetBhId: userId }, { bhId: userId }]
-            };
+            } : { bhStatus: { not: 'PENDING' } };
 
             // Visits do not have 'bhId' field in schema
-            const bhVisitsFilter = {
+            const bhVisitsFilter = (!req.user.isGlobalAccess) ? {
                 bhStatus: { not: 'PENDING' },
                 targetBhId: userId
-            };
+            } : { bhStatus: { not: 'PENDING' } };
 
             leaveWhere = { AND: [leaveWhere, bhRequestsFilter] };
             permissionWhere = { AND: [permissionWhere, bhRequestsFilter] };
@@ -302,6 +304,21 @@ const updateRequestStatus = async (req, res) => {
                     type === 'showroom-visit' ? prisma.showroomVisitRequest : null;
 
         if (!model) return res.status(400).json({ message: 'Invalid request type' });
+
+        // Security check for BH: Can only approve their own subordinates
+        const request = await model.findUnique({
+            where: { id: parseInt(id) },
+            include: { user: true }
+        });
+
+        if (!request) return res.status(404).json({ message: 'Request not found' });
+
+        if (userRole === 'BUSINESS_HEAD' || userRole === 'AE_MANAGER') {
+            const isAuthorized = request.targetBhId === userId || request.user.reportingBhId === userId;
+            if (!isAuthorized) {
+                return res.status(403).json({ message: 'Not authorized to update this request. You can only update requests for your subordinates.' });
+            }
+        }
 
         // Construct update data based on Role
         let updateData = {};
@@ -452,7 +469,9 @@ const getAllWorkLogs = async (req, res) => {
         if (req.user.role === 'AE_MANAGER') {
             where = { user: { designation: 'AE' } };
         } else if (req.user.role === 'BUSINESS_HEAD') {
-            where = { user: { reportingBhId: req.user.id } };
+            if (!req.user.isGlobalAccess) {
+                where = { user: { reportingBhId: req.user.id } };
+            }
         }
 
         const logs = await prisma.workLog.findMany({
@@ -492,7 +511,9 @@ const getDailyWorkLogs = async (req, res) => {
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
         } else if (req.user.role === 'BUSINESS_HEAD') {
-            userWhere.reportingBhId = req.user.id;
+            if (!req.user.isGlobalAccess) {
+                userWhere.reportingBhId = req.user.id;
+            }
         }
 
         const users = await prisma.user.findMany({
@@ -549,7 +570,9 @@ const getAllAttendance = async (req, res) => {
         if (req.user.role === 'AE_MANAGER') {
             where = { user: { designation: 'AE' } };
         } else if (req.user.role === 'BUSINESS_HEAD') {
-            where = { user: { reportingBhId: req.user.id } };
+            if (!req.user.isGlobalAccess) {
+                where = { user: { reportingBhId: req.user.id } };
+            }
         }
 
         const attendance = await prisma.attendance.findMany({
@@ -582,7 +605,9 @@ const getDailyAttendance = async (req, res) => {
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
         } else if (req.user.role === 'BUSINESS_HEAD') {
-            userWhere.reportingBhId = req.user.id;
+            if (!req.user.isGlobalAccess) {
+                userWhere.reportingBhId = req.user.id;
+            }
         }
 
         const users = await prisma.user.findMany({
