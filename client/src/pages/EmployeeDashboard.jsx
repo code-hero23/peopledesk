@@ -30,7 +30,7 @@ import { getDeviceType } from '../utils/deviceUtils';
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { attendance, workLogs, requests, isLoading } = useSelector((state) => state.employee);
+    const { attendance, workLogs, requests, isLoading, isRequestsFetched } = useSelector((state) => state.employee);
 
     // DEBUG LOG
     useEffect(() => {
@@ -116,12 +116,12 @@ const EmployeeDashboard = () => {
 
     // Robust Lateness Check
     useEffect(() => {
-        if (attendance?.status === 'PRESENT' && !hasCheckedLateness && requests?.permissions) {
+        if (attendance?.status === 'PRESENT' && !hasCheckedLateness && isRequestsFetched) {
             console.log('--- Robust Lateness Check Triggered ---');
             checkLatenessAndRedirect(attendance.date);
             setHasCheckedLateness(true);
         }
-    }, [attendance, requests, hasCheckedLateness, user]);
+    }, [attendance, isRequestsFetched, hasCheckedLateness, user]);
 
     // Mobile Detection
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);

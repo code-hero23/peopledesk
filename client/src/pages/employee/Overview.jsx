@@ -25,7 +25,7 @@ import { isTimeCoveredByPermission } from '../../utils/timeUtils';
 const Overview = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { attendance, workLogs, requests, isLoading, isPaused, activeBreak } = useSelector((state) => state.employee);
+    const { attendance, workLogs, requests, isLoading, isPaused, activeBreak, isRequestsFetched } = useSelector((state) => state.employee);
 
     // UI State
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
@@ -114,10 +114,10 @@ const Overview = () => {
 
     // Robust Lateness Check
     useEffect(() => {
-        if (attendance?.status === 'PRESENT' && requests?.permissions && activeModal !== 'permission' && user?.designation !== 'AE') {
+        if (attendance?.status === 'PRESENT' && isRequestsFetched && activeModal !== 'permission' && user?.designation !== 'AE') {
             checkLatenessAndRedirect(attendance.date, true);
         }
-    }, [attendance, requests, activeModal, user]);
+    }, [attendance, isRequestsFetched, activeModal, user]);
 
     const executeAttendanceAction = (actionName) => {
         const deviceInfo = navigator.userAgent;

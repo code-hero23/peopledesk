@@ -15,6 +15,7 @@ const initialState = {
     todayLog: null, // Track today's log status
     isPaused: false,
     activeBreak: null,
+    isRequestsFetched: false,
 };
 
 // Check attendance status for today
@@ -552,15 +553,18 @@ export const employeeSlice = createSlice({
             // Get Requests
             .addCase(getMyRequests.pending, (state) => {
                 state.isLoading = true;
+                state.isRequestsFetched = false;
             })
             .addCase(getMyRequests.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.requests = action.payload;
+                state.isRequestsFetched = true;
             })
             .addCase(getMyRequests.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;
+                state.isRequestsFetched = true;
             })
 
             // Create Site Visit
