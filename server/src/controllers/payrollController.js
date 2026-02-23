@@ -33,17 +33,21 @@ const generatePayrollReport = async (req, res) => {
 
         // Column definitions (Keys mapped to specific indices for formula reference)
         sheet.columns = [
-            { header: 'Employee Name', key: 'name', width: 25 },           // A
-            { header: 'Email', key: 'email', width: 25 },                  // B
-            { header: 'Designation', key: 'designation', width: 15 },      // C
-            { header: 'Present Days', key: 'presentDays', width: 12 },     // D
-            { header: 'Absent Days', key: 'absentDays', width: 12 },       // E
-            { header: 'Approved Leaves', key: 'leaves', width: 15 },       // F
-            { header: 'Approved Permissions', key: 'permissions', width: 20 }, // G
-            { header: 'Working Hours', key: 'workingHours', width: 15 },   // H
-            { header: 'Allocated Monthly Salary', key: 'allocatedSalary', width: 25 }, // I
-            { header: 'Other Deduction', key: 'extraDeduction', width: 20 }, // J
-            { header: 'On-Hand Salary', key: 'onHandSalary', width: 20 }   // K
+            { header: 'Employee Name', key: 'name', width: 25 },             // A
+            { header: 'Email', key: 'email', width: 25 },                    // B
+            { header: 'Designation', key: 'designation', width: 15 },        // C
+            { header: 'Present Days', key: 'presentDays', width: 12 },       // D
+            { header: 'Absent Days', key: 'absentDays', width: 12 },         // E
+            { header: 'Approved Leaves', key: 'leaves', width: 15 },         // F
+            { header: 'Unapproved Leaves', key: 'unapprovedLeaves', width: 18 }, // G
+            { header: 'Approved Permissions', key: 'permissions', width: 20 }, // H
+            { header: 'Permission Hours', key: 'permHours', width: 18 },     // I
+            { header: 'Working Hours', key: 'workingHours', width: 15 },     // J
+            { header: 'Expected Hours', key: 'expectedHours', width: 15 },   // K
+            { header: 'Time Shortage', key: 'shortage', width: 15 },         // L
+            { header: 'Allocated Monthly Salary', key: 'allocatedSalary', width: 25 }, // M
+            { header: 'Other Deduction', key: 'extraDeduction', width: 20 }, // N
+            { header: 'On-Hand Salary', key: 'onHandSalary', width: 20 }     // O
         ];
 
         sheet.getRow(1).font = { bold: true };
@@ -81,7 +85,7 @@ const generatePayrollReport = async (req, res) => {
                 }
             });
 
-            const workingHours = parseFloat((totalMinutes / 60).toFixed(2));
+            const workingHours = parseFloat((totalMinutes / 1440).toFixed(5)); // Fraction of a day
             const allocated = user.allocatedSalary || 0;
 
             const row = sheet.addRow({
@@ -91,19 +95,30 @@ const generatePayrollReport = async (req, res) => {
                 presentDays,
                 absentDays,
                 leaves: approvedLeaves,
+                unapprovedLeaves: 0,
                 permissions: approvedPermissions,
+                permHours: 0,
                 workingHours,
+                expectedHours: 0,
+                shortage: 0,
                 allocatedSalary: allocated,
                 extraDeduction: 0,
                 onHandSalary: 0
             });
 
             const r = row.number;
+
+            // Formula Logic for Intermediate Columns (Dividing by 24/1440 to store as Excel Time)
+            row.getCell('unapprovedLeaves').value = { formula: `MAX(0, E${r} - F${r})`, result: 0 };
+            row.getCell('permHours').value = { formula: `(MIN(H${r}, 4) * 2) / 24`, result: 0 };
+            row.getCell('expectedHours').value = { formula: `(D${r} * 9) / 24`, result: 0 };
+            row.getCell('shortage').value = { formula: `MAX(0, K${r} - I${r} - J${r})`, result: 0 };
+
             // Formula Logic: Allocated - absenteeism - shortfall - other
-            // Column I: Allocated, E: Absent, D: Present, G: Perm, H: Hours, J: Other Ded
-            // Formula for K:
+            // Column M: Allocated, E: Absent, L: Shortage (Time), N: Other Ded
+            // Formula for O: Convert shortage back to decimal hours (*24) for math
             row.getCell('onHandSalary').value = {
-                formula: `MAX(0, I${r} - (MAX(0, E${r}-4) * (I${r}/30)) - (MAX(0, (D${r}*9 - MIN(G${r},4)*2) - H${r}) * (I${r}/270)) - J${r})`,
+                formula: `MAX(0, M${r} - (MAX(0, E${r}-4) * (M${r}/30)) - (L${r} * 24 * (M${r}/270)) - N${r})`,
                 result: 0
             };
 
@@ -112,6 +127,13 @@ const generatePayrollReport = async (req, res) => {
             row.getCell('onHandSalary').numFmt = '#,##0';
             row.getCell('allocatedSalary').numFmt = '#,##0';
             row.getCell('extraDeduction').numFmt = '#,##0';
+
+            // Time Formatting [h]:mm handles values over 24 hours correctly
+            const timeFormat = '[h]:mm';
+            row.getCell('shortage').numFmt = timeFormat;
+            row.getCell('workingHours').numFmt = timeFormat;
+            row.getCell('expectedHours').numFmt = timeFormat;
+            row.getCell('permHours').numFmt = timeFormat;
         }
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
