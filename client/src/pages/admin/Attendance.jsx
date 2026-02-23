@@ -165,8 +165,13 @@ const Attendance = () => {
             const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            const monthName = dateObj.toLocaleString('default', { month: 'long' });
-            link.setAttribute('download', `attendance_report_${monthName}_${year}.xlsx`);
+            const monthName = dateObj.toLocaleString('default', { month: 'short' });
+
+            // Format prev month name for filename
+            const prevMonthDate = new Date(year, month - 2, 1);
+            const prevMonthName = prevMonthDate.toLocaleString('default', { month: 'short' });
+
+            link.setAttribute('download', `payroll_${prevMonthName}26_to_${monthName}25_${year}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();

@@ -343,7 +343,10 @@ const exportAttendance = async (req, res) => {
             const d = new Date(date);
             attendanceWhere.date = { gte: new Date(d.setHours(0, 0, 0, 0)), lte: new Date(d.setHours(23, 59, 59, 999)) };
         } else if (month && year) {
-            attendanceWhere.date = { gte: new Date(year, month - 1, 1), lte: new Date(year, month, 0, 23, 59, 59) };
+            // Payroll Cycle: 26th of previous month to 25th of current month
+            const startDate = new Date(year, month - 2, 26, 0, 0, 0); // 1 month back (0-indexed adjustment), 26th day
+            const endDate = new Date(year, month - 1, 25, 23, 59, 59); // Selected month (0-indexed adjustment), 25th day
+            attendanceWhere.date = { gte: startDate, lte: endDate };
         }
 
         if (userId) {
