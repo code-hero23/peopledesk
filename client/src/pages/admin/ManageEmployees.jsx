@@ -202,9 +202,16 @@ const ManageEmployees = () => {
                                                 ADMINISTRATOR
                                             </span>
                                         ) : emp.role === 'BUSINESS_HEAD' ? (
-                                            <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded">
-                                                BUSINESS HEAD
-                                            </span>
+                                            <div className="flex flex-col gap-1">
+                                                <span className="inline-block px-2 py-1 bg-blue-100 text-blue-700 text-xs font-bold rounded w-fit">
+                                                    BUSINESS HEAD
+                                                </span>
+                                                {emp.isGlobalAccess && (
+                                                    <span className="inline-block px-2 py-0.5 bg-blue-600 text-white text-[9px] font-black rounded-full w-fit flex items-center gap-1 shadow-sm">
+                                                        🌐 GLOBAL VIEW
+                                                    </span>
+                                                )}
+                                            </div>
                                         ) : emp.role === 'HR' ? (
                                             <span className="inline-block px-2 py-1 bg-pink-100 text-pink-700 text-xs font-bold rounded">
                                                 HR MANAGER

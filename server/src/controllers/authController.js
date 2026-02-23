@@ -32,6 +32,7 @@ const loginUser = async (req, res) => {
                 role: user.role,
                 designation: user.designation,
                 reportingBhId: user.reportingBhId,
+                isGlobalAccess: user.isGlobalAccess,
                 token: generateToken(user.id, user.role),
             });
         } else {
@@ -98,6 +99,7 @@ const getMe = async (req, res) => {
         role: req.user.role,
         designation: req.user.designation,
         reportingBhId: req.user.reportingBhId,
+        isGlobalAccess: req.user.isGlobalAccess,
     };
     res.json(user);
 };
