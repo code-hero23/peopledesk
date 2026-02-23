@@ -7,7 +7,10 @@ const prisma = new PrismaClient();
 const getBusinessHeads = async (req, res) => {
     try {
         const businessHeads = await prisma.user.findMany({
-            where: { role: 'BUSINESS_HEAD', status: 'ACTIVE' },
+            where: {
+                role: { in: ['BUSINESS_HEAD', 'AE_MANAGER'] },
+                status: 'ACTIVE'
+            },
             select: { id: true, name: true, email: true }
         });
         res.json(businessHeads);

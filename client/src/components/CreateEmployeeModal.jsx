@@ -44,11 +44,11 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 ...prev,
                 role: 'EMPLOYEE',
                 designation: 'AE',
-                reportingBhId: '',
+                reportingBhId: user?.id || '',
                 isGlobalAccess: false
             }));
         }
-    }, [selectedEmployee, isAeManager]);
+    }, [selectedEmployee, isAeManager, user?.id]);
 
     const onSubmit = (e) => {
         e.preventDefault();
@@ -57,6 +57,11 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         // Remove isGlobalAccess if not a BH
         if (submissionData.role !== 'BUSINESS_HEAD') {
             submissionData.isGlobalAccess = false;
+        }
+
+        // If AE Manager is creating an AE, ensure they are set as BH
+        if (isAeManager && submissionData.designation === 'AE') {
+            submissionData.reportingBhId = user?.id;
         }
 
         if (selectedEmployee) {
