@@ -781,19 +781,46 @@ const deleteEmployee = async (req, res) => {
     const userId = parseInt(id);
 
     try {
-        // Use transaction to delete all related data first
+        // Use transaction to handle all related data and foreign key constraints
         await prisma.$transaction([
+            // 1. Detach subordinates if the user is a BH
+            prisma.user.updateMany({
+                where: { reportingBhId: userId },
+                data: { reportingBhId: null }
+            }),
+
+            // 2. Detach from projects if the user is a manager
+            prisma.project.updateMany({
+                where: { managerId: userId },
+                data: { managerId: null }
+            }),
+
+            // 3. Delete visit requests (Site & Showroom)
+            prisma.siteVisitRequest.deleteMany({ where: { userId } }),
+            prisma.showroomVisitRequest.deleteMany({ where: { userId } }),
+
+            // 4. Delete BreakLogs (must be deleted before Attendance)
+            prisma.breakLog.deleteMany({
+                where: { attendance: { userId: userId } }
+            }),
+
+            // 5. Delete workLogs, requests, and announcements
             prisma.workLog.deleteMany({ where: { userId } }),
-            prisma.attendance.deleteMany({ where: { userId } }),
             prisma.leaveRequest.deleteMany({ where: { userId } }),
             prisma.permissionRequest.deleteMany({ where: { userId } }),
             prisma.loginAccessRequest.deleteMany({ where: { userId } }),
+            prisma.announcement.deleteMany({ where: { authorId: userId } }),
+
+            // 6. Delete attendance records
+            prisma.attendance.deleteMany({ where: { userId } }),
+
+            // 7. Finally, delete the user record
             prisma.user.delete({ where: { id: userId } })
         ]);
 
-        res.json({ message: 'Employee removed' });
+        res.json({ message: 'Employee removed successfully' });
     } catch (error) {
-        console.error(error);
+        console.error("Delete Employee Error:", error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
