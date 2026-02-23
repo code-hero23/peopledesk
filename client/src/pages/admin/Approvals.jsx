@@ -13,6 +13,7 @@ const Approvals = () => {
         (state) => state.admin
     );
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
+    const [bhView, setBhView] = useState('mine'); // 'mine' or 'others' — Global BH only
     const [filterDate, setFilterDate] = useState(''); // '' means all
 
     useEffect(() => {
@@ -62,11 +63,24 @@ const Approvals = () => {
 
     const displayData = activeTab === 'pending' ? pendingRequests : requestHistory;
 
-    const leaves = displayData?.leaves || [];
-    const permissions = displayData?.permissions || [];
 
     const canDelete = ['ADMIN', 'HR'].includes(user?.role);
     const canApprove = ['HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role);
+    const isGlobalBH = user?.role === 'BUSINESS_HEAD' && user?.isGlobalAccess;
+
+    // For Global BH: split requests into Mine vs Others
+    let leaves = displayData?.leaves || [];
+    let permissions = displayData?.permissions || [];
+
+    if (isGlobalBH && activeTab === 'pending') {
+        if (bhView === 'mine') {
+            leaves = leaves.filter(r => r.targetBhId === user.id || r.user?.reportingBhId === user.id);
+            permissions = permissions.filter(r => r.targetBhId === user.id || r.user?.reportingBhId === user.id);
+        } else {
+            leaves = leaves.filter(r => r.targetBhId !== user.id && r.user?.reportingBhId !== user.id);
+            permissions = permissions.filter(r => r.targetBhId !== user.id && r.user?.reportingBhId !== user.id);
+        }
+    }
 
     if (isLoading && activeTab === 'pending' && !pendingRequests.leaves) return <div className="p-8 text-center text-slate-500">Loading requests...</div>;
 
@@ -186,8 +200,12 @@ const Approvals = () => {
             </div>
             {activeTab === 'pending' && canApprove && (
                 <div className="grid grid-cols-2 gap-3">
-                    {/* Security Check: Only show buttons if authorized (either target BH or reporting BH) */}
-                    {(user.role !== 'BUSINESS_HEAD' && user.role !== 'AE_MANAGER' ||
+                    {/* For Global BH: In 'others' tab, always show monitoring badge */}
+                    {(isGlobalBH && bhView === 'others') ? (
+                        <div className="col-span-2 py-2.5 bg-amber-50 rounded-lg text-center text-amber-600 text-[10px] font-bold border border-amber-100 uppercase tracking-widest">
+                            🌐 Monitoring — Other BH's Approval
+                        </div>
+                    ) : (user.role !== 'BUSINESS_HEAD' && user.role !== 'AE_MANAGER' ||
                         (req.targetBhId === user.id || req.user.reportingBhId === user.id)) ? (
                         <>
                             <button onClick={() => onUpdateStatus(type, req.id, 'APPROVED')} className="w-full py-2 rounded-lg bg-green-50 text-green-700 hover:bg-green-100 font-bold text-sm transition-colors">Approve</button>
@@ -288,12 +306,49 @@ const Approvals = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                {/* Second-level tab for Global BH users */}
+                {isGlobalBH && activeTab === 'pending' && (
+                    <div className="col-span-full">
+                        <div className="flex gap-2 bg-white border border-slate-200 rounded-xl p-1.5 w-fit shadow-sm">
+                            <button
+                                onClick={() => setBhView('mine')}
+                                className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${bhView === 'mine'
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                                    }`}
+                            >
+                                ✅ My Approvals
+                            </button>
+                            <button
+                                onClick={() => setBhView('others')}
+                                className={`px-5 py-2 rounded-lg text-sm font-bold transition-all ${bhView === 'others'
+                                    ? 'bg-amber-500 text-white shadow-md'
+                                    : 'text-slate-500 hover:text-slate-800 hover:bg-slate-50'
+                                    }`}
+                            >
+                                🌐 Other BH Approvals
+                            </button>
+                        </div>
+                        {bhView === 'others' && (
+                            <p className="mt-2 text-xs text-amber-600 font-semibold">
+                                🔒 Monitoring only — you cannot approve requests assigned to other Business Heads.
+                            </p>
+                        )}
+                    </div>
+                )}
+
                 {leaves.map(req => renderRequestCard(req, 'leave', 'Leave Request', 'orange'))}
                 {permissions.map(req => renderRequestCard(req, 'permission', 'Permission', 'purple'))}
 
                 {leaves.length === 0 && permissions.length === 0 && (
                     <div className="col-span-full border-2 border-dashed border-slate-200 rounded-xl p-8 text-center bg-slate-50">
-                        <p className="text-slate-400 font-medium">✨ No {activeTab} requests found.</p>
+                        <p className="text-slate-400 font-medium">
+                            {isGlobalBH && activeTab === 'pending' && bhView === 'mine'
+                                ? '✨ No pending requests assigned to you.'
+                                : isGlobalBH && activeTab === 'pending' && bhView === 'others'
+                                    ? '✨ No pending requests for other Business Heads.'
+                                    : `✨ No ${activeTab} requests found.`}
+                        </p>
                     </div>
                 )}
             </div>
