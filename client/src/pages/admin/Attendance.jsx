@@ -113,8 +113,16 @@ const Attendance = () => {
                 responseType: 'blob',
             };
 
+            // Force Today's Date for export as per requirement
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
+
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            let apiUrl = `${baseUrl}/export/attendance?date=${selectedDate}`;
+            let apiUrl = `${baseUrl}/export/attendance?date=${todayStr}`;
+
             if (searchTerm) {
                 apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
             }
@@ -123,13 +131,48 @@ const Attendance = () => {
             const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `attendance_${new Date().toISOString().split('T')[0]}.xlsx`);
+            link.setAttribute('download', `attendance_today_${todayStr}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
         } catch (error) {
             console.error("Export failed:", error);
             alert("Failed to download export. Please try again.");
+        }
+    };
+
+    const onDownloadMonthly = async () => {
+        try {
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${user.token}`,
+                },
+                responseType: 'blob',
+            };
+
+            const dateObj = new Date(selectedDate);
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            let apiUrl = `${baseUrl}/export/attendance?month=${month}&year=${year}`;
+
+            if (searchTerm) {
+                apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
+            }
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            const monthName = dateObj.toLocaleString('default', { month: 'long' });
+            link.setAttribute('download', `attendance_report_${monthName}_${year}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Monthly export failed:", error);
+            alert("Failed to download monthly report. Please try again.");
         }
     };
 
@@ -155,8 +198,11 @@ const Attendance = () => {
                         />
                     </div>
 
-                    <button onClick={onDownload} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2 whitespace-nowrap">
-                        <span>📅</span> Export Excel
+                    <button onClick={onDownload} className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
+                        <Smartphone size={16} /> Today
+                    </button>
+                    <button onClick={onDownloadMonthly} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
+                        <Calendar size={16} /> Monthly
                     </button>
                     <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
