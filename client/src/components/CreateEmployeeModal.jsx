@@ -16,6 +16,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         designation: isAeManager ? 'AE' : 'LA',
         reportingBhId: '',
         isGlobalAccess: false,
+        allocatedSalary: 0,
     });
 
     const [businessHeads, setBusinessHeads] = useState([]);
@@ -38,6 +39,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 password: '', // Don't pre-fill password
                 reportingBhId: selectedEmployee.reportingBhId || '',
                 isGlobalAccess: selectedEmployee.isGlobalAccess || false,
+                allocatedSalary: selectedEmployee.allocatedSalary || 0,
             });
         } else if (isAeManager) {
             setFormData((prev) => ({
@@ -45,7 +47,8 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 role: 'EMPLOYEE',
                 designation: 'AE',
                 reportingBhId: user?.id || '',
-                isGlobalAccess: false
+                isGlobalAccess: false,
+                allocatedSalary: 0,
             }));
         }
     }, [selectedEmployee, isAeManager, user?.id]);
@@ -114,6 +117,19 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
+
+                    {(user?.role === 'ADMIN' || user?.role === 'HR' || user?.role === 'BUSINESS_HEAD') && (
+                        <div>
+                            <label className="block text-sm font-medium text-slate-700 mb-1 font-bold text-blue-600">Allocated Monthly Salary (CTC)</label>
+                            <input
+                                type="number"
+                                placeholder="Enter monthly salary..."
+                                className="w-full px-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-mono"
+                                value={formData.allocatedSalary}
+                                onChange={(e) => setFormData({ ...formData, allocatedSalary: e.target.value })}
+                            />
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 gap-4">
                         <div>

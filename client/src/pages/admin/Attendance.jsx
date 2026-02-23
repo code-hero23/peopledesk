@@ -181,6 +181,43 @@ const Attendance = () => {
         }
     };
 
+    const onGeneratePayrollReport = async () => {
+        try {
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${user.token}`,
+                },
+                responseType: 'blob',
+            };
+
+            const dateObj = new Date(selectedDate);
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            let apiUrl = `${baseUrl}/payroll/report?month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            const monthName = dateObj.toLocaleString('default', { month: 'short' });
+
+            // Format prev month name for filename
+            const prevMonthDate = new Date(year, month - 2, 1);
+            const prevMonthName = prevMonthDate.toLocaleString('default', { month: 'short' });
+
+            link.setAttribute('download', `PAYROLL_SALARY_${prevMonthName}26_to_${monthName}25_${year}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Payroll report failed:", error);
+            alert("Failed to generate payroll report. Please try again.");
+        }
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -209,6 +246,11 @@ const Attendance = () => {
                     <button onClick={onDownloadMonthly} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                         <Calendar size={16} /> Monthly
                     </button>
+                    {(user?.role === 'ADMIN' || user?.role === 'HR') && (
+                        <button onClick={onGeneratePayrollReport} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
+                            <Zap size={16} /> Payroll Report
+                        </button>
+                    )}
                     <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <input
@@ -222,59 +264,61 @@ const Attendance = () => {
             </div>
 
             {/* Live Status Content */}
-            {activeStatuses.length > 0 && (
-                <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-6">
-                    <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
-                        <div className="flex items-center gap-2">
-                            <div className="relative">
-                                <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping absolute inset-0"></div>
-                                <div className="w-2 h-2 bg-rose-500 rounded-full relative"></div>
+            {
+                activeStatuses.length > 0 && (
+                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-6">
+                        <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                            <div className="flex items-center gap-2">
+                                <div className="relative">
+                                    <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping absolute inset-0"></div>
+                                    <div className="w-2 h-2 bg-rose-500 rounded-full relative"></div>
+                                </div>
+                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Active Status Panel</h3>
                             </div>
-                            <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Active Status Panel</h3>
+                            <button onClick={fetchActiveStatuses} className="text-slate-400 hover:text-rose-500 transition-colors">
+                                <Zap size={14} />
+                            </button>
                         </div>
-                        <button onClick={fetchActiveStatuses} className="text-slate-400 hover:text-rose-500 transition-colors">
-                            <Zap size={14} />
-                        </button>
-                    </div>
 
-                    <div className="p-4">
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                            <AnimatePresence mode='popLayout'>
-                                {activeStatuses.map((status) => {
-                                    const styles = getStatusStyles(status.breakType);
-                                    const Icon = styles.icon;
-                                    return (
-                                        <motion.div
-                                            key={`live-${status.id}`}
-                                            layout
-                                            initial={{ opacity: 0, scale: 0.9 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.9 }}
-                                            className={`${styles.bg} p-4 rounded-2xl border border-white shadow-sm flex items-start gap-3`}
-                                        >
-                                            <div className={`p-2.5 rounded-xl bg-white ${styles.text} shadow-sm`}>
-                                                <Icon size={18} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex justify-between items-start mb-1">
-                                                    <p className="text-sm font-black text-slate-800 truncate">{status.userName}</p>
-                                                    <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white ${styles.text} border border-current/10 whitespace-nowrap`}>
-                                                        {styles.label}
-                                                    </span>
+                        <div className="p-4">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                                <AnimatePresence mode='popLayout'>
+                                    {activeStatuses.map((status) => {
+                                        const styles = getStatusStyles(status.breakType);
+                                        const Icon = styles.icon;
+                                        return (
+                                            <motion.div
+                                                key={`live-${status.id}`}
+                                                layout
+                                                initial={{ opacity: 0, scale: 0.9 }}
+                                                animate={{ opacity: 1, scale: 1 }}
+                                                exit={{ opacity: 0, scale: 0.9 }}
+                                                className={`${styles.bg} p-4 rounded-2xl border border-white shadow-sm flex items-start gap-3`}
+                                            >
+                                                <div className={`p-2.5 rounded-xl bg-white ${styles.text} shadow-sm`}>
+                                                    <Icon size={18} />
                                                 </div>
-                                                <div className="mt-2 flex items-center justify-between text-[11px] font-black">
-                                                    <span className="text-slate-400 font-bold uppercase">{status.designation}</span>
-                                                    <span className={styles.text}>{getDuration(status.startTime)}</span>
+                                                <div className="flex-1 min-w-0">
+                                                    <div className="flex justify-between items-start mb-1">
+                                                        <p className="text-sm font-black text-slate-800 truncate">{status.userName}</p>
+                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white ${styles.text} border border-current/10 whitespace-nowrap`}>
+                                                            {styles.label}
+                                                        </span>
+                                                    </div>
+                                                    <div className="mt-2 flex items-center justify-between text-[11px] font-black">
+                                                        <span className="text-slate-400 font-bold uppercase">{status.designation}</span>
+                                                        <span className={styles.text}>{getDuration(status.startTime)}</span>
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        </motion.div>
-                                    );
-                                })}
-                            </AnimatePresence>
+                                            </motion.div>
+                                        );
+                                    })}
+                                </AnimatePresence>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                )
+            }
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="overflow-x-auto">
@@ -416,7 +460,7 @@ const Attendance = () => {
                     </table>
                 </div>
             </div>
-        </div>
+        </div >
     );
 };
 

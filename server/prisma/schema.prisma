@@ -22,6 +22,7 @@ model User {
    reportingBhId        Int?
    reportingBh          User?                  @relation("ReportingLink", fields: [reportingBhId], references: [id])
    isGlobalAccess       Boolean                @default(false)
+   allocatedSalary      Float?                 @default(0)
    subordinates         User[]                 @relation("ReportingLink")
   attendance            Attendance[]
   leaveRequests         LeaveRequest[]

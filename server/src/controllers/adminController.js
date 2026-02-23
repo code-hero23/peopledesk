@@ -445,12 +445,14 @@ const createEmployee = async (req, res) => {
                 role: newRole,
                 designation: newDesignation,
                 reportingBhId: req.body.reportingBhId ? parseInt(req.body.reportingBhId) : undefined,
-                isGlobalAccess: req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true'
+                isGlobalAccess: req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true',
+                allocatedSalary: req.body.allocatedSalary ? parseFloat(req.body.allocatedSalary) : 0
             },
             select: {
                 id: true, name: true, email: true, role: true, status: true, designation: true, lastWorkLogDate: true,
                 reportingBhId: true,
                 isGlobalAccess: true,
+                allocatedSalary: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -777,7 +779,8 @@ const updateEmployee = async (req, res) => {
             designation,
             role: role || undefined,
             reportingBhId: req.body.reportingBhId !== undefined ? (req.body.reportingBhId ? parseInt(req.body.reportingBhId) : null) : undefined,
-            isGlobalAccess: req.body.isGlobalAccess !== undefined ? (req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true') : undefined
+            isGlobalAccess: req.body.isGlobalAccess !== undefined ? (req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true') : undefined,
+            allocatedSalary: req.body.allocatedSalary !== undefined ? parseFloat(req.body.allocatedSalary) : undefined
         };
 
         // If password is provided, hash it and add to update data
@@ -789,7 +792,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true }
+            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true }
         });
         res.json(user);
     } catch (error) {
