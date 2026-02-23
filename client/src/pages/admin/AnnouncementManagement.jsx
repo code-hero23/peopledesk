@@ -1,9 +1,21 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Megaphone, Plus, Trash2, Edit2, X, Save } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import axios from 'axios';
 
 const AnnouncementManagement = () => {
+    const { user: authUser } = useSelector((state) => state.auth);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        // Only Admin and HR can manage announcements
+        if (authUser && !['ADMIN', 'HR'].includes(authUser.role)) {
+            navigate('/admin-dashboard');
+        }
+    }, [authUser, navigate]);
+
     const [announcements, setAnnouncements] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
     const [isModalOpen, setIsModalOpen] = useState(false);

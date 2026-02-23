@@ -158,7 +158,7 @@ const Layout = () => {
                             {user?.role === 'ADMIN' && (
                                 <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
                             )}
-                            {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                            {['ADMIN', 'HR'].includes(user?.role) && (
                                 <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" />
                             )}
                         </>
