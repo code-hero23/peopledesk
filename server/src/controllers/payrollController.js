@@ -111,14 +111,14 @@ const generatePayrollReport = async (req, res) => {
             // Formula Logic for Intermediate Columns (Dividing by 24/1440 to store as Excel Time)
             row.getCell('unapprovedLeaves').value = { formula: `MAX(0, E${r} - F${r})`, result: 0 };
             row.getCell('permHours').value = { formula: `(MIN(H${r}, 4) * 2) / 24`, result: 0 };
-            row.getCell('expectedHours').value = { formula: `(D${r} * 9) / 24`, result: 0 };
+            row.getCell('expectedHours').value = { formula: `(D${r} * 8) / 24`, result: 0 };
             row.getCell('shortage').value = { formula: `MAX(0, K${r} - I${r} - J${r})`, result: 0 };
 
             // Formula Logic: Allocated - absenteeism - shortfall - other
             // Column M: Allocated, E: Absent, L: Shortage (Time), N: Other Ded
             // Formula for O: Convert shortage back to decimal hours (*24) for math
             row.getCell('onHandSalary').value = {
-                formula: `MAX(0, M${r} - (MAX(0, E${r}-4) * (M${r}/30)) - (L${r} * 24 * (M${r}/270)) - N${r})`,
+                formula: `MAX(0, M${r} - (MAX(0, E${r}-4) * (M${r}/30)) - (L${r} * 24 * (M${r}/240)) - N${r})`,
                 result: 0
             };
 
