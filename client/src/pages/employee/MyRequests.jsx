@@ -42,10 +42,10 @@ const MyRequests = () => {
                                         <td className="py-3">{req.type}</td>
                                         <td className="py-3 text-slate-500 italic">
                                             "{req.reason}"
-                                            {req.isExceededLimit && (
+                                            {(req.isExceededLimit || (req.startDate && req.endDate && (Math.ceil(Math.abs(new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1) > 4)) && (
                                                 <div className="mt-1">
                                                     <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200">
-                                                        ⚠️ LIMIT EXCEEDED
+                                                        ⚠️ LIMIT EXCEEDED (4+)
                                                     </span>
                                                 </div>
                                             )}

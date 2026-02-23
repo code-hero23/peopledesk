@@ -93,7 +93,7 @@ const Approvals = () => {
             const end = new Date(req.endDate);
             const diffTime = Math.abs(end - start);
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            return `${diffDays} Days`;
+            return diffDays > 4 ? `${diffDays} Days (4+)` : `${diffDays} Days`;
         }
         return req.type;
     };
@@ -140,7 +140,7 @@ const Approvals = () => {
 
             {/* Status Badges */}
             <div className="flex flex-wrap gap-2 mb-3">
-                {req.isExceededLimit && (
+                {(req.isExceededLimit || (req.startDate && req.endDate && (Math.ceil(Math.abs(new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1) > 4)) && (
                     <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 animate-pulse shadow-sm">
                         <AlertTriangle size={10} />
                         LIMIT EXCEEDED (4+)

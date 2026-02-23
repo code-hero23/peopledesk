@@ -68,7 +68,7 @@ const createLeaveRequest = async (req, res) => {
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING',
-                isExceededLimit: (totalExistingDays + newRequestDays) > 4
+                isExceededLimit: newRequestDays > 4 || (totalExistingDays + newRequestDays) > 4
             },
         });
 
