@@ -694,9 +694,13 @@ const getDailyAttendance = async (req, res) => {
 // @access  Private (Admin, BH, HR)
 const getActiveStatuses = async (req, res) => {
     try {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
         const activeBreaks = await prisma.breakLog.findMany({
             where: {
-                endTime: null
+                endTime: null,
+                startTime: { gte: today }
             },
             include: {
                 attendance: {

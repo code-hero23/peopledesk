@@ -63,14 +63,26 @@ const Overview = () => {
 
         // 10:30 AM = 10 * 60 + 30 = 630 minutes
         if (hours * 60 + minutes > 630) {
-            // Check if user already has a valid permission for this time
+            // Check if user already has a valid permission or approved leave for this time
             const todayLocal = checkInTime.toLocaleDateString('en-CA');
-            const hasValidPermission = requests?.permissions?.some(p => {
+
+            // 1. Check for ANY permission (Pending/Approved) for today
+            const hasExistingPermission = requests?.permissions?.some(p => {
                 const pDate = new Date(p.date).toLocaleDateString('en-CA');
-                return pDate === todayLocal && isTimeCoveredByPermission(checkInTime, p.startTime, p.endTime);
+                return pDate === todayLocal;
             });
 
-            if (hasValidPermission) return;
+            // 2. Check for ANY approved leave for today
+            const hasApprovedLeave = requests?.leaves?.some(l => {
+                const lStart = new Date(l.startDate).toLocaleDateString('en-CA');
+                const lEnd = new Date(l.endDate).toLocaleDateString('en-CA');
+                return l.status === 'APPROVED' && todayLocal >= lStart && todayLocal <= lEnd;
+            });
+
+            if (hasExistingPermission || hasApprovedLeave) {
+                console.log('Skipping mandatory permission: Existing request or approved leave found for today.');
+                return;
+            }
 
             // Use local date (YYYY-MM-DD format for input[type="date"])
             const date = checkInTime.toLocaleDateString('en-CA');
@@ -306,6 +318,33 @@ const Overview = () => {
 
     return (
         <div className="space-y-8 animate-fade-in pb-20">
+            {/* Break Reminder Banner */}
+            {isPaused && (
+                <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-4 rounded-2xl shadow-lg shadow-orange-500/20 flex flex-col md:flex-row items-center justify-between gap-4 animate-bounce-subtle border border-white/20">
+                    <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl backdrop-blur-sm">
+                            {activeBreak?.breakType === 'TEA' && '☕'}
+                            {activeBreak?.breakType === 'LUNCH' && '🍽️'}
+                            {activeBreak?.breakType === 'CLIENT_MEETING' && '💼'}
+                            {activeBreak?.breakType === 'BH_MEETING' && '👥'}
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-lg leading-tight">You are currently on break!</h3>
+                            <p className="text-orange-50 text-sm opacity-90">
+                                Remember to resume your work process once you are back.
+                            </p>
+                        </div>
+                    </div>
+                    <button
+                        onClick={handleResume}
+                        disabled={isLoading}
+                        className="bg-white text-orange-600 hover:bg-orange-50 font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
+                    >
+                        <span>▶️</span> Resume Now
+                    </button>
+                </div>
+            )}
+
             {/* Modal Layer */}
             {activeModal && (
                 <Modal title={

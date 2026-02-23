@@ -116,6 +116,30 @@ const checkoutAttendance = async (req, res) => {
             },
         });
 
+        // AUTO-CLOSE ACTIVE BREAKS ON CHECKOUT
+        // Find any active break (without endTime) for this attendance
+        const activeBreak = await prisma.breakLog.findFirst({
+            where: {
+                attendanceId: attendance.id,
+                endTime: null
+            }
+        });
+
+        if (activeBreak) {
+            const endTime = new Date();
+            const startTime = new Date(activeBreak.startTime);
+            const duration = Math.round((endTime - startTime) / 60000);
+
+            await prisma.breakLog.update({
+                where: { id: activeBreak.id },
+                data: {
+                    endTime: endTime,
+                    duration: duration
+                }
+            });
+            console.log(`Auto-closed active break (${activeBreak.breakType}) for user ${userId} on checkout`);
+        }
+
         res.json(updatedAttendance);
     } catch (error) {
         console.error(error);
