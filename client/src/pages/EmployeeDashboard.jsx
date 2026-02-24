@@ -47,8 +47,10 @@ const EmployeeDashboard = () => {
     const checkLatenessAndRedirect = (checkInTimeRaw) => {
         console.log('checkLatenessAndRedirect called with:', checkInTimeRaw);
 
-        // Check if permission already exists for today to avoid redundant requests
+        // Required for comparing dates
         const todayLocal = new Date().toLocaleDateString('en-CA');
+
+        // Check if permission already exists for today to avoid redundant requests
         const hasPermissionForToday = requests?.permissions?.some(p => {
             const pDate = new Date(p.date).toLocaleDateString('en-CA');
             return pDate === todayLocal;
@@ -68,11 +70,26 @@ const EmployeeDashboard = () => {
         const checkInTime = new Date(checkInTimeRaw);
         const hours = checkInTime.getHours();
         const minutes = checkInTime.getMinutes();
-        console.log(`Check-in Time detected: ${hours}:${minutes}`);
+        const totalMinutes = hours * 60 + minutes;
+        console.log(`Check-in Time detected: ${hours}:${minutes} (${totalMinutes} mins)`);
 
-        // 10:30 AM = 10 * 60 + 30 = 630 minutes
-        if (hours * 60 + minutes > 630) {
-            console.log('Lateness detected (> 10:30 AM). Triggering redirection...');
+        // Check for Half Day leave
+        const hasHalfDayLeaveForToday = requests?.leaves?.some(l => {
+            if (l.type !== 'HALF_DAY') return false;
+            if (l.status === 'REJECTED') return false;
+
+            // Check if today falls within the leave's date range
+            const lStart = new Date(l.startDate).toLocaleDateString('en-CA');
+            const lEnd = new Date(l.endDate).toLocaleDateString('en-CA');
+            return todayLocal >= lStart && todayLocal <= lEnd;
+        });
+
+        // Determine Threshold: 14:00 (2:00 PM = 840 mins) for Half Day, 10:30 AM (630 mins) for normal
+        const thresholdMinutes = hasHalfDayLeaveForToday ? 840 : 630;
+        const thresholdLabel = hasHalfDayLeaveForToday ? '2:00 PM' : '10:30 AM';
+
+        if (totalMinutes > thresholdMinutes) {
+            console.log(`Lateness detected (> ${thresholdLabel}). Triggering redirection...`);
             // Use local date (YYYY-MM-DD format for input[type="date"])
             const date = checkInTime.toLocaleDateString('en-CA');
 
@@ -96,11 +113,11 @@ const EmployeeDashboard = () => {
                 date,
                 startTime,
                 endTime,
-                reason: 'Late Check-In (After 10:30 AM)'
+                reason: `Late Check-In (After ${thresholdLabel})`
             });
             setActiveModal('permission');
         } else {
-            console.log('Not late enough for auto-permission (< 10:30 AM)');
+            console.log(`Not late enough for auto-permission (< ${thresholdLabel})`);
         }
     };
     const [isCheckingOut, setIsCheckingOut] = useState(false); // Track if current action is check-out
