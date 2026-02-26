@@ -51,19 +51,19 @@ const getEmployeeStats = async (req, res) => {
         const workLogs = await prisma.workLog.findMany({
             where: {
                 userId,
-                createdAt: { gte: start, lte: end }
+                date: { gte: start, lte: end }
             }
         });
 
         // 3. Get Requests (to check for flags)
         const [leaves, permissions] = await Promise.all([
-            prisma.leaveRequest.findMany({ where: { userId, createdAt: { gte: start, lte: end } } }),
-            prisma.permissionRequest.findMany({ where: { userId, createdAt: { gte: start, lte: end } } })
+            prisma.leaveRequest.findMany({ where: { userId, startDate: { gte: start, lte: end } } }),
+            prisma.permissionRequest.findMany({ where: { userId, date: { gte: start, lte: end } } })
         ]);
 
         // CALCULATIONS
         const totalDaysPresent = attendance.length;
-        const daysWithLogs = new Set(workLogs.map(log => new Date(log.createdAt).toDateString())).size;
+        const daysWithLogs = new Set(workLogs.map(log => new Date(log.date).toDateString())).size;
 
         const consistencyScore = totalDaysPresent > 0 ? (daysWithLogs / totalDaysPresent) * 100 : 0;
 
@@ -150,11 +150,11 @@ const getTeamOverview = async (req, res) => {
             });
 
             const workLogsData = await prisma.workLog.findMany({
-                where: { userId: emp.id, createdAt: { gte: start, lte: end } },
-                select: { createdAt: true }
+                where: { userId: emp.id, date: { gte: start, lte: end } },
+                select: { date: true }
             });
 
-            const uniqueDaysWithLogs = new Set(workLogsData.map(log => new Date(log.createdAt).toDateString())).size;
+            const uniqueDaysWithLogs = new Set(workLogsData.map(log => new Date(log.date).toDateString())).size;
             const logsCount = workLogsData.length; // Total reports submitted
 
             let totalNetMinutes = 0;

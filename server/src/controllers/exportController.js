@@ -646,10 +646,10 @@ const exportPerformanceAnalytics = async (req, res) => {
                     include: { breaks: true }
                 }),
                 prisma.workLog.findMany({
-                    where: { userId: emp.id, createdAt: { gte: start, lte: end } }
+                    where: { userId: emp.id, date: { gte: start, lte: end } }
                 }),
-                prisma.leaveRequest.findMany({ where: { userId: emp.id, createdAt: { gte: start, lte: end } } }),
-                prisma.permissionRequest.findMany({ where: { userId: emp.id, createdAt: { gte: start, lte: end } } })
+                prisma.leaveRequest.findMany({ where: { userId: emp.id, startDate: { gte: start, lte: end } } }),
+                prisma.permissionRequest.findMany({ where: { userId: emp.id, date: { gte: start, lte: end } } })
             ]);
 
             const daysPresent = attendance.length;

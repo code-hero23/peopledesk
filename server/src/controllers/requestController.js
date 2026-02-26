@@ -272,7 +272,7 @@ const getMyRequests = async (req, res) => {
         const leaves = await prisma.leaveRequest.findMany({
             where: {
                 userId,
-                createdAt: { gte: start, lte: end }
+                startDate: { gte: start, lte: end }
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -280,7 +280,7 @@ const getMyRequests = async (req, res) => {
         const permissions = await prisma.permissionRequest.findMany({
             where: {
                 userId,
-                createdAt: { gte: start, lte: end }
+                date: { gte: start, lte: end }
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -288,7 +288,7 @@ const getMyRequests = async (req, res) => {
         const siteVisits = await prisma.siteVisitRequest.findMany({
             where: {
                 userId,
-                createdAt: { gte: start, lte: end }
+                date: { gte: start, lte: end }
             },
             orderBy: { createdAt: 'desc' },
         });
@@ -296,7 +296,7 @@ const getMyRequests = async (req, res) => {
         const showroomVisits = await prisma.showroomVisitRequest.findMany({
             where: {
                 userId,
-                createdAt: { gte: start, lte: end }
+                date: { gte: start, lte: end }
             },
             orderBy: { createdAt: 'desc' },
         });
