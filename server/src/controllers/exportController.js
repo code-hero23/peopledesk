@@ -946,9 +946,60 @@ const exportIncentiveScorecard = async (req, res) => {
         }));
 
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(scorecards);
-        ws['!cols'] = setAutoWidth(scorecards);
-        XLSX.utils.book_append_sheet(wb, ws, "Incentive_Scorecard");
+
+        // 1. Data Sheet
+        const wsData = XLSX.utils.json_to_sheet(scorecards);
+        wsData['!cols'] = setAutoWidth(scorecards);
+        XLSX.utils.book_append_sheet(wb, wsData, "Incentive_Scorecard");
+
+        // 2. Summary Dashboard Sheet
+        const summaryData = [];
+
+        // Departmental Totals
+        summaryData.push(["DEPARTMENTAL PRODUCTIVITY TOTALS"]);
+        summaryData.push(["Department", "Total Output Metric", "Avg Consistency %", "Avg Net Hours"]);
+
+        const depts = ["CRE", "FA", "LA", "AE"];
+        depts.forEach(dept => {
+            const deptEmps = scorecards.filter(s => s.Designation === dept);
+            if (deptEmps.length > 0) {
+                let totalMetric = 0;
+                let totalConsistency = 0;
+                let totalHours = 0;
+
+                deptEmps.forEach(s => {
+                    totalConsistency += s['Consistency Score %'];
+                    totalHours += parseFloat(s['Net Work Hours (Attendance)']);
+
+                    // Extract numbers from "Primary Output" string
+                    const match = s['Primary Output'].match(/\d+/g);
+                    if (match) match.forEach(n => totalMetric += parseInt(n));
+                });
+
+                summaryData.push([
+                    dept,
+                    totalMetric,
+                    (totalConsistency / deptEmps.length).toFixed(1) + "%",
+                    (totalHours / deptEmps.length).toFixed(1)
+                ]);
+            }
+        });
+
+        summaryData.push([]);
+        summaryData.push(["TOP PERFORMERS (By Consistency)"]);
+        summaryData.push(["Rank", "Employee", "Designation", "Consistency %"]);
+
+        const topPerformers = [...scorecards]
+            .sort((a, b) => b['Consistency Score %'] - a['Consistency Score %'])
+            .slice(0, 5);
+
+        topPerformers.forEach((p, i) => {
+            summaryData.push([i + 1, p.Employee, p.Designation, p['Consistency Score %'] + "%"]);
+        });
+
+        const wsSummary = XLSX.utils.aoa_to_sheet(summaryData);
+        wsSummary['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 20 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Dashboard_Summary");
 
         const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
         res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
