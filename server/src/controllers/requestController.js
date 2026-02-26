@@ -39,28 +39,73 @@ const createLeaveRequest = async (req, res) => {
             return res.status(400).json({ message: 'End date cannot be before start date' });
         }
 
-        // Check for 4+ LEAVE DAYS this month (using custom cycle: 26th to 25th)
-        const cycleStart = getCycleStartDateIST(startDate);
-        const cycleEnd = getCycleEndDateIST(startDate);
-
-        const monthlyLeaves = await prisma.leaveRequest.findMany({
-            where: {
-                userId,
-                startDate: { gte: cycleStart, lte: cycleEnd }
-            }
-        });
-
-        const calculateDays = (start, end, type) => {
+        // Helper to get days in a specific range for a request
+        const getDaysInRange = (start, end, rangeStart, rangeEnd, type) => {
             if (type === 'HALF_DAY') return 0.5;
-            const diffTime = Math.abs(new Date(end) - new Date(start));
+
+            const effectiveStart = new Date(Math.max(new Date(start), new Date(rangeStart)));
+            const effectiveEnd = new Date(Math.min(new Date(end), new Date(rangeEnd)));
+
+            if (effectiveStart > effectiveEnd) return 0;
+
+            const diffTime = Math.abs(effectiveEnd - effectiveStart);
             return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
         };
 
-        const totalExistingDays = monthlyLeaves.reduce((sum, req) => {
-            return sum + calculateDays(req.startDate, req.endDate, req.type);
-        }, 0);
+        // 1. Identify all cycles this leave request spans
+        const requestStart = new Date(startDate);
+        const requestEnd = new Date(endDate);
 
-        const newRequestDays = calculateDays(startDate, endDate, type);
+        const startCycleStart = getCycleStartDateIST(requestStart);
+        const startCycleEnd = getCycleEndDateIST(requestStart);
+
+        const endCycleStart = getCycleStartDateIST(requestEnd);
+        const endCycleEnd = getCycleEndDateIST(requestEnd);
+
+        // We check limits for the start cycle and end cycle (most leaves only cover 1 or 2 cycles)
+        const cyclesToCheck = [
+            { start: startCycleStart, end: startCycleEnd }
+        ];
+
+        // If it spans to a different cycle, add it
+        if (startCycleStart.getTime() !== endCycleStart.getTime()) {
+            cyclesToCheck.push({ start: endCycleStart, end: endCycleEnd });
+        }
+
+        let isExceededLimit = false;
+
+        for (const cycle of cyclesToCheck) {
+            // Calculate how many days of THIS request fall into THIS cycle
+            const daysInThisCycle = getDaysInRange(requestStart, requestEnd, cycle.start, cycle.end, type);
+
+            // If the request itself has > 4 days in a single cycle
+            if (daysInThisCycle > 4) {
+                isExceededLimit = true;
+                break;
+            }
+
+            // Get existing leaves in THIS cycle
+            const existingInCycle = await prisma.leaveRequest.findMany({
+                where: {
+                    userId,
+                    OR: [
+                        { startDate: { gte: cycle.start, lte: cycle.end } },
+                        { endDate: { gte: cycle.start, lte: cycle.end } },
+                        { AND: [{ startDate: { lte: cycle.start } }, { endDate: { gte: cycle.end } }] }
+                    ],
+                    status: { not: 'REJECTED' }
+                }
+            });
+
+            const existingDaysInCycle = existingInCycle.reduce((sum, r) => {
+                return sum + getDaysInRange(r.startDate, r.endDate, cycle.start, cycle.end, r.type);
+            }, 0);
+
+            if ((existingDaysInCycle + daysInThisCycle) > 4) {
+                isExceededLimit = true;
+                break;
+            }
+        }
 
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
@@ -71,7 +116,7 @@ const createLeaveRequest = async (req, res) => {
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING',
-                isExceededLimit: newRequestDays > 4 || (totalExistingDays + newRequestDays) > 4
+                isExceededLimit
             },
         });
 

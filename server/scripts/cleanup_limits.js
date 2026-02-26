@@ -43,28 +43,61 @@ async function fixLimits() {
 
         console.log(`Checking ${pendingLeaves.length} pending leaves...`);
 
+        const getDaysInRange = (start, end, rangeStart, rangeEnd, type) => {
+            if (type === 'HALF_DAY') return 0.5;
+            const effectiveStart = new Date(Math.max(new Date(start), new Date(rangeStart)));
+            const effectiveEnd = new Date(Math.min(new Date(end), new Date(rangeEnd)));
+            if (effectiveStart > effectiveEnd) return 0;
+            const diffTime = Math.abs(effectiveEnd - effectiveStart);
+            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+        };
+
         for (const req of pendingLeaves) {
-            const cycleStart = getCycleStartDateIST(req.startDate);
-            const cycleEnd = getCycleEndDateIST(req.startDate);
+            const requestStart = new Date(req.startDate);
+            const requestEnd = new Date(req.endDate);
 
-            const previousLeaves = await prisma.leaveRequest.findMany({
-                where: {
-                    userId: req.userId,
-                    startDate: { gte: cycleStart, lte: cycleEnd },
-                    id: { lt: req.id }
+            const startCycleStart = getCycleStartDateIST(requestStart);
+            const startCycleEnd = getCycleEndDateIST(requestStart);
+            const endCycleStart = getCycleStartDateIST(requestEnd);
+            const endCycleEnd = getCycleEndDateIST(requestEnd);
+
+            const cyclesToCheck = [{ start: startCycleStart, end: startCycleEnd }];
+            if (startCycleStart.getTime() !== endCycleStart.getTime()) {
+                cyclesToCheck.push({ start: endCycleStart, end: endCycleEnd });
+            }
+
+            let shouldExceed = false;
+
+            for (const cycle of cyclesToCheck) {
+                const daysInThisCycle = getDaysInRange(requestStart, requestEnd, cycle.start, cycle.end, req.type);
+
+                if (daysInThisCycle > 4) {
+                    shouldExceed = true;
+                    break;
                 }
-            });
 
-            const calculateDays = (start, end, type) => {
-                if (type === 'HALF_DAY') return 0.5;
-                const diffTime = Math.abs(new Date(end) - new Date(start));
-                return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-            };
+                const historicalLeaves = await prisma.leaveRequest.findMany({
+                    where: {
+                        userId: req.userId,
+                        id: { lt: req.id },
+                        OR: [
+                            { startDate: { gte: cycle.start, lte: cycle.end } },
+                            { endDate: { gte: cycle.start, lte: cycle.end } },
+                            { AND: [{ startDate: { lte: cycle.start } }, { endDate: { gte: cycle.end } }] }
+                        ],
+                        status: { not: 'REJECTED' }
+                    }
+                });
 
-            const totalExistingDays = previousLeaves.reduce((sum, r) => sum + calculateDays(r.startDate, r.endDate, r.type), 0);
-            const currentRequestDays = calculateDays(req.startDate, req.endDate, req.type);
+                const existingDaysInCycle = historicalLeaves.reduce((sum, r) => {
+                    return sum + getDaysInRange(r.startDate, r.endDate, cycle.start, cycle.end, r.type);
+                }, 0);
 
-            const shouldExceed = currentRequestDays > 4 || (totalExistingDays + currentRequestDays) > 4;
+                if ((existingDaysInCycle + daysInThisCycle) > 4) {
+                    shouldExceed = true;
+                    break;
+                }
+            }
 
             if (req.isExceededLimit !== shouldExceed) {
                 await prisma.leaveRequest.update({
