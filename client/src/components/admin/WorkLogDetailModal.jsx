@@ -1,7 +1,7 @@
 import Modal from '../Modal';
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { Printer } from 'lucide-react';
+import { Printer, Download } from 'lucide-react';
 
 const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
     const componentRef = useRef();
@@ -62,12 +62,27 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
 
     return (
         <Modal title="Work Log Details" onClose={onClose}>
-            <div className="flex justify-end mb-4">
+            <div className="flex justify-end gap-3 mb-4">
                 <button
                     onClick={handlePrint}
                     className="flex items-center gap-2 bg-slate-800 hover:bg-black text-white px-4 py-2 rounded-lg transition-all shadow-md font-bold text-sm"
                 >
-                    <Printer size={18} /> PRINT REPORT
+                    <Printer size={18} /> PRINT LOG
+                </button>
+                <button
+                    onClick={() => {
+                        // We need the cycle range to export monthly report
+                        // This logic is best handled in the parent or by passing a callback
+                        // For now we'll suggest using it from the main list as it has the cycle context
+                        if (window.onQuickExportIndividual) {
+                            window.onQuickExportIndividual(log.userId, log.user?.name);
+                        } else {
+                            alert("Please use the download button in the work log list to export the monthly report.");
+                        }
+                    }}
+                    className="flex items-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg transition-all shadow-md font-bold text-sm"
+                >
+                    <Download size={18} /> EXCEL REPORT
                 </button>
             </div>
 

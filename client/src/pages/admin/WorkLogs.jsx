@@ -149,6 +149,39 @@ const WorkLogs = () => {
         }
     };
 
+    const onExportIndividual = async (userId, userName) => {
+        try {
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/worklogs?startDate=${startDate}&endDate=${endDate}&userId=${userId}`;
+
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `worklog_${userName}_${startDate}_to_${endDate}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Individual export failed:", error);
+            alert("Failed to export individual worklogs.");
+        }
+    };
+
+    // Register globally for modal use
+    useEffect(() => {
+        window.onQuickExportIndividual = onExportIndividual;
+        return () => {
+            delete window.onQuickExportIndividual;
+        };
+    }, [startDate, endDate]);
+
     const renderClientInfo = (log) => {
         // AE
         if (log.ae_siteLocation) return <div className="font-bold">{log.ae_siteLocation}</div>;
@@ -323,18 +356,31 @@ const WorkLogs = () => {
                                             </td>
                                             <td className="px-6 py-4 text-center">
                                                 {log ? (
-                                                    <button
-                                                        type="button"
-                                                        onClick={(e) => {
-                                                            e.stopPropagation();
-                                                            handleViewDetails(record);
-                                                        }}
-                                                        className="inline-flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-bold text-xs group mx-auto"
-                                                        title="View & Print Details"
-                                                    >
-                                                        <Eye size={16} className="group-hover:scale-110 transition-transform" />
-                                                        <span>View Report</span>
-                                                    </button>
+                                                    <div className="flex items-center justify-center gap-2">
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleViewDetails(record);
+                                                            }}
+                                                            className="inline-flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-bold text-xs group"
+                                                            title="View & Print Details"
+                                                        >
+                                                            <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                                                            <span>View Report</span>
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onExportIndividual(record.user.id, record.user.name);
+                                                            }}
+                                                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                                            title="Download Monthly Report"
+                                                        >
+                                                            <Download size={16} />
+                                                        </button>
+                                                    </div>
                                                 ) : (
                                                     <span className="text-slate-300">-</span>
                                                 )}
