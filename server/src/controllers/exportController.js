@@ -134,7 +134,10 @@ const exportWorkLogs = async (req, res) => {
         const processEntries = (targetUsers, targetLogs, targetDates) => {
             targetDates.forEach(dateStr => {
                 targetUsers.forEach(user => {
-                    const userLogs = targetLogs.filter(l => l.userId === user.id && new Date(l.date).toLocaleDateString() === dateStr);
+                    const userLogs = targetLogs.filter(l => {
+                        const lDate = l.date ? new Date(l.date).toISOString().split('T')[0] : null;
+                        return l.userId === user.id && lDate === dateStr;
+                    });
 
                     if (userLogs.length > 0) {
                         userLogs.forEach(log => {
@@ -299,10 +302,10 @@ const exportWorkLogs = async (req, res) => {
         // Determine Dates to show
         let datesToShow = [];
         if (date) {
-            datesToShow = [new Date(date).toLocaleDateString()];
+            datesToShow = [new Date(date).toISOString().split('T')[0]];
         } else {
             // Unique dates from logs or the range
-            const logDates = new Set(logs.map(l => new Date(l.date).toLocaleDateString()));
+            const logDates = new Set(logs.map(l => l.date ? new Date(l.date).toISOString().split('T')[0] : null).filter(Boolean));
             datesToShow = Array.from(logDates).sort((a, b) => new Date(b) - new Date(a));
         }
 
@@ -653,7 +656,7 @@ const exportPerformanceAnalytics = async (req, res) => {
             ]);
 
             const daysPresent = attendance.length;
-            const daysWithLogs = new Set(workLogs.map(log => new Date(log.createdAt).toDateString())).size;
+            const daysWithLogs = new Set(workLogs.map(log => log.date ? new Date(log.date).toISOString().split('T')[0] : null).filter(Boolean)).size;
             const consistency = daysPresent > 0 ? Math.round((daysWithLogs / daysPresent) * 100) : 0;
 
             let totalNetMinutes = 0;

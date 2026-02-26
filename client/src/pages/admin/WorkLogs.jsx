@@ -247,6 +247,12 @@ const WorkLogs = () => {
                         <option value="ESCALATION">Escalation</option>
                         <option value="CLIENT-FACILITATOR">Client Facilitator</option>
                     </select>
+                    <button onClick={onExportDaily} className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
+                        <Download size={16} /> Today
+                    </button>
+                    <button onClick={onExportMonth} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
+                        <Calendar size={16} /> Monthly
+                    </button>
                     <MonthCycleSelector onCycleChange={handleCycleChange} />
                 </div>
             </div>
