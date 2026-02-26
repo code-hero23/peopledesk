@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const XLSX = require('xlsx');
 const prisma = new PrismaClient();
-const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
+const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
 
 // Helper to safely parse JSON
 const safeParse = (data) => {
@@ -630,8 +630,8 @@ const exportPerformanceAnalytics = async (req, res) => {
         const defaultStart = getCycleStartDateIST();
         const defaultEnd = getCycleEndDateIST();
 
-        const start = startDate ? new Date(startDate) : defaultStart;
-        const end = endDate ? new Date(endDate) : defaultEnd;
+        const start = startDate ? getStartOfDayIST(startDate) : defaultStart;
+        const end = endDate ? getEndOfDayIST(endDate) : defaultEnd;
 
         const employees = await prisma.user.findMany({
             where: {
@@ -664,18 +664,18 @@ const exportPerformanceAnalytics = async (req, res) => {
             let punctualityCount = 0;
 
             attendance.forEach(record => {
-                if (record.checkIn) {
-                    const checkIn = new Date(record.checkIn);
-                    const target = new Date(record.checkIn);
+                if (record.createdAt) {
+                    const checkIn = new Date(record.createdAt);
+                    const target = new Date(record.createdAt);
                     target.setHours(10, 20, 0, 0); // Unified to 10:20 AM
                     totalLateness += (checkIn - target) / (1000 * 60);
                     punctualityCount++;
                 }
 
-                if (record.checkIn && record.checkOut) {
-                    const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                if (record.createdAt && record.checkoutTime) {
+                    const gross = (new Date(record.checkoutTime) - new Date(record.createdAt)) / (1000 * 60);
                     const personalBreaks = record.breaks
-                        .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                        .filter(b => b.breakType === 'TEA' || b.breakType === 'LUNCH')
                         .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
                     totalNetMinutes += (gross - personalBreaks);
                 }
@@ -782,8 +782,8 @@ const exportIncentiveScorecard = async (req, res) => {
         const defaultStart = getCycleStartDateIST();
         const defaultEnd = getCycleEndDateIST();
 
-        const start = startDate ? new Date(startDate) : defaultStart;
-        const end = endDate ? new Date(endDate) : defaultEnd;
+        const start = startDate ? getStartOfDayIST(startDate) : defaultStart;
+        const end = endDate ? getEndOfDayIST(endDate) : defaultEnd;
 
         const employees = await prisma.user.findMany({
             where: {
@@ -814,14 +814,14 @@ const exportIncentiveScorecard = async (req, res) => {
             let lunchCount = 0;
 
             attendance.forEach(record => {
-                if (record.checkIn && record.checkOut) {
-                    const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                if (record.createdAt && record.checkoutTime) {
+                    const gross = (new Date(record.checkoutTime) - new Date(record.createdAt)) / (1000 * 60);
                     const personalBreaks = record.breaks
-                        .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                        .filter(b => b.breakType === 'TEA' || b.breakType === 'LUNCH')
                         .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
 
                     const lunchBreaks = record.breaks
-                        .filter(b => b.type === 'LUNCH')
+                        .filter(b => b.breakType === 'LUNCH')
                         .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
 
                     if (lunchBreaks > 0) {
