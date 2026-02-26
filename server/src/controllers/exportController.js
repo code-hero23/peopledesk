@@ -797,7 +797,8 @@ const exportIncentiveScorecard = async (req, res) => {
         const scorecards = await Promise.all(employees.map(async (emp) => {
             const [attendance, workLogs] = await Promise.all([
                 prisma.attendance.findMany({
-                    where: { userId: emp.id, date: { gte: start, lte: end } }
+                    where: { userId: emp.id, date: { gte: start, lte: end } },
+                    include: { breaks: true }
                 }),
                 prisma.workLog.findMany({
                     where: { userId: emp.id, date: { gte: start, lte: end } }
@@ -807,29 +808,58 @@ const exportIncentiveScorecard = async (req, res) => {
             const daysPresent = attendance.length;
             const daysWithLogs = new Set(workLogs.map(log => log.date ? new Date(log.date).toISOString().split('T')[0] : null).filter(Boolean)).size;
 
+            // Attendance Metrics
+            let totalNetMinutes = 0;
+            let totalLunchMinutes = 0;
+            let lunchCount = 0;
+
+            attendance.forEach(record => {
+                if (record.checkIn && record.checkOut) {
+                    const gross = (new Date(record.checkOut) - new Date(record.checkIn)) / (1000 * 60);
+                    const personalBreaks = record.breaks
+                        .filter(b => b.type === 'TEA' || b.type === 'LUNCH')
+                        .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
+
+                    const lunchBreaks = record.breaks
+                        .filter(b => b.type === 'LUNCH')
+                        .reduce((acc, b) => acc + (b.endTime ? (new Date(b.endTime) - new Date(b.startTime)) / (1000 * 60) : 0), 0);
+
+                    if (lunchBreaks > 0) {
+                        totalLunchMinutes += lunchBreaks;
+                        lunchCount++;
+                    }
+
+                    totalNetMinutes += (gross - personalBreaks);
+                }
+            });
+
+            const avgLunch = lunchCount > 0 ? Math.round(totalLunchMinutes / lunchCount) : 0;
+            const netHours = (totalNetMinutes / 60).toFixed(1);
+
             // Metrics Aggregation
             const metrics = {
-                totalHours: 0,
-                // CRE metrics
+                logHours: 0,
                 cre_calls: 0,
                 cre_visits: 0,
                 cre_quotes: 0,
                 cre_orders: 0,
-                // FA metrics
+                fa_calls: 0,
                 fa_siteVisits: 0,
                 fa_showroomVisits: 0,
                 fa_onlineDiscussions: 0,
                 fa_bookings: 0,
-                // LA metrics
+                fa_quotes: 0,
                 la_images: 0,
                 la_freezes: 0,
-                // AE metrics
+                la_onlineMeetings: 0,
+                la_showroomMeetings: 0,
+                la_measurements: 0,
                 ae_tasks: 0,
                 ae_installs: 0
             };
 
             workLogs.forEach(log => {
-                metrics.totalHours += (log.hours || 0);
+                metrics.logHours += (log.hours || 0);
 
                 // CRE
                 metrics.cre_calls += (log.cre_totalCalls || 0);
@@ -838,14 +868,34 @@ const exportIncentiveScorecard = async (req, res) => {
                 metrics.cre_orders += (log.cre_orders || 0);
 
                 // FA
+                metrics.fa_calls += (log.fa_calls || 0);
                 metrics.fa_siteVisits += (log.fa_siteVisits || 0);
                 metrics.fa_showroomVisits += (log.fa_showroomVisits || 0);
                 metrics.fa_onlineDiscussions += (log.fa_onlineDiscussion || 0);
                 metrics.fa_bookings += (log.fa_bookingFreezed || 0);
+                metrics.fa_quotes += (log.fa_quotePending || 0);
 
                 // LA
                 metrics.la_images += (log.completedImages || 0);
                 if (log.la_freezingAmount) metrics.la_freezes += 1;
+                if (log.la_onlineMeeting) {
+                    try {
+                        const m = typeof log.la_onlineMeeting === 'string' ? JSON.parse(log.la_onlineMeeting) : log.la_onlineMeeting;
+                        if (Array.isArray(m)) metrics.la_onlineMeetings += m.length;
+                    } catch (e) { }
+                }
+                if (log.la_showroomMeeting) {
+                    try {
+                        const m = typeof log.la_showroomMeeting === 'string' ? JSON.parse(log.la_showroomMeeting) : log.la_showroomMeeting;
+                        if (Array.isArray(m)) metrics.la_showroomMeetings += m.length;
+                    } catch (e) { }
+                }
+                if (log.la_measurements) {
+                    try {
+                        const m = typeof log.la_measurements === 'string' ? JSON.parse(log.la_measurements) : log.la_measurements;
+                        if (Array.isArray(m)) metrics.la_measurements += m.length;
+                    } catch (e) { }
+                }
 
                 // AE
                 if (log.ae_tasksCompleted) {
@@ -874,15 +924,22 @@ const exportIncentiveScorecard = async (req, res) => {
                 'Days Worked': daysPresent,
                 'Logs Submitted': daysWithLogs,
                 'Consistency Score %': consistency,
-                'Total Working Hours': metrics.totalHours.toFixed(1),
+                'Net Work Hours (Attendance)': netHours,
+                'Reported Hours (Logs)': metrics.logHours.toFixed(1),
+                'Avg Lunch Time (min)': avgLunch || '-',
                 'Primary Output': primaryMetric,
                 // Breakdown columns for easy filtering
                 'CRE: Calls': metrics.cre_calls || '-',
                 'CRE: Quotes': metrics.cre_quotes || '-',
                 'CRE: Orders': metrics.cre_orders || '-',
+                'FA: Calls': metrics.fa_calls || '-',
                 'FA: Site Visits': metrics.fa_siteVisits || '-',
                 'FA: Bookings': metrics.fa_bookings || '-',
+                'FA: Quotes': metrics.fa_quotes || '-',
                 'LA: Completed Images': metrics.la_images || '-',
+                'LA: Project Freezes': metrics.la_freezes || '-',
+                'LA: Meetings': (metrics.la_onlineMeetings + metrics.la_showroomMeetings) || '-',
+                'LA: Measurements': metrics.la_measurements || '-',
                 'AE: Tasks Completed': metrics.ae_tasks || '-',
                 'AE: Items Installed': metrics.ae_installs || '-'
             };
