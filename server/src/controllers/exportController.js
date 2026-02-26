@@ -468,14 +468,16 @@ const exportAttendance = async (req, res) => {
                 });
             }
 
-            const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
-            const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
+            if (record.status !== 'ABSENT') {
+                const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+                const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
 
-            const inPhoto = record.checkInPhoto ? `${baseUrl}${record.checkInPhoto}` : 'No Photo';
-            const outPhoto = record.checkoutPhoto ? `${baseUrl}${record.checkoutPhoto}` : 'No Photo';
+                const inPhoto = record.checkInPhoto ? `${baseUrl}${record.checkInPhoto}` : 'No Photo';
+                const outPhoto = record.checkoutPhoto ? `${baseUrl}${record.checkoutPhoto}` : 'No Photo';
 
-            group.sessionLogs.push(`${inTime} - ${outTime}`);
-            group.sessionPhotos.push(`In: ${inPhoto} | Out: ${outPhoto}`);
+                group.sessionLogs.push(`${inTime} - ${outTime}`);
+                group.sessionPhotos.push(`In: ${inPhoto} | Out: ${outPhoto}`);
+            }
         });
 
         // Fill in ABSENT records
@@ -512,14 +514,14 @@ const exportAttendance = async (req, res) => {
                 Email: group.Email,
                 Designation: group.Designation,
                 Date: group.Date,
-                'Log In': group.firstLogin ? group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
-                'Log Out': group.hasActiveSession ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
+                'Log In': (group.status === 'ABSENT' || !group.firstLogin) ? '-' : group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
+                'Log Out': (group.status === 'ABSENT' || group.hasActiveSession) ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
                 'Net Working Hours': group.status === 'ABSENT' ? '-' : formatDuration(netMinutes),
                 'Total Breaks': group.status === 'ABSENT' ? '-' : formatDuration(group.totalBreakMinutes),
                 'Total Meetings': group.status === 'ABSENT' ? '-' : formatDuration(group.totalMeetingMinutes),
-                'Sessions': group.sessionCount === 0 ? '-' : group.sessionCount,
-                'Session Details': group.sessionLogs.length > 0 ? group.sessionLogs.join(' | ') : '-',
-                'Photo Evidence': group.sessionPhotos.length > 0 ? group.sessionPhotos.join(' || ') : '-',
+                'Sessions': (group.status === 'ABSENT' || group.sessionCount === 0) ? '-' : group.sessionCount,
+                'Session Details': (group.status === 'ABSENT' || group.sessionLogs.length === 0) ? '-' : group.sessionLogs.join(' | '),
+                'Photo Evidence': (group.status === 'ABSENT' || group.sessionPhotos.length === 0) ? '-' : group.sessionPhotos.join(' || '),
                 Status: group.status,
             };
         });

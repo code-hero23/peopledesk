@@ -734,15 +734,23 @@ const getDailyAttendance = async (req, res) => {
             const effectiveMinutes = Math.max(0, totalGrossDurationMinutes - totalBreakDeductionMinutes);
             const totalHours = (effectiveMinutes / 60).toFixed(2);
 
+            // Calculate overall status
+            const isPresent = userRecords.some(r => r.status === 'PRESENT');
+            const status = isPresent ? 'PRESENT' : 'ABSENT';
+
+            // Only show times if PRESENT
+            const finalTimeIn = status === 'PRESENT' ? timeIn : null;
+            const finalTimeOut = status === 'PRESENT' ? timeOut : null;
+
             return {
                 user: user,
-                status: userRecords.length > 0 ? 'PRESENT' : 'ABSENT',
-                timeIn,
-                timeOut,
-                totalHours: totalHours,
-                effectiveMinutes: effectiveMinutes,
-                deviceInfo,
-                checkoutDeviceInfo,
+                status: status,
+                timeIn: finalTimeIn,
+                timeOut: finalTimeOut,
+                totalHours: status === 'PRESENT' ? totalHours : '0.00',
+                effectiveMinutes: status === 'PRESENT' ? effectiveMinutes : 0,
+                deviceInfo: status === 'PRESENT' ? deviceInfo : null,
+                checkoutDeviceInfo: status === 'PRESENT' ? checkoutDeviceInfo : null,
                 sessions: sessions,
                 breakData: {
                     personal: Math.round(totalBreakDeductionMinutes),
@@ -913,13 +921,11 @@ const importEmployees = async (req, res) => {
             return res.status(400).json({ message: 'Please upload an Excel file' });
         }
 
-        // Read from file path (Multer DiskStorage)
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
         const data = xlsx.utils.sheet_to_json(sheet);
 
-        // Delete file after reading to save space
         try {
             fs.unlinkSync(req.file.path);
         } catch (err) {
@@ -930,23 +936,18 @@ const importEmployees = async (req, res) => {
             return res.status(400).json({ message: 'Excel sheet is empty' });
         }
 
-        const results = {
-            success: 0,
-            failed: 0,
-            errors: []
-        };
-
+        const results = { success: 0, updated: 0, failed: 0, errors: [] };
         const salt = await bcrypt.genSalt(10);
-        // Default password for bulk import
-        const hashedPassword = await bcrypt.hash('employee@123', salt);
+        const defaultHashedPassword = await bcrypt.hash('employee@123', salt);
+
+        const historicalDates = ['Jan 26', 'Jan 27', 'Jan 28', 'Jan 29'];
 
         for (const [index, row] of data.entries()) {
-            // Excel Columns: Name, Email, Role (Optional), Designation (Optional), Password (Optional)
             const name = row['Name'] || row['name'];
             const email = row['Email'] || row['email'];
             const role = (row['Role'] || row['role'] || 'EMPLOYEE').toUpperCase();
             const designation = (row['Designation'] || row['designation'] || 'LA').toUpperCase();
-            const rawPassword = row['Password'] || row['password'];
+            const ctc = parseFloat(row['CTC'] || row['Salary'] || row['salary'] || 0);
 
             if (!name || !email) {
                 results.failed++;
@@ -955,28 +956,90 @@ const importEmployees = async (req, res) => {
             }
 
             try {
-                // Check if user exists
-                const existingUser = await prisma.user.findUnique({ where: { email } });
-                if (existingUser) {
-                    results.failed++;
-                    results.errors.push(`Row ${index + 2}: Email ${email} already exists`);
-                    continue;
+                // 1. Process Deductions
+                const deductionBreakdown = [];
+                for (let i = 1; i <= 10; i++) {
+                    const label = row[`Deduction ${i} Name`] || row[`deduction ${i} name`];
+                    const amount = parseFloat(row[`Deduction ${i} Amount`] || row[`deduction ${i} amount`]);
+                    if (label && !isNaN(amount)) {
+                        deductionBreakdown.push({
+                            label,
+                            amount,
+                            isFixed: true,
+                            month: new Date().getMonth() + 1,
+                            year: new Date().getFullYear()
+                        });
+                    }
                 }
 
-                // Use provided password or default 'employee@123'
-                const passwordToHash = rawPassword ? String(rawPassword) : 'employee@123';
-                const userHashedPassword = await bcrypt.hash(passwordToHash, salt);
+                // 2. Upsert User
+                let user = await prisma.user.findUnique({ where: { email } });
+                const userData = {
+                    name,
+                    role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER'].includes(role) ? role : 'EMPLOYEE',
+                    designation,
+                    allocatedSalary: ctc > 0 ? ctc : undefined,
+                    salaryDeductionBreakdown: deductionBreakdown.length > 0 ? deductionBreakdown : undefined,
+                    salaryViewEnabled: true
+                };
 
-                await prisma.user.create({
-                    data: {
-                        name,
-                        email,
-                        password: userHashedPassword,
-                        role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER'].includes(role) ? role : 'EMPLOYEE',
-                        designation
+                if (user) {
+                    user = await prisma.user.update({
+                        where: { email },
+                        data: userData
+                    });
+                    results.updated++;
+                } else {
+                    user = await prisma.user.create({
+                        data: {
+                            ...userData,
+                            email,
+                            password: defaultHashedPassword,
+                            allocatedSalary: ctc || 0,
+                            salaryDeductionBreakdown: deductionBreakdown
+                        }
+                    });
+                    results.success++;
+                }
+
+                // 3. Process Historical Attendance (Backfill)
+                for (const dateStr of historicalDates) {
+                    const statusVal = row[dateStr] || row[dateStr.toLowerCase()];
+                    if (statusVal) {
+                        const status = statusVal.toString().trim().toUpperCase();
+                        if (status === 'P' || status === 'PRESENT') {
+                            const dateObj = new Date(`2026-${dateStr.split(' ')[0]}-${dateStr.split(' ')[1]}`);
+                            if (!isNaN(dateObj.getTime())) {
+                                // Upsert Attendance
+                                await prisma.attendance.upsert({
+                                    where: { userId_date: { userId: user.id, date: dateObj } },
+                                    update: { status: 'PRESENT' },
+                                    create: { userId: user.id, date: dateObj, status: 'PRESENT' }
+                                });
+                                // Create WorkLog for history
+                                await prisma.workLog.create({
+                                    data: {
+                                        userId: user.id,
+                                        date: dateObj,
+                                        tasks: "Historical Backfill",
+                                        hours: 8.5,
+                                        logStatus: 'CLOSED'
+                                    }
+                                });
+                            }
+                        } else if (status === 'A' || status === 'ABSENT') {
+                            const dateObj = new Date(`2026-${dateStr.split(' ')[0]}-${dateStr.split(' ')[1]}`);
+                            if (!isNaN(dateObj.getTime())) {
+                                await prisma.attendance.upsert({
+                                    where: { userId_date: { userId: user.id, date: dateObj } },
+                                    update: { status: 'ABSENT' },
+                                    create: { userId: user.id, date: dateObj, status: 'ABSENT' }
+                                });
+                            }
+                        }
                     }
-                });
-                results.success++;
+                }
+
             } catch (err) {
                 results.failed++;
                 results.errors.push(`Row ${index + 2}: ${err.message}`);
@@ -984,7 +1047,7 @@ const importEmployees = async (req, res) => {
         }
 
         res.json({
-            message: `Import complete. Added ${results.success} users. Failed ${results.failed}.`,
+            message: `Import complete. Added ${results.success}, Updated ${results.updated}, Failed ${results.failed}.`,
             details: results
         });
 
