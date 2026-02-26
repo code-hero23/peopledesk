@@ -183,8 +183,8 @@ const MySalary = () => {
                         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                             <StatCard icon={<Calendar className="text-blue-500" />} label="Present Days" value={summary.stats.presentDays} sub={`of ${summary.cycle.totalDays} Total`} color="blue" />
                             <StatCard icon={<TrendingDown className="text-amber-500" />} label="Absent Days" value={summary.stats.absentDays} sub="L.O.P. Basis" color="amber" />
-                            <StatCard icon={<AlertCircle className="text-rose-500" />} label="Shortage Hrs" value={summary.stats.shortageHours} sub={`${summary.stats.actualWorkingHours} Worked`} color="rose" />
-                            <StatCard icon={<FileText className="text-emerald-500" />} label="Leaves/Perms" value={`${summary.stats.approvedLeaves}/${summary.stats.approvedPermissions}`} sub="Approved Docs" color="emerald" />
+                            <StatCard icon={<AlertCircle className="text-rose-500" />} label="Shortage Hrs" value={summary.stats.shortageHours} sub={`${summary.stats.actualWorkingHours}h Worked + ${summary.stats.permissionCreditHours}h Credit`} color="rose" />
+                            <StatCard icon={<FileText className="text-emerald-500" />} label="Leaves/Perms" value={`${summary.stats.approvedLeaves}/${summary.stats.approvedPermissions}`} sub={`Max ${summary.stats.permissionCreditHours}h Credit`} color="emerald" />
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">

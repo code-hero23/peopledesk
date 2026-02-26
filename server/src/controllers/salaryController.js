@@ -110,7 +110,8 @@ const getMySalarySummary = async (req, res) => {
 
         // B. Time Shortage Deduction
         const expectedHours = presentDays * 8;
-        const permissionCreditHours = approvedPermissions * 2;
+        const creditedPermissionCount = Math.min(approvedPermissions, 4); // Max 4 perms allowed
+        const permissionCreditHours = creditedPermissionCount * 2;
         const shortageHours = Math.max(0, expectedHours - permissionCreditHours - actualWorkingHours);
         const shortageDeduction = shortageHours * (allocated / 240);
 
@@ -135,6 +136,7 @@ const getMySalarySummary = async (req, res) => {
                 absentDays,
                 approvedLeaves,
                 approvedPermissions,
+                permissionCreditHours,
                 actualWorkingHours: parseFloat(actualWorkingHours.toFixed(2)),
                 expectedHours,
                 shortageHours: parseFloat(shortageHours.toFixed(2))
