@@ -167,7 +167,7 @@ const Approvals = () => {
                 {(req.isExceededLimit || (req.startDate && req.endDate && (Math.ceil(Math.abs(new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1) > 4)) && (
                     <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 animate-pulse shadow-sm">
                         <AlertTriangle size={10} />
-                        LIMIT EXCEEDED (4+)
+                        {type === 'leave' ? 'LEAVE LIMIT EXCEEDED (4+ Days)' : 'PERMISSION LIMIT EXCEEDED (4+)'}
                     </span>
                 )}
                 {req.bhStatus === 'PENDING' && (
