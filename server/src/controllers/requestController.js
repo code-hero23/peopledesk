@@ -41,11 +41,12 @@ const createLeaveRequest = async (req, res) => {
 
         // Check for 4+ LEAVE DAYS this month (using custom cycle: 26th to 25th)
         const cycleStart = getCycleStartDateIST(startDate);
+        const cycleEnd = getCycleEndDateIST(startDate);
 
         const monthlyLeaves = await prisma.leaveRequest.findMany({
             where: {
                 userId,
-                startDate: { gte: cycleStart }
+                startDate: { gte: cycleStart, lte: cycleEnd }
             }
         });
 
@@ -96,9 +97,13 @@ const createPermissionRequest = async (req, res) => {
 
         // Check for 4+ PERMISSION requests this month (using custom cycle: 26th to 25th)
         const cycleStart = getCycleStartDateIST(date);
+        const cycleEnd = getCycleEndDateIST(date);
 
         const permCount = await prisma.permissionRequest.count({
-            where: { userId, createdAt: { gte: cycleStart } }
+            where: {
+                userId,
+                date: { gte: cycleStart, lte: cycleEnd }
+            }
         });
 
         // Check if a permission already exists for this date
