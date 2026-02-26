@@ -940,8 +940,6 @@ const importEmployees = async (req, res) => {
         const salt = await bcrypt.genSalt(10);
         const defaultHashedPassword = await bcrypt.hash('employee@123', salt);
 
-        const historicalDates = ['Jan 26', 'Jan 27', 'Jan 28', 'Jan 29'];
-
         for (const [index, row] of data.entries()) {
             const name = row['Name'] || row['name'];
             const email = row['Email'] || row['email'];
@@ -1003,33 +1001,49 @@ const importEmployees = async (req, res) => {
                 }
 
                 // 3. Process Historical Attendance (Backfill)
-                for (const dateStr of historicalDates) {
-                    const statusVal = row[dateStr] || row[dateStr.toLowerCase()];
+                // Filter columns that look like 'Jan 10' or 'Feb 05'
+                const dateColumns = Object.keys(row).filter(key =>
+                    /^(Jan|Feb)\s+\d{1,2}$/i.test(key.trim())
+                );
+
+                for (const colName of dateColumns) {
+                    const statusVal = row[colName];
                     if (statusVal) {
                         const status = statusVal.toString().trim().toUpperCase();
-                        if (status === 'P' || status === 'PRESENT') {
-                            const dateObj = new Date(`2026-${dateStr.split(' ')[0]}-${dateStr.split(' ')[1]}`);
-                            if (!isNaN(dateObj.getTime())) {
+                        const parts = colName.trim().split(/\s+/);
+                        const monthStr = parts[0];
+                        const dayStr = parts[1];
+
+                        // Map month name to number (0-indexed)
+                        const monthMap = { 'JAN': '01', 'FEB': '02' };
+                        const monthNum = monthMap[monthStr.toUpperCase()];
+
+                        const dateObj = new Date(`2026-${monthNum}-${dayStr.padStart(2, '0')}`);
+
+                        if (!isNaN(dateObj.getTime())) {
+                            if (status === 'P' || status === 'PRESENT') {
                                 // Upsert Attendance
                                 await prisma.attendance.upsert({
                                     where: { userId_date: { userId: user.id, date: dateObj } },
                                     update: { status: 'PRESENT' },
                                     create: { userId: user.id, date: dateObj, status: 'PRESENT' }
                                 });
-                                // Create WorkLog for history
-                                await prisma.workLog.create({
-                                    data: {
-                                        userId: user.id,
-                                        date: dateObj,
-                                        tasks: "Historical Backfill",
-                                        hours: 8.5,
-                                        logStatus: 'CLOSED'
-                                    }
+                                // Create WorkLog for history if not exists
+                                const existingWorkLog = await prisma.workLog.findFirst({
+                                    where: { userId: user.id, date: dateObj }
                                 });
-                            }
-                        } else if (status === 'A' || status === 'ABSENT') {
-                            const dateObj = new Date(`2026-${dateStr.split(' ')[0]}-${dateStr.split(' ')[1]}`);
-                            if (!isNaN(dateObj.getTime())) {
+                                if (!existingWorkLog) {
+                                    await prisma.workLog.create({
+                                        data: {
+                                            userId: user.id,
+                                            date: dateObj,
+                                            tasks: "Historical Backfill",
+                                            hours: 8.5,
+                                            logStatus: 'CLOSED'
+                                        }
+                                    });
+                                }
+                            } else if (status === 'A' || status === 'ABSENT') {
                                 await prisma.attendance.upsert({
                                     where: { userId_date: { userId: user.id, date: dateObj } },
                                     update: { status: 'ABSENT' },
