@@ -28,6 +28,11 @@ const getAllEmployees = async (req, res) => {
                 designation: true,
                 lastWorkLogDate: true,
                 reportingBhId: true,
+                isGlobalAccess: true,
+                allocatedSalary: true,
+                salaryViewEnabled: true,
+                salaryDeductions: true,
+                salaryDeductionBreakdown: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -476,13 +481,19 @@ const createEmployee = async (req, res) => {
                 designation: newDesignation,
                 reportingBhId: req.body.reportingBhId ? parseInt(req.body.reportingBhId) : undefined,
                 isGlobalAccess: req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true',
-                allocatedSalary: req.body.allocatedSalary ? parseFloat(req.body.allocatedSalary) : 0
+                allocatedSalary: req.body.allocatedSalary ? parseFloat(req.body.allocatedSalary) : 0,
+                salaryViewEnabled: req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true',
+                salaryDeductions: req.body.salaryDeductions ? parseFloat(req.body.salaryDeductions) : 0,
+                salaryDeductionBreakdown: req.body.salaryDeductionBreakdown || []
             },
             select: {
                 id: true, name: true, email: true, role: true, status: true, designation: true, lastWorkLogDate: true,
                 reportingBhId: true,
                 isGlobalAccess: true,
                 allocatedSalary: true,
+                salaryViewEnabled: true,
+                salaryDeductions: true,
+                salaryDeductionBreakdown: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -810,7 +821,10 @@ const updateEmployee = async (req, res) => {
             role: role || undefined,
             reportingBhId: req.body.reportingBhId !== undefined ? (req.body.reportingBhId ? parseInt(req.body.reportingBhId) : null) : undefined,
             isGlobalAccess: req.body.isGlobalAccess !== undefined ? (req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true') : undefined,
-            allocatedSalary: req.body.allocatedSalary !== undefined ? parseFloat(req.body.allocatedSalary) : undefined
+            allocatedSalary: req.body.allocatedSalary !== undefined ? parseFloat(req.body.allocatedSalary) : undefined,
+            salaryViewEnabled: req.body.salaryViewEnabled !== undefined ? (req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true') : undefined,
+            salaryDeductions: req.body.salaryDeductions !== undefined ? parseFloat(req.body.salaryDeductions) : undefined,
+            salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined
         };
 
         // If password is provided, hash it and add to update data
@@ -822,7 +836,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true }
+            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
         });
         res.json(user);
     } catch (error) {

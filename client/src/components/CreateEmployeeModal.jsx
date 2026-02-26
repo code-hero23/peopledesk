@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createEmployee, updateEmployee, getAllEmployees } from '../features/admin/adminSlice';
 import { getBusinessHeads } from '../features/employee/employeeSlice';
+import { X, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
 
 const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
     const dispatch = useDispatch();
@@ -17,6 +18,9 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         reportingBhId: '',
         isGlobalAccess: false,
         allocatedSalary: 0,
+        salaryViewEnabled: false,
+        salaryDeductions: 0,
+        salaryDeductionBreakdown: [],
     });
 
     const [businessHeads, setBusinessHeads] = useState([]);
@@ -31,6 +35,14 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
 
     useEffect(() => {
         if (selectedEmployee) {
+            const normalizedBreakdown = (selectedEmployee.salaryDeductionBreakdown || []).map(item => ({
+                label: item.label || '',
+                amount: item.amount || 0,
+                isFixed: item.isFixed !== undefined ? item.isFixed : true,
+                month: item.month || new Date().getMonth() + 1,
+                year: item.year || new Date().getFullYear()
+            }));
+
             setFormData({
                 name: selectedEmployee.name,
                 email: selectedEmployee.email,
@@ -40,6 +52,9 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 reportingBhId: selectedEmployee.reportingBhId || '',
                 isGlobalAccess: selectedEmployee.isGlobalAccess || false,
                 allocatedSalary: selectedEmployee.allocatedSalary || 0,
+                salaryViewEnabled: selectedEmployee.salaryViewEnabled || false,
+                salaryDeductions: selectedEmployee.salaryDeductions || 0,
+                salaryDeductionBreakdown: normalizedBreakdown,
             });
         } else if (isAeManager) {
             setFormData((prev) => ({
@@ -119,15 +134,163 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                     </div>
 
                     {(user?.role === 'ADMIN' || user?.role === 'HR' || user?.role === 'BUSINESS_HEAD') && (
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1 font-bold text-blue-600">Allocated Monthly Salary (CTC)</label>
-                            <input
-                                type="number"
-                                placeholder="Enter monthly salary..."
-                                className="w-full px-4 py-2 rounded-lg border border-blue-200 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all font-mono"
-                                value={formData.allocatedSalary}
-                                onChange={(e) => setFormData({ ...formData, allocatedSalary: e.target.value })}
-                            />
+                        <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                            <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Financial Settings</h4>
+                            <div className="grid grid-cols-2 gap-4">
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Monthly Salary (CTC)</label>
+                                    <input
+                                        type="number"
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                                        value={formData.allocatedSalary}
+                                        onChange={(e) => setFormData({ ...formData, allocatedSalary: e.target.value })}
+                                    />
+                                </div>
+                                <div>
+                                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Fixed Deductions</label>
+                                    <input
+                                        type="number"
+                                        className="w-full px-3 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 outline-none text-sm font-mono"
+                                        value={formData.salaryDeductions}
+                                        onChange={(e) => setFormData({ ...formData, salaryDeductions: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-2 mt-4">
+                                <div className="flex justify-between items-center">
+                                    <label className="text-[10px] font-bold text-slate-500 uppercase">Deduction Breakdown</label>
+                                    <button
+                                        type="button"
+                                        onClick={() => setFormData({
+                                            ...formData,
+                                            salaryDeductionBreakdown: [
+                                                ...formData.salaryDeductionBreakdown,
+                                                { label: '', amount: 0, isFixed: true, month: new Date().getMonth() + 1, year: new Date().getFullYear() }
+                                            ]
+                                        })}
+                                        className="text-[10px] font-black text-blue-600 flex items-center gap-1 hover:text-blue-700 transition-colors"
+                                    >
+                                        <Plus size={10} /> ADD ROW
+                                    </button>
+                                </div>
+
+                                {formData.salaryDeductionBreakdown?.map((row, idx) => (
+                                    <div key={idx} className="space-y-2 p-3 bg-white rounded-xl border border-slate-200 animate-in fade-in slide-in-from-top-1 shadow-sm">
+                                        <div className="flex gap-2 items-center">
+                                            <input
+                                                type="text"
+                                                placeholder="Reason (e.g. PF, Tax)"
+                                                className="flex-1 px-3 py-1.5 rounded-lg border border-slate-200 text-xs outline-none focus:border-blue-400"
+                                                value={row.label}
+                                                onChange={(e) => {
+                                                    const newR = [...formData.salaryDeductionBreakdown];
+                                                    newR[idx] = { ...newR[idx], label: e.target.value };
+                                                    setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                }}
+                                            />
+                                            <input
+                                                type="number"
+                                                placeholder="Amount"
+                                                className="w-24 px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-mono outline-none focus:border-blue-400"
+                                                value={row.amount}
+                                                onChange={(e) => {
+                                                    const newR = [...formData.salaryDeductionBreakdown];
+                                                    newR[idx] = { ...newR[idx], amount: e.target.value };
+                                                    setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    const newR = formData.salaryDeductionBreakdown.filter((_, i) => i !== idx);
+                                                    setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                }}
+                                                className="p-1.5 text-slate-400 hover:text-red-500 transition-colors"
+                                            >
+                                                <Trash2 size={14} />
+                                            </button>
+                                        </div>
+
+                                        <div className="flex items-center gap-3">
+                                            <div className="flex bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newR = [...formData.salaryDeductionBreakdown];
+                                                        newR[idx] = { ...newR[idx], isFixed: true };
+                                                        setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                    }}
+                                                    className={`px-3 py-1 text-[9px] font-black rounded-md transition-all ${row.isFixed ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >
+                                                    FIXED
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const newR = [...formData.salaryDeductionBreakdown];
+                                                        newR[idx] = { ...newR[idx], isFixed: false };
+                                                        setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                    }}
+                                                    className={`px-3 py-1 text-[9px] font-black rounded-md transition-all ${!row.isFixed ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >
+                                                    MONTHLY
+                                                </button>
+                                            </div>
+
+                                            {!row.isFixed && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <select
+                                                        className="text-[10px] font-bold bg-white border border-slate-200 rounded-md px-2 py-1 outline-none"
+                                                        value={row.month}
+                                                        onChange={(e) => {
+                                                            const newR = [...formData.salaryDeductionBreakdown];
+                                                            newR[idx] = { ...newR[idx], month: parseInt(e.target.value) };
+                                                            setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                        }}
+                                                    >
+                                                        {['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'].map((m, i) => (
+                                                            <option key={i} value={i + 1}>{m}</option>
+                                                        ))}
+                                                    </select>
+                                                    <select
+                                                        className="text-[10px] font-bold bg-white border border-slate-200 rounded-md px-2 py-1 outline-none"
+                                                        value={row.year}
+                                                        onChange={(e) => {
+                                                            const newR = [...formData.salaryDeductionBreakdown];
+                                                            newR[idx] = { ...newR[idx], year: parseInt(e.target.value) };
+                                                            setFormData({ ...formData, salaryDeductionBreakdown: newR });
+                                                        }}
+                                                    >
+                                                        {[2024, 2025, 2026].map(y => (
+                                                            <option key={y} value={y}>{y}</option>
+                                                        ))}
+                                                    </select>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">💰</span>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-800">Enable Salary Dashboard</p>
+                                        <p className="text-[9px] text-slate-500">Employee can view their pay summary</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={formData.salaryViewEnabled}
+                                        onChange={(e) => setFormData({ ...formData, salaryViewEnabled: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
+                                </label>
+                            </div>
                         </div>
                     )}
 

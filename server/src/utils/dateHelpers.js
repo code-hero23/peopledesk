@@ -37,31 +37,74 @@ const getEndOfDayIST = (dateInput = new Date()) => {
     return endOfDayUTC;
 };
 
-const getCycleStartDateIST = (dateInput = new Date()) => {
-    const now = dateInput ? new Date(dateInput) : new Date();
+const getCycleStartDateIST = (dateInput = new Date(), yearParam, monthParam) => {
+    let year, month;
 
-    const istOffset = 5.5 * 60 * 60 * 1000;
-    const istTime = new Date(now.getTime() + istOffset);
+    if (yearParam !== undefined && monthParam !== undefined) {
+        year = parseInt(yearParam);
+        month = parseInt(monthParam); // 0-indexed internally
+    } else {
+        const now = dateInput ? new Date(dateInput) : new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istTime = new Date(now.getTime() + istOffset);
+        year = istTime.getUTCFullYear();
+        month = istTime.getUTCMonth();
+        const date = istTime.getUTCDate();
 
-    let year = istTime.getUTCFullYear();
-    let month = istTime.getUTCMonth();
-    const date = istTime.getUTCDate();
-
-    if (date < 26) {
-        month -= 1;
-        if (month < 0) {
-            month = 11;
-            year -= 1;
+        if (date < 26) {
+            month -= 1;
+            if (month < 0) {
+                month = 11;
+                year -= 1;
+            }
         }
     }
 
+    const istOffset = 5.5 * 60 * 60 * 1000;
     const cycleStartIST = new Date(Date.UTC(year, month, 26, 0, 0, 0, 0));
     return new Date(cycleStartIST.getTime() - istOffset);
 };
 
-const getCycleEndDateIST = (dateInput = new Date()) => {
-    const now = dateInput ? new Date(dateInput) : new Date();
+const getCycleEndDateIST = (dateInput = new Date(), yearParam, monthParam) => {
+    let year, month;
 
+    if (yearParam !== undefined && monthParam !== undefined) {
+        year = parseInt(yearParam);
+        month = parseInt(monthParam);
+    } else {
+        const now = dateInput ? new Date(dateInput) : new Date();
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const istTime = new Date(now.getTime() + istOffset);
+        year = istTime.getUTCFullYear();
+        month = istTime.getUTCMonth();
+        const date = istTime.getUTCDate();
+
+        if (date >= 26) {
+            month += 1;
+            if (month > 11) {
+                month = 0;
+                year += 1;
+            }
+        }
+    }
+
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    // End is 25th of the NEXT logical month relative to start
+    // If start was 26th Jan, end is 25th Feb.
+    let endMonth = month + 1;
+    let endYear = year;
+    if (endMonth > 11) {
+        endMonth = 0;
+        endYear += 1;
+    }
+
+    const cycleEndIST = new Date(Date.UTC(endYear, endMonth, 25, 23, 59, 59, 999));
+    return new Date(cycleEndIST.getTime() - istOffset);
+};
+
+// Helper to get the cycle that JUST finished (for default view)
+const getLatestCompletedCycle = () => {
+    const now = new Date();
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istTime = new Date(now.getTime() + istOffset);
 
@@ -69,21 +112,34 @@ const getCycleEndDateIST = (dateInput = new Date()) => {
     let month = istTime.getUTCMonth();
     const date = istTime.getUTCDate();
 
-    if (date >= 26) {
-        month += 1;
-        if (month > 11) {
-            month = 0;
-            year += 1;
-        }
+    // If today is Feb 26 or Feb 28, the "latest completed" is the one that ended Feb 25.
+    // If today is Feb 10, the "latest completed" is the one that ended Jan 25.
+
+    if (date < 26) {
+        // We are currently IN a cycle that hasn't finished. 
+        // Go back 2 months to get the start of the completed one.
+        // e.g. Feb 10 -> current scale is Jan 26 - Feb 25. 
+        // Completed one was Dec 26 - Jan 25.
+        month -= 2;
+    } else {
+        // Today is 26th or later. e.g. Feb 26.
+        // Current scale is Feb 26 - March 25.
+        // Completed one was Jan 26 - Feb 25.
+        month -= 1;
     }
 
-    const cycleEndIST = new Date(Date.UTC(year, month, 25, 23, 59, 59, 999));
-    return new Date(cycleEndIST.getTime() - istOffset);
+    if (month < 0) {
+        month += 12;
+        year -= 1;
+    }
+
+    return { year, month }; // Returns start anchor for getCycleStartDateIST
 };
 
 module.exports = {
     getStartOfDayIST,
     getEndOfDayIST,
     getCycleStartDateIST,
-    getCycleEndDateIST
+    getCycleEndDateIST,
+    getLatestCompletedCycle
 };

@@ -185,6 +185,7 @@ const ManageEmployees = () => {
                                 <th className="px-6 py-4">Employee Details</th>
                                 <th className="px-6 py-4">Designation</th>
                                 <th className="px-6 py-4">Reporting To</th>
+                                <th className="px-6 py-4 text-center">Salary Access</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -232,6 +233,18 @@ const ManageEmployees = () => {
                                         ) : (
                                             <div className="text-xs text-slate-400 italic">Not Assigned</div>
                                         )}
+                                    </td>
+                                    <td className="px-6 py-4 text-center">
+                                        <div className="flex flex-col items-center gap-1">
+                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${emp.salaryViewEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                                                {emp.salaryViewEnabled ? 'Dashboard ON' : 'Dashboard OFF'}
+                                            </span>
+                                            {emp.allocatedSalary > 0 && (
+                                                <span className="text-[10px] font-mono font-bold text-slate-500">
+                                                    ₹{emp.allocatedSalary.toLocaleString()}
+                                                </span>
+                                            )}
+                                        </div>
                                     </td>
                                     <td className="px-6 py-4 text-center">
                                         <span

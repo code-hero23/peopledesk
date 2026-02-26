@@ -4,6 +4,7 @@ import Login from './pages/Login';
 import Overview from './pages/employee/Overview';
 import MyWorkLogs from './pages/employee/MyWorkLogs';
 import MyRequests from './pages/employee/MyRequests';
+import MySalary from './pages/employee/MySalary';
 import AdminDashboard from './pages/AdminDashboard';
 import Approvals from './pages/admin/Approvals';
 import ManageEmployees from './pages/admin/ManageEmployees';
@@ -37,6 +38,7 @@ function App() {
                 <Route path="/dashboard" element={<Overview />} />
                 <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
                 <Route path="/dashboard/requests" element={<MyRequests />} />
+                <Route path="/dashboard/salary" element={<MySalary />} />
               </Route>
 
               {/* Admin Routes */}

@@ -16,6 +16,7 @@ import {
     ChevronLeft,
     ChevronRight,
     RefreshCw,
+    DollarSign,
     X
 } from 'lucide-react';
 
@@ -144,6 +145,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" exact />
                         <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                         <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
+                        <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
                     </>
                 )}
             </nav>
