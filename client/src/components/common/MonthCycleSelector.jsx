@@ -69,7 +69,7 @@ const MonthCycleSelector = ({ onCycleChange }) => {
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
             label: `${monthLabel} ${cycleYear}`,
-            subLabel: `${new Date(startDate).toLocaleDateString()} - ${new Date(endDate).toLocaleDateString()}`
+            subLabel: `${new Date(startYear, startMonth, 26).toLocaleDateString()} - ${new Date(endYear, endMonth, 25).toLocaleDateString()}`
         };
     };
 
