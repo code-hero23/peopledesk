@@ -44,12 +44,27 @@ const getAllEmployees = async (req, res) => {
 const getAllPendingRequests = async (req, res) => {
     try {
         const userRole = req.user.role;
-        const { date } = req.query;
+        const { date, startDate, endDate } = req.query;
 
         // Date filter logic
         let leaveDateFilter = {};
         let generalDateFilter = {};
-        if (date) {
+
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+
+            leaveDateFilter = {
+                startDate: { lte: end },
+                endDate: { gte: start }
+            };
+
+            generalDateFilter = {
+                date: { gte: start, lte: end }
+            };
+        } else if (date) {
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);
@@ -161,12 +176,27 @@ const getRequestHistory = async (req, res) => {
     try {
         const userRole = req.user.role;
         const userId = req.user.id;
-        const { date } = req.query;
+        const { date, startDate, endDate } = req.query;
 
         // Date filter logic
         let leaveDateFilter = {};
         let generalDateFilter = {};
-        if (date) {
+
+        if (startDate && endDate) {
+            const start = new Date(startDate);
+            start.setHours(0, 0, 0, 0);
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+
+            leaveDateFilter = {
+                startDate: { lte: end },
+                endDate: { gte: start }
+            };
+
+            generalDateFilter = {
+                date: { gte: start, lte: end }
+            };
+        } else if (date) {
             const startOfDay = new Date(date);
             startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(date);

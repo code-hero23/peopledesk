@@ -37,4 +37,53 @@ const getEndOfDayIST = (dateInput = new Date()) => {
     return endOfDayUTC;
 };
 
-module.exports = { getStartOfDayIST, getEndOfDayIST };
+const getCycleStartDateIST = (dateInput = new Date()) => {
+    const now = dateInput ? new Date(dateInput) : new Date();
+
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(now.getTime() + istOffset);
+
+    let year = istTime.getUTCFullYear();
+    let month = istTime.getUTCMonth();
+    const date = istTime.getUTCDate();
+
+    if (date < 26) {
+        month -= 1;
+        if (month < 0) {
+            month = 11;
+            year -= 1;
+        }
+    }
+
+    const cycleStartIST = new Date(Date.UTC(year, month, 26, 0, 0, 0, 0));
+    return new Date(cycleStartIST.getTime() - istOffset);
+};
+
+const getCycleEndDateIST = (dateInput = new Date()) => {
+    const now = dateInput ? new Date(dateInput) : new Date();
+
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(now.getTime() + istOffset);
+
+    let year = istTime.getUTCFullYear();
+    let month = istTime.getUTCMonth();
+    const date = istTime.getUTCDate();
+
+    if (date >= 26) {
+        month += 1;
+        if (month > 11) {
+            month = 0;
+            year += 1;
+        }
+    }
+
+    const cycleEndIST = new Date(Date.UTC(year, month, 25, 23, 59, 59, 999));
+    return new Date(cycleEndIST.getTime() - istOffset);
+};
+
+module.exports = {
+    getStartOfDayIST,
+    getEndOfDayIST,
+    getCycleStartDateIST,
+    getCycleEndDateIST
+};

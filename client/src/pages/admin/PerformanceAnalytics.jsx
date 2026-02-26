@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getTeamOverview, getEmployeeStats, reset } from '../../features/analytics/analyticsSlice';
 import { TrendingUp, Users, Clock, AlertTriangle, Calendar, Search, ArrowRight, Award, BarChart3, LineChart as LineIcon, Download, Crown } from 'lucide-react';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import axios from 'axios';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -51,26 +52,17 @@ const PerformanceAnalytics = () => {
     const dispatch = useDispatch();
     const { teamOverview, employeeStats, isLoading } = useSelector((state) => state.analytics);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
-    const [dateRange, setDateRange] = useState(() => {
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth();
-        const currentDate = today.getDate();
-
-        let start, end;
-        if (currentDate >= 26) {
-            start = new Date(currentYear, currentMonth, 26);
-            end = new Date(currentYear, currentMonth + 1, 25);
-        } else {
-            start = new Date(currentYear, currentMonth - 1, 26);
-            end = new Date(currentYear, currentMonth, 25);
-        }
-
-        return {
-            startDate: start.toISOString().split('T')[0],
-            endDate: end.toISOString().split('T')[0],
-        };
+    const [dateRange, setDateRange] = useState({
+        startDate: '',
+        endDate: '',
     });
+
+    const handleCycleChange = (range) => {
+        setDateRange({
+            startDate: range.startDate,
+            endDate: range.endDate
+        });
+    };
 
     const [activeTab, setActiveTab] = useState('leaderboard');
     const [searchTerm, setSearchTerm] = useState('');
@@ -148,36 +140,11 @@ const PerformanceAnalytics = () => {
                 </div>
 
                 <div className="relative z-10 flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-[16px] border border-slate-200/60 shadow-inner">
-                        <div className="flex items-center gap-2 pl-2">
-                            <Calendar size={14} className="text-blue-600" />
-                            <div className="flex flex-col">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter">Start Date</span>
-                                <input
-                                    type="date"
-                                    className="text-[10px] font-black bg-transparent outline-none text-slate-700 w-20 cursor-pointer"
-                                    value={dateRange.startDate}
-                                    onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                        <div className="h-6 w-px bg-slate-200"></div>
-                        <div className="flex items-center gap-2 pr-2">
-                            <div className="flex flex-col text-right">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-tighter text-right">End Date</span>
-                                <input
-                                    type="date"
-                                    className="text-[10px] font-black bg-transparent outline-none text-slate-700 w-20 text-right cursor-pointer"
-                                    value={dateRange.endDate}
-                                    onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                                />
-                            </div>
-                        </div>
-                    </div>
+                    <MonthCycleSelector onCycleChange={handleCycleChange} />
 
                     <button
                         onClick={handleDownload}
-                        className="group flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-600 text-white px-5 py-2.5 rounded-[16px] shadow-lg hover:shadow-blue-200 transition-all duration-300 font-black text-[10px] active:scale-95"
+                        className="group flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-600 text-white px-5 py-3 rounded-[16px] shadow-lg hover:shadow-blue-200 transition-all duration-300 font-black text-[10px] active:scale-95"
                     >
                         <Download size={14} className="group-hover:animate-bounce" />
                         <span>Export</span>

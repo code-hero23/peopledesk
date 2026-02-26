@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance } from '../../features/employee/employeeSlice';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
 import LAWorkLogForm from '../../components/worklogs/LAWorkLogForm'; // Detailed (LA)
 import CREWorkLogForm from '../../components/worklogs/CREWorkLogForm';
@@ -48,10 +48,18 @@ const Overview = () => {
 
     useEffect(() => {
         dispatch(getAttendanceStatus());
-        dispatch(getMyWorkLogs());
-        dispatch(getMyRequests());
+        // Initial getMyWorkLogs and getMyRequests handled by MonthCycleSelector
         return () => { dispatch(reset()); };
     }, [dispatch]);
+
+    const handleCycleChange = (range) => {
+        const params = {
+            startDate: range.startDate,
+            endDate: range.endDate
+        };
+        dispatch(getMyWorkLogs(params));
+        dispatch(getMyRequests(params));
+    };
 
     const checkLatenessAndRedirect = (checkInTimeRaw, isAuto = false) => {
         // Exempt AE (Area Engineers) from this restriction
@@ -392,7 +400,6 @@ const Overview = () => {
                 confirmText={confirmationConfig.confirmText}
             />
 
-            {/* Header */}
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
@@ -405,10 +412,7 @@ const Overview = () => {
                     </h2>
                     <p className="text-slate-500">Ready to make today count?</p>
                 </div>
-                <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-slate-200 text-sm font-medium text-slate-600 flex items-center gap-2">
-                    <span>📅</span>
-                    {new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
-                </div>
+                <MonthCycleSelector onCycleChange={handleCycleChange} />
             </div>
 
             {/* Main Action Grid */}

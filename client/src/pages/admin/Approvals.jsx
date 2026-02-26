@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
 import { Download, Calendar, X, AlertTriangle } from 'lucide-react';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import axios from 'axios';
 import { formatDate } from '../../utils/dateUtils';
 
@@ -14,17 +15,26 @@ const Approvals = () => {
     );
     const [activeTab, setActiveTab] = useState('pending'); // 'pending' or 'history'
     const [bhView, setBhView] = useState('mine'); // 'mine' or 'others' — Global BH only
-    const [filterDate, setFilterDate] = useState(''); // '' means all
+    const [filterDate, setFilterDate] = useState(''); // Specific date if picked
+    const [cycleRange, setCycleRange] = useState({ startDate: '', endDate: '' });
+
+    const handleCycleChange = (range) => {
+        setCycleRange(range);
+        // Default to fetching for the whole cycle range
+        // If we want to support specific date filtering within cycle, we keep filterDate
+    };
 
     useEffect(() => {
+        const params = filterDate ? { date: filterDate } : { startDate: cycleRange.startDate, endDate: cycleRange.endDate };
+
         if (activeTab === 'pending') {
-            dispatch(getPendingRequests(filterDate));
+            dispatch(getPendingRequests(params));
         } else {
-            dispatch(getRequestHistory(filterDate));
+            dispatch(getRequestHistory(params));
         }
 
         return () => { dispatch(reset()); };
-    }, [dispatch, activeTab, filterDate]);
+    }, [dispatch, activeTab, filterDate, cycleRange]);
 
     const onUpdateStatus = (type, id, status) => {
         if (window.confirm(`Confirm ${status} action?`)) {
@@ -243,6 +253,8 @@ const Approvals = () => {
                         <Download size={18} />
                         <span className="hidden sm:inline">Export Requests</span>
                     </button>
+
+                    <MonthCycleSelector onCycleChange={handleCycleChange} />
 
                     <div className="relative flex items-center group gap-2">
                         <motion.button

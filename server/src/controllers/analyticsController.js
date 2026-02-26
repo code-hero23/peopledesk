@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // Helper to format minutes to "Xh Ym"
 const formatMinutes = (minutes) => {
@@ -29,22 +30,8 @@ const getEmployeeStats = async (req, res) => {
         const { id } = req.params;
         const { startDate, endDate } = req.query;
 
-        const today = new Date();
-        const currentYear = today.getFullYear();
-        const currentMonth = today.getMonth();
-        const currentDate = today.getDate();
-
-        let defaultStart, defaultEnd;
-
-        if (currentDate >= 26) {
-            // Cycle: 26th of current month to 25th of next month
-            defaultStart = new Date(currentYear, currentMonth, 26);
-            defaultEnd = new Date(currentYear, currentMonth + 1, 25, 23, 59, 59);
-        } else {
-            // Cycle: 26th of previous month to 25th of current month
-            defaultStart = new Date(currentYear, currentMonth - 1, 26);
-            defaultEnd = new Date(currentYear, currentMonth, 25, 23, 59, 59);
-        }
+        const defaultStart = getCycleStartDateIST();
+        const defaultEnd = getCycleEndDateIST();
 
         const start = startDate ? new Date(startDate) : defaultStart;
         const end = endDate ? new Date(endDate) : defaultEnd;
@@ -148,8 +135,8 @@ const getEmployeeStats = async (req, res) => {
 const getTeamOverview = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        const start = startDate ? new Date(startDate) : new Date(new Date().getFullYear(), new Date().getMonth(), 1);
-        const end = endDate ? new Date(endDate) : new Date();
+        const start = startDate ? new Date(startDate) : getCycleStartDateIST();
+        const end = endDate ? new Date(endDate) : getCycleEndDateIST();
 
         const employees = await prisma.user.findMany({
             where: { role: 'EMPLOYEE', status: 'ACTIVE' },

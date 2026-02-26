@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // @desc    Get all Business Heads
 // @route   GET /api/requests/business-heads
@@ -38,15 +39,13 @@ const createLeaveRequest = async (req, res) => {
             return res.status(400).json({ message: 'End date cannot be before start date' });
         }
 
-        // Check for 4+ LEAVE DAYS this month (The 5th day will be flagged)
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        // Check for 4+ LEAVE DAYS this month (using custom cycle: 26th to 25th)
+        const cycleStart = getCycleStartDateIST();
 
         const monthlyLeaves = await prisma.leaveRequest.findMany({
             where: {
                 userId,
-                startDate: { gte: startOfMonth }
+                startDate: { gte: cycleStart }
             }
         });
 
@@ -95,13 +94,11 @@ const createPermissionRequest = async (req, res) => {
     try {
         const userId = req.user.id;
 
-        // Check for 4+ PERMISSION requests this month (The 5th will be flagged)
-        const startOfMonth = new Date();
-        startOfMonth.setDate(1);
-        startOfMonth.setHours(0, 0, 0, 0);
+        // Check for 4+ PERMISSION requests this month (using custom cycle: 26th to 25th)
+        const cycleStart = getCycleStartDateIST();
 
         const permCount = await prisma.permissionRequest.count({
-            where: { userId, createdAt: { gte: startOfMonth } }
+            where: { userId, createdAt: { gte: cycleStart } }
         });
 
         // Check if a permission already exists for this date
@@ -210,24 +207,47 @@ const createShowroomVisitRequest = async (req, res) => {
 const getMyRequests = async (req, res) => {
     try {
         const userId = req.user.id;
+        const { startDate, endDate } = req.query;
+
+        let start, end;
+        if (startDate && endDate) {
+            start = new Date(startDate);
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            start = getCycleStartDateIST();
+            end = getCycleEndDateIST();
+        }
 
         const leaves = await prisma.leaveRequest.findMany({
-            where: { userId },
+            where: {
+                userId,
+                createdAt: { gte: start, lte: end }
+            },
             orderBy: { createdAt: 'desc' },
         });
 
         const permissions = await prisma.permissionRequest.findMany({
-            where: { userId },
+            where: {
+                userId,
+                createdAt: { gte: start, lte: end }
+            },
             orderBy: { createdAt: 'desc' },
         });
 
         const siteVisits = await prisma.siteVisitRequest.findMany({
-            where: { userId },
+            where: {
+                userId,
+                createdAt: { gte: start, lte: end }
+            },
             orderBy: { createdAt: 'desc' },
         });
 
         const showroomVisits = await prisma.showroomVisitRequest.findMany({
-            where: { userId },
+            where: {
+                userId,
+                createdAt: { gte: start, lte: end }
+            },
             orderBy: { createdAt: 'desc' },
         });
 

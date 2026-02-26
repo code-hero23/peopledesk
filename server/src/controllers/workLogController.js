@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // @desc    Submit a daily work log
 // @route   POST /api/worklogs
@@ -356,11 +357,27 @@ const addProjectReport = async (req, res) => {
 const getMyWorkLogs = async (req, res) => {
     try {
         const userId = req.user.id;
+        const { startDate, endDate } = req.query;
+
+        let start, end;
+        if (startDate && endDate) {
+            start = new Date(startDate);
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            start = getCycleStartDateIST();
+            end = getCycleEndDateIST();
+        }
 
         const logs = await prisma.workLog.findMany({
-            where: { userId },
-            orderBy: { date: 'desc' },
-            take: 30, // Limit to last 30 entries
+            where: {
+                userId,
+                date: {
+                    gte: start,
+                    lte: end
+                }
+            },
+            orderBy: { date: 'desc' }
         });
 
         res.json(logs);

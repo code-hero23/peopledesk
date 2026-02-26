@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getMyWorkLogs, reset } from '../../features/employee/employeeSlice';
 import { Eye } from 'lucide-react';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 
 const MyWorkLogs = () => {
     const dispatch = useDispatch();
@@ -14,9 +15,16 @@ const MyWorkLogs = () => {
     const [isModalOpen, setIsModalOpen] = useState(false);
 
     useEffect(() => {
-        dispatch(getMyWorkLogs());
+        // Initial fetch handled by CycleSelector on mount
         return () => { dispatch(reset()); };
     }, [dispatch]);
+
+    const handleCycleChange = (range) => {
+        dispatch(getMyWorkLogs({
+            startDate: range.startDate,
+            endDate: range.endDate
+        }));
+    };
 
     const handleViewDetails = (log) => {
         setSelectedLog(log);
@@ -32,11 +40,12 @@ const MyWorkLogs = () => {
 
     return (
         <div className="space-y-6 animate-fade-in pb-20">
-            <div className="flex justify-between items-center">
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800">My Work Reports</h2>
                     <p className="text-slate-500">History of your daily submitted reports.</p>
                 </div>
+                <MonthCycleSelector onCycleChange={handleCycleChange} />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

@@ -2,21 +2,32 @@ import { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getMyRequests, reset } from '../../features/employee/employeeSlice';
 import { formatDate } from '../../utils/dateUtils';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 
 const MyRequests = () => {
     const dispatch = useDispatch();
     const { requests } = useSelector((state) => state.employee);
 
     useEffect(() => {
-        dispatch(getMyRequests());
+        // Initial fetch handled by CycleSelector
         return () => { dispatch(reset()); };
     }, [dispatch]);
 
+    const handleCycleChange = (range) => {
+        dispatch(getMyRequests({
+            startDate: range.startDate,
+            endDate: range.endDate
+        }));
+    };
+
     return (
         <div className="space-y-8 animate-fade-in pb-20">
-            <div>
-                <h2 className="text-3xl font-bold text-slate-800">My Requests</h2>
-                <p className="text-slate-500">History of your leave and permission requests.</p>
+            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <h2 className="text-3xl font-bold text-slate-800">My Requests</h2>
+                    <p className="text-slate-500">History of your leave and permission requests.</p>
+                </div>
+                <MonthCycleSelector onCycleChange={handleCycleChange} />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">

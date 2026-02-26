@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const XLSX = require('xlsx');
 const prisma = new PrismaClient();
+const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // Helper to safely parse JSON
 const safeParse = (data) => {
@@ -73,8 +74,14 @@ const exportWorkLogs = async (req, res) => {
             startDate = new Date(d.setHours(0, 0, 0, 0));
             endDate = new Date(d.setHours(23, 59, 59, 999));
         } else if (month && year) {
-            startDate = new Date(year, month - 1, 1);
-            endDate = new Date(year, month, 0, 23, 59, 59, 999);
+            // Use standard cycle: 26th of (month-1) to 25th of month
+            // We adjust for Date.UTC/New Date month indices
+            startDate = new Date(year, month - 2, 26, 0, 0, 0);
+            endDate = new Date(year, month - 1, 25, 23, 59, 59, 999);
+        } else {
+            // Default to current cycle if no filters provided
+            startDate = getCycleStartDateIST();
+            endDate = getCycleEndDateIST();
         }
 
         if (startDate && endDate) {
@@ -343,10 +350,16 @@ const exportAttendance = async (req, res) => {
             const d = new Date(date);
             attendanceWhere.date = { gte: new Date(d.setHours(0, 0, 0, 0)), lte: new Date(d.setHours(23, 59, 59, 999)) };
         } else if (month && year) {
-            // Payroll Cycle: 26th of previous month to 25th of current month
-            const startDate = new Date(year, month - 2, 26, 0, 0, 0); // 1 month back (0-indexed adjustment), 26th day
-            const endDate = new Date(year, month - 1, 25, 23, 59, 59); // Selected month (0-indexed adjustment), 25th day
+            // Payroll Cycle: 26th of (month-1) to 25th of month
+            startDate = new Date(year, month - 2, 26, 0, 0, 0);
+            endDate = new Date(year, month - 1, 25, 23, 59, 59);
             attendanceWhere.date = { gte: startDate, lte: endDate };
+        } else {
+            // Default to current cycle
+            attendanceWhere.date = {
+                gte: getCycleStartDateIST(),
+                lte: getCycleEndDateIST()
+            };
         }
 
         if (userId) {
@@ -611,14 +624,8 @@ const exportPerformanceAnalytics = async (req, res) => {
         const currentMonth = today.getMonth();
         const currentDate = today.getDate();
 
-        let defaultStart, defaultEnd;
-        if (currentDate >= 26) {
-            defaultStart = new Date(currentYear, currentMonth, 26);
-            defaultEnd = new Date(currentYear, currentMonth + 1, 25, 23, 59, 59);
-        } else {
-            defaultStart = new Date(currentYear, currentMonth - 1, 26);
-            defaultEnd = new Date(currentYear, currentMonth, 25, 23, 59, 59);
-        }
+        const defaultStart = getCycleStartDateIST();
+        const defaultEnd = getCycleEndDateIST();
 
         const start = startDate ? new Date(startDate) : defaultStart;
         const end = endDate ? new Date(endDate) : defaultEnd;

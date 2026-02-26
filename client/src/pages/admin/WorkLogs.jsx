@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
 import { Calendar, Download, Eye, Search } from 'lucide-react';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
@@ -10,9 +11,14 @@ const WorkLogs = () => {
     const { user } = useSelector((state) => state.auth);
     const { dailyWorkLogs, employees, isLoading, isError, message } = useSelector((state) => state.admin);
 
-    // Default to today's date formatted as YYYY-MM-DD
-    const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
-    const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
+    // Date Range handled by CycleSelector
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
+    const handleCycleChange = (range) => {
+        setStartDate(range.startDate.split('T')[0]);
+        setEndDate(range.endDate.split('T')[0]);
+    };
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDesignation, setSelectedDesignation] = useState('');
 
@@ -241,35 +247,7 @@ const WorkLogs = () => {
                         <option value="ESCALATION">Escalation</option>
                         <option value="CLIENT-FACILITATOR">Client Facilitator</option>
                     </select>
-                    <button onClick={onExportDaily} className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-2 border border-blue-500/20">
-                        <Download size={14} />
-                        <span>EXPORT RANGE</span>
-                    </button>
-                    <button onClick={onExportMonth} className="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-2 rounded-lg font-bold text-[11px] shadow-sm transition-all flex items-center gap-2 border border-emerald-500/20">
-                        <Download size={14} />
-                        <span>MONTHLY EXCEL</span>
-                    </button>
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg p-1">
-                        <div className="relative">
-                            <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 w-3 h-3" />
-                            <input
-                                type="date"
-                                value={startDate}
-                                onChange={(e) => setStartDate(e.target.value)}
-                                className="pl-7 pr-2 py-1 text-xs focus:outline-none text-slate-600 font-medium border-none"
-                            />
-                        </div>
-                        <span className="text-slate-400 pt-1">→</span>
-                        <div className="relative">
-                            <Calendar className="absolute left-2 top-1/2 transform -translate-y-1/2 text-slate-400 w-3 h-3" />
-                            <input
-                                type="date"
-                                value={endDate}
-                                onChange={(e) => setEndDate(e.target.value)}
-                                className="pl-7 pr-2 py-1 text-xs focus:outline-none text-slate-600 font-medium border-none"
-                            />
-                        </div>
-                    </div>
+                    <MonthCycleSelector onCycleChange={handleCycleChange} />
                 </div>
             </div>
 

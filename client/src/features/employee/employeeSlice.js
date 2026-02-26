@@ -156,13 +156,14 @@ export const getTodayLogStatus = createAsyncThunk(
 // Get my work logs
 export const getMyWorkLogs = createAsyncThunk(
     'employee/getMyWorkLogs',
-    async (_, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
+                params: params || {}
             };
             const response = await axios.get(API_URL + 'worklogs', config);
             return response.data;
@@ -324,13 +325,14 @@ export const createShowroomVisitRequest = createAsyncThunk(
 // Get My Requests
 export const getMyRequests = createAsyncThunk(
     'employee/getMyRequests',
-    async (_, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
                 headers: {
                     Authorization: `Bearer ${token}`,
                 },
+                params: params || {}
             };
             const response = await axios.get(API_URL + 'requests', config);
             return response.data;

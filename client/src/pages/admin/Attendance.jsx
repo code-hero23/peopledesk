@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
 import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils } from 'lucide-react';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 
@@ -54,6 +55,11 @@ const Attendance = () => {
     });
 
     const [searchTerm, setSearchTerm] = useState('');
+    const [cycleRange, setCycleRange] = useState({ startDate: '', endDate: '' });
+
+    const handleCycleChange = (range) => {
+        setCycleRange(range);
+    };
 
     // Filter attendance records based on search
     const filteredAttendance = dailyAttendance.filter((record) => {
@@ -150,7 +156,7 @@ const Attendance = () => {
                 responseType: 'blob',
             };
 
-            const dateObj = new Date(selectedDate);
+            const dateObj = new Date(cycleRange.endDate);
             const month = dateObj.getMonth() + 1;
             const year = dateObj.getFullYear();
 
@@ -190,7 +196,7 @@ const Attendance = () => {
                 responseType: 'blob',
             };
 
-            const dateObj = new Date(selectedDate);
+            const dateObj = new Date(cycleRange.endDate);
             const month = dateObj.getMonth() + 1;
             const year = dateObj.getFullYear();
 
@@ -251,6 +257,7 @@ const Attendance = () => {
                             <Zap size={16} /> Payroll Report
                         </button>
                     )}
+                    <MonthCycleSelector onCycleChange={handleCycleChange} />
                     <div className="relative">
                         <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
                         <input

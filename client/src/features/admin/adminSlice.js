@@ -137,7 +137,7 @@ export const getDailyWorkLogs = createAsyncThunk(
 // Get Pending Requests
 export const getPendingRequests = createAsyncThunk(
     'admin/getPendingRequests',
-    async (date, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
@@ -145,7 +145,21 @@ export const getPendingRequests = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const query = date ? `?date=${date}` : '';
+
+            let query = '';
+            if (params) {
+                if (typeof params === 'string') {
+                    query = `?date=${params}`;
+                } else {
+                    const { date, startDate, endDate } = params;
+                    if (startDate && endDate) {
+                        query = `?startDate=${startDate}&endDate=${endDate}`;
+                    } else if (date) {
+                        query = `?date=${date}`;
+                    }
+                }
+            }
+
             const response = await axios.get(API_URL + `requests/pending${query}`, config);
             return response.data;
         } catch (error) {
@@ -161,7 +175,7 @@ export const getPendingRequests = createAsyncThunk(
 // Get Request History
 export const getRequestHistory = createAsyncThunk(
     'admin/getRequestHistory',
-    async (date, thunkAPI) => {
+    async (params, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
@@ -169,7 +183,21 @@ export const getRequestHistory = createAsyncThunk(
                     Authorization: `Bearer ${token}`,
                 },
             };
-            const query = date ? `?date=${date}` : '';
+
+            let query = '';
+            if (params) {
+                if (typeof params === 'string') {
+                    query = `?date=${params}`;
+                } else {
+                    const { date, startDate, endDate } = params;
+                    if (startDate && endDate) {
+                        query = `?startDate=${startDate}&endDate=${endDate}`;
+                    } else if (date) {
+                        query = `?date=${date}`;
+                    }
+                }
+            }
+
             const response = await axios.get(API_URL + `requests/history${query}`, config);
             return response.data;
         } catch (error) {
