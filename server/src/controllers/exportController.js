@@ -773,4 +773,141 @@ const exportEmployees = async (req, res) => {
     }
 };
 
-module.exports = { exportWorkLogs, exportAttendance, exportRequests, exportPerformanceAnalytics, exportEmployees };
+// @desc    Export Incentive & Productivity Scorecard
+// @route   GET /api/export/incentives
+// @access  Private (Admin/HR/BH)
+const exportIncentiveScorecard = async (req, res) => {
+    try {
+        const { startDate, endDate } = req.query;
+        const defaultStart = getCycleStartDateIST();
+        const defaultEnd = getCycleEndDateIST();
+
+        const start = startDate ? new Date(startDate) : defaultStart;
+        const end = endDate ? new Date(endDate) : defaultEnd;
+
+        const employees = await prisma.user.findMany({
+            where: {
+                role: 'EMPLOYEE',
+                status: 'ACTIVE',
+                id: req.query.userId ? parseInt(req.query.userId) : undefined
+            },
+            select: { id: true, name: true, email: true, designation: true }
+        });
+
+        const scorecards = await Promise.all(employees.map(async (emp) => {
+            const [attendance, workLogs] = await Promise.all([
+                prisma.attendance.findMany({
+                    where: { userId: emp.id, date: { gte: start, lte: end } }
+                }),
+                prisma.workLog.findMany({
+                    where: { userId: emp.id, date: { gte: start, lte: end } }
+                })
+            ]);
+
+            const daysPresent = attendance.length;
+            const daysWithLogs = new Set(workLogs.map(log => log.date ? new Date(log.date).toISOString().split('T')[0] : null).filter(Boolean)).size;
+
+            // Metrics Aggregation
+            const metrics = {
+                totalHours: 0,
+                // CRE metrics
+                cre_calls: 0,
+                cre_visits: 0,
+                cre_quotes: 0,
+                cre_orders: 0,
+                // FA metrics
+                fa_siteVisits: 0,
+                fa_showroomVisits: 0,
+                fa_onlineDiscussions: 0,
+                fa_bookings: 0,
+                // LA metrics
+                la_images: 0,
+                la_freezes: 0,
+                // AE metrics
+                ae_tasks: 0,
+                ae_installs: 0
+            };
+
+            workLogs.forEach(log => {
+                metrics.totalHours += (log.hours || 0);
+
+                // CRE
+                metrics.cre_calls += (log.cre_totalCalls || 0);
+                metrics.cre_visits += (log.cre_showroomVisits || 0);
+                metrics.cre_quotes += (log.cre_fqSent || 0);
+                metrics.cre_orders += (log.cre_orders || 0);
+
+                // FA
+                metrics.fa_siteVisits += (log.fa_siteVisits || 0);
+                metrics.fa_showroomVisits += (log.fa_showroomVisits || 0);
+                metrics.fa_onlineDiscussions += (log.fa_onlineDiscussion || 0);
+                metrics.fa_bookings += (log.fa_bookingFreezed || 0);
+
+                // LA
+                metrics.la_images += (log.completedImages || 0);
+                if (log.la_freezingAmount) metrics.la_freezes += 1;
+
+                // AE
+                if (log.ae_tasksCompleted) {
+                    try {
+                        const tasks = typeof log.ae_tasksCompleted === 'string' ? JSON.parse(log.ae_tasksCompleted) : log.ae_tasksCompleted;
+                        if (Array.isArray(tasks)) metrics.ae_tasks += tasks.length;
+                        else if (tasks) metrics.ae_tasks += 1;
+                    } catch (e) { }
+                }
+                metrics.ae_installs += (log.ae_itemsInstalled ? (typeof log.ae_itemsInstalled === 'number' ? log.ae_itemsInstalled : 1) : 0);
+            });
+
+            const consistency = daysPresent > 0 ? Math.round((daysWithLogs / daysPresent) * 100) : 0;
+
+            // Role-specific display
+            let primaryMetric = '-';
+            if (emp.designation === 'CRE') primaryMetric = `Calls: ${metrics.cre_calls} | Orders: ${metrics.cre_orders}`;
+            else if (emp.designation === 'FA') primaryMetric = `Visits: ${metrics.fa_siteVisits + metrics.fa_showroomVisits} | Bookings: ${metrics.fa_bookings}`;
+            else if (emp.designation === 'LA') primaryMetric = `Images: ${metrics.la_images} | Project Freezing: ${metrics.la_freezes}`;
+            else if (emp.designation === 'AE') primaryMetric = `Tasks: ${metrics.ae_tasks} | Installs: ${metrics.ae_installs}`;
+
+            return {
+                Employee: emp.name,
+                Email: emp.email,
+                Designation: emp.designation,
+                'Days Worked': daysPresent,
+                'Logs Submitted': daysWithLogs,
+                'Consistency Score %': consistency,
+                'Total Working Hours': metrics.totalHours.toFixed(1),
+                'Primary Output': primaryMetric,
+                // Breakdown columns for easy filtering
+                'CRE: Calls': metrics.cre_calls || '-',
+                'CRE: Quotes': metrics.cre_quotes || '-',
+                'CRE: Orders': metrics.cre_orders || '-',
+                'FA: Site Visits': metrics.fa_siteVisits || '-',
+                'FA: Bookings': metrics.fa_bookings || '-',
+                'LA: Completed Images': metrics.la_images || '-',
+                'AE: Tasks Completed': metrics.ae_tasks || '-',
+                'AE: Items Installed': metrics.ae_installs || '-'
+            };
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(scorecards);
+        ws['!cols'] = setAutoWidth(scorecards);
+        XLSX.utils.book_append_sheet(wb, ws, "Incentive_Scorecard");
+
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment(`incentive_scorecard_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.xlsx`);
+        res.send(buf);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
+module.exports = {
+    exportWorkLogs,
+    exportAttendance,
+    exportRequests,
+    exportPerformanceAnalytics,
+    exportEmployees,
+    exportIncentiveScorecard
+};

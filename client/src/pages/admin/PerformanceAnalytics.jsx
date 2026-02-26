@@ -94,7 +94,7 @@ const PerformanceAnalytics = () => {
     const handleDownload = async () => {
         try {
             const token = JSON.parse(localStorage.getItem('user')).token;
-            const response = await axios.get(`http://localhost:5000/api/export/analytics`, {
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/export/analytics`, {
                 params: { ...dateRange, userId: selectedEmployee },
                 headers: { Authorization: `Bearer ${token}` },
                 responseType: 'blob'
@@ -110,6 +110,28 @@ const PerformanceAnalytics = () => {
         } catch (error) {
             console.error('Download failed', error);
             alert('Failed to download report');
+        }
+    };
+
+    const handleIncentiveDownload = async () => {
+        try {
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/export/incentives`, {
+                params: { ...dateRange },
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Incentive_Scorecard_${dateRange.startDate}_to_${dateRange.endDate}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Incentive download failed', error);
+            alert('Failed to download incentive report');
         }
     };
 
@@ -143,11 +165,19 @@ const PerformanceAnalytics = () => {
                     <MonthCycleSelector onCycleChange={handleCycleChange} />
 
                     <button
+                        onClick={handleIncentiveDownload}
+                        className="group flex items-center justify-center gap-2 bg-rose-600 hover:bg-rose-700 text-white px-5 py-3 rounded-[16px] shadow-lg hover:shadow-rose-200 transition-all duration-300 font-black text-[10px] active:scale-95"
+                    >
+                        <BarChart3 size={14} className="group-hover:scale-110" />
+                        <span>Incentive Scorecard</span>
+                    </button>
+
+                    <button
                         onClick={handleDownload}
                         className="group flex items-center justify-center gap-2 bg-slate-900 hover:bg-blue-600 text-white px-5 py-3 rounded-[16px] shadow-lg hover:shadow-blue-200 transition-all duration-300 font-black text-[10px] active:scale-95"
                     >
                         <Download size={14} className="group-hover:animate-bounce" />
-                        <span>Export</span>
+                        <span>Export Team</span>
                     </button>
                 </div>
             </div>
