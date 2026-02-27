@@ -8,7 +8,7 @@ echo "🛠️ Updating Server & Database..."
 cd server
 npm install
 npx prisma generate
-npx prisma db push --accept-data-loss
+npx prisma migrate deploy
 pm2 restart all
 cd ..
 

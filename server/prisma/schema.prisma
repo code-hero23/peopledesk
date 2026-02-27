@@ -9,34 +9,34 @@ datasource db {
 }
 
 model User {
-  id                    Int                    @id @default(autoincrement())
-  email                 String                 @unique
-  password              String
-  name                  String
-  role                  Role                   @default(EMPLOYEE)
-  status                Status                 @default(ACTIVE)
-  lastWorkLogDate       DateTime?
-  createdAt             DateTime               @default(now())
-  updatedAt             DateTime               @updatedAt
-  designation           String                 @default("LA")
-   reportingBhId        Int?
-   reportingBh          User?                  @relation("ReportingLink", fields: [reportingBhId], references: [id])
-   isGlobalAccess       Boolean                @default(false)
-   allocatedSalary      Float?                 @default(0)
-   salaryViewEnabled    Boolean                @default(false)
-   salaryDeductions     Float?                 @default(0)
-   salaryDeductionBreakdown Json?              @default("[]")
-   timeShortageDeductionEnabled Boolean       @default(true)
-   subordinates         User[]                 @relation("ReportingLink")
-  attendance            Attendance[]
-  leaveRequests         LeaveRequest[]
-  loginAccessRequests   LoginAccessRequest[]
-  permissionRequests    PermissionRequest[]
-  managedProjects       Project[]
-  showroomVisitRequests ShowroomVisitRequest[]
-  siteVisitRequests     SiteVisitRequest[]
-  workLogs              WorkLog[]
-  announcements         Announcement[]         @relation("AuthorAnnouncements")
+  id                           Int                    @id @default(autoincrement())
+  email                        String                 @unique
+  password                     String
+  name                         String
+  role                         Role                   @default(EMPLOYEE)
+  status                       Status                 @default(ACTIVE)
+  lastWorkLogDate              DateTime?
+  createdAt                    DateTime               @default(now())
+  updatedAt                    DateTime               @updatedAt
+  designation                  String                 @default("LA")
+  reportingBhId                Int?
+  allocatedSalary              Float?                 @default(0)
+  isGlobalAccess               Boolean                @default(false)
+  salaryDeductions             Float?                 @default(0)
+  salaryViewEnabled            Boolean                @default(false)
+  salaryDeductionBreakdown     Json?                  @default("[]")
+  timeShortageDeductionEnabled Boolean                @default(true)
+  announcements                Announcement[]         @relation("AuthorAnnouncements")
+  attendance                   Attendance[]
+  leaveRequests                LeaveRequest[]
+  loginAccessRequests          LoginAccessRequest[]
+  permissionRequests           PermissionRequest[]
+  managedProjects              Project[]
+  showroomVisitRequests        ShowroomVisitRequest[]
+  siteVisitRequests            SiteVisitRequest[]
+  reportingBh                  User?                  @relation("ReportingLink", fields: [reportingBhId], references: [id])
+  subordinates                 User[]                 @relation("ReportingLink")
+  workLogs                     WorkLog[]
 }
 
 model SiteVisitRequest {
@@ -74,20 +74,20 @@ model ShowroomVisitRequest {
 }
 
 model Attendance {
-  id            Int       @id @default(autoincrement())
-  userId        Int
-  date          DateTime  @default(now())
-  status        String    @default("PRESENT")
-  createdAt     DateTime  @default(now())
-  checkInPhoto  String?
-  checkoutPhoto String?
-  checkoutTime  DateTime?
-  deviceInfo    String?
-  ipAddress     String?
+  id                 Int        @id @default(autoincrement())
+  userId             Int
+  date               DateTime   @default(now())
+  status             String     @default("PRESENT")
+  createdAt          DateTime   @default(now())
+  checkInPhoto       String?
+  checkoutPhoto      String?
+  checkoutTime       DateTime?
+  deviceInfo         String?
+  ipAddress          String?
   checkoutDeviceInfo String?
   checkoutIpAddress  String?
-  breaks        BreakLog[]
-  user          User      @relation(fields: [userId], references: [id])
+  user               User       @relation(fields: [userId], references: [id])
+  breaks             BreakLog[]
 
   @@unique([userId, date])
 }
@@ -98,7 +98,7 @@ model BreakLog {
   breakType    BreakType
   startTime    DateTime   @default(now())
   endTime      DateTime?
-  duration     Int?       // Duration in minutes
+  duration     Int?
   attendance   Attendance @relation(fields: [attendanceId], references: [id])
 }
 
@@ -191,48 +191,48 @@ model WorkLog {
   la_closing_metrics         Json?
   la_opening_metrics         Json?
   la_project_reports         Json?
-  fa_project_reports         Json?
-  ae_project_reports         Json?
   ae_closing_metrics         Json?
   ae_opening_metrics         Json?
+  ae_project_reports         Json?
   notes                      String?
+  fa_project_reports         Json?
   project                    Project?  @relation(fields: [projectId], references: [id])
   user                       User      @relation(fields: [userId], references: [id])
 }
 
 model LeaveRequest {
-  id         Int           @id @default(autoincrement())
-  userId     Int
-  type       LeaveType
-  startDate  DateTime
-  endDate    DateTime
-  reason     String
-  status     RequestStatus @default(PENDING)
-  approvedBy Int?
-  createdAt  DateTime      @default(now())
-  bhId       Int?
-  bhStatus   RequestStatus @default(PENDING)
-  hrId       Int?
-  hrStatus   RequestStatus @default(PENDING)
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  type            LeaveType
+  startDate       DateTime
+  endDate         DateTime
+  reason          String
+  status          RequestStatus @default(PENDING)
+  approvedBy      Int?
+  createdAt       DateTime      @default(now())
+  bhId            Int?
+  bhStatus        RequestStatus @default(PENDING)
+  hrId            Int?
+  hrStatus        RequestStatus @default(PENDING)
   targetBhId      Int?
   isExceededLimit Boolean       @default(false)
   user            User          @relation(fields: [userId], references: [id])
 }
 
 model PermissionRequest {
-  id         Int           @id @default(autoincrement())
-  userId     Int
-  date       DateTime
-  startTime  String
-  endTime    String
-  reason     String
-  status     RequestStatus @default(PENDING)
-  approvedBy Int?
-  createdAt  DateTime      @default(now())
-  bhId       Int?
-  bhStatus   RequestStatus @default(PENDING)
-  hrId       Int?
-  hrStatus   RequestStatus @default(PENDING)
+  id              Int           @id @default(autoincrement())
+  userId          Int
+  date            DateTime
+  startTime       String
+  endTime         String
+  reason          String
+  status          RequestStatus @default(PENDING)
+  approvedBy      Int?
+  createdAt       DateTime      @default(now())
+  bhId            Int?
+  bhStatus        RequestStatus @default(PENDING)
+  hrId            Int?
+  hrStatus        RequestStatus @default(PENDING)
   targetBhId      Int?
   isExceededLimit Boolean       @default(false)
   user            User          @relation(fields: [userId], references: [id])
@@ -290,33 +290,39 @@ model AuditLog {
 }
 
 model PopupConfig {
-  id        Int      @id @default(autoincrement())
+  id        Int       @id @default(autoincrement())
   imageUrl  String
   quote     String
   author    String
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @default(now()) @updatedAt
+  isActive  Boolean   @default(true)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @default(now()) @updatedAt
   type      PopupType @default(INSPIRATIONAL)
+}
+
+model Announcement {
+  id        Int              @id @default(autoincrement())
+  title     String
+  content   String
+  type      AnnouncementType @default(INFO)
+  priority  Priority         @default(LOW)
+  isActive  Boolean          @default(true)
+  expiresAt DateTime?
+  authorId  Int
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  author    User             @relation("AuthorAnnouncements", fields: [authorId], references: [id])
+}
+
+model GlobalSetting {
+  id    Int    @id @default(autoincrement())
+  key   String @unique
+  value String
 }
 
 enum PopupType {
   INSPIRATIONAL
   BIRTHDAY
-}
-
-model Announcement {
-  id        Int      @id @default(autoincrement())
-  title     String
-  content   String   @db.Text
-  type      AnnouncementType @default(INFO)
-  priority  Priority @default(LOW)
-  isActive  Boolean  @default(true)
-  expiresAt DateTime?
-  authorId  Int
-  author    User     @relation("AuthorAnnouncements", fields: [authorId], references: [id])
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
 }
 
 enum AnnouncementType {
@@ -370,10 +376,4 @@ enum BreakType {
   LUNCH
   CLIENT_MEETING
   BH_MEETING
-}
-
-model GlobalSetting {
-  id    Int     @id @default(autoincrement())
-  key   String  @unique
-  value String
 }
