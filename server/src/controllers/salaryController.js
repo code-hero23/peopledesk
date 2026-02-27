@@ -17,7 +17,8 @@ const getMySalarySummary = async (req, res) => {
                 salaryViewEnabled: true,
                 salaryDeductions: true,
                 salaryDeductionBreakdown: true,
-                designation: true
+                designation: true,
+                timeShortageDeductionEnabled: true
             }
         });
 
@@ -112,11 +113,19 @@ const getMySalarySummary = async (req, res) => {
         let shortageDeduction = 0;
         let shortageHours = 0;
 
-        // Fetch Global Setting
-        const globalShortageSetting = await prisma.globalSetting.findUnique({
-            where: { key: 'isGlobalShortageDeductionEnabled' }
-        });
-        const isGlobalEnabled = globalShortageSetting ? globalShortageSetting.value === 'true' : true;
+        // Fetch Global Setting (Safe fetch)
+        let isGlobalEnabled = true;
+        try {
+            const globalShortageSetting = await prisma.globalSetting.findUnique({
+                where: { key: 'isGlobalShortageDeductionEnabled' }
+            });
+            if (globalShortageSetting) {
+                isGlobalEnabled = globalShortageSetting.value === 'true';
+            }
+        } catch (dbError) {
+            console.error('Global settings table missing or inaccessible:', dbError.message);
+            // Default to enabled if table doesn't exist yet to maintain existing behavior
+        }
 
         if (isGlobalEnabled && user.timeShortageDeductionEnabled) {
             const expectedHours = presentDays * 8;

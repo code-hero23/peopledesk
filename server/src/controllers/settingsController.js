@@ -13,8 +13,9 @@ const getSettings = async (req, res) => {
         }, {});
         res.json(settingsMap);
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.error('Settings table error:', error.message);
+        // If table doesn't exist, return empty object so UI doesn't crash
+        res.json({});
     }
 };
 
