@@ -112,6 +112,8 @@ const getMySalarySummary = async (req, res) => {
         // B. Time Shortage Deduction (respect global and individual toggle)
         let shortageDeduction = 0;
         let shortageHours = 0;
+        let expectedHours = 0;
+        let permissionCreditHours = 0;
 
         // Fetch Global Setting (Safe fetch)
         let isGlobalEnabled = true;
@@ -128,15 +130,12 @@ const getMySalarySummary = async (req, res) => {
         }
 
         if (isGlobalEnabled && user.timeShortageDeductionEnabled) {
-            const expectedHours = presentDays * 8;
+            expectedHours = presentDays * 8;
             const creditedPermissionCount = Math.min(approvedPermissions, 4); // Max 4 perms allowed
-            const permissionCreditHours = creditedPermissionCount * 2;
+            permissionCreditHours = creditedPermissionCount * 2;
             shortageHours = Math.max(0, expectedHours - permissionCreditHours - actualWorkingHours);
             shortageDeduction = shortageHours * (allocated / 240);
         }
-        // If disabled, shortageHours remains 0 and deduction is 0
-        // Duplicate shortage deduction logic removed – handled by conditional block above
-        // Duplicate shortage deduction logic removed – handled by conditional block above
 
 
 
