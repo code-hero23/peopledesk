@@ -8,8 +8,8 @@ const initialState = {
     workLogs: [],
     dailyWorkLogs: [],
     dailyAttendance: [],
-    pendingRequests: { leaves: [], permissions: [] },
-    requestHistory: { leaves: [], permissions: [] },
+    pendingRequests: { leaves: [], permissions: [], wfh: [] },
+    requestHistory: { leaves: [], permissions: [], wfh: [] },
     isLoading: false,
     isError: false,
     isSuccess: false,
@@ -209,8 +209,45 @@ export const getRequestHistory = createAsyncThunk(
         }
     }
 );
+// Get Manageable WFH Requests
+export const getManageableWfhRequests = createAsyncThunk(
+    'admin/getManageableWfhRequests',
+    async (_, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.get((import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/wfh/manage', config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
 
-
+// Approve WFH Request
+export const approveWfhRequest = createAsyncThunk(
+    'admin/approveWfhRequest',
+    async ({ id, status, remarks }, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.put(
+                (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + `/wfh/${id}/approve`,
+                { status, remarks },
+                config
+            );
+            return response.data;
+        } catch (error) {
+            const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
 
 // Update request status
 export const updateRequestStatus = createAsyncThunk(
@@ -380,7 +417,7 @@ export const adminSlice = createSlice({
             })
             .addCase(getPendingRequests.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.pendingRequests = action.payload;
+                state.pendingRequests = { ...state.pendingRequests, ...action.payload };
             })
             .addCase(getPendingRequests.rejected, (state, action) => {
                 state.isLoading = false;
@@ -492,6 +529,33 @@ export const adminSlice = createSlice({
                 state.message = 'Request deleted';
             })
             .addCase(deleteRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Get Manageable WFH
+            .addCase(getManageableWfhRequests.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getManageableWfhRequests.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.pendingRequests.wfh = action.payload;
+            })
+            .addCase(getManageableWfhRequests.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Approve WFH
+            .addCase(approveWfhRequest.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(approveWfhRequest.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.pendingRequests.wfh = state.pendingRequests.wfh.filter(req => req.id !== action.payload.id);
+            })
+            .addCase(approveWfhRequest.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

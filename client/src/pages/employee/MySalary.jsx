@@ -140,7 +140,7 @@ const MySalary = () => {
                 </div>
 
                 {error && (() => {
-                    const isCycleCompleted = error.toLowerCase().includes('cycle is comleted') || error.toLowerCase().includes('next month cycle');
+                    const isCycleCompleted = error.toLowerCase().includes('cycle is completed') || error.toLowerCase().includes('next month cycle');
                     if (isCycleCompleted) {
                         return (
                             <div className="p-10 bg-emerald-50 border border-emerald-100 rounded-[40px] text-center shadow-xl shadow-emerald-100/20 animate-fade-in">

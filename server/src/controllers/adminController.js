@@ -34,6 +34,7 @@ const getAllEmployees = async (req, res) => {
                 salaryDeductions: true,
                 salaryDeductionBreakdown: true,
                 timeShortageDeductionEnabled: true,
+                wfhViewEnabled: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -836,7 +837,8 @@ const updateEmployee = async (req, res) => {
             salaryViewEnabled: req.body.salaryViewEnabled !== undefined ? (req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true') : undefined,
             salaryDeductions: req.body.salaryDeductions !== undefined ? parseFloat(req.body.salaryDeductions) : undefined,
             salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined,
-            timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined
+            timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined,
+            wfhViewEnabled: req.body.wfhViewEnabled !== undefined ? (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true') : undefined
         };
 
         // If password is provided, hash it and add to update data
@@ -848,7 +850,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
+            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
         });
         res.json(user);
     } catch (error) {

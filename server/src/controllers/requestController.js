@@ -301,9 +301,16 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
-        // Combine and sort or return separately. Returning object with both arrays is cleaner.
-        // Combine and sort or return separately. Returning object with both arrays is cleaner.
-        res.json({ leaves, permissions, siteVisits, showroomVisits });
+        const wfh = await prisma.wfhRequest.findMany({
+            where: {
+                userId,
+                startDate: { gte: start, lte: end }
+            },
+            orderBy: { createdAt: 'desc' },
+        });
+
+        // Combine and sort or return separately. Returning object with all arrays is cleaner.
+        res.json({ leaves, permissions, siteVisits, showroomVisits, wfh });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

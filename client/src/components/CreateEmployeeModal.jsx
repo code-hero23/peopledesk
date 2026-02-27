@@ -22,6 +22,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         timeShortageDeductionEnabled: true,
         salaryDeductions: 0,
         salaryDeductionBreakdown: [],
+        wfhViewEnabled: false,
     });
 
     const [businessHeads, setBusinessHeads] = useState([]);
@@ -57,6 +58,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 timeShortageDeductionEnabled: selectedEmployee.timeShortageDeductionEnabled !== undefined ? selectedEmployee.timeShortageDeductionEnabled : true,
                 salaryDeductions: selectedEmployee.salaryDeductions || 0,
                 salaryDeductionBreakdown: normalizedBreakdown,
+                wfhViewEnabled: selectedEmployee.wfhViewEnabled || false,
             });
         } else if (isAeManager) {
             setFormData((prev) => ({
@@ -308,6 +310,25 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                         className="sr-only peer"
                                         checked={formData.timeShortageDeductionEnabled}
                                         onChange={(e) => setFormData({ ...formData, timeShortageDeductionEnabled: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
+                                </label>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">🏡</span>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-800">Allow WFH Request</p>
+                                        <p className="text-[9px] text-slate-500">Enable 8-section WFH application form</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={formData.wfhViewEnabled}
+                                        onChange={(e) => setFormData({ ...formData, wfhViewEnabled: e.target.checked })}
                                     />
                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
                                 </label>

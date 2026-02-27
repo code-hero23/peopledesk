@@ -177,6 +177,37 @@ const MyRequests = () => {
                     </div>
                 </div>
             </div>
+
+            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="p-6">
+                    <h3 className="font-bold text-lg text-slate-700 mb-4">WFH Requests</h3>
+                    <div className="space-y-4">
+                        {requests.wfh?.map(req => (
+                            <div key={req.id} className="p-4 rounded-lg border border-slate-100 flex justify-between items-center bg-slate-50 hover:bg-white hover:border-blue-100 transition-colors">
+                                <div>
+                                    <p className="font-bold text-slate-800 flex items-center gap-2">
+                                        {formatDate(req.startDate)} {req.startDate !== req.endDate ? `- ${formatDate(req.endDate)}` : ''}
+                                        <span className="text-[10px] bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full border border-slate-200 font-semibold">
+                                            Applied: {formatDate(req.createdAt)}
+                                        </span>
+                                    </p>
+                                    <p className="text-sm text-slate-500">{req.wfhDays} Day(s)</p>
+                                    <p className="text-xs text-slate-400 mt-1 italic">"{req.realReason}"</p>
+                                </div>
+                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                    req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                    }`}>
+                                    {req.status === 'APPROVED' ? 'APPROVED' :
+                                        req.status === 'REJECTED' ? 'REJECTED' :
+                                            req.bhStatus === 'PENDING' ? 'Wait for BH' :
+                                                req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
+                                </span>
+                            </div>
+                        ))}
+                        {(!requests.wfh || requests.wfh.length === 0) && <p className="text-slate-400 italic text-center">No WFH requests found.</p>}
+                    </div>
+                </div>
+            </div>
         </div>
     );
 };

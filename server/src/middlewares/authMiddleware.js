@@ -16,7 +16,7 @@ const protect = async (req, res, next) => {
 
             req.user = await prisma.user.findUnique({
                 where: { id: decoded.id },
-                select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true },
+                select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, wfhViewEnabled: true },
             });
 
             if (!req.user) {
@@ -40,7 +40,7 @@ const protect = async (req, res, next) => {
 
             req.user = await prisma.user.findUnique({
                 where: { id: decoded.id },
-                select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true },
+                select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, wfhViewEnabled: true },
             });
 
             if (!req.user) {

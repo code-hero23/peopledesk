@@ -16,6 +16,8 @@ import PopupManagement from './pages/admin/PopupManagement';
 import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import AnnouncementManagement from './pages/admin/AnnouncementManagement';
 import SalarySettings from './pages/admin/SalarySettings';
+import WFHRequestForm from './pages/employee/WFHRequestForm';
+import WFHManagement from './pages/admin/WFHManagement';
 import Layout from './components/MainLayout';
 import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
@@ -40,6 +42,7 @@ function App() {
                 <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
                 <Route path="/dashboard/requests" element={<MyRequests />} />
                 <Route path="/dashboard/salary" element={<MySalary />} />
+                <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
               </Route>
 
               {/* Admin Routes */}
@@ -54,6 +57,7 @@ function App() {
               <Route path="/admin/analytics" element={<PerformanceAnalytics />} />
               <Route path="/admin/announcements" element={<AnnouncementManagement />} />
               <Route path="/admin/salary-settings" element={<SalarySettings />} />
+              <Route path="/admin/wfh" element={<WFHManagement />} />
             </Route>
 
             {/* Smart Root Redirect */}

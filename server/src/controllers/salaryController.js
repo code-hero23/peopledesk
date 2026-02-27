@@ -23,7 +23,7 @@ const getMySalarySummary = async (req, res) => {
         });
 
         if (!user.salaryViewEnabled) {
-            return res.status(200).json({ message: 'This month cycle is comleted wait for next month cycle' });
+            return res.status(200).json({ message: 'This month cycle is completed wait for next month cycle' });
         }
 
         let start, end;

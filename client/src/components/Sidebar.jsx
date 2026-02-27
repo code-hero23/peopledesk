@@ -17,6 +17,7 @@ import {
     ChevronRight,
     RefreshCw,
     DollarSign,
+    Home,
     X
 } from 'lucide-react';
 
@@ -125,6 +126,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
                         )}
 
+                        {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                            <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" />
+                        )}
+
                         <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
                         <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
 
@@ -150,6 +155,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                         <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                         <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
+                        {user?.wfhViewEnabled && (
+                            <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
+                        )}
                     </>
                 )}
             </nav>

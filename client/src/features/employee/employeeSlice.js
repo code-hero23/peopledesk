@@ -6,7 +6,7 @@ const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 const initialState = {
     attendance: null,
     workLogs: [],
-    requests: { leaves: [], permissions: [], siteVisits: [], showroomVisits: [] },
+    requests: { leaves: [], permissions: [], siteVisits: [], showroomVisits: [], wfh: [] },
     businessHeads: [],
     isLoading: false,
     isError: false,
@@ -302,6 +302,42 @@ export const createSiteVisitRequest = createAsyncThunk(
     }
 );
 
+// Create WFH Request
+export const createWfhRequest = createAsyncThunk(
+    'employee/createWfhRequest',
+    async (requestData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.post(API_URL + 'wfh', requestData, config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Get My WFH Requests
+export const getMyWfhRequests = createAsyncThunk(
+    'employee/getMyWfhRequests',
+    async (_, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.get(API_URL + 'wfh/me', config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Create Showroom Visit Request
 export const createShowroomVisitRequest = createAsyncThunk(
     'employee/createShowroomVisitRequest',
@@ -559,7 +595,10 @@ export const employeeSlice = createSlice({
             })
             .addCase(getMyRequests.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.requests = action.payload;
+                state.requests = {
+                    ...action.payload,
+                    wfh: state.requests?.wfh || []
+                };
                 state.isRequestsFetched = true;
             })
             .addCase(getMyRequests.rejected, (state, action) => {
@@ -593,6 +632,36 @@ export const employeeSlice = createSlice({
                 state.requests.showroomVisits.unshift(action.payload);
             })
             .addCase(createShowroomVisitRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Create WFH
+            .addCase(createWfhRequest.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(createWfhRequest.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                if (!state.requests.wfh) {
+                    state.requests.wfh = [];
+                }
+                state.requests.wfh.unshift(action.payload);
+            })
+            .addCase(createWfhRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Get WFH
+            .addCase(getMyWfhRequests.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getMyWfhRequests.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.requests.wfh = action.payload;
+            })
+            .addCase(getMyWfhRequests.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

@@ -76,6 +76,7 @@ app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/payroll', require('./routes/payrollRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
+app.use('/api/wfh', require('./routes/wfhRoutes'));
 
 
 app.get('/', (req, res) => {
