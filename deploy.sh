@@ -8,8 +8,7 @@ echo "🛠️ Updating Server & Database..."
 cd server
 npm install
 npx prisma generate
-node scripts/generate_vps_sql.js
-psql -f prisma/migrations/vps_sync_migration.sql
+npx prisma db push --accept-data-loss
 pm2 restart all
 cd ..
 

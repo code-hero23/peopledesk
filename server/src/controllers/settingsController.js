@@ -37,7 +37,13 @@ const updateSetting = async (req, res) => {
         });
         res.json(setting);
     } catch (error) {
-        console.error(error);
+        console.error('Settings update error:', error.message);
+        if (error.code === 'P2021' || error.message.includes('does not exist')) {
+            return res.status(400).json({
+                message: 'System Settings table not found. Please run ./deploy.sh on the VPS to sync the database.',
+                syncRequired: true
+            });
+        }
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
