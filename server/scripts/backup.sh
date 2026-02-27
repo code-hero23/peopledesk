@@ -5,8 +5,8 @@
 # ==========================================
 
 # --- Configuration ---
-BACKUP_DIR="/root/peopledesk_backups"  # Where to save backups on VPS
-PROJECT_DIR="/root/peopledesk/server"  # Path to your server folder on VPS
+BACKUP_DIR="/home/deploy/peopledesk_backups"  # Where to save backups on VPS
+PROJECT_DIR="/home/deploy/PeopleDesk-app/peopledesk/server"  # Path to your server folder on VPS
 DB_USER="postgres"
 DB_NAME="peopledesk"
 RETENTION_DAYS=7                       # Keep backups for 7 days
@@ -28,8 +28,8 @@ mkdir -p "$TARGET_PATH"
 
 # 2. Dump Database
 echo "📦 Dumping Database..."
-# Use PGPASSWORD if needed, or rely on .pgpass / ident
-pg_dump -U "$DB_USER" "$DB_NAME" > "$TARGET_PATH/database.sql"
+# Use sudo -u postgres to avoid password prompts if configured, or use .pgpass
+sudo -u postgres pg_dump "$DB_NAME" > "$TARGET_PATH/database.sql"
 
 # 3. Copy Uploads (Images)
 echo "📸 Copying Uploads..."
