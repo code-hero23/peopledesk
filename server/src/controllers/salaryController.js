@@ -108,12 +108,29 @@ const getMySalarySummary = async (req, res) => {
         const lopDays = Math.max(0, absentDays - 4);
         const absenteeismDeduction = lopDays * (allocated / 30);
 
-        // B. Time Shortage Deduction
-        const expectedHours = presentDays * 8;
-        const creditedPermissionCount = Math.min(approvedPermissions, 4); // Max 4 perms allowed
-        const permissionCreditHours = creditedPermissionCount * 2;
-        const shortageHours = Math.max(0, expectedHours - permissionCreditHours - actualWorkingHours);
-        const shortageDeduction = shortageHours * (allocated / 240);
+        // B. Time Shortage Deduction (respect global and individual toggle)
+        let shortageDeduction = 0;
+        let shortageHours = 0;
+
+        // Fetch Global Setting
+        const globalShortageSetting = await prisma.globalSetting.findUnique({
+            where: { key: 'isGlobalShortageDeductionEnabled' }
+        });
+        const isGlobalEnabled = globalShortageSetting ? globalShortageSetting.value === 'true' : true;
+
+        if (isGlobalEnabled && user.timeShortageDeductionEnabled) {
+            const expectedHours = presentDays * 8;
+            const creditedPermissionCount = Math.min(approvedPermissions, 4); // Max 4 perms allowed
+            const permissionCreditHours = creditedPermissionCount * 2;
+            shortageHours = Math.max(0, expectedHours - permissionCreditHours - actualWorkingHours);
+            shortageDeduction = shortageHours * (allocated / 240);
+        }
+        // If disabled, shortageHours remains 0 and deduction is 0
+        // Duplicate shortage deduction logic removed – handled by conditional block above
+        // Duplicate shortage deduction logic removed – handled by conditional block above
+
+
+
 
         // Final Payout
         const onHandSalary = Math.max(0, allocated - absenteeismDeduction - shortageDeduction - manualDeductions);

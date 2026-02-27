@@ -1,4 +1,4 @@
-Name,Email,Role,Designation,CTC,Deduction 1 Name,Deduction 1 Amount,Jan 30,Feb 01,Feb 02,Feb 03,Feb 04,Feb 05
-John Doe,john@example.com,EMPLOYEE,SOFTWARE ENGINEER,50000,PF,1800,P,P,P,P,A,P
-Jane Smith,jane@example.com,EMPLOYEE,LA,35000,Health Insurance,1200,P,P,P,P,P,P
-Bob Johnson,bob@example.com,EMPLOYEE,LA,30000,,,A,A,A,A,A,A
+Name,Email,Role,Designation,CTC,Deduction 1 Name,Deduction 1 Amount,Jan 30,Feb 13,Feb 14,Feb 15
+John Doe,john@example.com,EMPLOYEE,SOFTWARE ENGINEER,50000,PF,1800,P,P,P,P
+Jane Smith,jane@example.com,EMPLOYEE,LA,35000,Health Insurance,1200,P,P,P,P
+Bob Johnson,bob@example.com,EMPLOYEE,LA,30000,,,A,P,A,A

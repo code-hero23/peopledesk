@@ -19,6 +19,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         isGlobalAccess: false,
         allocatedSalary: 0,
         salaryViewEnabled: false,
+        timeShortageDeductionEnabled: true,
         salaryDeductions: 0,
         salaryDeductionBreakdown: [],
     });
@@ -53,6 +54,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 isGlobalAccess: selectedEmployee.isGlobalAccess || false,
                 allocatedSalary: selectedEmployee.allocatedSalary || 0,
                 salaryViewEnabled: selectedEmployee.salaryViewEnabled || false,
+                timeShortageDeductionEnabled: selectedEmployee.timeShortageDeductionEnabled !== undefined ? selectedEmployee.timeShortageDeductionEnabled : true,
                 salaryDeductions: selectedEmployee.salaryDeductions || 0,
                 salaryDeductionBreakdown: normalizedBreakdown,
             });
@@ -287,6 +289,25 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                         className="sr-only peer"
                                         checked={formData.salaryViewEnabled}
                                         onChange={(e) => setFormData({ ...formData, salaryViewEnabled: e.target.checked })}
+                                    />
+                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
+                                </label>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-lg">⏳</span>
+                                    <div>
+                                        <p className="text-xs font-bold text-slate-800">Apply Time Shortage Deduction</p>
+                                        <p className="text-[9px] text-slate-500">Calculate deduction for missing hours</p>
+                                    </div>
+                                </div>
+                                <label className="relative inline-flex items-center cursor-pointer">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={formData.timeShortageDeductionEnabled}
+                                        onChange={(e) => setFormData({ ...formData, timeShortageDeductionEnabled: e.target.checked })}
                                     />
                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
                                 </label>

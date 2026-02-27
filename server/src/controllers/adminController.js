@@ -33,6 +33,7 @@ const getAllEmployees = async (req, res) => {
                 salaryViewEnabled: true,
                 salaryDeductions: true,
                 salaryDeductionBreakdown: true,
+                timeShortageDeductionEnabled: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -483,6 +484,7 @@ const createEmployee = async (req, res) => {
                 isGlobalAccess: req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true',
                 allocatedSalary: req.body.allocatedSalary ? parseFloat(req.body.allocatedSalary) : 0,
                 salaryViewEnabled: req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true',
+                timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : true,
                 salaryDeductions: req.body.salaryDeductions ? parseFloat(req.body.salaryDeductions) : 0,
                 salaryDeductionBreakdown: req.body.salaryDeductionBreakdown || []
             },
@@ -492,6 +494,7 @@ const createEmployee = async (req, res) => {
                 isGlobalAccess: true,
                 allocatedSalary: true,
                 salaryViewEnabled: true,
+                timeShortageDeductionEnabled: true,
                 salaryDeductions: true,
                 salaryDeductionBreakdown: true,
                 reportingBh: { select: { name: true } }
@@ -832,7 +835,8 @@ const updateEmployee = async (req, res) => {
             allocatedSalary: req.body.allocatedSalary !== undefined ? parseFloat(req.body.allocatedSalary) : undefined,
             salaryViewEnabled: req.body.salaryViewEnabled !== undefined ? (req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true') : undefined,
             salaryDeductions: req.body.salaryDeductions !== undefined ? parseFloat(req.body.salaryDeductions) : undefined,
-            salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined
+            salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined,
+            timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined
         };
 
         // If password is provided, hash it and add to update data
@@ -844,7 +848,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
+            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
         });
         res.json(user);
     } catch (error) {
@@ -947,6 +951,10 @@ const importEmployees = async (req, res) => {
             const designation = (row['Designation'] || row['designation'] || 'LA').toUpperCase();
             const ctc = parseFloat(row['CTC'] || row['Salary'] || row['salary'] || 0);
 
+            // Check for Time Shortage Deduction flag (YES/NO)
+            const tsdVal = (row['Time Shortage Deduction'] || row['time shortage deduction'])?.toString().trim().toUpperCase();
+            const timeShortageDeductionEnabled = tsdVal === 'NO' || tsdVal === 'FALSE' ? false : true;
+
             if (!name || !email) {
                 results.failed++;
                 results.errors.push(`Row ${index + 2}: Missing Name or Email`);
@@ -978,7 +986,8 @@ const importEmployees = async (req, res) => {
                     designation,
                     allocatedSalary: ctc > 0 ? ctc : undefined,
                     salaryDeductionBreakdown: deductionBreakdown.length > 0 ? deductionBreakdown : undefined,
-                    salaryViewEnabled: true
+                    salaryViewEnabled: true,
+                    timeShortageDeductionEnabled: timeShortageDeductionEnabled
                 };
 
                 if (user) {

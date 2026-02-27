@@ -26,6 +26,7 @@ model User {
    salaryViewEnabled    Boolean                @default(false)
    salaryDeductions     Float?                 @default(0)
    salaryDeductionBreakdown Json?              @default("[]")
+   timeShortageDeductionEnabled Boolean       @default(true)
    subordinates         User[]                 @relation("ReportingLink")
   attendance            Attendance[]
   leaveRequests         LeaveRequest[]
@@ -369,4 +370,10 @@ enum BreakType {
   LUNCH
   CLIENT_MEETING
   BH_MEETING
+}
+
+model GlobalSetting {
+  id    Int     @id @default(autoincrement())
+  key   String  @unique
+  value String
 }

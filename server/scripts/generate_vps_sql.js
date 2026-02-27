@@ -82,6 +82,7 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "allocatedSalary" DOUBLE PRECISION D
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryViewEnabled" BOOLEAN NOT NULL DEFAULT false;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryDeductions" DOUBLE PRECISION DEFAULT 0;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryDeductionBreakdown" JSONB DEFAULT '[]';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "timeShortageDeductionEnabled" BOOLEAN DEFAULT true;
 
 -- Foreign Key for User reportingBhId
 DO $$ BEGIN
@@ -215,6 +216,13 @@ CREATE TABLE IF NOT EXISTS "ShowroomVisitRequest" (
     "hrStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING',
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE IF NOT EXISTS "GlobalSetting" (
+    "id" SERIAL PRIMARY KEY,
+    "key" TEXT UNIQUE NOT NULL,
+    "value" TEXT NOT NULL
+);
+
 
 `;
 

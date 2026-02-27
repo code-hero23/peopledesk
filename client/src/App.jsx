@@ -15,6 +15,7 @@ import VisitRequests from './pages/admin/VisitRequests';
 import PopupManagement from './pages/admin/PopupManagement';
 import PerformanceAnalytics from './pages/admin/PerformanceAnalytics';
 import AnnouncementManagement from './pages/admin/AnnouncementManagement';
+import SalarySettings from './pages/admin/SalarySettings';
 import Layout from './components/MainLayout';
 import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
@@ -52,6 +53,7 @@ function App() {
               <Route path="/admin/popup-management" element={<PopupManagement />} />
               <Route path="/admin/analytics" element={<PerformanceAnalytics />} />
               <Route path="/admin/announcements" element={<AnnouncementManagement />} />
+              <Route path="/admin/salary-settings" element={<SalarySettings />} />
             </Route>
 
             {/* Smart Root Redirect */}

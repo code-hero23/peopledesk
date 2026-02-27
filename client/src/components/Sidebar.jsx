@@ -133,6 +133,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         )}
 
                         {user?.role === 'ADMIN' && (
+                            <NavItem to="/admin/salary-settings" icon={DollarSign} label="Salary Settings" />
+                        )}
+
+                        {user?.role === 'ADMIN' && (
                             <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
                         )}
 

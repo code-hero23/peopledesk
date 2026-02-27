@@ -75,9 +75,11 @@ app.use('/api/popup', require('./routes/popupRoutes'));
 app.use('/api/analytics', require('./routes/analyticsRoutes'));
 app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/payroll', require('./routes/payrollRoutes'));
+app.use('/api/settings', require('./routes/settingsRoutes'));
+
 
 app.get('/', (req, res) => {
-    res.json({ message: 'Welcome to Cookscape WorkSphere API' }); // Server Restart Triggered v2
+    res.json({ message: 'Welcome to Cookscape WorkSphere API' }); // Server Restart Triggered v4 (Bug Fixed)
 });
 
 module.exports = app;

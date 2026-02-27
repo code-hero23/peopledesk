@@ -1,0 +1,250 @@
+-- Catch-up Migration for VPS (Syncing DRIFTED columns)
+-- Generated on: 2026-02-27T06:15:21.784Z
+
+-- 1. Missing Enums
+DO $$ BEGIN
+    CREATE TYPE "AnnouncementType" AS ENUM ('INFO', 'RULE', 'NEWS', 'EVENT');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "Priority" AS ENUM ('LOW', 'MEDIUM', 'HIGH', 'URGENT');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "PopupType" AS ENUM ('INSPIRATIONAL', 'BIRTHDAY');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "LogStatus" AS ENUM ('OPEN', 'CLOSED');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    CREATE TYPE "BreakType" AS ENUM ('TEA', 'LUNCH', 'CLIENT_MEETING', 'BH_MEETING');
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- 2. Missing Tables
+CREATE TABLE IF NOT EXISTS "AuditLog" (
+    "id" SERIAL PRIMARY KEY,
+    "action" TEXT NOT NULL,
+    "userId" INTEGER,
+    "details" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "PopupConfig" (
+    "id" SERIAL PRIMARY KEY,
+    "imageUrl" TEXT NOT NULL,
+    "quote" TEXT NOT NULL,
+    "author" TEXT NOT NULL,
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "type" "PopupType" NOT NULL DEFAULT 'INSPIRATIONAL'
+);
+
+CREATE TABLE IF NOT EXISTS "Announcement" (
+    "id" SERIAL PRIMARY KEY,
+    "title" TEXT NOT NULL,
+    "content" TEXT NOT NULL,
+    "type" "AnnouncementType" NOT NULL DEFAULT 'INFO',
+    "priority" "Priority" NOT NULL DEFAULT 'LOW',
+    "isActive" BOOLEAN NOT NULL DEFAULT true,
+    "expiresAt" TIMESTAMP(3),
+    "authorId" INTEGER NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL
+);
+
+-- 3. User Table Missing Columns
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "reportingBhId" INTEGER;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "isGlobalAccess" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "allocatedSalary" DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryViewEnabled" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryDeductions" DOUBLE PRECISION DEFAULT 0;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryDeductionBreakdown" JSONB DEFAULT '[]';
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "timeShortageDeductionEnabled" BOOLEAN DEFAULT true;
+
+-- Foreign Key for User reportingBhId
+DO $$ BEGIN
+    ALTER TABLE "User" ADD CONSTRAINT "User_reportingBhId_fkey" FOREIGN KEY ("reportingBhId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+-- 4. Attendance Table Missing Columns
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "checkInPhoto" TEXT;
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "checkoutPhoto" TEXT;
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "checkoutTime" TIMESTAMP(3);
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "deviceInfo" TEXT;
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "ipAddress" TEXT;
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "checkoutDeviceInfo" TEXT;
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "checkoutIpAddress" TEXT;
+
+-- 5. WorkLog Table Missing Columns
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_clientFeedback" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_clientMet" BOOLEAN DEFAULT false;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_gpsCoordinates" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_hasIssues" BOOLEAN DEFAULT false;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_issueDescription" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_issueType" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_issuesRaised" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_issuesResolved" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_itemsInstalled" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_measurements" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_nextVisitDate" TIMESTAMP(3);
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_nextVisitRequired" BOOLEAN DEFAULT false;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_photos" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_plannedWork" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_siteLocation" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_siteStatus" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_tasksCompleted" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_visitType" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_workStage" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "clientName" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "completedImages" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_callBreakdown" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_fqSent" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_orders" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_proposals" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_showroomVisits" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_totalCalls" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "customFields" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "endTime" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_bookingFreezed" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_bookingFreezedClients" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_calls" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_designPending" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_designPendingClients" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_initialQuoteRn" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_loadingDiscussion" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_onlineDiscussion" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_onlineDiscussionClients" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_onlineTime" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_quotePending" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_quotePendingClients" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_revisedQuoteRn" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_showroomTime" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_showroomVisitClients" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_showroomVisits" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_siteTime" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_siteVisits" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "imageCount" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_addOns" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_colours" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_cpCode" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_fa" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_freezingAmount" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_mailId" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_measurements" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_number" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_onlineMeeting" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_projectLocation" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_projectValue" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_referalBonus" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_requirements" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_showroomMeeting" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_siteStatus" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_source" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_specialNote" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_variant" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_woodwork" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "pendingImages" INTEGER;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "process" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "site" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "startTime" TEXT;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_closing_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "cre_opening_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "logStatus" "LogStatus" NOT NULL DEFAULT 'CLOSED';
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_closing_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_opening_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_closing_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_opening_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "la_project_reports" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "fa_project_reports" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_project_reports" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_closing_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "ae_opening_metrics" JSONB;
+ALTER TABLE "WorkLog" ADD COLUMN IF NOT EXISTS "notes" TEXT;
+
+-- 6. Project Table Missing Columns
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "description" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "managerId" INTEGER;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "addOns" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "colours" JSONB;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "cpCode" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "fa" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "freezingAmount" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "latitude" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "location" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "longitude" DOUBLE PRECISION;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "mailId" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "measurements" JSONB;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "number" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "onlineMeeting" JSONB;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "projectValue" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "referalBonus" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "requirements" JSONB;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "showroomMeeting" JSONB;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "siteStatus" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "source" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "specialNote" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "variant" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "woodwork" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "clientName" TEXT;
+ALTER TABLE "Project" ADD COLUMN IF NOT EXISTS "googleMapLink" TEXT;
+
+-- 7. Request Tables (Leave, Permission) Missing Columns
+ALTER TABLE "LeaveRequest" ADD COLUMN IF NOT EXISTS "bhId" INTEGER;
+ALTER TABLE "LeaveRequest" ADD COLUMN IF NOT EXISTS "bhStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING';
+ALTER TABLE "LeaveRequest" ADD COLUMN IF NOT EXISTS "hrId" INTEGER;
+ALTER TABLE "LeaveRequest" ADD COLUMN IF NOT EXISTS "hrStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING';
+ALTER TABLE "LeaveRequest" ADD COLUMN IF NOT EXISTS "targetBhId" INTEGER;
+ALTER TABLE "LeaveRequest" ADD COLUMN IF NOT EXISTS "isExceededLimit" BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE "PermissionRequest" ADD COLUMN IF NOT EXISTS "bhId" INTEGER;
+ALTER TABLE "PermissionRequest" ADD COLUMN IF NOT EXISTS "bhStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING';
+ALTER TABLE "PermissionRequest" ADD COLUMN IF NOT EXISTS "hrId" INTEGER;
+ALTER TABLE "PermissionRequest" ADD COLUMN IF NOT EXISTS "hrStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING';
+ALTER TABLE "PermissionRequest" ADD COLUMN IF NOT EXISTS "targetBhId" INTEGER;
+ALTER TABLE "PermissionRequest" ADD COLUMN IF NOT EXISTS "isExceededLimit" BOOLEAN NOT NULL DEFAULT false;
+
+
+-- 8. Visit Request Tables (SiteVisit, ShowroomVisit) - ensuring they exist fully
+CREATE TABLE IF NOT EXISTS "SiteVisitRequest" (
+    "id" SERIAL PRIMARY KEY,
+    "userId" INTEGER NOT NULL,
+    "projectName" TEXT NOT NULL,
+    "location" TEXT NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "startTime" TEXT NOT NULL,
+    "endTime" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "targetBhId" INTEGER,
+    "status" "RequestStatus" NOT NULL DEFAULT 'PENDING',
+    "bhStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING',
+    "hrStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "ShowroomVisitRequest" (
+    "id" SERIAL PRIMARY KEY,
+    "userId" INTEGER NOT NULL,
+    "date" TIMESTAMP(3) NOT NULL,
+    "startTime" TEXT NOT NULL,
+    "endTime" TEXT NOT NULL,
+    "sourceShowroom" TEXT NOT NULL,
+    "destinationShowroom" TEXT NOT NULL,
+    "reason" TEXT NOT NULL,
+    "targetBhId" INTEGER,
+    "status" "RequestStatus" NOT NULL DEFAULT 'PENDING',
+    "bhStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING',
+    "hrStatus" "RequestStatus" NOT NULL DEFAULT 'PENDING',
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS "GlobalSetting" (
+    "id" SERIAL PRIMARY KEY,
+    "key" TEXT UNIQUE NOT NULL,
+    "value" TEXT NOT NULL
+);
+
+
