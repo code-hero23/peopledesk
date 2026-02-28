@@ -1,5 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
+import { ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 import Overview from './pages/employee/Overview';
 import MyWorkLogs from './pages/employee/MyWorkLogs';
@@ -30,6 +32,7 @@ function App() {
   return (
     <>
       <PWAFresher />
+      <ToastContainer position="top-right" autoClose={3000} />
       <Router>
         <Routes>
           <Route path="/login" element={<Login />} />

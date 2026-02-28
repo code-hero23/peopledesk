@@ -75,39 +75,39 @@ const WFHRequestForm = () => {
     }, [dispatch]);
 
     useEffect(() => {
-    if (isError) {
-        toast.error(message);
-        dispatch(reset());
-    }
+        if (isError) {
+            toast.error(message);
+            dispatch(reset());
+        }
 
-    if (isSuccess) {
-        toast.success('WFH Request Submitted Successfully');
+        if (isSuccess) {
+            toast.success('WFH Request Submitted Successfully');
 
-        // Optional: reset form after success
-        setFormData({
-            ...formData,
-            reportingManager: '',
-            startDate: '',
-            endDate: '',
-            realReason: '',
-            necessityReason: '',
-            impactIfRejected: '',
-            primaryProject: '',
-            deliverables: '',
-            deadline: '',
-            workingHours: '',
-            communicationPlan: '',
-            environmentSetup: '',
-            risksManagement: '',
-            failurePlan: '',
-            officeVisitCommitment: false,
-        });
+            // Optional: reset form after success
+            setFormData({
+                ...formData,
+                reportingManager: '',
+                startDate: '',
+                endDate: '',
+                realReason: '',
+                necessityReason: '',
+                impactIfRejected: '',
+                primaryProject: '',
+                deliverables: '',
+                deadline: '',
+                workingHours: '',
+                communicationPlan: '',
+                environmentSetup: '',
+                risksManagement: '',
+                failurePlan: '',
+                officeVisitCommitment: false,
+            });
 
-        setActiveSection(1);
-        dispatch(reset());
-    }
+            setActiveSection(1);
+            dispatch(reset());
+        }
 
-}, [isError, isSuccess, message, dispatch]);
+    }, [isError, isSuccess, message, dispatch]);
 
     const onChange = (e) => {
         const { name, value, type, checked } = e.target;
@@ -119,6 +119,21 @@ const WFHRequestForm = () => {
 
     const onSubmit = (e) => {
         e.preventDefault();
+
+        // Manual Validations because unmounted react components bypass HTML5 required validation
+        const requiredFields = [
+            'reportingManager', 'startDate', 'endDate',
+            'wfhDays', 'realReason', 'necessityReason', 'impactIfRejected',
+            'primaryProject', 'deliverables', 'deadline',
+            'workingHours', 'communicationPlan', 'responseTime',
+            'environmentSetup', 'risksManagement', 'failurePlan'
+        ];
+
+        const firstMissing = requiredFields.find(field => !formData[field]);
+        if (firstMissing) {
+            toast.error(`Please fill out the missing required field: ${firstMissing}`);
+            return;
+        }
 
         // Final Validations
         if (!formData.officeVisitCommitment) {

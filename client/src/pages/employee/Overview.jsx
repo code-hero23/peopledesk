@@ -1,7 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance } from '../../features/employee/employeeSlice';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
+
 import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
 import LAWorkLogForm from '../../components/worklogs/LAWorkLogForm'; // Detailed (LA)
 import CREWorkLogForm from '../../components/worklogs/CREWorkLogForm';
@@ -9,6 +10,7 @@ import FAWorkLogForm from '../../components/worklogs/FAWorkLogForm';
 import AEWorkLogForm from '../../components/worklogs/AEWorkLogForm'; // Added AE Import
 import DynamicWorkLogForm from '../../components/worklogs/DynamicWorkLogForm';
 import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
+
 import LeaveRequestForm from '../../components/LeaveRequestForm';
 import PermissionRequestForm from '../../components/PermissionRequestForm';
 import StatCard from '../../components/StatCard';
@@ -17,26 +19,78 @@ import BreakSelectionModal from '../../components/BreakSelectionModal';
 import ProjectCreationForm from '../../components/ProjectCreationForm';
 import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
 import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
-
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
+
 import { getDeviceType } from '../../utils/deviceUtils';
-import { isTimeCoveredByPermission } from '../../utils/timeUtils';
+import { motion, AnimatePresence } from 'framer-motion';
+
+// ─── Helper: Request browser notification permission ───────────────────────────
+const requestNotifPermission = async () => {
+    if ('Notification' in window && Notification.permission === 'default') {
+        await Notification.requestPermission();
+    }
+};
+
+const showBrowserNotif = (title, body) => {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        new Notification(title, { body, icon: '/logo.png' });
+    }
+};
+
+// ─── Elapsed timer helper ─────────────────────────────────────────────────────
+const useElapsedTime = (startIso) => {
+    const [elapsed, setElapsed] = useState('');
+    useEffect(() => {
+        if (!startIso) { setElapsed(''); return; }
+        const tick = () => {
+            const diffMs = Date.now() - new Date(startIso).getTime();
+            const h = Math.floor(diffMs / 3600000);
+            const m = Math.floor((diffMs % 3600000) / 60000);
+            const s = Math.floor((diffMs % 60000) / 1000);
+            setElapsed(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
+        };
+        tick();
+        const id = setInterval(tick, 1000);
+        return () => clearInterval(id);
+    }, [startIso]);
+    return elapsed;
+};
+
+// ─── Live clock ───────────────────────────────────────────────────────────────
+const useLiveClock = () => {
+    const [time, setTime] = useState(new Date());
+    useEffect(() => {
+        const id = setInterval(() => setTime(new Date()), 1000);
+        return () => clearInterval(id);
+    }, []);
+    return time;
+};
 
 const Overview = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { attendance, workLogs, requests, isLoading, isPaused, activeBreak, isRequestsFetched } = useSelector((state) => state.employee);
 
+    // Alerts state
+    const [breakAlert, setBreakAlert] = useState(false);   // 30-min break overrun
+    const [logoutAlert, setLogoutAlert] = useState(false); // 10PM reminder
+    const breakTimerRef = useRef(null);
+    const logoutTimerRef = useRef(null);
+
     // UI State
+    const [activeTab, setActiveTab] = useState(user?.designation === 'OFFICE-ADMINISTRATION' ? 'leaves' : 'logs');
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const [showBreakModal, setShowBreakModal] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
-    const [laFormType, setLaFormType] = useState('detailed'); // 'standard' or 'detailed' for LA role
     const [permissionInitialData, setPermissionInitialData] = useState(null);
     const [isAutoPermission, setIsAutoPermission] = useState(false);
+    const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
+    const now = useLiveClock();
+    const elapsedSinceCheckIn = useElapsedTime(attendance?.status === 'PRESENT' && !attendance?.checkoutTime ? attendance?.date : null);
 
     // Confirmation Modal State
     const [confirmationConfig, setConfirmationConfig] = useState({
@@ -46,6 +100,16 @@ const Overview = () => {
         onConfirm: () => { },
         type: 'info'
     });
+
+    // ── Request notif permission on mount ──────────────────────────────────────
+    useEffect(() => { requestNotifPermission(); }, []);
+
+    // ── Mobile resize ──────────────────────────────────────────────────────────
+    useEffect(() => {
+        const h = () => setIsMobile(window.innerWidth < 768);
+        window.addEventListener('resize', h);
+        return () => window.removeEventListener('resize', h);
+    }, []);
 
     useEffect(() => {
         dispatch(getAttendanceStatus());
@@ -61,6 +125,52 @@ const Overview = () => {
         dispatch(getMyWorkLogs(params));
         dispatch(getMyRequests(params));
     };
+
+    // ── Break overrun alert: 30 min after break starts (TEA / LUNCH only) ─────
+    useEffect(() => {
+        if (breakTimerRef.current) clearTimeout(breakTimerRef.current);
+        setBreakAlert(false);
+
+        if (isPaused && activeBreak && ['TEA', 'LUNCH'].includes(activeBreak.breakType) && activeBreak.startTime) {
+            const breakStart = new Date(activeBreak.startTime).getTime();
+            const elapsed = Date.now() - breakStart;
+            const remaining = 30 * 60 * 1000 - elapsed; // 30 minutes
+
+            if (remaining <= 0) {
+                setBreakAlert(true);
+                showBrowserNotif('⏰ Break Overrun!', `Your ${activeBreak.breakType.toLowerCase()} break has exceeded 30 minutes. Please resume work.`);
+            } else {
+                breakTimerRef.current = setTimeout(() => {
+                    setBreakAlert(true);
+                    showBrowserNotif('⏰ Break Overrun!', `Your ${activeBreak.breakType.toLowerCase()} break has exceeded 30 minutes. Please resume work.`);
+                }, remaining);
+            }
+        }
+        return () => { if (breakTimerRef.current) clearTimeout(breakTimerRef.current); };
+    }, [isPaused, activeBreak]);
+
+    // ── Logout Reminder at 10 PM ──────────────────────────────────────────────
+    useEffect(() => {
+        if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
+        setLogoutAlert(false);
+
+        if (attendance?.status === 'PRESENT' && !attendance?.checkoutTime) {
+            const target = new Date();
+            target.setHours(22, 0, 0, 0); // 10:00 PM
+            const remaining = target.getTime() - Date.now();
+
+            if (remaining <= 0) {
+                setLogoutAlert(true);
+                showBrowserNotif('🚨 Please Log Out!', "It's past 10 PM. Don't forget to tap Check Out before leaving.");
+            } else {
+                logoutTimerRef.current = setTimeout(() => {
+                    setLogoutAlert(true);
+                    showBrowserNotif('🚨 Please Log Out!', "It's past 10 PM. Don't forget to tap Check Out before leaving.");
+                }, remaining);
+            }
+        }
+        return () => { if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current); };
+    }, [attendance]);
 
     const checkLatenessAndRedirect = (checkInTimeRaw, isAuto = false) => {
         // Exempt AE (Area Engineers) from this restriction
@@ -123,10 +233,11 @@ const Overview = () => {
 
     // Robust Lateness Check
     useEffect(() => {
-        if (attendance?.status === 'PRESENT' && isRequestsFetched && activeModal !== 'permission' && user?.designation !== 'AE') {
+        if (attendance?.status === 'PRESENT' && isRequestsFetched && activeModal !== 'permission' && user?.designation !== 'AE' && !hasCheckedLateness) {
             checkLatenessAndRedirect(attendance.date, true);
+            setHasCheckedLateness(true);
         }
-    }, [attendance, isRequestsFetched, activeModal, user]);
+    }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness]);
 
     const executeAttendanceAction = (actionName) => {
         const deviceInfo = navigator.userAgent;
@@ -163,6 +274,11 @@ const Overview = () => {
     };
 
     const handleMarkAttendance = () => {
+        if (isMobile && user?.designation !== 'AE') {
+            alert('Mobile Check-In is restricted to AE. Please use a Desktop.');
+            return;
+        }
+
         // Determine action name for confirmation
         let actionName = 'Log In';
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
@@ -325,49 +441,35 @@ const Overview = () => {
         }
     };
 
-    return (
-        <div className="space-y-8 animate-fade-in pb-20">
-            {/* Break Reminder Banner */}
-            {isPaused && (
-                <div className="bg-gradient-to-r from-orange-500 to-amber-500 text-white px-6 py-4 rounded-2xl shadow-lg shadow-orange-500/20 flex flex-col md:flex-row items-center justify-between gap-4 animate-bounce-subtle border border-white/20">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/20 rounded-full flex items-center justify-center text-2xl backdrop-blur-sm">
-                            {activeBreak?.breakType === 'TEA' && '☕'}
-                            {activeBreak?.breakType === 'LUNCH' && '🍽️'}
-                            {activeBreak?.breakType === 'CLIENT_MEETING' && '💼'}
-                            {activeBreak?.breakType === 'BH_MEETING' && '👥'}
-                        </div>
-                        <div>
-                            <h3 className="font-bold text-lg leading-tight">You are currently on break!</h3>
-                            <p className="text-orange-50 text-sm opacity-90">
-                                Remember to resume your work process once you are back.
-                            </p>
-                        </div>
-                    </div>
-                    <button
-                        onClick={handleResume}
-                        disabled={isLoading}
-                        className="bg-white text-orange-600 hover:bg-orange-50 font-bold px-6 py-2.5 rounded-xl shadow-sm transition-all active:scale-95 flex items-center gap-2 whitespace-nowrap"
-                    >
-                        <span>▶️</span> Resume Now
-                    </button>
-                </div>
-            )}
+    // derived
+    const isCheckedIn = attendance?.status === 'PRESENT' && !attendance?.checkoutTime;
+    const isCheckedOut = !!attendance?.checkoutTime;
+    const pendingCount = (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0);
+    const greetHour = now.getHours();
+    const greeting = greetHour < 12 ? 'Good Morning' : greetHour < 17 ? 'Good Afternoon' : 'Good Evening';
 
-            {/* Modal Layer */}
+    const quickActions = [
+        user?.designation !== 'OFFICE-ADMINISTRATION' && { id: 'worklog', label: 'Log Work', sub: `${user?.designation || 'General'} Report`, icon: '📝', color: 'from-blue-500 to-indigo-600' },
+        { id: 'leave', label: 'Request Leave', sub: 'Full / Half Day', icon: '🏖️', color: 'from-orange-400 to-amber-500' },
+        { id: 'permission', label: 'Permission', sub: 'Late / Early exit', icon: '🕑', color: 'from-violet-500 to-purple-600' },
+        ['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
+        { id: 'site-visit', label: 'Site Visit', sub: 'Update visit log', icon: '🏗️', color: 'from-green-500 to-emerald-600' },
+        { id: 'showroom-visit', label: 'Showroom Visit', sub: 'Cross-showroom move', icon: '🏢', color: 'from-indigo-500 to-blue-600' },
+    ].filter(Boolean);
+
+    return (
+        <div className="space-y-6 animate-fade-in pb-20">
+            {/* Modals */}
             {activeModal && (
                 <Modal title={
                     activeModal === 'worklog' ? 'Submit Daily Work Log' :
                         activeModal === 'leave' ? 'Request Leave' :
                             activeModal === 'permission' ? (isAutoPermission ? 'Mandatory Permission Request' : 'Request Permission') :
                                 activeModal === 'site-visit' ? 'Update Site Visit' :
-                                    activeModal === 'showroom-visit' ? 'Cross-Showroom Visit' :
-                                        'Create New Project'
-                }
-                    onClose={closeModal}
+                                    activeModal === 'showroom-visit' ? 'Showroom Visit' : 'Create New Project'
+                } onClose={closeModal}
                     showClose={!isAutoPermission}
-                    closeOnClickOutside={!isAutoPermission}
-                >
+                    closeOnClickOutside={!isAutoPermission}>
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
                     {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} isMandatory={isAutoPermission} />}
@@ -377,13 +479,7 @@ const Overview = () => {
                 </Modal>
             )}
 
-            <CheckInPhotoModal
-                isOpen={showCheckInModal}
-                onClose={() => setShowCheckInModal(false)}
-                onSubmit={handlePhotoCheckIn}
-                isLoading={isLoading}
-                isCheckingOut={isCheckingOut}
-            />
+            <CheckInPhotoModal isOpen={showCheckInModal} onClose={() => setShowCheckInModal(false)} onSubmit={handlePhotoCheckIn} isLoading={isLoading} isCheckingOut={isCheckingOut} />
 
             <BreakSelectionModal
                 isOpen={showBreakModal}
@@ -401,243 +497,313 @@ const Overview = () => {
                 confirmText={confirmationConfig.confirmText}
             />
 
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-800 flex items-center gap-2">
-                        Hello, {user?.name.split(' ')[0]} 👋
-                        <span className="text-xs bg-slate-200 text-slate-600 px-2 py-1 rounded-full border border-slate-300 capitalize">
-                            {['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role)
-                                ? user?.role.replace('_', ' ').toLowerCase()
-                                : (user?.designation || 'No Designation')}
-                        </span>
-                    </h2>
-                    <p className="text-slate-500">Ready to make today count?</p>
-                </div>
-                <MonthCycleSelector onCycleChange={handleCycleChange} />
-            </div>
-
-            {/* Main Action Grid */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                {/* Attendance Card (Hero) */}
-                <div className="lg:col-span-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 rounded-2xl p-8 text-white shadow-xl flex flex-col justify-between relative overflow-hidden group min-h-[280px]">
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-start">
-                            <p className="text-slate-400 text-xs font-bold uppercase tracking-wider mb-2">My Status</p>
-                            <div className={`w-3 h-3 rounded-full ${attendance?.status === 'PRESENT' && !attendance?.checkoutTime ? 'bg-green-400 shadow-[0_0_10px_rgba(74,222,128,0.5)]' : 'bg-red-400'}`}></div>
+            {/* ── Smart Alert Banners ─────────────────────────────────────── */}
+            <AnimatePresence>
+                {breakAlert && (
+                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                        className="bg-amber-500 text-white px-5 py-3 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-200 mb-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl animate-bounce">⏰</span>
+                            <div>
+                                <p className="font-black text-sm">Break Overrun — 30 minutes exceeded!</p>
+                                <p className="text-amber-100 text-xs">Your {activeBreak?.breakType?.toLowerCase() || ''} break is past 30 minutes. Please resume work.</p>
+                            </div>
                         </div>
-                        <h3 className="text-4xl font-bold mb-4 tracking-tight">
-                            {attendance?.status === 'PRESENT' && !attendance?.checkoutTime
-                                ? (user?.designation === 'AE' ? 'Checked In' : 'Logged In')
-                                : 'Not Active'}
-                        </h3>
-                        {attendance?.status === 'PRESENT' && !attendance?.checkoutTime ? (
-                            <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-4 py-2 rounded-lg border border-white/10">
-                                <span>🕒</span>
-                                <span className="font-mono font-medium">In at {new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <button onClick={() => setBreakAlert(false)} className="text-amber-100 hover:text-white ml-4 text-lg font-bold">✕</button>
+                    </motion.div>
+                )}
+                {logoutAlert && (
+                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
+                        className="bg-red-600 text-white px-5 py-3 rounded-2xl flex items-center justify-between shadow-lg shadow-red-200 mb-4">
+                        <div className="flex items-center gap-3">
+                            <span className="text-2xl animate-pulse">🚨</span>
+                            <div>
+                                <p className="font-black text-sm">It's past 10 PM — Don't forget to Check Out!</p>
+                                <p className="text-red-100 text-xs">Please tap the Check Out button before leaving for the day.</p>
                             </div>
-                        ) : attendance?.checkoutTime ? (
-                            <div className="space-y-2 mt-2">
-                                <div className="flex flex-col gap-2 text-sm">
-                                    <div className="inline-flex items-center gap-2 bg-white/5 px-3 py-1.5 rounded-lg border border-white/10">
-                                        <span>🕒</span>
-                                        <span className="font-mono text-slate-200">In: {new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </div>
-                                    <div className="inline-flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10">
-                                        <span>🏁</span>
-                                        <span className="font-mono font-bold">Out: {new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                    </div>
-                                </div>
-                                <p className="text-slate-400 text-sm mt-1">
-                                    Total: <span className="font-bold text-white tracking-wide">{
-                                        Math.abs((new Date(attendance.checkoutTime) - new Date(attendance.date)) / (1000 * 60 * 60)).toFixed(2)
-                                    } HRS</span>
-                                </p>
+                        </div>
+                        <button onClick={() => setLogoutAlert(false)} className="text-red-100 hover:text-white ml-4 text-lg font-bold">✕</button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* ── Hero Header ────────────────────────────────────────────────── */}
+            <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
+                className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-7 shadow-2xl">
+                <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
+                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
+
+                <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-center gap-5">
+                    <div>
+                        <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-1">{greeting} 👋</p>
+                        <h2 className="text-3xl md:text-4xl font-black text-white mb-1 tracking-tight flex flex-col sm:flex-row sm:items-center gap-3">
+                            {user?.name?.split(' ')[0]}
+                            <div className="scale-75 sm:scale-90 origin-left">
+                                <MonthCycleSelector onCycleChange={handleCycleChange} />
                             </div>
-                        ) : (
-                            <p className="text-slate-400 text-sm">You haven't marked your attendance yet.</p>
-                        )}
+                        </h2>
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <span className="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs px-3 py-1 rounded-full font-bold">{user?.designation || '—'}</span>
+                            <span className="text-slate-500 text-xs">•</span>
+                            <span className="text-slate-400 text-xs">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                        </div>
                     </div>
 
-                    {!attendance ? (
-                        <button
-                            onClick={handleMarkAttendance}
-                            disabled={isLoading}
-                            className="relative z-10 w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-3.5 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3 mt-6 group-hover:shadow-blue-500/25"
-                        >
-                            <span className="text-xl">👆</span>
-                            <span>Tap to {user?.designation === 'AE' ? 'Check In' : 'Log In'}</span>
-                        </button>
-                    ) : !attendance.checkoutTime ? (
-                        <div className="flex flex-col gap-4 mt-8 relative z-10">
-                            {isPaused ? (
-                                <div className="space-y-4 animate-fade-in">
-                                    {/* Paused State Card */}
-                                    <div className="relative overflow-hidden bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/30 rounded-2xl p-6 text-center backdrop-blur-md">
-                                        {/* Animated Pulse Background */}
-                                        <div className="absolute inset-0 bg-yellow-500/5 animate-pulse rounded-2xl"></div>
+                    {/* Live clock */}
+                    <div className="flex items-center gap-4">
+                        <div className="flex flex-col items-center bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 shrink-0">
+                            <p className="text-white font-black text-3xl font-mono tracking-widest">
+                                {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                            </p>
+                            <p className="text-slate-400 text-xs mt-1 font-medium">{now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
 
-                                        <p className="text-yellow-200 text-xs font-bold uppercase tracking-[0.2em] mb-3 relative z-10">Currently Paused</p>
+            {/* ── Main Grid ──────────────────────────────────────────────────── */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                                        <div className="flex flex-col items-center justify-center gap-3 relative z-10">
-                                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/30 mb-1">
-                                                {activeBreak?.breakType === 'TEA' && <span className="text-3xl">☕</span>}
-                                                {activeBreak?.breakType === 'LUNCH' && <span className="text-3xl">🍽️</span>}
-                                                {activeBreak?.breakType === 'CLIENT_MEETING' && <span className="text-3xl">💼</span>}
-                                                {activeBreak?.breakType === 'BH_MEETING' && <span className="text-3xl">👥</span>}
-                                            </div>
-                                            <div className="text-white font-medium text-lg">
-                                                {activeBreak?.breakType === 'TEA' && 'Tea Break'}
-                                                {activeBreak?.breakType === 'LUNCH' && 'Lunch Break'}
-                                                {activeBreak?.breakType === 'CLIENT_MEETING' && 'Client Meeting'}
-                                                {activeBreak?.breakType === 'BH_MEETING' && 'BH Meeting'}
-                                            </div>
-                                        </div>
-                                    </div>
+                {/* ── Attendance Card ──────────────────────────────────────── */}
+                <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
+                    className={`lg:col-span-1 border border-slate-200/5 rounded-3xl p-7 text-white shadow-xl flex flex-col justify-between relative overflow-hidden min-h-[300px]
+                        ${isCheckedOut ? 'bg-gradient-to-br from-emerald-700 to-teal-900'
+                            : isCheckedIn ? 'bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900'
+                                : 'bg-gradient-to-br from-slate-800 to-slate-900'}`}>
+                    <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
 
-                                    <button
-                                        onClick={handleResume}
-                                        disabled={isLoading}
-                                        className="w-full group bg-gradient-to-r from-emerald-500 to-emerald-400 hover:from-emerald-400 hover:to-emerald-300 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-emerald-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
-                                    >
-                                        <div className="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center group-hover:bg-white/30 transition-colors">
-                                            <span className="text-lg">▶️</span>
-                                        </div>
-                                        <span className="text-lg">Resume Work</span>
-                                    </button>
+                    <div className="relative z-10">
+                        <div className="flex justify-between items-center mb-4">
+                            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">My Status</p>
+                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border
+                                ${isCheckedOut ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200'
+                                    : isCheckedIn ? 'bg-blue-400/20 border-blue-300/30 text-blue-200'
+                                        : 'bg-slate-500/20 border-slate-400/30 text-slate-300'}`}>
+                                <div className={`w-2 h-2 rounded-full ${isCheckedOut ? 'bg-emerald-400' : isCheckedIn ? 'bg-blue-300 animate-pulse' : 'bg-slate-400'}`} />
+                                {isCheckedOut ? 'Done for Today' : isCheckedIn ? 'Active' : 'Offline'}
+                            </div>
+                        </div>
+
+                        <h3 className="text-4xl font-black tracking-tight mb-3">
+                            {isCheckedOut ? 'Signed Off' : isCheckedIn ? 'Checked In' : 'Not Active'}
+                        </h3>
+
+                        {isCheckedIn && (
+                            <div className="space-y-2 mb-4">
+                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
+                                    <span>🕒</span>
+                                    <span className="text-sm font-medium">In at <span className="font-black">{new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
                                 </div>
-                            ) : (
-                                <div className="space-y-4">
-                                    {/* Pause Button */}
-                                    <button
-                                        onClick={() => setShowBreakModal(true)}
-                                        disabled={isLoading}
-                                        className="w-full group bg-white/10 hover:bg-white/20 backdrop-blur-md border border-white/10 text-white font-bold py-3.5 rounded-xl transition-all active:scale-[0.98] flex items-center justify-center gap-3 hover:border-white/30"
-                                    >
-                                        <span className="text-xl group-hover:scale-110 transition-transform">☕</span>
-                                        <span className="text-lg">Desk Break</span>
-                                    </button>
-
-                                    {/* Divider */}
-                                    <div className="flex items-center gap-4">
-                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                                        <span className="text-xs font-medium text-slate-400 uppercase tracking-widest">OR</span>
-                                        <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                {/* Live elapsed timer */}
+                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
+                                    <span>⏱️</span>
+                                    <span className="font-mono font-black text-lg tracking-widest">{elapsedSinceCheckIn}</span>
+                                    <span className="text-white/50 text-xs">elapsed</span>
+                                </div>
+                                {/* Break status */}
+                                {isPaused && activeBreak && (
+                                    <div className="flex items-center gap-2 bg-amber-400/20 border border-amber-400/30 rounded-xl px-4 py-2">
+                                        <span>{activeBreak.breakType === 'TEA' ? '🍵' : activeBreak.breakType === 'LUNCH' ? '🍱' : activeBreak.breakType === 'CLIENT_MEETING' ? '💼' : '👥'}</span>
+                                        <span className="text-amber-200 text-sm font-bold">{activeBreak.breakType?.replace('_', ' ')} in progress</span>
                                     </div>
+                                )}
+                            </div>
+                        )}
 
-                                    {/* Check Out Button */}
+                        {isCheckedOut && (
+                            <div className="space-y-2 mb-4">
+                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
+                                    <span>🏁</span>
+                                    <span className="text-sm font-medium">Out at <span className="font-black">{new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+                                </div>
+                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
+                                    <span>⚡</span>
+                                    <span className="text-sm font-medium">
+                                        Total: <span className="font-black">
+                                            {Math.abs((new Date(attendance.checkoutTime) - new Date(attendance.date)) / (1000 * 60 * 60)).toFixed(1)} HRS
+                                        </span>
+                                    </span>
+                                </div>
+                                <p className="text-emerald-200 text-xs text-center py-1">✨ Great work today!</p>
+                            </div>
+                        )}
+
+                        {!attendance && <p className="text-white/50 text-sm">You haven't marked your attendance yet.</p>}
+                    </div>
+
+                    {/* CTA Button */}
+                    <div className="relative z-10 mt-4">
+                        {!isCheckedIn && !isCheckedOut ? (
+                            <button onClick={handleMarkAttendance} disabled={isLoading}
+                                className={`w-full py-4 rounded-2xl font-black text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3
+                                    ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 cursor-not-allowed text-slate-300' : 'bg-white text-slate-900 hover:bg-blue-50'}`}>
+                                {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> Desktop Only</> : <><span>👆</span> Tap to Check In</>}
+                            </button>
+                        ) : isCheckedIn ? (
+                            <div className="flex flex-col gap-3">
+                                {isPaused ? (
+                                    <button onClick={handleResume} disabled={isLoading}
+                                        className="w-full py-3 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-white shadow-lg active:scale-95 flex items-center justify-center gap-3 transition-all">
+                                        <span>▶️</span> Resume Work
+                                    </button>
+                                ) : (
+                                    <button onClick={() => setShowBreakModal(true)} disabled={isLoading}
+                                        className="w-full py-3 rounded-2xl font-black text-sm bg-white/10 border border-white/20 hover:bg-white/20 text-white active:scale-95 flex items-center justify-center gap-3 transition-all">
+                                        <span>☕</span> Take a Break
+                                    </button>
+                                )}
+                                <div className="flex items-center gap-4">
+                                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                    <span className="text-xs font-medium text-white/40 uppercase tracking-widest">OR</span>
+                                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
+                                </div>
+                                <button onClick={handleMarkAttendance} disabled={isLoading}
+                                    className="w-full py-3 rounded-2xl font-black text-sm bg-white/20 hover:bg-white/30 text-white active:scale-95 flex items-center justify-center gap-3 transition-all border border-white/20">
+                                    <span>👋</span> Check Out
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="space-y-3">
+                                <div className="w-full py-3 rounded-2xl text-center text-emerald-200 bg-white/10 text-sm font-bold border border-white/10">
+                                    ✅ All done for today
+                                </div>
+                                {/* Allow AE to start a NEW session */}
+                                {user?.designation === 'AE' && (
                                     <button
                                         onClick={handleMarkAttendance}
                                         disabled={isLoading}
-                                        className="w-full group bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-400 hover:to-red-400 text-white font-bold py-3.5 rounded-xl shadow-lg hover:shadow-orange-500/40 transition-all active:scale-[0.98] flex items-center justify-center gap-3"
+                                        className="w-full bg-blue-500/90 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
                                     >
-                                        <span className="text-xl group-hover:rotate-12 transition-transform">👋</span>
-                                        <span className="text-lg">{user?.designation === 'AE' ? 'Check Out' : 'Log Out'}</span>
+                                        <span className="text-lg">🔄</span>
+                                        <span>Start New Session</span>
                                     </button>
-                                </div>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="relative z-10 mt-6 space-y-4">
-                            <div className="text-emerald-300 font-medium flex items-center gap-2 text-sm bg-emerald-500/10 p-3 rounded-lg border border-emerald-500/20">
-                                <span className="text-lg">✨</span>
-                                <span>Session Completed at {new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                )}
                             </div>
+                        )}
+                    </div>
+                </motion.div>
 
-                            {/* Allow AE to start a NEW session */}
-                            {user?.designation === 'AE' && (
-                                <button
-                                    onClick={handleMarkAttendance}
-                                    disabled={isLoading}
-                                    className="w-full bg-blue-500/90 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                                >
-                                    <span className="text-lg">🔄</span>
-                                    <span>Start New Session</span>
-                                </button>
-                            )}
-                        </div>
-                    )}
+                {/* ── Right Column ─────────────────────────────────────────── */}
+                <div className="lg:col-span-2 flex flex-col gap-5">
 
-                    {/* Decorative Blob */}
-                    <div className="absolute -top-24 -right-24 w-64 h-64 bg-blue-500 rounded-full blur-[80px] opacity-20 group-hover:opacity-30 transition-opacity"></div>
-                </div>
-
-                {/* Quick Actions & Stats */}
-                <div className="lg:col-span-2 flex flex-col gap-6">
-                    {/* Stats Row */}
-                    <div className="grid grid-cols-2 gap-4">
-                        <StatCard title="Total Reports" value={workLogs.length} icon="📝" color="blue" />
-                        <StatCard title="Approved Leaves" value={requests.leaves.filter(l => l.status === 'APPROVED').length} icon="🏖️" color="orange" />
+                    {/* Stats row */}
+                    <div className="grid grid-cols-3 gap-4">
+                        <StatCard title="Work Logs" value={workLogs?.length || 0} icon="📝" color="blue" />
+                        <StatCard title="Approved Leaves" value={requests?.leaves?.filter(l => l.status === 'APPROVED').length || 0} icon="🏖️" color="orange" />
+                        <StatCard title="Pending" value={pendingCount} icon="⏳" color="purple" />
                     </div>
 
-                    {/* Action Buttons Row */}
-                    <div className="flex-1 bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-                        <h4 className="font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    {/* Quick Actions */}
+                    <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+                        <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
                             <span>⚡</span> Quick Actions
                         </h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4 h-full">
-                            {(
-
-                                <button
-                                    onClick={() => setActiveModal('worklog')}
-                                    className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-blue-50 hover:border-blue-200 hover:text-blue-600 transition-all group min-h-[100px] md:h-[120px]"
-                                >
-                                    <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">📝</div>
-                                    <span className="font-bold text-sm">Daily Report</span>
-                                    <span className="text-xs text-slate-400 mt-1">{user?.designation || 'General'} Report</span>
-                                </button>
-                            )}
-
-                            <button
-                                onClick={() => setActiveModal('leave')}
-                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-orange-50 hover:border-orange-200 hover:text-orange-600 transition-all group min-h-[100px] md:h-[120px]"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏖️</div>
-                                <span className="font-bold text-sm">Request Leave</span>
-                            </button>
-
-                            <button
-                                onClick={() => {
-                                    setPermissionInitialData(null);
-                                    setIsAutoPermission(false);
-                                    setActiveModal('permission');
-                                }}
-                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-purple-50 hover:border-purple-200 hover:text-purple-600 transition-all group min-h-[100px] md:h-[120px]"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🕑</div>
-                                <span className="font-bold text-sm">Permission</span>
-                            </button>
-
-                            {/* Create Project - LA & AE Only */}
-                            {['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && (
-                                <button
-                                    onClick={() => setActiveModal('project')}
-                                    className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group min-h-[100px] md:h-[120px]"
-                                >
-                                    <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🚀</div>
-                                    <span className="font-bold text-sm">Create Project</span>
-                                </button>
-                            )}
-
-                            <button
-                                onClick={() => setActiveModal('site-visit')}
-                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-200 hover:text-emerald-600 transition-all group min-h-[100px] md:h-[120px]"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏗️</div>
-                                <span className="font-bold text-sm">Update Site Visit</span>
-                            </button>
-
-                            <button
-                                onClick={() => setActiveModal('showroom-visit')}
-                                className="flex flex-col items-center justify-center p-3 md:p-4 rounded-xl border border-slate-100 bg-slate-50 hover:bg-indigo-50 hover:border-indigo-200 hover:text-indigo-600 transition-all group min-h-[100px] md:h-[120px]"
-                            >
-                                <div className="w-12 h-12 rounded-full bg-white shadow-sm flex items-center justify-center text-2xl mb-3 group-hover:scale-110 transition-transform">🏢</div>
-                                <span className="font-bold text-sm">Cross-Showroom Visit</span>
-                            </button>
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
+                            {quickActions.map(action => (
+                                <motion.button key={action.id} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
+                                    onClick={() => { if (action.id === 'permission') setPermissionInitialData(null); setActiveModal(action.id); }}
+                                    className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-slate-200 transition-all text-left group min-h-[110px]">
+                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform`}>
+                                        {action.icon}
+                                    </div>
+                                    <div>
+                                        <p className="font-bold text-slate-800 text-sm leading-tight">{action.label}</p>
+                                        <p className="text-slate-400 text-[11px] mt-0.5">{action.sub}</p>
+                                    </div>
+                                </motion.button>
+                            ))}
                         </div>
                     </div>
                 </div>
             </div>
-        </div >
+
+            {/* ── Recent Activity Tabs ────────────────────────────────────── */}
+            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
+                className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+                <div className="border-b border-slate-100 flex overflow-x-auto">
+                    {(['logs', 'leaves', 'permissions']).filter(t => !(t === 'logs' && user?.designation === 'OFFICE-ADMINISTRATION'))
+                        .map(tab => (
+                            <button key={tab} onClick={() => setActiveTab(tab)}
+                                className={`px-6 py-4 text-sm font-bold whitespace-nowrap transition-colors capitalize border-b-2 ${activeTab === tab ? 'text-blue-600 border-blue-500 bg-blue-50/40' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
+                                {tab === 'logs' ? '📋 Work Logs' : tab === 'leaves' ? '🏖️ Leaves' : '🕑 Permissions'}
+                            </button>
+                        ))}
+                </div>
+
+                <div className="p-6">
+                    {/* Work Logs Tab */}
+                    {activeTab === 'logs' && (
+                        <div className="space-y-3">
+                            {!workLogs || workLogs.length === 0 ? (
+                                <div className="text-center py-12 text-slate-400">
+                                    <p className="text-5xl mb-3">📭</p>
+                                    <p className="font-medium">No work logs yet</p>
+                                    <p className="text-xs mt-1">Tap "Log Work" above to submit your first report</p>
+                                </div>
+                            ) : workLogs.map(log => (
+                                <div key={log.id} className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
+                                    <div className="w-11 h-11 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center text-xs font-bold flex-shrink-0 shadow-sm">
+                                        <span className="text-slate-400 text-[10px] font-normal">{new Date(log.date).toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</span>
+                                        <span className="text-slate-800 text-sm leading-none">{new Date(log.date).getDate()}</span>
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <div className="flex justify-between items-start gap-2">
+                                            <h4 className="font-bold text-slate-800 truncate text-sm">{log.clientName || log.projectName || 'Work Log'}</h4>
+                                            {log.hours && <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex-shrink-0">{log.hours}h</span>}
+                                        </div>
+                                        <p className="text-slate-500 text-xs mt-0.5 truncate">{log.process || log.tasks || log.cre_callBreakdown || 'Detailed Report'}</p>
+                                        <div className="flex gap-1.5 mt-1.5 flex-wrap">
+                                            {log.imageCount && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">📸 {log.imageCount} imgs</span>}
+                                            {log.cre_totalCalls && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">📞 {log.cre_totalCalls} calls</span>}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Leaves Tab */}
+                    {activeTab === 'leaves' && (
+                        <div className="space-y-2">
+                            {!requests?.leaves || requests.leaves.length === 0 ? (
+                                <p className="text-center text-slate-400 italic py-10">No leave requests found.</p>
+                            ) : requests.leaves.map(req => (
+                                <div key={req.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-lg">🏖️</div>
+                                        <div>
+                                            <p className="font-bold text-slate-800 text-sm">{new Date(req.startDate).toLocaleDateString()} — {new Date(req.endDate).toLocaleDateString()}</p>
+                                            <p className="text-xs text-slate-400">{req.type} · "{req.reason}"</p>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0 ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{req.status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Permissions Tab */}
+                    {activeTab === 'permissions' && (
+                        <div className="space-y-2">
+                            {!requests?.permissions || requests.permissions.length === 0 ? (
+                                <p className="text-center text-slate-400 italic py-10">No permission requests found.</p>
+                            ) : requests.permissions.map(req => (
+                                <div key={req.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-lg">🕑</div>
+                                        <div>
+                                            <p className="font-bold text-slate-800 text-sm">{new Date(req.date).toLocaleDateString()} · {req.startTime} – {req.endTime}</p>
+                                            <p className="text-xs text-slate-400">"{req.reason}"</p>
+                                        </div>
+                                    </div>
+                                    <span className={`px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0 ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{req.status}</span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+            </motion.div>
+        </div>
     );
 };
 
