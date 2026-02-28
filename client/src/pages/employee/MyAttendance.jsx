@@ -48,9 +48,13 @@ const MyAttendance = () => {
         const logoutTime = new Date(record.checkoutTime);
         const totalMinutes = Math.floor((logoutTime - loginTime) / 60000);
 
-        const totalBreaks = record.breaks?.reduce((acc, b) => acc + (b.duration || 0), 0) || 0;
-        const workingMinutes = Math.max(0, totalMinutes - totalBreaks);
+        // Only TEA and LUNCH breaks are deducted from net hours
+        // Client Meeting and Online Discussion count as working time
+        const deductibleBreaks = record.breaks
+            ?.filter(b => ['TEA', 'LUNCH'].includes(b.breakType))
+            .reduce((acc, b) => acc + (b.duration || 0), 0) || 0;
 
+        const workingMinutes = Math.max(0, totalMinutes - deductibleBreaks);
         return formatMinutes(workingMinutes);
     };
 
