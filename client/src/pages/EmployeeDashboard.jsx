@@ -327,12 +327,7 @@ const EmployeeDashboard = () => {
                     </div>
 
                     {/* Live clock */}
-                    <div className="flex flex-col items-center bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 shrink-0">
-                        <p className="text-white font-black text-3xl font-mono tracking-widest">
-                            {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                        </p>
-                        <p className="text-slate-400 text-xs mt-1 font-medium">{now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
-                    </div>
+
                 </div>
             </motion.div>
 

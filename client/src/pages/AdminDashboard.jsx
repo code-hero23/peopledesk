@@ -21,8 +21,15 @@ const AdminDashboard = () => {
         return () => { dispatch(reset()); };
     }, [dispatch]);
 
-    const todayPresentCount = dailyAttendance.filter(att => att.status === 'PRESENT').length;
-    const todayAbsentCount = dailyAttendance.filter(att => att.status === 'ABSENT').length;
+    // IDs of employees to include (exclude admin, business head, HR, AE manager)
+    const includedEmployeeIds = employees
+        .filter(emp => !['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(emp.role))
+        .map(emp => emp.id);
+    // Count present and absent only for included employees
+    const todayPresentCount = dailyAttendance.filter(att => att.status === 'PRESENT' && includedEmployeeIds.includes(att.user.id)).length;
+    const todayAbsentCount = dailyAttendance.filter(att => att.status === 'ABSENT' && includedEmployeeIds.includes(att.user.id)).length;
+
+    const actualEmployeeCount = includedEmployeeIds.length;
 
     const pendingLeavesCount = pendingRequests.leaves?.length || 0;
     const pendingPermissionsCount = pendingRequests.permissions?.length || 0;
@@ -183,7 +190,7 @@ const AdminDashboard = () => {
                                 <>
                                     <StatCard
                                         title="Total Employees"
-                                        value={employees.length}
+                                        value={actualEmployeeCount}
                                         icon="👥"
                                         color="blue"
                                         onClick={() => navigate('/admin/employees')}
@@ -256,18 +263,18 @@ const AdminDashboard = () => {
                                 <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${employees.length > 0 ? (todayPresentCount / employees.length) * 100 : 0}%` }}
+                                        animate={{ width: `${actualEmployeeCount > 0 ? (todayPresentCount / actualEmployeeCount) * 100 : 0}%` }}
                                         transition={{ duration: 1, ease: 'easeOut' }}
                                         className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 rounded-l-full"
                                     />
                                     <motion.div
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${employees.length > 0 ? (todayAbsentCount / employees.length) * 100 : 0}%` }}
+                                        animate={{ width: `${actualEmployeeCount > 0 ? (todayAbsentCount / actualEmployeeCount) * 100 : 0}%` }}
                                         transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
                                         className="h-full bg-gradient-to-r from-red-400 to-rose-500"
                                     />
                                 </div>
-                                <p className="text-[11px] text-slate-400 mt-1 text-right">{employees.length} total employees</p>
+                                <p className="text-[11px] text-slate-400 mt-1 text-right">{actualEmployeeCount} total employees</p>
                             </div>
                             {/* Absent list */}
                             {todayAbsentCount > 0 && (

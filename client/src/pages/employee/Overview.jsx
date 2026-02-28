@@ -38,34 +38,7 @@ const showBrowserNotif = (title, body) => {
     }
 };
 
-// ─── Elapsed timer helper ─────────────────────────────────────────────────────
-const useElapsedTime = (startIso) => {
-    const [elapsed, setElapsed] = useState('');
-    useEffect(() => {
-        if (!startIso) { setElapsed(''); return; }
-        const tick = () => {
-            const diffMs = Date.now() - new Date(startIso).getTime();
-            const h = Math.floor(diffMs / 3600000);
-            const m = Math.floor((diffMs % 3600000) / 60000);
-            const s = Math.floor((diffMs % 60000) / 1000);
-            setElapsed(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`);
-        };
-        tick();
-        const id = setInterval(tick, 1000);
-        return () => clearInterval(id);
-    }, [startIso]);
-    return elapsed;
-};
 
-// ─── Live clock ───────────────────────────────────────────────────────────────
-const useLiveClock = () => {
-    const [time, setTime] = useState(new Date());
-    useEffect(() => {
-        const id = setInterval(() => setTime(new Date()), 1000);
-        return () => clearInterval(id);
-    }, []);
-    return time;
-};
 
 const Overview = () => {
     const dispatch = useDispatch();
@@ -89,8 +62,7 @@ const Overview = () => {
     const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
-    const now = useLiveClock();
-    const elapsedSinceCheckIn = useElapsedTime(attendance?.status === 'PRESENT' && !attendance?.checkoutTime ? attendance?.date : null);
+
 
     // Confirmation Modal State
     const [confirmationConfig, setConfirmationConfig] = useState({
@@ -445,7 +417,7 @@ const Overview = () => {
     const isCheckedIn = attendance?.status === 'PRESENT' && !attendance?.checkoutTime;
     const isCheckedOut = !!attendance?.checkoutTime;
     const pendingCount = (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0);
-    const greetHour = now.getHours();
+    const greetHour = new Date().getHours();
     const greeting = greetHour < 12 ? 'Good Morning' : greetHour < 17 ? 'Good Afternoon' : 'Good Evening';
 
     const quickActions = [
@@ -545,19 +517,11 @@ const Overview = () => {
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs px-3 py-1 rounded-full font-bold">{user?.designation || '—'}</span>
                             <span className="text-slate-500 text-xs">•</span>
-                            <span className="text-slate-400 text-xs">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                            <span className="text-slate-400 text-xs">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
                         </div>
                     </div>
 
-                    {/* Live clock */}
-                    <div className="flex items-center gap-4">
-                        <div className="flex flex-col items-center bg-white/5 border border-white/10 backdrop-blur-sm rounded-2xl px-6 py-4 shrink-0">
-                            <p className="text-white font-black text-3xl font-mono tracking-widest">
-                                {now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
-                            </p>
-                            <p className="text-slate-400 text-xs mt-1 font-medium">{now.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })} IST</p>
-                        </div>
-                    </div>
+
                 </div>
             </motion.div>
 
@@ -594,12 +558,7 @@ const Overview = () => {
                                     <span>🕒</span>
                                     <span className="text-sm font-medium">In at <span className="font-black">{new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
                                 </div>
-                                {/* Live elapsed timer */}
-                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
-                                    <span>⏱️</span>
-                                    <span className="font-mono font-black text-lg tracking-widest">{elapsedSinceCheckIn}</span>
-                                    <span className="text-white/50 text-xs">elapsed</span>
-                                </div>
+
                                 {/* Break status */}
                                 {isPaused && activeBreak && (
                                     <div className="flex items-center gap-2 bg-amber-400/20 border border-amber-400/30 rounded-xl px-4 py-2">
