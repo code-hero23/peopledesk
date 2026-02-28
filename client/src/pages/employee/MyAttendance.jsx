@@ -122,10 +122,9 @@ const MyAttendance = () => {
                                             // Find attendance record for this exact date
                                             const dateString = dateObj.toISOString().split('T')[0];
                                             const record = attendanceHistory?.find(a => a.date.startsWith(dateString));
-                                            const isWeekend = dateObj.getDay() === 0;
 
                                             return (
-                                                <tr key={dateString} className={`border-b border-gray-100 transition-colors ${isWeekend ? 'bg-red-50/30' : 'hover:bg-slate-50'}`}>
+                                                <tr key={dateString} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                                                     <td className="p-4 border-r border-gray-100">
                                                         <div className="flex flex-col items-center justify-center">
                                                             <span className="font-bold text-gray-800">{formatDate(dateObj)}</span>
@@ -159,7 +158,7 @@ const MyAttendance = () => {
                                                         </>
                                                     ) : (
                                                         <td colSpan="7" className="p-4 text-center text-gray-400 font-medium bg-gray-50/50">
-                                                            {isWeekend ? 'Weekend Off' : 'Absent / No Data'}
+                                                            Absent / No Data
                                                         </td>
                                                     )}
                                                 </tr>
