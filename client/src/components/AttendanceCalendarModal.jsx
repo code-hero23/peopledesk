@@ -19,9 +19,9 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         return dates;
     }, [cycleData]);
 
-    // Calculate total approved leave days in this cycle
-    const leaveDayCount = useMemo(() => {
-        if (!leaves || !cycleData) return 0;
+    // Calculate all approved leave dates in this cycle, sorted
+    const sortedLeaveDates = useMemo(() => {
+        if (!leaves || !cycleData) return [];
 
         const approvedLeaves = leaves.filter(l => l.status === 'APPROVED');
         const leaveDates = new Set();
@@ -42,7 +42,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
             }
         });
 
-        return leaveDates.size;
+        return Array.from(leaveDates).sort();
     }, [leaves, cycleData]);
 
     const getDayStatus = (date) => {
@@ -57,15 +57,9 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         if (isPresent) return 'PRESENT';
 
         // 2. Check Leaves (Blue/Orange)
-        const isLeave = leaves?.some(l => {
-            if (l.status !== 'APPROVED') return false;
-            const start = new Date(l.startDate).toISOString().split('T')[0];
-            const end = new Date(l.endDate).toISOString().split('T')[0];
-            return dateStr >= start && dateStr <= end;
-        });
-
-        if (isLeave) {
-            return leaveDayCount <= 4 ? 'LEAVE_NORMAL' : 'LEAVE_EXCESS';
+        if (sortedLeaveDates.includes(dateStr)) {
+            const leaveIndex = sortedLeaveDates.indexOf(dateStr);
+            return leaveIndex < 4 ? 'LEAVE_NORMAL' : 'LEAVE_EXCESS';
         }
 
         // 3. Past days without data are ABSENT
@@ -123,15 +117,15 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                                 <p className="text-emerald-600 text-[10px] font-black uppercase tracking-wider mb-1">Present</p>
                                 <p className="text-2xl font-black text-emerald-700">{attendanceHistory?.length || 0} <span className="text-xs font-bold">Days</span></p>
                             </div>
-                            <div className={`${leaveDayCount <= 4 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'} rounded-2xl p-4 border`}>
-                                <p className={`${leaveDayCount <= 4 ? 'text-blue-600' : 'text-orange-600'} text-[10px] font-black uppercase tracking-wider mb-1`}>Leaves</p>
-                                <p className={`text-2xl font-black ${leaveDayCount <= 4 ? 'text-blue-700' : 'text-orange-700'}`}>{leaveDayCount} <span className="text-xs font-bold">Days</span></p>
+                            <div className={`${sortedLeaveDates.length <= 4 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'} rounded-2xl p-4 border`}>
+                                <p className={`${sortedLeaveDates.length <= 4 ? 'text-blue-600' : 'text-orange-600'} text-[10px] font-black uppercase tracking-wider mb-1`}>Leaves</p>
+                                <p className={`text-2xl font-black ${sortedLeaveDates.length <= 4 ? 'text-blue-700' : 'text-orange-700'}`}>{sortedLeaveDates.length} <span className="text-xs font-bold">Days</span></p>
                             </div>
                             <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
                                 <p className="text-slate-500 text-[10px] font-black uppercase tracking-wider mb-1">Status</p>
-                                <p className={`text-xs font-bold flex items-center gap-1.5 mt-2 ${leaveDayCount > 4 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                    {leaveDayCount > 4 ? <Info size={14} /> : <CheckCircle2 size={14} />}
-                                    {leaveDayCount > 4 ? 'Threshold Exceeded' : 'Within Limits'}
+                                <p className={`text-xs font-bold flex items-center gap-1.5 mt-2 ${sortedLeaveDates.length > 4 ? 'text-orange-600' : 'text-emerald-600'}`}>
+                                    {sortedLeaveDates.length > 4 ? <Info size={14} /> : <CheckCircle2 size={14} />}
+                                    {sortedLeaveDates.length > 4 ? 'Threshold Exceeded' : 'Within Limits'}
                                 </p>
                             </div>
                         </div>
