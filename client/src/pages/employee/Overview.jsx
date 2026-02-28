@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance } from '../../features/employee/employeeSlice';
+import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance, getAttendanceHistory } from '../../features/employee/employeeSlice';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 
 import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
@@ -21,6 +21,7 @@ import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
 import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
 import CheckInPhotoModal from '../../components/CheckInPhotoModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
+import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
 
 import { getDeviceType } from '../../utils/deviceUtils';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -43,7 +44,7 @@ const showBrowserNotif = (title, body) => {
 const Overview = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { attendance, workLogs, requests, isLoading, isPaused, activeBreak, isRequestsFetched } = useSelector((state) => state.employee);
+    const { attendance, workLogs, requests, isLoading, isPaused, activeBreak, isRequestsFetched, attendanceHistory } = useSelector((state) => state.employee);
 
     // Alerts state
     const [breakAlert, setBreakAlert] = useState(false);   // 30-min break overrun
@@ -61,6 +62,8 @@ const Overview = () => {
     const [isAutoPermission, setIsAutoPermission] = useState(false);
     const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [showCalendarModal, setShowCalendarModal] = useState(false);
+    const [selectedCycle, setSelectedCycle] = useState(null);
 
 
 
@@ -94,8 +97,10 @@ const Overview = () => {
             startDate: range.startDate,
             endDate: range.endDate
         };
+        setSelectedCycle(range);
         dispatch(getMyWorkLogs(params));
         dispatch(getMyRequests(params));
+        dispatch(getAttendanceHistory(params));
     };
 
     // ── Break overrun alert: 30 min after break starts (TEA / LUNCH only) ─────
@@ -469,6 +474,14 @@ const Overview = () => {
                 confirmText={confirmationConfig.confirmText}
             />
 
+            <AttendanceCalendarModal
+                isOpen={showCalendarModal}
+                onClose={() => setShowCalendarModal(false)}
+                cycleData={selectedCycle}
+                attendanceHistory={attendanceHistory}
+                leaves={requests?.leaves}
+            />
+
             {/* ── Smart Alert Banners ─────────────────────────────────────── */}
             <AnimatePresence>
                 {breakAlert && (
@@ -508,11 +521,8 @@ const Overview = () => {
                 <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-center gap-5">
                     <div>
                         <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-1">{greeting} 👋</p>
-                        <h2 className="text-3xl md:text-4xl font-black text-white mb-1 tracking-tight flex flex-col sm:flex-row sm:items-center gap-3">
+                        <h2 className="text-3xl md:text-4xl font-black text-white mb-1 tracking-tight">
                             {user?.name?.split(' ')[0]}
-                            <div className="scale-75 sm:scale-90 origin-left">
-                                <MonthCycleSelector onCycleChange={handleCycleChange} />
-                            </div>
                         </h2>
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs px-3 py-1 rounded-full font-bold">{user?.designation || '—'}</span>
@@ -522,6 +532,10 @@ const Overview = () => {
                     </div>
 
 
+                    {/* Month Selector on the right corner */}
+                    <div className="shrink-0 scale-90 sm:scale-100 origin-right">
+                        <MonthCycleSelector onCycleChange={handleCycleChange} onCardClick={() => setShowCalendarModal(true)} />
+                    </div>
                 </div>
             </motion.div>
 
@@ -673,6 +687,7 @@ const Overview = () => {
                             ))}
                         </div>
                     </div>
+
                 </div>
             </div>
 

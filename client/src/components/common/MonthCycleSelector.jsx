@@ -9,7 +9,7 @@ import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
  * 
  * @param {Function} onCycleChange - Returns { startDate, endDate, label }
  */
-const MonthCycleSelector = ({ onCycleChange }) => {
+const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
     const [selectedDate, setSelectedDate] = useState(new Date());
 
     // Calculate initial cycle on mount
@@ -90,32 +90,41 @@ const MonthCycleSelector = ({ onCycleChange }) => {
     const currentCycle = calculateCycleRange(selectedDate);
 
     return (
-        <div className="flex items-center gap-4 bg-white/80 backdrop-blur-md border border-slate-200 p-2 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-sm">
             <button
                 onClick={handlePrev}
                 className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
+                title="Previous Cycle"
             >
                 <ChevronLeft size={20} />
             </button>
 
-            <div className="flex items-center gap-3 px-2 min-w-[180px] justify-center text-center">
-                <div className="bg-blue-50 p-2 rounded-lg text-blue-600">
-                    <Calendar size={18} />
+            <button
+                onClick={onCardClick}
+                className="flex items-center gap-3 px-4 py-1.5 rounded-xl hover:bg-blue-50/50 transition-all border border-transparent hover:border-blue-100 group text-left min-w-[200px]"
+            >
+                <div className="bg-blue-50 p-2 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
+                    <Calendar size={20} />
                 </div>
                 <div>
-                    <div className="font-bold text-slate-800 text-sm">{currentCycle.label}</div>
-                    <div className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{currentCycle.subLabel}</div>
+                    <div className="font-black text-slate-800 text-sm flex items-center gap-1.5">
+                        {currentCycle.label}
+                        <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">VIEW CALENDAR</span>
+                    </div>
+                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{currentCycle.subLabel}</div>
                 </div>
-            </div>
+            </button>
 
             <button
                 onClick={handleNext}
                 className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
+                title="Next Cycle"
             >
                 <ChevronRight size={20} />
             </button>
         </div>
     );
 };
+
 
 export default MonthCycleSelector;
