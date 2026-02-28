@@ -566,13 +566,13 @@ const Overview = () => {
                                     transition={{ duration: 2, repeat: Infinity }}
                                     className={`w-2 h-2 rounded-full ${isCheckedOut ? 'bg-white' : isCheckedIn ? (isPaused ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-white/40'}`}
                                 />
-                                {isCheckedOut ? 'Shift Ended' : isCheckedIn ? (isPaused ? 'On Break' : 'Work Session Active') : 'System Idle'}
+                                {isCheckedOut ? 'Session Ended' : isCheckedIn ? (isPaused ? 'On Break' : 'Work Session Active') : 'System Idle'}
                             </div>
                         </div>
 
                         <div className="mb-auto">
                             <h3 className="text-4xl font-black tracking-tight mb-4 leading-tight">
-                                {isCheckedOut ? 'Shift Ended' : isCheckedIn ? 'Logged In' : 'Sign In To Start'}
+                                {isCheckedOut ? 'Session Ended' : isCheckedIn ? 'Logged In' : 'Sign In To Start'}
                             </h3>
 
                             <div className="space-y-3">
