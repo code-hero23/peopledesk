@@ -5,6 +5,7 @@ const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api
 
 const initialState = {
     attendance: null,
+    attendanceHistory: [],
     workLogs: [],
     requests: { leaves: [], permissions: [], siteVisits: [], showroomVisits: [], wfh: [] },
     businessHeads: [],
@@ -30,6 +31,36 @@ export const getAttendanceStatus = createAsyncThunk(
                 },
             };
             const response = await axios.get(API_URL + 'attendance/today', config);
+            return response.data;
+        } catch (error) {
+            const message =
+                (error.response && error.response.data && error.response.data.message) ||
+                error.message ||
+                error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Get attendance history
+export const getAttendanceHistory = createAsyncThunk(
+    'employee/getAttendanceHistory',
+    async (params, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+            };
+            let query = '';
+            if (params) {
+                const { startDate, endDate } = params;
+                if (startDate && endDate) {
+                    query = `?startDate=${startDate}&endDate=${endDate}`;
+                }
+            }
+            const response = await axios.get(API_URL + `attendance/history${query}`, config);
             return response.data;
         } catch (error) {
             const message =
@@ -426,6 +457,20 @@ export const employeeSlice = createSlice({
                 state.activeBreak = action.payload.activeBreak;
             })
             .addCase(getAttendanceStatus.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Get Attendance History
+            .addCase(getAttendanceHistory.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getAttendanceHistory.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.attendanceHistory = action.payload;
+            })
+            .addCase(getAttendanceHistory.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

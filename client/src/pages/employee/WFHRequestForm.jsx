@@ -393,7 +393,7 @@ const WFHRequestForm = () => {
 
                                         <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 flex gap-3 text-sm text-yellow-800">
                                             <AlertTriangle className="flex-shrink-0" size={20} />
-                                            <p>This request will be routed through **HR**, **Business Head**, and **Admin** for approval. Submission does not guarantee WFH.</p>
+                                            <p>This request will be routed through **HR**, **Business Head**, and <br></br>**raakesh natrajan** for approval. Submission does not guarantee WFH.</p>
                                         </div>
 
                                         <button

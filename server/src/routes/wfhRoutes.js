@@ -4,7 +4,8 @@ const {
     createWfhRequest,
     getManageableWfhRequests,
     getMyWfhRequests,
-    approveWfhRequest
+    approveWfhRequest,
+    getWfhHistory
 } = require('../controllers/wfhController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
@@ -16,6 +17,9 @@ router.route('/me')
 
 router.route('/manage')
     .get(protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), getManageableWfhRequests);
+
+router.route('/history')
+    .get(protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), getWfhHistory);
 
 router.route('/:id/approve')
     .put(protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), approveWfhRequest);

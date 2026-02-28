@@ -686,7 +686,8 @@ const getDailyAttendance = async (req, res) => {
             userRecords.sort((a, b) => new Date(a.date) - new Date(b.date));
 
             let totalGrossDurationMinutes = 0;
-            let totalBreakDeductionMinutes = 0;
+            let totalTeaBreakMinutes = 0;
+            let totalLunchBreakMinutes = 0;
             let totalMeetingMinutes = 0;
 
             const sessions = userRecords.map(record => {
@@ -700,8 +701,10 @@ const getDailyAttendance = async (req, res) => {
                 const sessionBreaks = record.breaks || [];
                 sessionBreaks.forEach(b => {
                     const duration = b.duration || 0;
-                    if (['TEA', 'LUNCH'].includes(b.breakType)) {
-                        totalBreakDeductionMinutes += duration;
+                    if (b.breakType === 'TEA') {
+                        totalTeaBreakMinutes += duration;
+                    } else if (b.breakType === 'LUNCH') {
+                        totalLunchBreakMinutes += duration;
                     } else if (['CLIENT_MEETING', 'BH_MEETING'].includes(b.breakType)) {
                         totalMeetingMinutes += duration;
                     }
@@ -735,6 +738,7 @@ const getDailyAttendance = async (req, res) => {
                 checkoutDeviceInfo = lastRecord.checkoutDeviceInfo;
             }
 
+            const totalBreakDeductionMinutes = totalTeaBreakMinutes + totalLunchBreakMinutes;
             const effectiveMinutes = Math.max(0, totalGrossDurationMinutes - totalBreakDeductionMinutes);
             const totalHours = (effectiveMinutes / 60).toFixed(2);
 
@@ -757,7 +761,8 @@ const getDailyAttendance = async (req, res) => {
                 checkoutDeviceInfo: status === 'PRESENT' ? checkoutDeviceInfo : null,
                 sessions: sessions,
                 breakData: {
-                    personal: Math.round(totalBreakDeductionMinutes),
+                    tea: Math.round(totalTeaBreakMinutes),
+                    lunch: Math.round(totalLunchBreakMinutes),
                     meetings: Math.round(totalMeetingMinutes)
                 }
             };

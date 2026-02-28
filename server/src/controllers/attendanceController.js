@@ -288,4 +288,42 @@ const getAttendanceStatus = async (req, res) => {
     }
 };
 
-module.exports = { markAttendance, checkoutAttendance, getAttendanceStatus, pauseAttendance, resumeAttendance };
+// @desc    Get attendance history
+// @route   GET /api/attendance/history
+// @access  Private
+const getMyAttendanceHistory = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { startDate, endDate } = req.query;
+
+        let dateFilter = {};
+        if (startDate && endDate) {
+            dateFilter = {
+                date: {
+                    gte: new Date(startDate),
+                    lte: new Date(endDate)
+                }
+            };
+        }
+
+        const history = await prisma.attendance.findMany({
+            where: {
+                userId,
+                ...dateFilter
+            },
+            include: {
+                breaks: true // Include breaks to calculate durations
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
+
+        res.json(history);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+module.exports = { markAttendance, checkoutAttendance, getAttendanceStatus, pauseAttendance, resumeAttendance, getMyAttendanceHistory };

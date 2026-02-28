@@ -184,9 +184,56 @@ const approveWfhRequest = async (req, res) => {
     }
 };
 
+// @desc    Get WFH History
+// @route   GET /api/wfh/history
+// @access  Private (Admin, HR, BH)
+const getWfhHistory = async (req, res) => {
+    try {
+        const { role, id } = req.user;
+        const { startDate, endDate } = req.query;
+
+        let dateFilter = {};
+        if (startDate && endDate) {
+            dateFilter = {
+                startDate: {
+                    gte: new Date(startDate),
+                },
+                endDate: {
+                    lte: new Date(endDate)
+                }
+            };
+        }
+
+        let whereClause = { ...dateFilter };
+
+        if (role === 'ADMIN' || role === 'HR') {
+            // Admins and HR can see all history
+            whereClause.status = { in: ['APPROVED', 'REJECTED'] };
+        } else if (role === 'BUSINESS_HEAD') {
+            // BH can see history for requests they were involved in or their direct reports (assuming reportingManager matches their name, or just approved/rejected by them)
+            // Simplified: if they are BH, they see all approved/rejected where they are the reporting manager
+            whereClause.reportingManager = req.user.name;
+            whereClause.status = { in: ['APPROVED', 'REJECTED'] };
+        } else {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const history = await prisma.wfhRequest.findMany({
+            where: whereClause,
+            orderBy: { createdAt: 'desc' }
+        });
+
+        res.json(history);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     createWfhRequest,
     getManageableWfhRequests,
     getMyWfhRequests,
-    approveWfhRequest
+    approveWfhRequest,
+    getWfhHistory
 };

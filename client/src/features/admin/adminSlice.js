@@ -227,6 +227,31 @@ export const getManageableWfhRequests = createAsyncThunk(
     }
 );
 
+// Get WFH Request History
+export const getWfhHistory = createAsyncThunk(
+    'admin/getWfhHistory',
+    async (params, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            let query = '';
+            if (params) {
+                const { startDate, endDate } = params;
+                if (startDate && endDate) {
+                    query = `?startDate=${startDate}&endDate=${endDate}`;
+                }
+            }
+            const response = await axios.get((import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + `/wfh/history${query}`, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Approve WFH Request
 export const approveWfhRequest = createAsyncThunk(
     'admin/approveWfhRequest',
@@ -542,6 +567,19 @@ export const adminSlice = createSlice({
                 state.pendingRequests.wfh = action.payload;
             })
             .addCase(getManageableWfhRequests.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Get WFH History
+            .addCase(getWfhHistory.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getWfhHistory.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.requestHistory.wfh = action.payload;
+            })
+            .addCase(getWfhHistory.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

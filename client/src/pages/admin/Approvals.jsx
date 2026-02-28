@@ -17,6 +17,7 @@ const Approvals = () => {
     const [bhView, setBhView] = useState('mine'); // 'mine' or 'others' — Global BH only
     const [filterDate, setFilterDate] = useState(''); // Specific date if picked
     const [cycleRange, setCycleRange] = useState({ startDate: '', endDate: '' });
+    const [searchTerm, setSearchTerm] = useState('');
 
     const handleCycleChange = (range) => {
         setCycleRange(range);
@@ -90,6 +91,12 @@ const Approvals = () => {
             leaves = leaves.filter(r => r.targetBhId !== user.id && r.user?.reportingBhId !== user.id);
             permissions = permissions.filter(r => r.targetBhId !== user.id && r.user?.reportingBhId !== user.id);
         }
+    }
+
+    if (searchTerm) {
+        const lowerTerm = searchTerm.toLowerCase();
+        leaves = leaves.filter(r => r.user?.name?.toLowerCase().includes(lowerTerm) || r.user?.email?.toLowerCase().includes(lowerTerm));
+        permissions = permissions.filter(r => r.user?.name?.toLowerCase().includes(lowerTerm) || r.user?.email?.toLowerCase().includes(lowerTerm));
     }
 
     if (isLoading && activeTab === 'pending' && !pendingRequests.leaves) return <div className="p-8 text-center text-slate-500">Loading requests...</div>;
@@ -246,6 +253,20 @@ const Approvals = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-3 items-center">
+                    {/* Search Bar */}
+                    <div className="relative w-full sm:w-64">
+                        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <span className="text-slate-400">🔍</span>
+                        </div>
+                        <input
+                            type="text"
+                            placeholder="Search employee..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="pl-10 pr-4 py-2 w-full border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium bg-white"
+                        />
+                    </div>
+
                     <button
                         onClick={handleExport}
                         className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2"

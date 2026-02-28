@@ -16,22 +16,35 @@ import {
     Home,
     Info
 } from 'lucide-react';
-import { getManageableWfhRequests, approveWfhRequest, reset } from '../../features/admin/adminSlice';
+import MonthCycleSelector from '../../components/common/MonthCycleSelector';
+import { getManageableWfhRequests, getWfhHistory, approveWfhRequest, reset } from '../../features/admin/adminSlice';
 import { toast } from 'react-toastify';
 import Spinner from '../../components/Spinner';
 
 const WFHManagement = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { pendingRequests, isLoading, isError, isSuccess, message } = useSelector((state) => state.admin);
+    const { pendingRequests, requestHistory, isLoading, isError, isSuccess, message } = useSelector((state) => state.admin);
 
     const [selectedRequest, setSelectedRequest] = useState(null);
     const [remarks, setRemarks] = useState('');
     const [isApproving, setIsApproving] = useState(false);
+    const [activeTab, setActiveTab] = useState('pending');
+    const [cycleRange, setCycleRange] = useState({ startDate: '', endDate: '' });
+
+    const handleCycleChange = (range) => {
+        setCycleRange(range);
+    };
 
     useEffect(() => {
-        dispatch(getManageableWfhRequests());
-    }, [dispatch]);
+        if (activeTab === 'pending') {
+            dispatch(getManageableWfhRequests());
+        } else {
+            if (cycleRange.startDate && cycleRange.endDate) {
+                dispatch(getWfhHistory({ startDate: cycleRange.startDate, endDate: cycleRange.endDate }));
+            }
+        }
+    }, [dispatch, activeTab, cycleRange]);
 
     useEffect(() => {
         if (isError) {
@@ -59,31 +72,62 @@ const WFHManagement = () => {
         setRemarks('');
     };
 
-    if (isLoading && (!pendingRequests?.wfh || pendingRequests.wfh.length === 0)) return <Spinner />;
+    const displayRequests = activeTab === 'pending' ? pendingRequests?.wfh : requestHistory?.wfh;
+
+    if (isLoading && (!displayRequests || displayRequests.length === 0)) return <Spinner />;
 
     return (
         <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
                 {/* Header */}
-                <div className="mb-8">
-                    <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
-                        <Home className="text-blue-600" /> WFH Approvals
-                    </h1>
-                    <p className="text-gray-500 mt-1">Manage 3-level Work From Home requests for your team.</p>
+                <div className="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <h1 className="text-3xl font-extrabold text-gray-900 flex items-center gap-3">
+                            <Home className="text-blue-600" /> WFH Approvals
+                        </h1>
+                        <p className="text-gray-500 mt-1">Manage 3-level Work From Home requests for your team.</p>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 items-center">
+                        {activeTab === 'history' && (
+                            <MonthCycleSelector onCycleChange={handleCycleChange} />
+                        )}
+
+                        <div className="flex bg-white p-1 rounded-lg border border-slate-200">
+                            <button
+                                onClick={() => { setActiveTab('pending'); setSelectedRequest(null); }}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'pending'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                    }`}
+                            >
+                                Pending
+                            </button>
+                            <button
+                                onClick={() => { setActiveTab('history'); setSelectedRequest(null); }}
+                                className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${activeTab === 'history'
+                                    ? 'bg-blue-600 text-white shadow-sm'
+                                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                                    }`}
+                            >
+                                History
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 {/* Content */}
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* List View */}
                     <div className="lg:col-span-2 space-y-4">
-                        {(!pendingRequests?.wfh || pendingRequests.wfh.length === 0) ? (
+                        {(!displayRequests || displayRequests.length === 0) ? (
                             <div className="bg-white p-12 rounded-2xl shadow-sm text-center border-2 border-dashed border-gray-200">
                                 <CheckCircle2 className="mx-auto text-green-400 mb-4" size={48} />
-                                <h3 className="text-xl font-bold text-gray-800">No Pending Requests</h3>
-                                <p className="text-gray-500 mt-2">All caught up! New requests will appear here.</p>
+                                <h3 className="text-xl font-bold text-gray-800">No {activeTab === 'pending' ? 'Pending' : 'History'} Requests</h3>
+                                <p className="text-gray-500 mt-2">{activeTab === 'pending' ? 'All caught up! New requests will appear here.' : 'No data found for this period.'}</p>
                             </div>
                         ) : (
-                            pendingRequests.wfh.map((request) => (
+                            displayRequests.map((request) => (
                                 <motion.div
                                     layoutId={request.id}
                                     key={request.id}
@@ -129,8 +173,9 @@ const WFHManagement = () => {
                                             </div>
                                             <span className="text-xs text-gray-400 font-medium">Approval Chain</span>
                                         </div>
-                                        <button className="text-blue-600 text-sm font-bold flex items-center gap-1 hover:underline">
-                                            Review Details <Eye size={16} />
+                                        <button className="bg-gradient-to-r from-blue-600 to-indigo-600 text-white px-8 py-3 rounded-2xl text-base font-extrabold flex items-center gap-2 shadow-[0_4px_20px_-4px_rgba(79,70,229,0.5)] hover:shadow-[0_8px_30px_-4px_rgba(79,70,229,0.7)] transform hover:-translate-y-1.5 hover:scale-[1.03] active:scale-95 transition-all duration-300 relative overflow-hidden group">
+                                            <div className="absolute inset-0 w-1/3 h-full bg-white/25 skew-x-12 -translate-x-[250%] group-hover:translate-x-[300%] transition-transform duration-700 ease-in-out" />
+                                            <span className="relative flex items-center gap-2">Verify & Approve <Eye size={20} className="group-hover:animate-pulse" /></span>
                                         </button>
                                     </div>
                                 </motion.div>
@@ -256,20 +301,28 @@ const WFHManagement = () => {
 
                                     {/* Footer Buttons */}
                                     <div className="p-6 bg-gray-50 border-t flex gap-3">
-                                        <button
-                                            onClick={() => handleReject(selectedRequest.id)}
-                                            disabled={isLoading}
-                                            className="flex-1 py-3 px-4 bg-white border-2 border-red-100 text-red-600 font-bold rounded-2xl hover:bg-red-50 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <X size={18} /> Reject
-                                        </button>
-                                        <button
-                                            onClick={() => handleApprove(selectedRequest.id)}
-                                            disabled={isLoading}
-                                            className="flex-[2] py-3 px-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
-                                        >
-                                            <Check size={18} /> Approve Layer
-                                        </button>
+                                        {activeTab === 'pending' ? (
+                                            <>
+                                                <button
+                                                    onClick={() => handleReject(selectedRequest.id)}
+                                                    disabled={isLoading}
+                                                    className="flex-1 py-3 px-4 bg-white border-2 border-red-100 text-red-600 font-bold rounded-2xl hover:bg-red-50 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <X size={18} /> Reject
+                                                </button>
+                                                <button
+                                                    onClick={() => handleApprove(selectedRequest.id)}
+                                                    disabled={isLoading}
+                                                    className="flex-[2] py-3 px-4 bg-blue-600 text-white font-bold rounded-2xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-all flex items-center justify-center gap-2"
+                                                >
+                                                    <Check size={18} /> Approve Layer
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="w-full text-center py-3 bg-gray-100 text-gray-500 font-bold rounded-2xl border border-gray-200">
+                                                Request Completed ({selectedRequest.status})
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             ) : (

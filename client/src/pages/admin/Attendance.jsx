@@ -338,16 +338,17 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-semibold text-center">Out Device</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time In</th>
                                 <th className="px-6 py-4 font-semibold text-center">Time Out</th>
-                                <th className="px-6 py-4 font-semibold text-center">Breaks</th>
+                                <th className="px-6 py-4 font-semibold text-center">Tea Break</th>
+                                <th className="px-6 py-4 font-semibold text-center">Lunch Break</th>
                                 <th className="px-6 py-4 font-semibold text-center">Meetings</th>
                                 <th className="px-6 py-4 font-semibold text-center">Net Hours</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan="9" className="text-center py-8">Loading...</td></tr>
+                                <tr><td colSpan="10" className="text-center py-8">Loading...</td></tr>
                             ) : filteredAttendance.length === 0 ? (
-                                <tr><td colSpan="9" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr><td colSpan="10" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
                                 filteredAttendance.map((record) => (
                                     <tr key={`row-${record.user.id}`} className="hover:bg-slate-50 transition-colors">
@@ -438,10 +439,19 @@ const Attendance = () => {
                                             }
                                         </td>
 
-                                        {/* Break Time */}
+                                        {/* Tea Break Time */}
                                         <td className="px-6 py-4 text-center text-slate-600">
-                                            {record.breakData?.personal > 0 ? (
-                                                <span className="text-orange-600 font-bold font-mono">{formatDuration(record.breakData.personal)}</span>
+                                            {record.breakData?.tea > 0 ? (
+                                                <span className="text-amber-600 font-bold font-mono">{formatDuration(record.breakData.tea)}</span>
+                                            ) : (
+                                                <span className="text-slate-300">-</span>
+                                            )}
+                                        </td>
+
+                                        {/* Lunch Time */}
+                                        <td className="px-6 py-4 text-center text-slate-600">
+                                            {record.breakData?.lunch > 0 ? (
+                                                <span className="text-orange-600 font-bold font-mono">{formatDuration(record.breakData.lunch)}</span>
                                             ) : (
                                                 <span className="text-slate-300">-</span>
                                             )}
