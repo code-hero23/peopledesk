@@ -480,6 +480,7 @@ const Overview = () => {
                 cycleData={selectedCycle}
                 attendanceHistory={attendanceHistory}
                 leaves={requests?.leaves}
+                permissions={requests?.permissions}
             />
 
             {/* ── Smart Alert Banners ─────────────────────────────────────── */}
@@ -542,117 +543,149 @@ const Overview = () => {
             {/* ── Main Grid ──────────────────────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
-                {/* ── Attendance Card ──────────────────────────────────────── */}
+                {/* ── Attendance Card (My Status) ──────────────────────── */}
                 <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-                    className={`lg:col-span-1 border border-slate-200/5 rounded-3xl p-7 text-white shadow-xl flex flex-col justify-between relative overflow-hidden min-h-[300px]
-                        ${isCheckedOut ? 'bg-gradient-to-br from-emerald-700 to-teal-900'
-                            : isCheckedIn ? 'bg-gradient-to-br from-blue-700 via-blue-800 to-indigo-900'
-                                : 'bg-gradient-to-br from-slate-800 to-slate-900'}`}>
-                    <div className="absolute -top-16 -right-16 w-48 h-48 bg-white/10 rounded-full blur-2xl pointer-events-none" />
+                    className={`lg:col-span-1 rounded-[2.5rem] p-8 text-white shadow-2xl flex flex-col justify-between relative overflow-hidden min-h-[340px] border border-white/10
+                        ${isCheckedOut ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 shadow-emerald-200/50'
+                            : isCheckedIn ? 'bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 shadow-indigo-200/50'
+                                : 'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 shadow-slate-200/50'}`}>
 
-                    <div className="relative z-10">
-                        <div className="flex justify-between items-center mb-4">
-                            <p className="text-white/60 text-xs font-bold uppercase tracking-widest">My Status</p>
-                            <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border
-                                ${isCheckedOut ? 'bg-emerald-500/20 border-emerald-400/30 text-emerald-200'
-                                    : isCheckedIn ? 'bg-blue-400/20 border-blue-300/30 text-blue-200'
-                                        : 'bg-slate-500/20 border-slate-400/30 text-slate-300'}`}>
-                                <div className={`w-2 h-2 rounded-full ${isCheckedOut ? 'bg-emerald-400' : isCheckedIn ? 'bg-blue-300 animate-pulse' : 'bg-slate-400'}`} />
-                                {isCheckedOut ? 'Done for Today' : isCheckedIn ? 'Active' : 'Offline'}
+                    {/* Glassmorphic decorative elements */}
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
+
+                    <div className="relative z-10 h-full flex flex-col">
+                        <div className="flex justify-between items-center mb-6">
+                            <span className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em]">Live Status</span>
+                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md border 
+                                ${isCheckedOut ? 'bg-white/10 border-white/20 text-white'
+                                    : isCheckedIn ? 'bg-emerald-400 text-emerald-950 border-emerald-300'
+                                        : 'bg-white/10 border-white/20 text-white/70'}`}>
+                                <motion.div
+                                    animate={isCheckedIn && !isPaused ? { scale: [1, 1.3, 1], opacity: [1, 0.5, 1] } : {}}
+                                    transition={{ duration: 2, repeat: Infinity }}
+                                    className={`w-2 h-2 rounded-full ${isCheckedOut ? 'bg-white' : isCheckedIn ? (isPaused ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-white/40'}`}
+                                />
+                                {isCheckedOut ? 'Shift Ended' : isCheckedIn ? (isPaused ? 'On Break' : 'Work Session Active') : 'System Idle'}
                             </div>
                         </div>
 
-                        <h3 className="text-4xl font-black tracking-tight mb-3">
-                            {isCheckedOut ? 'Signed Off' : isCheckedIn ? 'Checked In' : 'Not Active'}
-                        </h3>
+                        <div className="mb-auto">
+                            <h3 className="text-4xl font-black tracking-tight mb-4 leading-tight">
+                                {isCheckedOut ? 'Shift Ended' : isCheckedIn ? 'Logged In' : 'Sign In To Start'}
+                            </h3>
 
-                        {isCheckedIn && (
-                            <div className="space-y-2 mb-4">
-                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
-                                    <span>🕒</span>
-                                    <span className="text-sm font-medium">In at <span className="font-black">{new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
-                                </div>
-
-                                {/* Break status */}
-                                {isPaused && activeBreak && (
-                                    <div className="flex items-center gap-2 bg-amber-400/20 border border-amber-400/30 rounded-xl px-4 py-2">
-                                        <span>{activeBreak.breakType === 'TEA' ? '🍵' : activeBreak.breakType === 'LUNCH' ? '🍱' : activeBreak.breakType === 'CLIENT_MEETING' ? '💼' : '👥'}</span>
-                                        <span className="text-amber-200 text-sm font-bold">{activeBreak.breakType?.replace('_', ' ')} in progress</span>
-                                    </div>
-                                )}
-                            </div>
-                        )}
-
-                        {isCheckedOut && (
-                            <div className="space-y-2 mb-4">
-                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
-                                    <span>🏁</span>
-                                    <span className="text-sm font-medium">Out at <span className="font-black">{new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
-                                </div>
-                                <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
-                                    <span>⚡</span>
-                                    <span className="text-sm font-medium">
-                                        Total: <span className="font-black">
-                                            {Math.abs((new Date(attendance.checkoutTime) - new Date(attendance.date)) / (1000 * 60 * 60)).toFixed(1)} HRS
-                                        </span>
-                                    </span>
-                                </div>
-                                <p className="text-emerald-200 text-xs text-center py-1">✨ Great work today!</p>
-                            </div>
-                        )}
-
-                        {!attendance && <p className="text-white/50 text-sm">You haven't marked your attendance yet.</p>}
-                    </div>
-
-                    {/* CTA Button */}
-                    <div className="relative z-10 mt-4">
-                        {!isCheckedIn && !isCheckedOut ? (
-                            <button onClick={handleMarkAttendance} disabled={isLoading}
-                                className={`w-full py-4 rounded-2xl font-black text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3
-                                    ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 cursor-not-allowed text-slate-300' : 'bg-white text-slate-900 hover:bg-blue-50'}`}>
-                                {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> Desktop Only</> : <><span>👆</span> Tap to Check In</>}
-                            </button>
-                        ) : isCheckedIn ? (
-                            <div className="flex flex-col gap-3">
-                                {isPaused ? (
-                                    <button onClick={handleResume} disabled={isLoading}
-                                        className="w-full py-3 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-white shadow-lg active:scale-95 flex items-center justify-center gap-3 transition-all">
-                                        <span>▶️</span> Resume Work
-                                    </button>
-                                ) : (
-                                    <button onClick={() => setShowBreakModal(true)} disabled={isLoading}
-                                        className="w-full py-3 rounded-2xl font-black text-sm bg-white/10 border border-white/20 hover:bg-white/20 text-white active:scale-95 flex items-center justify-center gap-3 transition-all">
-                                        <span>☕</span> Take a Break
-                                    </button>
-                                )}
-                                <div className="flex items-center gap-4">
-                                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                                    <span className="text-xs font-medium text-white/40 uppercase tracking-widest">OR</span>
-                                    <div className="h-px flex-1 bg-gradient-to-r from-transparent via-white/20 to-transparent"></div>
-                                </div>
-                                <button onClick={handleMarkAttendance} disabled={isLoading}
-                                    className="w-full py-3 rounded-2xl font-black text-sm bg-white/20 hover:bg-white/30 text-white active:scale-95 flex items-center justify-center gap-3 transition-all border border-white/20">
-                                    <span>👋</span> Check Out
-                                </button>
-                            </div>
-                        ) : (
                             <div className="space-y-3">
-                                <div className="w-full py-3 rounded-2xl text-center text-emerald-200 bg-white/10 text-sm font-bold border border-white/10">
-                                    ✅ All done for today
-                                </div>
-                                {/* Allow AE to start a NEW session */}
-                                {user?.designation === 'AE' && (
-                                    <button
-                                        onClick={handleMarkAttendance}
-                                        disabled={isLoading}
-                                        className="w-full bg-blue-500/90 hover:bg-blue-600 text-white font-bold py-3 rounded-xl shadow-lg transition-all active:scale-95 flex items-center justify-center gap-2"
-                                    >
-                                        <span className="text-lg">🔄</span>
-                                        <span>Start New Session</span>
-                                    </button>
+                                {isCheckedIn && (
+                                    <>
+                                        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10 group hover:bg-white/10 transition-colors">
+                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shadow-inner">🕒</div>
+                                            <div>
+                                                <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">Entry Time</p>
+                                                <p className="text-lg font-black">{new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                            </div>
+                                        </div>
+
+                                        {isPaused && activeBreak && (
+                                            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
+                                                className="flex items-center gap-3 bg-amber-400/20 backdrop-blur-sm border border-amber-400/30 rounded-2xl p-4">
+                                                <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center text-xl shadow-inner">
+                                                    {activeBreak.breakType === 'TEA' ? '�' : activeBreak.breakType === 'LUNCH' ? '🍱' : '�'}
+                                                </div>
+                                                <div>
+                                                    <p className="text-amber-200/70 text-[10px] font-black uppercase tracking-widest">Ongoing Break</p>
+                                                    <p className="text-amber-100 font-black">{activeBreak.breakType?.split('_').join(' ')}</p>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </>
+                                )}
+
+                                {isCheckedOut && (
+                                    <>
+                                        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
+                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shadow-inner">🏁</div>
+                                            <div>
+                                                <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">Exit Time</p>
+                                                <p className="text-lg font-black">{new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 bg-emerald-400/10 backdrop-blur-sm border border-emerald-400/20 rounded-2xl p-4">
+                                            <div className="w-10 h-10 rounded-xl bg-emerald-400/20 flex items-center justify-center text-xl shadow-inner text-emerald-300">⚡</div>
+                                            <div>
+                                                <p className="text-emerald-200/70 text-[10px] font-black uppercase tracking-widest">Total Duration</p>
+                                                <p className="text-emerald-50 font-black tracking-tight">
+                                                    {Math.abs((new Date(attendance.checkoutTime) - new Date(attendance.date)) / (1000 * 60 * 60)).toFixed(1)} <span className="text-xs">HRS</span>
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </>
+                                )}
+
+                                {!attendance && !isCheckedIn && !isCheckedOut && (
+                                    <p className="text-white/40 text-xs font-bold bg-black/5 rounded-xl p-4 border border-white/5 italic">
+                                        ✨ Your today's work journey starts here.
+                                    </p>
                                 )}
                             </div>
-                        )}
+                        </div>
+
+                        {/* CTA Button Actions */}
+                        <div className="mt-8">
+                            {!isCheckedIn && !isCheckedOut ? (
+                                <motion.button
+                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                    onClick={handleMarkAttendance} disabled={isLoading}
+                                    className={`w-full py-5 rounded-2xl font-black text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3
+                                        ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 cursor-not-allowed text-slate-300' : 'bg-white text-slate-900 hover:shadow-white/20'}`}>
+                                    {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> Desktop Only</> : <><span>👆</span> TAP TO SIGN IN</>}
+                                </motion.button>
+                            ) : isCheckedIn ? (
+                                <div className="flex flex-col gap-3">
+                                    {isPaused ? (
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                            onClick={handleResume} disabled={isLoading}
+                                            className="w-full py-4 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-white shadow-lg flex items-center justify-center gap-3 shadow-amber-900/40">
+                                            <span>▶️</span> RESUME WORK
+                                        </motion.button>
+                                    ) : (
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                            onClick={() => setShowBreakModal(true)} disabled={isLoading}
+                                            className="w-full py-4 rounded-2xl font-black text-sm bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center gap-3 shadow-xl">
+                                            <span>☕</span> TAKE A BREAK
+                                        </motion.button>
+                                    )}
+                                    <div className="flex items-center gap-4 py-1">
+                                        <div className="h-[1px] flex-1 bg-white/10"></div>
+                                        <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">OR</span>
+                                        <div className="h-[1px] flex-1 bg-white/10"></div>
+                                    </div>
+                                    <motion.button
+                                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                        onClick={handleMarkAttendance} disabled={isLoading}
+                                        className="w-full py-4 rounded-2xl font-black text-sm bg-black/20 hover:bg-black/40 text-white border border-white/5 flex items-center justify-center gap-3 shadow-lg">
+                                        <span>👋</span> CHECK OUT
+                                    </motion.button>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    <div className="w-full py-4 rounded-2xl text-center text-emerald-100 bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">
+                                        ✓ Cycle Progress Saved
+                                    </div>
+                                    {user?.designation === 'AE' && (
+                                        <motion.button
+                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                            onClick={handleMarkAttendance} disabled={isLoading}
+                                            className="w-full bg-white text-emerald-900 font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2"
+                                        >
+                                            🔄 START NEW SESSION
+                                        </motion.button>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 </motion.div>
 

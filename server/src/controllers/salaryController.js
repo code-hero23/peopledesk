@@ -115,19 +115,66 @@ const getMySalarySummary = async (req, res) => {
         let expectedHours = 0;
         let permissionCreditHours = 0;
 
-        // Fetch Global Setting (Safe fetch)
+        // Fetch Global Settings (Safe fetch)
         let isGlobalEnabled = true;
+        let calculationMode = 'AUTO';
         try {
-            const globalShortageSetting = await prisma.globalSetting.findUnique({
-                where: { key: 'isGlobalShortageDeductionEnabled' }
-            });
-            if (globalShortageSetting) {
-                isGlobalEnabled = globalShortageSetting.value === 'true';
-            }
+            const settings = await prisma.globalSetting.findMany();
+            const shortageSetting = settings.find(s => s.key === 'isGlobalShortageDeductionEnabled');
+            const modeSetting = settings.find(s => s.key === 'payrollCalculationMode');
+
+            if (shortageSetting) isGlobalEnabled = shortageSetting.value === 'true';
+            if (modeSetting) calculationMode = modeSetting.value;
         } catch (dbError) {
-            console.error('Global settings table missing or inaccessible:', dbError.message);
-            // Default to enabled if table doesn't exist yet to maintain existing behavior
+            console.error('Global settings error:', dbError.message);
         }
+
+        // Date Display Formatting (Fixing IST display)
+        const formatDate = (d) => {
+            if (!d) return '';
+            const istOffset = 5.5 * 60 * 60 * 1000;
+            const istDate = new Date(d.getTime() + istOffset);
+            return istDate.toISOString().split('T')[0];
+        };
+
+        // --- NEW: Manual Mode Logic ---
+        if (calculationMode === 'MANUAL') {
+            const manualData = await prisma.manualPayroll.findUnique({
+                where: {
+                    email_month_year: {
+                        email: req.user.email,
+                        month: reqMonth,
+                        year: reqYear
+                    }
+                }
+            });
+
+            if (manualData) {
+                return res.json({
+                    isManual: true,
+                    cycle: {
+                        start: formatDate(start),
+                        end: formatDate(end),
+                        totalDays: totalDaysInPeriod
+                    },
+                    stats: {
+                        presentDays,
+                        absentDays,
+                        approvedLeaves,
+                        approvedPermissions,
+                        actualWorkingHours: parseFloat(actualWorkingHours.toFixed(2)),
+                    },
+                    financials: {
+                        allocatedSalary: manualData.allocatedSalary,
+                        absenteeismDeduction: manualData.absenteeismDeduction,
+                        shortageDeduction: manualData.shortageDeduction,
+                        manualDeductions: manualData.manualDeductions,
+                        onHandSalary: Math.round(manualData.netPayout)
+                    }
+                });
+            }
+        }
+        // ------------------------------
 
         if (isGlobalEnabled && user.timeShortageDeductionEnabled) {
             expectedHours = presentDays * 8;
@@ -137,18 +184,8 @@ const getMySalarySummary = async (req, res) => {
             shortageDeduction = shortageHours * (allocated / 240);
         }
 
-
-
-
         // Final Payout
         const onHandSalary = Math.max(0, allocated - absenteeismDeduction - shortageDeduction - manualDeductions);
-
-        // Date Display Formatting (Fixing IST display)
-        const formatDate = (d) => {
-            const istOffset = 5.5 * 60 * 60 * 1000;
-            const istDate = new Date(d.getTime() + istOffset);
-            return istDate.toISOString().split('T')[0];
-        };
 
         res.json({
             cycle: {

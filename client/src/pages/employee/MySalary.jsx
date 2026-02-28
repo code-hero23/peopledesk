@@ -1,10 +1,16 @@
 import { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
-import { DollarSign, Calendar, AlertCircle, ShieldAlert, FileText, TrendingDown, ChevronDown } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    DollarSign, Calendar, AlertCircle, ShieldAlert,
+    FileText, TrendingDown, ChevronDown, Info,
+    CheckCircle2, Clock, Calculator, Lock, RefreshCw
+} from 'lucide-react';
 
 const MySalary = () => {
     const { user } = useSelector((state) => state.auth);
+    const [showDetails, setShowDetails] = useState(false);
 
     // Default to latest completed month
     const getInitialPeriod = () => {
@@ -81,195 +87,399 @@ const MySalary = () => {
 
     if (loading && !summary) return (
         <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+            <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="h-12 w-12 border-4 border-blue-600 border-t-transparent rounded-full"
+            />
         </div>
     );
 
     return (
-        <div className="relative overflow-hidden select-none p-6 pb-20">
+        <div className="relative overflow-hidden select-none p-6 pb-24 md:p-10 md:pb-32">
             {/* CSS Security Layer */}
             <style dangerouslySetInnerHTML={{
                 __html: `
-                @media print { body { display: none !important; } }
-                .security-watermark {
-                    pointer-events: none;
-                    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Ctext x='50%25' y='50%25' dy='.35em' fill='rgba(0,0,0,0.03)' font-size='14' font-family='monospace' text-anchor='middle' transform='rotate(-25, 150, 150)'%3E${user.email} | ${ip}%3C/text%3E%3C/svg%3E");
-                    position: absolute;
-                    inset: 0;
-                    z-index: 50;
-                }
-            ` }} />
+@media print { body { display: none!important; } }
+                .security - watermark {
+    pointer - events: none;
+    background - image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300' viewBox='0 0 300 300'%3E%3Ctext x='50%25' y='50%25' dy='.35em' fill='rgba(0,0,0,0.03)' font-size='12' font-family='monospace' text-anchor='middle' transform='rotate(-25, 150, 150)'%3E${user.email} | ${ip}%3C/text%3E%3C/svg%3E");
+    position: fixed;
+    inset: 0;
+    z - index: 50;
+}
+` }} />
 
             <div className="security-watermark" />
 
-            <div className="relative z-10 max-w-4xl mx-auto space-y-8 animate-fade-in">
+            <div className="relative z-10 max-w-5xl mx-auto space-y-10">
 
-                {/* Month/Year Selector Bar */}
-                <div className="flex flex-wrap items-center justify-between gap-4 bg-white/60 backdrop-blur-xl p-5 rounded-[30px] border border-white shadow-xl shadow-slate-200/50">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-600 rounded-2xl text-white shadow-lg shadow-blue-200">
-                            <Calendar size={20} />
+                {/* Header/Selector Bar - Glassmorphism */}
+                <motion.div
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="flex flex-wrap items-center justify-between gap-6 bg-white/40 backdrop-blur-2xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-2xl shadow-slate-200/40"
+                >
+                    <div className="flex items-center gap-5">
+                        <div className="p-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl text-white shadow-xl shadow-blue-200/50">
+                            <Calendar size={24} />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">Select Period</p>
-                            <h2 className="text-lg font-black text-slate-800 leading-none">Salary Cycle</h2>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Payroll Cycle</p>
+                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Financial Dashboard</h2>
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200/50">
-                        <select
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
-                            className="bg-white border-none text-sm font-black text-slate-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 shadow-sm outline-none appearance-none cursor-pointer hover:bg-slate-50 transition-colors"
-                        >
-                            {months.map((m, i) => (
-                                <option key={i} value={i + 1}>{m}</option>
-                            ))}
-                        </select>
-                        <select
-                            value={selectedYear}
-                            onChange={(e) => setSelectedYear(parseInt(e.target.value))}
-                            className="bg-white border-none text-sm font-black text-slate-700 rounded-xl px-4 py-2 focus:ring-2 focus:ring-blue-500 shadow-sm outline-none appearance-none cursor-pointer hover:bg-slate-50 transition-colors"
-                        >
-                            {[2024, 2025, 2026].map(y => (
-                                <option key={y} value={y}>{y}</option>
-                            ))}
-                        </select>
-                        {loading && <div className="animate-spin h-4 w-4 border-2 border-blue-600 border-t-transparent rounded-full ml-2"></div>}
+                    <div className="flex items-center gap-3 bg-white/50 p-2 rounded-3xl border border-white shadow-inner">
+                        <div className="flex items-center gap-2 px-2">
+                            <select
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(parseInt(e.target.value))}
+                                className="bg-transparent border-none text-sm font-black text-slate-700 px-3 py-2 outline-none cursor-pointer hover:text-blue-600 transition-colors"
+                            >
+                                {months.map((m, i) => (
+                                    <option key={i} value={i + 1}>{m}</option>
+                                ))}
+                            </select>
+                            <div className="w-px h-6 bg-slate-200" />
+                            <select
+                                value={selectedYear}
+                                onChange={(e) => setSelectedYear(parseInt(e.target.value))}
+                                className="bg-transparent border-none text-sm font-black text-slate-700 px-3 py-2 outline-none cursor-pointer hover:text-blue-600 transition-colors"
+                            >
+                                {[2024, 2025, 2026].map(y => (
+                                    <option key={y} value={y}>{y}</option>
+                                ))}
+                            </select>
+                        </div>
+                        {loading && (
+                            <div className="pr-4">
+                                <RefreshCw className="animate-spin text-blue-600" size={16} />
+                            </div>
+                        )}
                     </div>
-                </div>
+                </motion.div>
 
                 {error && (() => {
                     const isCycleCompleted = error.toLowerCase().includes('cycle is completed') || error.toLowerCase().includes('next month cycle');
                     if (isCycleCompleted) {
                         return (
-                            <div className="p-10 bg-emerald-50 border border-emerald-100 rounded-[40px] text-center shadow-xl shadow-emerald-100/20 animate-fade-in">
-                                <div className="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-6 text-emerald-600 shadow-inner">
-                                    <Calendar size={32} />
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="p-12 bg-emerald-50/50 backdrop-blur-md border border-emerald-100 rounded-[3rem] text-center shadow-2xl shadow-emerald-100/20"
+                            >
+                                <div className="w-20 h-20 bg-emerald-100 rounded-[2rem] flex items-center justify-center mx-auto mb-8 text-emerald-600 shadow-inner">
+                                    <CheckCircle2 size={40} />
                                 </div>
-                                <h3 className="text-2xl font-black text-emerald-900 mb-2">Cycle Completed! 🌟</h3>
-                                <p className="text-emerald-700 font-bold mb-6">{error}</p>
-                                <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100 text-emerald-700 rounded-xl font-black text-[10px] uppercase tracking-widest leading-none">
-                                    Next cycle starting soon
+                                <h3 className="text-3xl font-black text-emerald-900 mb-3 tracking-tight">Cycle Finalized! 🌟</h3>
+                                <p className="text-emerald-700 font-bold mb-8 text-lg">{error}</p>
+                                <div className="inline-flex items-center gap-3 px-6 py-3 bg-emerald-600 text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-emerald-200">
+                                    AWAITING NEXT CYCLE...
                                 </div>
-                            </div>
+                            </motion.div>
                         );
                     }
                     return (
-                        <div className="p-8 bg-rose-50 border border-rose-100 rounded-[40px] text-center">
-                            <ShieldAlert className="mx-auto text-rose-500 mb-4" size={32} />
-                            <p className="text-rose-900 font-black text-lg">{error}</p>
-                            <p className="text-rose-500 text-sm font-bold mt-2">Try selecting a different cycle or contact HR.</p>
-                        </div>
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            className="p-12 bg-rose-50/50 backdrop-blur-md border border-rose-100 rounded-[3rem] text-center shadow-2xl shadow-rose-100/20"
+                        >
+                            <ShieldAlert className="mx-auto text-rose-500 mb-6" size={48} />
+                            <h3 className="text-2xl font-black text-rose-900 mb-2 tracking-tight">Data Unavailable</h3>
+                            <p className="text-rose-600 font-bold text-lg mb-4">{error}</p>
+                            <p className="text-rose-400 text-sm font-bold opacity-70">Access restricted or records not yet generated for this cycle.</p>
+                        </motion.div>
                     );
                 })()}
 
                 {summary && (
-                    <>
-                        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-700 via-blue-800 to-indigo-900 p-8 rounded-[40px] text-white shadow-2xl shadow-blue-200 border border-white/20">
-                            <div>
-                                <div className="flex items-center gap-2 mb-2 text-blue-200 text-sm font-black uppercase tracking-widest">
-                                    <ShieldAlert size={14} /> Secure Access Active
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="space-y-10"
+                    >
+                        {/* Summary Banner Card */}
+                        <div className="relative group">
+                            <div className="absolute inset-0 bg-blue-600 rounded-[3rem] blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" />
+                            <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 p-10 md:p-14 rounded-[3rem] text-white shadow-2xl border border-white/5 overflow-hidden">
+                                {/* Decorative Gradient Blobs */}
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-[100px] -mr-32 -mt-32" />
+                                <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-[100px] -ml-32 -mb-32" />
+
+                                <div className="relative z-10 w-full md:w-auto">
+                                    <div className="flex items-center gap-3 mb-4">
+                                        {summary.isManual ? (
+                                            <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 backdrop-blur-md border border-amber-500/30 rounded-full text-amber-400 text-[10px] font-black uppercase tracking-widest shadow-lg">
+                                                <Lock size={12} /> Official Payroll Access
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-blue-300 text-[10px] font-black uppercase tracking-widest">
+                                                <RefreshCw size={12} className="animate-spin-slow" /> Real-time Simulation
+                                            </div>
+                                        )}
+                                    </div>
+                                    <h1 className="text-5xl font-black tracking-tight mb-2">My Remuneration</h1>
+                                    <p className="text-blue-200/60 font-black text-xs uppercase tracking-[0.2em]">CYCLE: {summary.cycle.start} — {summary.cycle.end}</p>
                                 </div>
-                                <h1 className="text-4xl font-black font-display tracking-tight">Financial Summary</h1>
-                                <p className="text-blue-200/80 font-bold mt-1">REMUNERATION CYCLE: {summary.cycle.start} — {summary.cycle.end}</p>
-                            </div>
-                            <div className="bg-white/10 backdrop-blur-md px-6 py-4 rounded-3xl border border-white/20 text-right">
-                                <div className="text-xs font-black text-white/60 mb-1 uppercase">Allocated CTC</div>
-                                <div className="text-3xl font-black font-mono tracking-tighter">₹{summary.financials.allocatedSalary.toLocaleString()}</div>
+
+                                <div className="relative z-10 bg-white/5 backdrop-blur-2xl px-10 py-8 rounded-[2.5rem] border border-white/10 text-right shadow-2xl group-hover:border-white/20 transition-all">
+                                    <div className="flex items-center justify-end gap-2 mb-2">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                        <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Allocated Monthly CTC</div>
+                                    </div>
+                                    <div className="text-5xl font-black font-mono tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60">
+                                        ₹{summary.financials.allocatedSalary.toLocaleString()}
+                                    </div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-                            <StatCard icon={<Calendar className="text-blue-500" />} label="Present Days" value={summary.stats.presentDays} sub={`of ${summary.cycle.totalDays} Total`} color="blue" />
-                            <StatCard icon={<TrendingDown className="text-amber-500" />} label="Absent Days" value={summary.stats.absentDays} sub="L.O.P. Basis" color="amber" />
-                            <StatCard icon={<AlertCircle className="text-rose-500" />} label="Shortage Hrs" value={summary.stats.shortageHours} sub={`${summary.stats.actualWorkingHours}h Worked + ${summary.stats.permissionCreditHours}h Credit`} color="rose" />
-                            <StatCard icon={<FileText className="text-emerald-500" />} label="Leaves/Perms" value={`${summary.stats.approvedLeaves}/${summary.stats.approvedPermissions}`} sub={`Max ${summary.stats.permissionCreditHours}h Credit`} color="emerald" />
-                        </div>
+                        {/* Stats Grid */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                            <StatCard
+                                icon={<Calendar size={22} />}
+                                label="Attendance"
+                                value={summary.stats.presentDays}
+                                sub={`PRESENT OF ${summary.cycle.totalDays} `}
+                                color="blue"
+                                delay={0.1}
+                            />
+                            <StatCard
+                                icon={<TrendingDown size={22} />}
+                                label="Absent Days"
+                                value={summary.stats.absentDays}
+                                sub="LOP DEDUCTION BASIS"
+                                color="amber"
+                                delay={0.2}
+                            />
+                            <StatCard
+                                icon={<Clock size={22} />}
+                                label="Shortage"
+                                value={summary.stats.shortageHours ? `${summary.stats.shortageHours} h` : '0h'}
+                                sub="MISSING WORK HOURS"
+                                color="rose"
+                                delay={0.3}
+                            />
+                            <StatCard
+                                icon={<FileText size={22} />}
+                                label="Exceptions"
+                                value={`${summary.stats.approvedLeaves}/${summary.stats.approvedPermissions}`}
+                                sub="LEAVES & PERMISSIONS"
+                                color="indigo"
+                                delay={0.4}
+                            />
+                        </div >
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="bg-white p-8 rounded-[40px] shadow-xl border border-slate-100 relative overflow-hidden group hover:shadow-2xl transition-all duration-500">
-                                <div className="absolute top-0 right-0 p-10 opacity-5 group-hover:scale-110 transition-transform">
-                                    <FileText size={180} strokeWidth={1} />
+                        {/* Detailed Calculation Toggle Section */}
+                        {
+                            !summary.isManual && (
+                                <motion.div
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ delay: 0.5 }}
+                                    className="bg-slate-50/50 backdrop-blur-sm border border-slate-200/60 rounded-[2.5rem] overflow-hidden"
+                                >
+                                    <button
+                                        onClick={() => setShowDetails(!showDetails)}
+                                        className="w-full flex items-center justify-between px-8 py-5 hover:bg-slate-100/50 transition-colors"
+                                    >
+                                        <div className="flex items-center gap-3">
+                                            <div className="p-2 bg-indigo-100 text-indigo-600 rounded-xl">
+                                                <Calculator size={18} />
+                                            </div>
+                                            <span className="text-xs font-black text-slate-800 uppercase tracking-widest">Show Calculation Details</span>
+                                        </div>
+                                        <motion.div
+                                            animate={{ rotate: showDetails ? 180 : 0 }}
+                                            className="text-slate-400"
+                                        >
+                                            <ChevronDown size={20} />
+                                        </motion.div>
+                                    </button>
+
+                                    <AnimatePresence>
+                                        {showDetails && (
+                                            <motion.div
+                                                initial={{ height: 0, opacity: 0 }}
+                                                animate={{ height: 'auto', opacity: 1 }}
+                                                exit={{ height: 0, opacity: 0 }}
+                                                className="overflow-hidden"
+                                            >
+                                                <div className="p-8 pt-0 border-t border-slate-200/50 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                                                    <div className="space-y-4">
+                                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-2">Working Hours Math</h4>
+                                                        <div className="space-y-2">
+                                                            <DetailRow label="Expected (Present Days × 8h)" value={`${summary.stats.presentDays * 8}h`} />
+                                                            <DetailRow label="Actual Work Log Hours" value={`${summary.stats.actualWorkingHours}h`} color="text-emerald-600" />
+                                                            <DetailRow label="Permission Credit Hours" value={`${summary.stats.permissionCreditHours}h`} color="text-indigo-600" />
+                                                            <div className="pt-2 border-t font-black flex justify-between text-xs">
+                                                                <span>Net Shortage Hours</span>
+                                                                <span className="text-rose-600">{summary.stats.shortageHours}h</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-2">Absenteeism Rules</h4>
+                                                        <div className="space-y-2">
+                                                            <DetailRow label="Total Absent Days" value={summary.stats.absentDays} />
+                                                            <DetailRow label="Global Buffer (Free Leaves)" value="4 Days" />
+                                                            <DetailRow label="Net LOP Applied Days" value={Math.max(0, summary.stats.absentDays - 4)} color="text-rose-600" />
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="space-y-4">
+                                                        <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest border-b pb-2">Formula Constants</h4>
+                                                        <div className="space-y-2">
+                                                            <div className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm text-[10px] font-bold text-slate-500 italic leading-relaxed">
+                                                                "Shortage Deduction = Shortage Hours × (Allocated / 240 hours)"
+                                                            </div>
+                                                            <div className="p-3 bg-white rounded-2xl border border-slate-100 shadow-sm text-[10px] font-bold text-slate-500 italic leading-relaxed">
+                                                                "LOP Deduction = LOP Days × (Allocated / 30 days)"
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </motion.div>
+                                        )}
+                                    </AnimatePresence>
+                                </motion.div>
+                            )
+                        }
+
+                        {/* Breakdown Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            {/* Deductions Card */}
+                            <motion.div
+                                initial={{ opacity: 0, x: -20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.6 }}
+                                className="lg:col-span-12 xl:col-span-7 bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 relative overflow-hidden group"
+                            >
+                                <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform duration-1000">
+                                    <TrendingDown size={200} />
                                 </div>
-                                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
-                                    <span className="p-2 bg-slate-100 rounded-2xl text-slate-600"><FileText size={20} /></span>
+                                <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-4">
+                                    <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl shadow-sm"><FileText size={24} /></div>
                                     Deduction Breakdown
                                 </h3>
-                                <div className="space-y-4 relative z-10">
-                                    <DeductionRow label="Absenteeism LOP (Buffer Rule)" value={summary.financials.absenteeismDeduction} />
-                                    <DeductionRow label="Time Shortage Deduction" value={summary.financials.shortageDeduction} />
+                                <div className="space-y-6 relative z-10">
+                                    <DeductionRow label="Absenteeism LOP" value={summary.financials.absenteeismDeduction} />
+                                    <DeductionRow label="Time Shortage Adjustment" value={summary.financials.shortageDeduction} />
 
                                     {summary.financials.deductionBreakdown?.map((ded, idx) => (
                                         <DeductionRow key={idx} label={ded.label || 'Other Deduction'} value={parseFloat(ded.amount) || 0} />
                                     ))}
 
                                     {(!summary.financials.deductionBreakdown || summary.financials.deductionBreakdown.length === 0) && summary.financials.manualDeductions > 0 && (
-                                        <DeductionRow label="Fixed Deductions (Admin)" value={summary.financials.manualDeductions} />
+                                        <DeductionRow label="Variable Management Adjustments" value={summary.financials.manualDeductions} />
                                     )}
 
-                                    <div className="pt-4 border-t border-dashed border-slate-200 flex justify-between items-center">
-                                        <span className="text-slate-500 font-bold">Total Salary Deductions</span>
-                                        <span className="text-rose-600 font-black font-mono">
-                                            ₹{(summary.financials.absenteeismDeduction + summary.financials.shortageDeduction + summary.financials.manualDeductions).toLocaleString()}
-                                        </span>
+                                    <div className="mt-10 pt-8 border-t-2 border-dashed border-slate-100 flex justify-between items-center bg-slate-50 -mx-10 px-10 rounded-b-[3rem]">
+                                        <div>
+                                            <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest block mb-1">Total Impact</span>
+                                            <span className="text-slate-600 font-bold text-sm">Aggregated Deductions</span>
+                                        </div>
+                                        <div className="text-3xl font-black font-mono text-rose-600 px-6 py-2 bg-rose-50 rounded-2xl border border-rose-100">
+                                            - ₹{(summary.financials.absenteeismDeduction + summary.financials.shortageDeduction + summary.financials.manualDeductions).toLocaleString()}
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            <div className="bg-gradient-to-br from-emerald-500 to-teal-700 p-8 rounded-[40px] shadow-xl text-white relative overflow-hidden group">
-                                <div className="absolute -bottom-10 -right-10 opacity-10 group-hover:rotate-12 transition-transform duration-700">
-                                    <DollarSign size={240} strokeWidth={1} />
+                            {/* Payout Card */}
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.7 }}
+                                className="lg:col-span-12 xl:col-span-5 bg-gradient-to-br from-emerald-500 to-teal-700 p-12 rounded-[3.5rem] shadow-2xl text-white relative overflow-hidden group"
+                            >
+                                <div className="absolute -bottom-20 -right-20 opacity-10 group-hover:opacity-20 transition-opacity duration-1000 rotate-12">
+                                    <DollarSign size={400} strokeWidth={1} />
                                 </div>
-                                <h3 className="text-xl font-black mb-6 flex items-center gap-3">
-                                    <span className="p-2 bg-white/20 rounded-2xl"><DollarSign size={20} /></span>
-                                    Net Payout Estimation
-                                </h3>
-                                <div className="space-y-2 relative z-10">
-                                    <p className="text-emerald-100/80 font-bold mb-1 uppercase text-xs tracking-widest">Calculated On-Hand</p>
-                                    <div className="text-6xl font-black tracking-tighter font-mono">
-                                        ₹{summary.financials.onHandSalary.toLocaleString()}
+
+                                <div className="relative z-10 flex flex-col h-full justify-between min-h-[400px]">
+                                    <div>
+                                        <div className="p-4 bg-white/20 backdrop-blur-md rounded-3xl w-fit mb-8 shadow-xl border border-white/20">
+                                            <DollarSign size={32} />
+                                        </div>
+                                        <h3 className="text-3xl font-black mb-3 tracking-tight">Net Estimated Payout</h3>
+                                        <p className="text-emerald-100/70 font-bold mb-10 leading-relaxed text-sm">The projected on-hand salary after all system logic and management adjustments.</p>
                                     </div>
-                                    <p className="text-emerald-500 bg-white/90 px-4 py-2 rounded-2xl text-xs font-black inline-block mt-6">
-                                        READY FOR PAYOUT
-                                    </p>
-                                    <p className="text-[10px] text-white/60 mt-4 leading-relaxed italic">
-                                        * This summary is an estimation based on present log data. Final values may vary during actual disbursement.
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
 
-                        <div className="p-6 bg-slate-50 rounded-[40px] border border-slate-100 text-center">
-                            <p className="text-slate-400 text-xs font-bold leading-relaxed max-w-lg mx-auto">
-                                This summary is dynamically generated for <strong>{user.name}</strong> ({user.email}).
-                                Unauthorized reproduction or sharing of this dashboard's content is strictly prohibited.
-                            </p>
+                                    <div className="space-y-8">
+                                        <div className="p-10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[3.5rem] transform hover:scale-105 transition-transform duration-500">
+                                            <div className="text-emerald-600 font-black text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                                <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Final Disbursement Value
+                                            </div>
+                                            <div className="text-6xl font-black tracking-tighter font-mono text-slate-900 overflow-hidden text-ellipsis">
+                                                ₹{summary.financials.onHandSalary.toLocaleString()}
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center gap-4 text-emerald-100/60">
+                                            <Info size={16} />
+                                            <p className="text-[10px] font-bold italic leading-relaxed">
+                                                * Encrypted data transmission active. Your financial records are protected under organizational security policies.
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </motion.div>
                         </div>
-                    </>
+                    </motion.div >
                 )}
-            </div>
-        </div>
+            </div >
+        </div >
     );
 };
 
-const StatCard = ({ icon, label, value, sub, color }) => (
-    <div className={`bg-white p-6 rounded-[35px] border border-slate-100 shadow-lg hover:shadow-xl transition-all hover:scale-[1.02] duration-300`}>
-        <div className="flex items-center gap-4 mb-4">
-            <div className={`p-3 bg-${color}-50 rounded-2xl`}>{icon}</div>
-            <div>
-                <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 leading-none mb-1">{sub}</p>
-                <p className="text-sm font-black text-slate-800 leading-none">{label}</p>
+const StatCard = ({ icon, label, value, sub, color, delay }) => {
+    const colorStyles = {
+        blue: "bg-blue-50 text-blue-600",
+        amber: "bg-amber-50 text-amber-600",
+        rose: "bg-rose-50 text-rose-600",
+        emerald: "bg-emerald-50 text-emerald-600",
+        indigo: "bg-indigo-50 text-indigo-600"
+    };
+
+    return (
+        <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay, type: "spring", stiffness: 100 }}
+            className="group bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+        >
+            <div className="flex items-center gap-5 mb-5 space-y-1">
+                <div className={`p-4 rounded-2xl ${colorStyles[color]} group-hover:scale-110 transition-transform shadow-sm`}>{icon}</div>
+                <div>
+                    <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-0.5">{sub}</p>
+                    <p className="text-sm font-black text-slate-800 tracking-tight leading-none">{label}</p>
+                </div>
             </div>
-        </div>
-        <div className="text-4xl font-black tracking-tighter font-mono text-slate-900">{value}</div>
+            <div className="text-4xl font-black tracking-tight font-mono text-slate-900 group-hover:text-blue-600 transition-colors">{value}</div>
+        </motion.div>
+    );
+};
+
+const DetailRow = ({ label, value, color = "text-slate-600" }) => (
+    <div className="flex justify-between items-center text-[11px] font-bold">
+        <span className="text-slate-400">{label}</span>
+        <span className={color}>{value}</span>
     </div>
 );
 
 const DeductionRow = ({ label, value }) => (
-    <div className="flex justify-between items-center text-rose-50/10">
-        <span className="text-sm font-bold text-slate-600">{label}</span>
-        <span className="font-mono text-slate-900 font-bold leading-none">- ₹{value.toLocaleString()}</span>
+    <div className="flex justify-between items-center group/row">
+        <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-rose-200 group-hover/row:bg-rose-500 transition-colors" />
+            <span className="text-sm font-black text-slate-600 group-hover/row:text-slate-900 transition-colors">{label}</span>
+        </div>
+        <span className="font-mono text-slate-900 font-black text-lg">
+            - ₹{value.toLocaleString()}
+        </span>
     </div>
 );
 

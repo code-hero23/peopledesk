@@ -148,4 +148,111 @@ const generatePayrollReport = async (req, res) => {
     }
 };
 
-module.exports = { generatePayrollReport };
+// @desc    Import Manual Payroll Excel
+// @route   POST /api/payroll/import-manual
+// @access  Private (Admin)
+const importManualPayroll = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: 'Excel or CSV file is required' });
+        }
+
+        const { month, year } = req.body;
+        if (!month || !year) {
+            return res.status(400).json({ message: 'Month and year are required' });
+        }
+
+        const workbook = new excelJS.Workbook();
+        const fileExtension = req.file.originalname.split('.').pop().toLowerCase();
+
+        if (fileExtension === 'csv') {
+            await workbook.csv.readFile(req.file.path);
+        } else if (['xlsx', 'xls'].includes(fileExtension)) {
+            await workbook.xlsx.readFile(req.file.path);
+        } else {
+            return res.status(400).json({ message: 'Unsupported file format. Please upload .xlsx or .csv' });
+        }
+
+        const worksheet = workbook.getWorksheet(1) || workbook.worksheets[0];
+        if (!worksheet) {
+            return res.status(400).json({ message: 'No worksheet found in file' });
+        }
+
+        const payrollData = [];
+        worksheet.eachRow((row, rowNumber) => {
+            if (rowNumber === 1) return; // Skip header
+
+            // Standardize cell access (CSV rows might be simple arrays vs XLSX cell objects)
+            const getVal = (idx) => {
+                const cell = row.getCell(idx);
+                // For CSV, value might be direct, for XLSX it might be { result, formula } or simple value
+                if (cell.value && typeof cell.value === 'object' && 'result' in cell.value) {
+                    return cell.value.result;
+                }
+                return cell.value;
+            };
+
+            const email = getVal(1)?.toString().trim();
+            const allocatedSalary = parseFloat(getVal(2)) || 0;
+            const absenteeismDeduction = parseFloat(getVal(3)) || 0;
+            const shortageDeduction = parseFloat(getVal(4)) || 0;
+            const manualDeductions = parseFloat(getVal(5)) || 0;
+            const netPayout = parseFloat(getVal(6)) || 0;
+
+            if (email && email.includes('@')) {
+                payrollData.push({
+                    email,
+                    month: parseInt(month),
+                    year: parseInt(year),
+                    allocatedSalary,
+                    absenteeismDeduction,
+                    shortageDeduction,
+                    manualDeductions,
+                    netPayout
+                });
+            }
+        });
+
+        if (payrollData.length === 0) {
+            return res.status(400).json({ message: 'No valid payroll data found in Excel/CSV. Ensure the email column is correct.' });
+        }
+
+        // Upsert data to ManualPayroll model
+        // We do this in a loop, but for large files a transaction or createMany (if supported by upsert logic) would be better.
+        // Prisma doesn't have upsertMany, so we loop or delete/createMany.
+        for (const data of payrollData) {
+            await prisma.manualPayroll.upsert({
+                where: {
+                    email_month_year: {
+                        email: data.email,
+                        month: data.month,
+                        year: data.year
+                    }
+                },
+                update: data,
+                create: data
+            });
+        }
+
+        // Clean up the uploaded file
+        try {
+            const fs = require('fs');
+            if (fs.existsSync(req.file.path)) {
+                fs.unlinkSync(req.file.path);
+            }
+        } catch (err) {
+            console.error('File cleanup error:', err);
+        }
+
+        res.json({ message: `Successfully imported ${payrollData.length} records for ${month}/${year}` });
+    } catch (error) {
+        console.error('Manual Payroll Import Error:', error);
+        res.status(500).json({
+            message: 'Internal Server Error during import',
+            error: error.message,
+            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+        });
+    }
+};
+
+module.exports = { generatePayrollReport, importManualPayroll };

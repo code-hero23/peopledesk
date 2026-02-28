@@ -319,7 +319,23 @@ model Announcement {
 model GlobalSetting {
   id    Int    @id @default(autoincrement())
   key   String @unique
-  value String
+  value String // 'isGlobalShortageDeductionEnabled', 'payrollCalculationMode' (AUTO/MANUAL)
+}
+
+model ManualPayroll {
+  id                   Int      @id @default(autoincrement())
+  email                String
+  month                Int
+  year                 Int
+  allocatedSalary      Float    @default(0)
+  absenteeismDeduction Float    @default(0)
+  shortageDeduction    Float    @default(0)
+  manualDeductions     Float    @default(0)
+  netPayout            Float
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@unique([email, month, year])
 }
 
 model WfhRequest {

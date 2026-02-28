@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 /**
  * MonthCycleSelector
@@ -99,21 +100,52 @@ const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
                 <ChevronLeft size={20} />
             </button>
 
-            <button
+            <motion.button
                 onClick={onCardClick}
-                className="flex items-center gap-3 px-4 py-1.5 rounded-xl hover:bg-blue-50/50 transition-all border border-transparent hover:border-blue-100 group text-left min-w-[200px]"
+                whileHover={{ y: -4, scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                animate={{
+                    y: [0, -4, 0],
+                }}
+                transition={{
+                    y: {
+                        duration: 3,
+                        repeat: Infinity,
+                        ease: "easeInOut"
+                    }
+                }}
+                className="group flex items-center gap-4 px-7 py-3 rounded-[2rem] bg-white border border-slate-100 hover:border-indigo-200 shadow-xl hover:shadow-2xl hover:shadow-indigo-100/50 transition-all relative overflow-hidden active:scale-95 z-10"
             >
-                <div className="bg-blue-50 p-2 rounded-lg text-blue-600 group-hover:scale-110 transition-transform">
-                    <Calendar size={20} />
+                {/* Decorative background glow */}
+                <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/10 transition-colors" />
+
+                <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-3 rounded-2xl shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform">
+                    <CalendarIcon className="text-white" size={24} />
                 </div>
-                <div>
-                    <div className="font-black text-slate-800 text-sm flex items-center gap-1.5">
-                        {currentCycle.label}
-                        <span className="text-[10px] bg-blue-100 text-blue-600 px-1.5 py-0.5 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">VIEW CALENDAR</span>
+
+                <div className="text-left">
+                    <div className="flex items-center gap-3">
+                        <span className="text-base font-black text-slate-800 tracking-tight leading-none">
+                            {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                        </span>
+                        <motion.div
+                            animate={{
+                                scale: [1, 1.1, 1],
+                                opacity: [0.9, 1, 0.9]
+                            }}
+                            transition={{
+                                duration: 2,
+                                repeat: Infinity,
+                                ease: "easeInOut"
+                            }}
+                            className="px-3 py-1 rounded-full bg-indigo-600 text-[10px] font-black text-white uppercase tracking-widest shadow-md shadow-indigo-200"
+                        >
+                            My Calendar
+                        </motion.div>
                     </div>
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{currentCycle.subLabel}</div>
+                    <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider opacity-70">View Cycle Details 26th - 25th</p>
                 </div>
-            </button>
+            </motion.button>
 
             <button
                 onClick={handleNext}

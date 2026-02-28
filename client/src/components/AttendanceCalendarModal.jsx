@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar as CalendarIcon, Info, CheckCircle2, Clock } from 'lucide-react';
 
-const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory, leaves }) => {
+const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory, leaves, permissions }) => {
     // Generate dates from 26th to 25th
     const calendarDays = useMemo(() => {
         if (!cycleData?.startDate || !cycleData?.endDate) return [];
@@ -45,6 +45,24 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         return Array.from(leaveDates).sort();
     }, [leaves, cycleData]);
 
+    // Calculate all approved permission dates
+    const approvedPermissionDates = useMemo(() => {
+        if (!permissions || !cycleData) return new Set();
+
+        const cycleStart = new Date(cycleData.startDate);
+        const cycleEnd = new Date(cycleData.endDate);
+
+        return new Set(
+            permissions
+                .filter(p => p.status === 'APPROVED')
+                .map(p => new Date(p.date).toISOString().split('T')[0])
+                .filter(dateStr => {
+                    const d = new Date(dateStr);
+                    return d >= cycleStart && d <= cycleEnd;
+                })
+        );
+    }, [permissions, cycleData]);
+
     const getDayStatus = (date) => {
         const dateStr = date.toISOString().split('T')[0];
         const today = new Date();
@@ -59,10 +77,15 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         // 2. Check Leaves (Blue/Orange)
         if (sortedLeaveDates.includes(dateStr)) {
             const leaveIndex = sortedLeaveDates.indexOf(dateStr);
-            return leaveIndex < 4 ? 'LEAVE_NORMAL' : 'LEAVE_EXCESS';
+            return leaveIndex < 4 ? 'LEAVE_BLUE' : 'LEAVE_ORANGE';
         }
 
-        // 3. Past days without data are ABSENT
+        // 3. Check Permissions (Purple)
+        if (approvedPermissionDates.has(dateStr)) {
+            return 'PERMISSION';
+        }
+
+        // 4. Past days without data are ABSENT
         if (checkDate < today) {
             return 'ABSENT';
         }
@@ -87,23 +110,27 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden pointer-events-auto"
+                    className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden pointer-events-auto border border-white/20"
                 >
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-slate-900 to-indigo-950 p-6 text-white relative">
+                    <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 text-white relative">
                         <div className="flex justify-between items-center">
-                            <div className="flex items-center gap-3">
-                                <div className="bg-white/10 p-2.5 rounded-xl">
-                                    <CalendarIcon className="text-blue-400" size={24} />
-                                </div>
+                            <div className="flex items-center gap-4">
+                                <motion.div
+                                    initial={{ rotate: -10 }}
+                                    animate={{ rotate: 0 }}
+                                    className="bg-white/10 p-3 rounded-2xl backdrop-blur-md border border-white/10"
+                                >
+                                    <CalendarIcon className="text-blue-400" size={28} />
+                                </motion.div>
                                 <div>
-                                    <h2 className="text-xl font-black tracking-tight">{cycleData?.label}</h2>
-                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest">{cycleData?.subLabel}</p>
+                                    <h2 className="text-2xl font-black tracking-tight">{cycleData?.label}</h2>
+                                    <p className="text-indigo-300 text-[10px] font-black uppercase tracking-[0.2em]">{cycleData?.subLabel}</p>
                                 </div>
                             </div>
                             <button
                                 onClick={onClose}
-                                className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                                className="p-2.5 hover:bg-white/10 rounded-full transition-all hover:rotate-90"
                             >
                                 <X size={20} />
                             </button>
@@ -112,61 +139,88 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
 
                     <div className="p-6">
                         {/* Stats Summary */}
-                        <div className="grid grid-cols-3 gap-4 mb-8">
-                            <div className="bg-emerald-50 rounded-2xl p-4 border border-emerald-100">
-                                <p className="text-emerald-600 text-[10px] font-black uppercase tracking-wider mb-1">Present</p>
-                                <p className="text-2xl font-black text-emerald-700">{attendanceHistory?.length || 0} <span className="text-xs font-bold">Days</span></p>
+                        <div className="grid grid-cols-4 gap-3 mb-8">
+                            <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100/50 group hover:bg-emerald-50 transition-colors">
+                                <p className="text-emerald-600 text-[9px] font-black uppercase tracking-wider mb-1">Present</p>
+                                <p className="text-2xl font-black text-emerald-700">{attendanceHistory?.length || 0}</p>
                             </div>
-                            <div className={`${sortedLeaveDates.length <= 4 ? 'bg-blue-50 border-blue-100' : 'bg-orange-50 border-orange-100'} rounded-2xl p-4 border`}>
-                                <p className={`${sortedLeaveDates.length <= 4 ? 'text-blue-600' : 'text-orange-600'} text-[10px] font-black uppercase tracking-wider mb-1`}>Leaves</p>
-                                <p className={`text-2xl font-black ${sortedLeaveDates.length <= 4 ? 'text-blue-700' : 'text-orange-700'}`}>{sortedLeaveDates.length} <span className="text-xs font-bold">Days</span></p>
+                            <div className={`${sortedLeaveDates.length <= 4 ? 'bg-blue-50/50 border-blue-100/50 hover:bg-blue-50' : 'bg-orange-50/50 border-orange-100/50 hover:bg-orange-50'} rounded-2xl p-4 border transition-colors group`}>
+                                <p className={`${sortedLeaveDates.length <= 4 ? 'text-blue-600' : 'text-orange-600'} text-[9px] font-black uppercase tracking-wider mb-1`}>Leaves</p>
+                                <p className={`text-2xl font-black ${sortedLeaveDates.length <= 4 ? 'text-blue-700' : 'text-orange-700'}`}>{sortedLeaveDates.length}</p>
                             </div>
-                            <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                                <p className="text-slate-500 text-[10px] font-black uppercase tracking-wider mb-1">Status</p>
-                                <p className={`text-xs font-bold flex items-center gap-1.5 mt-2 ${sortedLeaveDates.length > 4 ? 'text-orange-600' : 'text-emerald-600'}`}>
-                                    {sortedLeaveDates.length > 4 ? <Info size={14} /> : <CheckCircle2 size={14} />}
-                                    {sortedLeaveDates.length > 4 ? 'Threshold Exceeded' : 'Within Limits'}
-                                </p>
+                            <div className="bg-purple-50/50 rounded-2xl p-4 border border-purple-100/50 hover:bg-purple-50 transition-colors group">
+                                <p className="text-purple-600 text-[9px] font-black uppercase tracking-wider mb-1">Permission</p>
+                                <p className="text-2xl font-black text-purple-700">{approvedPermissionDates.size}</p>
+                            </div>
+                            <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100/50 hover:bg-slate-50 transition-colors group">
+                                <p className="text-slate-500 text-[9px] font-black uppercase tracking-wider mb-1">Status</p>
+                                <div className={`mt-1 font-black leading-none`}>
+                                    {sortedLeaveDates.length > 4 ? (
+                                        <span className="text-orange-600 text-[10px] uppercase">Alert</span>
+                                    ) : (
+                                        <span className="text-emerald-600 text-[10px] uppercase">Safe</span>
+                                    )}
+                                </div>
                             </div>
                         </div>
 
                         {/* Calendar Grid */}
-                        <div className="grid grid-cols-7 gap-2 mb-6">
+                        <div className="grid grid-cols-7 gap-1.5 mb-8">
                             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                                <div key={day} className="text-center text-[10px] font-black text-slate-400 uppercase tracking-widest py-1">
+                                <div key={day} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-widest py-2">
                                     {day}
                                 </div>
                             ))}
 
-                            {/* Empty cells for padding if first day isn't Sunday? 
-                                Actually, since it's a 26th-25th grid, we should probably just list the days sequentially 
-                                but showing them in a 7-col grid makes sense. */}
                             {calendarDays.map((date, idx) => {
                                 const status = getDayStatus(date);
+                                const dateStr = date.toISOString().split('T')[0]; // Define dateStr here
                                 const isToday = date.toDateString() === new Date().toDateString();
 
+                                const getStatusStyles = (status) => {
+                                    switch (status) {
+                                        case 'PRESENT':
+                                            return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white shadow-lg shadow-emerald-200/50';
+                                        case 'ABSENT':
+                                            return 'bg-gradient-to-br from-rose-400 to-rose-600 border-rose-300 text-white shadow-lg shadow-rose-200/50';
+                                        case 'LEAVE_BLUE':
+                                            return 'bg-gradient-to-br from-indigo-400 to-indigo-600 border-indigo-300 text-white shadow-lg shadow-indigo-200/50';
+                                        case 'LEAVE_ORANGE':
+                                            return 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-300 text-white shadow-lg shadow-amber-200/50';
+                                        case 'PERMISSION':
+                                            return 'bg-gradient-to-br from-violet-400 to-violet-600 border-violet-300 text-white shadow-lg shadow-violet-200/50';
+                                        default:
+                                            return 'bg-white border-slate-100 text-slate-400 hover:border-slate-300';
+                                    }
+                                };
+
                                 return (
-                                    <div key={idx} className="relative group">
-                                        <div
-                                            className={`aspect-square rounded-xl flex flex-col items-center justify-center transition-all border
-                                                ${status === 'PRESENT' ? 'bg-emerald-500 border-emerald-400 text-white shadow-sm shadow-emerald-200' :
-                                                    status === 'LEAVE_NORMAL' ? 'bg-blue-500 border-blue-400 text-white shadow-sm shadow-blue-200' :
-                                                        status === 'LEAVE_EXCESS' ? 'bg-orange-500 border-orange-400 text-white shadow-sm shadow-orange-200' :
-                                                            status === 'ABSENT' ? 'bg-red-500 border-red-400 text-white shadow-sm shadow-red-200' :
-                                                                'bg-slate-100 border-slate-200 text-slate-400'}
-                                                ${isToday ? 'ring-2 ring-indigo-500 ring-offset-2 scale-105 z-10' : ''}
+                                    <div key={idx} className="relative group perspective-1000">
+                                        <motion.div
+                                            key={dateStr}
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ delay: idx * 0.01 }} // Changed index to idx
+                                            whileHover={{ scale: 1.05, translateZ: 10 }}
+                                            className={`
+                                                relative h-14 sm:h-20 rounded-2xl flex flex-col items-center justify-center 
+                                                text-sm font-black transition-all cursor-default border-2
+                                                ${getStatusStyles(status)}
+                                                group
+                                                ${isToday ? 'ring-4 ring-indigo-500/30 border-indigo-500 scale-105 z-10' : ''}
                                             `}
                                         >
-                                            <span className="text-xs font-black">{date.getDate()}</span>
-                                            <span className="text-[8px] font-bold opacity-60 uppercase">{date.toLocaleDateString('en-US', { month: 'short' })}</span>
-                                        </div>
+                                            <span className="text-sm font-black">{date.getDate()}</span>
+                                            <span className="text-[7px] font-bold opacity-70 uppercase tracking-tighter">{date.toLocaleDateString('en-US', { month: 'short' })}</span>
+                                        </motion.div>
 
-                                        {/* Tooltip on hover */}
-                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-800 text-white text-[10px] rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-20 pointer-events-none">
-                                            {status === 'PRESENT' ? 'Present' :
-                                                status === 'LEAVE_NORMAL' ? 'Leave (Blue)' :
-                                                    status === 'LEAVE_EXCESS' ? 'Excess Leave (Orange)' :
-                                                        status === 'ABSENT' ? 'Absent (Red)' : 'Unmarked'}
+                                        {/* Tooltip */}
+                                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900/90 text-white text-[9px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-50 pointer-events-none backdrop-blur-sm border border-white/10 shadow-xl">
+                                            {status === 'PRESENT' ? '✓ Present' :
+                                                status === 'LEAVE_NORMAL' ? '✈ Leave (Standard)' :
+                                                    status === 'LEAVE_EXCESS' ? '⚠ Leave (Excess)' :
+                                                        status === 'PERMISSION' ? '🕒 Permission' :
+                                                            status === 'ABSENT' ? '✖ Absent' : '○ Pending'}
                                         </div>
                                     </div>
                                 );
@@ -174,27 +228,20 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                         </div>
 
                         {/* Legend */}
-                        <div className="flex flex-wrap items-center gap-4 pt-6 border-t border-slate-100 justify-center">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-emerald-500" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Working</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-blue-500" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Leave (≤4)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-orange-500" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Leave (&gt;4)</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-red-500" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Absent</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded bg-slate-100 border border-slate-200" />
-                                <span className="text-[10px] font-bold text-slate-500 uppercase">Unmarked</span>
-                            </div>
+                        <div className="flex flex-wrap gap-4 mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            {[
+                                { color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', label: 'Present' },
+                                { color: 'bg-gradient-to-br from-rose-400 to-rose-600', label: 'Absent' },
+                                { color: 'bg-gradient-to-br from-indigo-400 to-indigo-600', label: 'Leave' },
+                                { color: 'bg-gradient-to-br from-amber-400 to-amber-600', label: 'Excess' },
+                                { color: 'bg-gradient-to-br from-violet-400 to-violet-600', label: 'Permit' },
+                                { color: 'bg-white border-slate-200', label: 'Empty' },
+                            ].map((item, i) => (
+                                <div key={i} className="flex items-center gap-2">
+                                    <div className={`w-4 h-4 rounded-md ${item.color} shadow-sm border border-black/5`}></div>
+                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{item.label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
                 </motion.div>
