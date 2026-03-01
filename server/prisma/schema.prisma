@@ -24,20 +24,20 @@ model User {
   isGlobalAccess               Boolean                @default(false)
   salaryDeductions             Float?                 @default(0)
   salaryViewEnabled            Boolean                @default(false)
-  wfhViewEnabled               Boolean                @default(false)
   salaryDeductionBreakdown     Json?                  @default("[]")
   timeShortageDeductionEnabled Boolean                @default(true)
+  wfhViewEnabled               Boolean                @default(false)
   announcements                Announcement[]         @relation("AuthorAnnouncements")
   attendance                   Attendance[]
   leaveRequests                LeaveRequest[]
   loginAccessRequests          LoginAccessRequest[]
   permissionRequests           PermissionRequest[]
-  wfhRequests                  WfhRequest[]
   managedProjects              Project[]
   showroomVisitRequests        ShowroomVisitRequest[]
   siteVisitRequests            SiteVisitRequest[]
   reportingBh                  User?                  @relation("ReportingLink", fields: [reportingBhId], references: [id])
   subordinates                 User[]                 @relation("ReportingLink")
+  wfhRequests                  WfhRequest[]
   workLogs                     WorkLog[]
 }
 
@@ -319,7 +319,7 @@ model Announcement {
 model GlobalSetting {
   id    Int    @id @default(autoincrement())
   key   String @unique
-  value String // 'isGlobalShortageDeductionEnabled', 'payrollCalculationMode' (AUTO/MANUAL)
+  value String
 }
 
 model ManualPayroll {
@@ -349,27 +349,19 @@ model WfhRequest {
   wfhDays               Int
   startDate             DateTime
   endDate               DateTime
-  
-  // Justification
   realReason            String
   necessityReason       String
   impactIfRejected      String
   proofDetails          String
-  
-  // Work & Project
   primaryProject        String
   criticalReason        String
   deliverables          String
   measurableOutput      String
   deadline              String
-  
-  // Productivity
   workingHours          String
   trackingMethod        String
   communicationPlan     String
   responseTime          Int
-  
-  // Environment (Checklist stored as JSON or individual bools)
   environmentSetup      String
   hasDedicatedWorkspace Boolean
   hasStableInternet     Boolean
@@ -377,23 +369,17 @@ model WfhRequest {
   hasPowerBackup        Boolean
   hasSecurityCompliance Boolean
   hasErgonomicSeating   Boolean
-  
-  // Risk
   risksManagement       String
   failurePlan           String
   officeVisitCommitment Boolean
-  
-  // Status - 3 Level Approval
   hrStatus              RequestStatus @default(PENDING)
   bhStatus              RequestStatus @default(PENDING)
   adminStatus           RequestStatus @default(PENDING)
-  status                RequestStatus @default(PENDING) // Final aggregated status
-  currentLevel          Int           @default(1)     // 1=HR, 2=BH, 3=Admin
-  
+  status                RequestStatus @default(PENDING)
+  currentLevel          Int           @default(1)
   remarks               String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
-  
   user                  User          @relation(fields: [userId], references: [id])
 }
 
