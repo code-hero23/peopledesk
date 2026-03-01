@@ -67,7 +67,7 @@ const MyAttendance = () => {
             dates.push(new Date(currentDate));
             currentDate.setDate(currentDate.getDate() + 1);
         }
-        return dates.sort((a, b) => b - a); // descending order
+        return dates.sort((a, b) => a - b); // ascending order
     };
 
     const displayDates = cycleRange.startDate ? getDatesInRange(cycleRange.startDate, cycleRange.endDate) : [];

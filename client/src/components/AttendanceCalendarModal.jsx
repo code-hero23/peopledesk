@@ -19,6 +19,11 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         return dates;
     }, [cycleData]);
 
+    const firstDayOffset = useMemo(() => {
+        if (calendarDays.length === 0) return 0;
+        return calendarDays[0].getDay();
+    }, [calendarDays]);
+
     // Calculate all approved leave dates in this cycle, sorted
     const sortedLeaveDates = useMemo(() => {
         if (!leaves || !cycleData) return [];
@@ -97,7 +102,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
 
     return (
         <AnimatePresence>
-            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 mb-20 pointer-events-none">
+            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-6 pointer-events-none">
                 <motion.div
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
@@ -170,6 +175,11 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                                 <div key={day} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-widest py-2">
                                     {day}
                                 </div>
+                            ))}
+
+                            {/* Empty cells for offset */}
+                            {Array.from({ length: firstDayOffset }).map((_, i) => (
+                                <div key={`offset-${i}`} className="h-14 sm:h-20" />
                             ))}
 
                             {calendarDays.map((date, idx) => {

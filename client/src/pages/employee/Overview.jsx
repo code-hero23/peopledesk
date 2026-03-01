@@ -53,7 +53,7 @@ const Overview = () => {
     const logoutTimerRef = useRef(null);
 
     // UI State
-    const [activeTab, setActiveTab] = useState(user?.designation === 'OFFICE-ADMINISTRATION' ? 'leaves' : 'logs');
+    const [activeTab, setActiveTab] = useState('logs');
     const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const [showBreakModal, setShowBreakModal] = useState(false);
@@ -426,7 +426,7 @@ const Overview = () => {
     const greeting = greetHour < 12 ? 'Good Morning' : greetHour < 17 ? 'Good Afternoon' : 'Good Evening';
 
     const quickActions = [
-        user?.designation !== 'OFFICE-ADMINISTRATION' && { id: 'worklog', label: 'Log Work', sub: `${user?.designation || 'General'} Report`, icon: '📝', color: 'from-blue-500 to-indigo-600' },
+        { id: 'worklog', label: 'Log Work', sub: `${user?.designation || 'General'} Report`, icon: '📝', color: 'from-blue-500 to-indigo-600' },
         { id: 'leave', label: 'Request Leave', sub: 'Full / Half Day', icon: '🏖️', color: 'from-orange-400 to-amber-500' },
         { id: 'permission', label: 'Permission', sub: 'Late / Early exit', icon: '🕑', color: 'from-violet-500 to-purple-600' },
         ['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
@@ -728,7 +728,7 @@ const Overview = () => {
             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
                 className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
                 <div className="border-b border-slate-100 flex overflow-x-auto">
-                    {(['logs', 'leaves', 'permissions']).filter(t => !(t === 'logs' && user?.designation === 'OFFICE-ADMINISTRATION'))
+                    {(['logs', 'leaves', 'permissions'])
                         .map(tab => (
                             <button key={tab} onClick={() => setActiveTab(tab)}
                                 className={`px-6 py-4 text-sm font-bold whitespace-nowrap transition-colors capitalize border-b-2 ${activeTab === tab ? 'text-blue-600 border-blue-500 bg-blue-50/40' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
