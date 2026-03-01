@@ -5,6 +5,7 @@ const morgan = require('morgan');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 const initAttendanceCron = require('./cron/attendanceCron');
+const initCheckoutReminderCron = require('./cron/checkoutReminderCron');
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
@@ -17,6 +18,7 @@ const app = express();
 
 // Initialize Cron Jobs
 initAttendanceCron();
+initCheckoutReminderCron();
 
 // Security Middlewares
 app.use(helmet({

@@ -117,7 +117,15 @@ const getMySalarySummary = async (req, res) => {
         const reqYear = year ? parseInt(year) : (getLatestCompletedCycle().month + 2 > 12 ? getLatestCompletedCycle().year + 1 : getLatestCompletedCycle().year);
 
         // Sum deductions from breakdown (Filtered by Cycle)
-        const allDeductions = user.salaryDeductionBreakdown || [];
+        // Sum deductions from breakdown (Filtered by Cycle)
+        let allDeductions = user.salaryDeductionBreakdown;
+        if (typeof allDeductions === 'string') {
+            try { allDeductions = JSON.parse(allDeductions); } catch (e) { allDeductions = []; }
+        }
+        if (!Array.isArray(allDeductions)) {
+            allDeductions = [];
+        }
+
         const filteredDeductions = allDeductions.filter(item => {
             // Legacy support: if isFixed is missing, treat as Fixed (True)
             const isFixed = item.isFixed !== undefined ? item.isFixed : true;
@@ -149,39 +157,44 @@ const getMySalarySummary = async (req, res) => {
 
         // --- NEW: Manual Mode Logic ---
         if (calculationMode === 'MANUAL') {
-            const manualData = await prisma.manualPayroll.findUnique({
-                where: {
-                    email_month_year: {
-                        email: req.user.email,
-                        month: reqMonth,
-                        year: reqYear
-                    }
-                }
-            });
-
-            if (manualData) {
-                return res.json({
-                    isManual: true,
-                    cycle: {
-                        start: formatDate(start),
-                        end: formatDate(end),
-                        totalDays: totalDaysInPeriod
-                    },
-                    stats: {
-                        presentDays,
-                        absentDays,
-                        approvedLeaves,
-                        approvedPermissions,
-                        actualWorkingHours: parseFloat(actualWorkingHours.toFixed(2)),
-                    },
-                    financials: {
-                        allocatedSalary: manualData.allocatedSalary,
-                        absenteeismDeduction: manualData.absenteeismDeduction,
-                        shortageDeduction: manualData.shortageDeduction,
-                        manualDeductions: manualData.manualDeductions,
-                        onHandSalary: Math.round(manualData.netPayout)
+            try {
+                const manualData = await prisma.manualPayroll.findUnique({
+                    where: {
+                        email_month_year: {
+                            email: req.user.email,
+                            month: reqMonth,
+                            year: reqYear
+                        }
                     }
                 });
+
+                if (manualData) {
+                    return res.json({
+                        isManual: true,
+                        cycle: {
+                            start: formatDate(start),
+                            end: formatDate(end),
+                            totalDays: totalDaysInPeriod
+                        },
+                        stats: {
+                            presentDays,
+                            absentDays,
+                            approvedLeaves,
+                            approvedPermissions,
+                            actualWorkingHours: parseFloat(actualWorkingHours.toFixed(2)),
+                        },
+                        financials: {
+                            allocatedSalary: manualData.allocatedSalary,
+                            absenteeismDeduction: manualData.absenteeismDeduction,
+                            shortageDeduction: manualData.shortageDeduction,
+                            manualDeductions: manualData.manualDeductions,
+                            onHandSalary: Math.round(manualData.netPayout)
+                        }
+                    });
+                }
+            } catch (err) {
+                console.warn('ManualPayroll table missing or query failed:', err.message);
+                // Fallback to auto if table doesn't exist
             }
         }
         // ------------------------------
