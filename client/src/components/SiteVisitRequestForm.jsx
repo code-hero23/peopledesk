@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createSiteVisitRequest, getBusinessHeads } from '../features/employee/employeeSlice';
 import SuccessModal from './SuccessModal';
 
-const SiteVisitRequestForm = ({ onSuccess }) => {
+const SiteVisitRequestForm = ({ onSuccess, initialData }) => {
     const dispatch = useDispatch();
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -18,6 +18,15 @@ const SiteVisitRequestForm = ({ onSuccess }) => {
         reason: '',
         targetBhId: user?.reportingBhId || '',
     });
+
+    useEffect(() => {
+        if (initialData) {
+            setFormData(prev => ({
+                ...prev,
+                ...initialData
+            }));
+        }
+    }, [initialData]);
 
     useEffect(() => {
         dispatch(getBusinessHeads());

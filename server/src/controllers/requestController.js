@@ -304,7 +304,8 @@ const getMyRequests = async (req, res) => {
         const wfh = await prisma.wfhRequest.findMany({
             where: {
                 userId,
-                startDate: { gte: start, lte: end }
+                startDate: { lte: end },
+                endDate: { gte: start }
             },
             orderBy: { createdAt: 'desc' },
         });

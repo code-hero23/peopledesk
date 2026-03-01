@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance, getAttendanceHistory } from '../../features/employee/employeeSlice';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 
@@ -45,6 +46,7 @@ const showBrowserNotif = (title, body) => {
 
 const Overview = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
     const { attendance, workLogs, requests, isLoading, isPaused, activeBreak, isRequestsFetched, attendanceHistory } = useSelector((state) => state.employee);
 
@@ -66,6 +68,7 @@ const Overview = () => {
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
     const [showCalendarModal, setShowCalendarModal] = useState(false);
     const [selectedCycle, setSelectedCycle] = useState(null);
+    const [siteVisitInitialData, setSiteVisitInitialData] = useState(null);
 
 
 
@@ -218,11 +221,11 @@ const Overview = () => {
         }
     }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness]);
 
-    const executeAttendanceAction = (actionName) => {
+    const executeAttendanceAction = (actionName, isSiteLogin = false) => {
         const deviceInfo = navigator.userAgent;
         const deviceType = getDeviceType();
         const formData = new FormData();
-        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${deviceInfo}`);
+        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
 
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
             // Check-Out Logic
@@ -241,9 +244,34 @@ const Overview = () => {
                 dispatch(markAttendance(formData)).then((res) => {
                     if (!res.error) {
                         dispatch(getAttendanceStatus());
-                        // Auto-redirect if late
+
                         const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
-                        checkLatenessAndRedirect(checkInDate, true);
+
+                        if (isSiteLogin) {
+                            // Auto-trigger Site Visit Form
+                            const date = checkInDate.toLocaleDateString('en-CA');
+                            const formatTime = (dateObj) => {
+                                let h = dateObj.getHours();
+                                const m = dateObj.getMinutes().toString().padStart(2, '0');
+                                const ampm = h >= 12 ? 'PM' : 'AM';
+                                h = h % 12 || 12;
+                                return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+                            };
+                            setSiteVisitInitialData({
+                                date,
+                                startTime: formatTime(checkInDate),
+                                reason: 'Logged in from site.'
+                            });
+                            setActiveModal('site-visit');
+                        } else {
+                            // If WFH is enabled for this employee, force redirection to WFH form
+                            if (user?.wfhViewEnabled) {
+                                navigate('/dashboard/wfh');
+                                return;
+                            }
+                            // Auto-redirect if late
+                            checkLatenessAndRedirect(checkInDate, true);
+                        }
                     } else {
                         alert(res.payload || "Check-in failed. You might be already checked in.");
                     }
@@ -252,9 +280,9 @@ const Overview = () => {
         }
     };
 
-    const handleMarkAttendance = () => {
-        if (isMobile && user?.designation !== 'AE') {
-            alert('Mobile Check-In is restricted to AE. Please use a Desktop.');
+    const handleMarkAttendance = (isSiteLogin = false) => {
+        if (isMobile && user?.designation !== 'AE' && !isSiteLogin) {
+            alert('Mobile Check-In is restricted to AE. Please use a Desktop or select "Site Login".');
             return;
         }
 
@@ -263,7 +291,7 @@ const Overview = () => {
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
             actionName = user?.designation === 'AE' ? 'Check Out' : 'Log Out';
         } else {
-            actionName = user?.designation === 'AE' ? 'Check In' : 'Log In';
+            actionName = (user?.designation === 'AE' || isSiteLogin) ? 'Check In' : 'Log In';
         }
 
         const isLogin = ['Log In', 'Check In'].includes(actionName);
@@ -324,8 +352,8 @@ const Overview = () => {
             title: isAE && isLogin ? 'Start Work Confirmation' : (isLogin ? 'Start Work Confirmation' : `Confirm ${actionName}`),
             message: message,
             type: isLogin ? 'info' : 'warning',
-            confirmText: isAE && isLogin ? 'Start Work' : `Yes, ${actionName}`,
-            onConfirm: () => executeAttendanceAction(actionName)
+            confirmText: (isAE || isSiteLogin) && isLogin ? (isSiteLogin ? 'Start Site Session' : 'Start Work') : `Yes, ${actionName}`,
+            onConfirm: () => executeAttendanceAction(actionName, isSiteLogin)
         });
     };
 
@@ -391,6 +419,7 @@ const Overview = () => {
     const closeModal = () => {
         setActiveModal(null);
         setPermissionInitialData(null);
+        setSiteVisitInitialData(null);
         setIsAutoPermission(false);
     };
 
@@ -433,6 +462,7 @@ const Overview = () => {
         { id: 'permission', label: 'Permission', sub: 'Late / Early exit', icon: '🕑', color: 'from-violet-500 to-purple-600' },
         ['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
         { id: 'site-visit', label: 'Site Visit', sub: 'Update visit log', icon: '🏗️', color: 'from-green-500 to-emerald-600' },
+        !isCheckedIn && { id: 'site-login', label: 'Site Login', sub: 'Mobile Check-In', icon: '📍', color: 'from-rose-500 to-red-600' },
         { id: 'showroom-visit', label: 'Showroom Visit', sub: 'Cross-showroom move', icon: '🏢', color: 'from-indigo-500 to-blue-600' },
     ].filter(Boolean);
 
@@ -452,7 +482,8 @@ const Overview = () => {
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
                     {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} isMandatory={isAutoPermission} />}
-                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} />}
+                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} initialData={siteVisitInitialData} />}
+                    {activeModal === 'site-visit-standalone' && <SiteVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}
                 </Modal>
@@ -709,7 +740,18 @@ const Overview = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
                             {quickActions.map(action => (
                                 <motion.button key={action.id} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
-                                    onClick={() => { if (action.id === 'permission') setPermissionInitialData(null); setActiveModal(action.id); }}
+                                    onClick={() => {
+                                        if (action.id === 'permission') setPermissionInitialData(null);
+                                        if (action.id === 'site-login') {
+                                            handleMarkAttendance(true);
+                                            return;
+                                        }
+                                        if (action.id === 'site-visit') {
+                                            setActiveModal('site-visit-standalone');
+                                            return;
+                                        }
+                                        setActiveModal(action.id);
+                                    }}
                                     className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-slate-200 transition-all text-left group min-h-[110px]">
                                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform`}>
                                         {action.icon}

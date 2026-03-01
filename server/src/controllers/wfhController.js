@@ -196,10 +196,10 @@ const getWfhHistory = async (req, res) => {
         if (startDate && endDate) {
             dateFilter = {
                 startDate: {
-                    gte: new Date(startDate),
+                    lte: new Date(endDate),
                 },
                 endDate: {
-                    lte: new Date(endDate)
+                    gte: new Date(startDate)
                 }
             };
         }

@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset } from '../features/employee/employeeSlice';
 import WorkLogForm from '../components/WorkLogForm';
 import LAWorkLogForm from '../components/worklogs/LAWorkLogForm';
@@ -72,6 +73,7 @@ const useLiveClock = () => {
 
 const EmployeeDashboard = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
     const { attendance, workLogs, requests, isLoading, isRequestsFetched, activeBreak, isPaused } = useSelector((state) => state.employee);
 
@@ -89,6 +91,7 @@ const EmployeeDashboard = () => {
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
     const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+    const [siteVisitInitialData, setSiteVisitInitialData] = useState(null);
 
     const now = useLiveClock();
     const elapsedSinceCheckIn = useElapsedTime(attendance?.status === 'PRESENT' && !attendance?.checkoutTime ? attendance?.date : null);
@@ -191,8 +194,53 @@ const EmployeeDashboard = () => {
     }, [attendance, isRequestsFetched, hasCheckedLateness, checkLatenessAndRedirect]);
 
     // ── Attendance actions ────────────────────────────────────────────────────
-    const handleMarkAttendance = () => {
-        if (isMobile && user?.designation !== 'AE') { alert('Mobile Check-In is restricted to AE. Please use a Desktop.'); return; }
+    const executeAttendanceAction = (actionName, isSiteLogin = false) => {
+        const deviceInfo = navigator.userAgent;
+        const deviceType = getDeviceType();
+        const formData = new FormData();
+        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
+
+        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
+            // Check-Out Logic
+            if (user?.designation === 'AE') {
+                setIsCheckingOut(true);
+                setShowCheckInModal(true);
+            } else {
+                dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
+            }
+        } else {
+            // Check-In Logic
+            if (user?.designation === 'AE') {
+                setIsCheckingOut(false);
+                setShowCheckInModal(true);
+            } else {
+                dispatch(markAttendance(formData)).then((res) => {
+                    if (!res.error) {
+                        dispatch(getAttendanceStatus());
+                        const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
+
+                        if (isSiteLogin) {
+                            const date = checkInDate.toLocaleDateString('en-CA');
+                            const formatT = (d) => { let h = d.getHours(); const m = d.getMinutes().toString().padStart(2, '0'); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${String(h).padStart(2, '0')}:${m} ${ap}`; };
+                            setSiteVisitInitialData({ date, startTime: formatT(checkInDate), reason: 'Logged in from site.' });
+                            setActiveModal('site-visit');
+                        } else {
+                            if (user?.wfhViewEnabled) {
+                                navigate('/dashboard/wfh');
+                                return;
+                            }
+                            checkLatenessAndRedirect(checkInDate);
+                        }
+                    } else {
+                        alert(res.payload || 'Check-in failed.');
+                    }
+                });
+            }
+        }
+    };
+
+    const handleMarkAttendance = (isSiteLogin = false) => {
+        if (isMobile && user?.designation !== 'AE' && !isSiteLogin) { alert('Mobile Check-In is restricted to AE. Please use a Desktop or select "Site Login".'); return; }
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
             if (user?.designation === 'AE') { setIsCheckingOut(true); setShowCheckInModal(true); }
             else {
@@ -203,10 +251,7 @@ const EmployeeDashboard = () => {
         } else {
             if (user?.designation === 'AE') { setIsCheckingOut(false); setShowCheckInModal(true); }
             else {
-                dispatch(markAttendance()).then(res => {
-                    if (!res.error) { dispatch(getAttendanceStatus()); checkLatenessAndRedirect(res.payload?.date ? new Date(res.payload.date) : new Date()); }
-                    else alert(res.payload || 'Check-in failed.');
-                });
+                executeAttendanceAction((user?.designation === 'AE' || isSiteLogin) ? 'Check In' : 'Log In', isSiteLogin);
             }
         }
     };
@@ -219,7 +264,11 @@ const EmployeeDashboard = () => {
         });
     };
 
-    const closeModal = () => { setActiveModal(null); setPermissionInitialData(null); };
+    const closeModal = () => {
+        setActiveModal(null);
+        setPermissionInitialData(null);
+        setSiteVisitInitialData(null);
+    };
 
     // ── Work log form switcher ────────────────────────────────────────────────
     const renderWorkLogForm = () => {
@@ -255,6 +304,7 @@ const EmployeeDashboard = () => {
         { id: 'permission', label: 'Permission', sub: 'Late / Early exit', icon: '🕑', color: 'from-violet-500 to-purple-600' },
         ['LA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
         { id: 'site-visit', label: 'Site Visit', sub: 'Update visit log', icon: '🏗️', color: 'from-green-500 to-emerald-600' },
+        !isCheckedIn && { id: 'site-login', label: 'Site Login', sub: 'Mobile Check-In', icon: '📍', color: 'from-rose-500 to-red-600' },
         { id: 'showroom-visit', label: 'Showroom Visit', sub: 'Cross-showroom move', icon: '🏢', color: 'from-indigo-500 to-blue-600' },
     ].filter(Boolean);
 
@@ -272,7 +322,8 @@ const EmployeeDashboard = () => {
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
                     {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} />}
-                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} />}
+                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} initialData={siteVisitInitialData} />}
+                    {activeModal === 'site-visit-standalone' && <SiteVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}
                 </Modal>
@@ -441,7 +492,12 @@ const EmployeeDashboard = () => {
                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                             {quickActions.map(action => (
                                 <motion.button key={action.id} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
-                                    onClick={() => { if (action.id === 'permission') setPermissionInitialData(null); setActiveModal(action.id); }}
+                                    onClick={() => {
+                                        if (action.id === 'permission') setPermissionInitialData(null);
+                                        if (action.id === 'site-login') { handleMarkAttendance(true); return; }
+                                        if (action.id === 'site-visit') { setActiveModal('site-visit-standalone'); return; }
+                                        setActiveModal(action.id);
+                                    }}
                                     className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-slate-200 transition-all text-left group">
                                     <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform`}>
                                         {action.icon}

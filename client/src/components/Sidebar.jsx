@@ -64,6 +64,27 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             ? location.pathname === to
             : location.pathname === to || location.pathname.startsWith(to + '/');
 
+        const isWFHRoute = to === '/dashboard/wfh';
+        const isMandatoryWFH = user?.wfhViewEnabled && !isAdmin;
+
+        if (isMandatoryWFH && !isWFHRoute) {
+            return (
+                <div
+                    title={isCollapsed ? `${label} (Complete WFH Form first)` : ''}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-lg transition-all duration-200 opacity-40 cursor-not-allowed
+                        ${isCollapsed ? 'justify-center' : ''}
+                    `}
+                >
+                    <Icon size={20} className="flex-shrink-0 text-slate-500" />
+                    {!isCollapsed && (
+                        <span className="font-medium whitespace-nowrap overflow-hidden">
+                            {label}
+                        </span>
+                    )}
+                </div>
+            );
+        }
+
         return (
             <Link
                 to={to}

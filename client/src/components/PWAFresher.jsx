@@ -40,6 +40,34 @@ const PWAFresher = () => {
         }
     }, [needRefresh, updateServiceWorker]);
 
+    // Handle CacheStorage errors or Unexpected internal errors
+    useEffect(() => {
+        const handleError = async (event) => {
+            const error = event.reason || event;
+            const errorMessage = error?.message || String(error);
+
+            if (
+                errorMessage.includes('CacheStorage') ||
+                errorMessage.includes('Unexpected internal error') ||
+                errorMessage.includes('Failed to execute \'open\' on \'CacheStorage\'')
+            ) {
+                console.error('Detected PWA Cache Corruption. Attempting to clear caches...', error);
+
+                try {
+                    const cacheNames = await caches.keys();
+                    await Promise.all(cacheNames.map(name => caches.delete(name)));
+                    console.log('Caches cleared. Reloading app...');
+                    window.location.reload();
+                } catch (e) {
+                    console.error('Failed to clear caches manually.', e);
+                }
+            }
+        };
+
+        window.addEventListener('unhandledrejection', handleError);
+        return () => window.removeEventListener('unhandledrejection', handleError);
+    }, []);
+
     return null;
 };
 

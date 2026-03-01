@@ -18,15 +18,16 @@ export default defineConfig({
             urlPattern: ({ url }) => url.pathname.startsWith('/api'), // Cache API calls for offline viewing
             handler: 'NetworkFirst',
             options: {
-              cacheName: 'api-cache',
+              cacheName: 'peopledesk-api-v1',
               expiration: {
                 maxEntries: 50,
                 maxAgeSeconds: 60 * 60 * 24 // 24 hours
               },
               cacheableResponse: {
-                statuses: [0, 200]
+                statuses: [200] // Only cache successful responses
               }
-            }
+            },
+            method: 'GET'
           }
         ]
       },

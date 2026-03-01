@@ -640,10 +640,7 @@ export const employeeSlice = createSlice({
             })
             .addCase(getMyRequests.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.requests = {
-                    ...action.payload,
-                    wfh: state.requests?.wfh || []
-                };
+                state.requests = action.payload;
                 state.isRequestsFetched = true;
             })
             .addCase(getMyRequests.rejected, (state, action) => {

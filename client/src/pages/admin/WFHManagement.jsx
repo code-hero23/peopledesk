@@ -75,8 +75,6 @@ const WFHManagement = () => {
 
     const displayRequests = activeTab === 'pending' ? pendingRequests?.wfh : requestHistory?.wfh;
 
-    if (isLoading && (!displayRequests || displayRequests.length === 0)) return <Spinner />;
-
     return (
         <div className="p-4 sm:p-6 bg-gray-50 min-h-screen">
             <div className="max-w-7xl mx-auto">
@@ -121,7 +119,11 @@ const WFHManagement = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* List View */}
                     <div className="lg:col-span-2 space-y-4">
-                        {(!displayRequests || displayRequests.length === 0) ? (
+                        {isLoading && (!displayRequests || displayRequests.length === 0) ? (
+                            <div className="flex justify-center items-center py-20 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                                <Spinner />
+                            </div>
+                        ) : (!displayRequests || displayRequests.length === 0) ? (
                             <div className="bg-white p-12 rounded-2xl shadow-sm text-center border-2 border-dashed border-gray-200">
                                 <CheckCircle2 className="mx-auto text-green-400 mb-4" size={48} />
                                 <h3 className="text-xl font-bold text-gray-800">No {activeTab === 'pending' ? 'Pending' : 'History'} Requests</h3>

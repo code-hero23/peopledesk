@@ -83,6 +83,11 @@ const WFHRequestForm = () => {
         if (isSuccess) {
             toast.success('WFH Request Submitted Successfully');
 
+            // Redirect back to dashboard if it's mandatory
+            if (user?.wfhViewEnabled) {
+                navigate('/dashboard');
+            }
+
             // Optional: reset form after success
             setFormData({
                 ...formData,
@@ -178,6 +183,13 @@ const WFHRequestForm = () => {
                         className="h-full bg-blue-600"
                     />
                 </div>
+
+                {user?.wfhViewEnabled && (
+                    <div className="bg-amber-50 border-b border-amber-100 p-4 flex items-center gap-3">
+                        <AlertTriangle className="text-amber-600" size={20} />
+                        <p className="text-amber-800 text-sm font-bold">Mandatory: Please complete this WFH application to proceed to your dashboard.</p>
+                    </div>
+                )}
 
                 <div className="grid grid-cols-1 md:grid-cols-4 min-h-[600px]">
                     {/* Sidebar Navigation */}
@@ -424,19 +436,31 @@ const WFHRequestForm = () => {
 
                             {/* Navigation Buttons */}
                             <div className="flex justify-between items-center pt-8 border-t">
-                                <button
-                                    type="button"
-                                    onClick={prevSection}
-                                    disabled={activeSection === 1}
-                                    className="px-6 py-2 text-gray-600 font-semibold hover:bg-gray-100 rounded-lg disabled:opacity-30"
-                                >
-                                    Previous
-                                </button>
+                                {!user?.wfhViewEnabled && (
+                                    <button
+                                        type="button"
+                                        onClick={prevSection}
+                                        disabled={activeSection === 1}
+                                        className="px-6 py-2 text-gray-600 font-semibold hover:bg-gray-100 rounded-lg disabled:opacity-30"
+                                    >
+                                        Previous
+                                    </button>
+                                )}
+                                {user?.wfhViewEnabled && (
+                                    <button
+                                        type="button"
+                                        onClick={prevSection}
+                                        disabled={activeSection === 1}
+                                        className={`px-6 py-2 text-gray-600 font-semibold hover:bg-gray-100 rounded-lg disabled:opacity-30 ${activeSection === 1 ? 'invisible' : ''}`}
+                                    >
+                                        Previous
+                                    </button>
+                                )}
                                 {activeSection < totalSections && (
                                     <button
                                         type="button"
                                         onClick={nextSection}
-                                        className="px-8 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-md"
+                                        className="px-8 py-3 bg-gray-900 text-white font-bold rounded-xl hover:bg-black transition-all shadow-md ml-auto"
                                     >
                                         Next Component
                                     </button>
