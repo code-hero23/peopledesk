@@ -99,7 +99,7 @@ const MySalary = () => {
     );
 
     return (
-        <div className="relative overflow-hidden select-none p-6 pb-24 md:p-10 md:pb-32">
+        <div className="relative overflow-hidden select-none p-4 pb-16 md:p-6 md:pb-20">
             {/* CSS Security Layer */}
             <style dangerouslySetInnerHTML={{
                 __html: `
@@ -115,21 +115,21 @@ const MySalary = () => {
 
             <div className="security-watermark" />
 
-            <div className="relative z-10 max-w-5xl mx-auto space-y-10">
+            <div className="relative z-10 max-w-5xl mx-auto space-y-6">
 
                 {/* Header/Selector Bar - Glassmorphism */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="flex flex-wrap items-center justify-between gap-6 bg-white/40 backdrop-blur-2xl p-6 md:p-8 rounded-[2.5rem] border border-white/60 shadow-2xl shadow-slate-200/40"
+                    className="flex flex-wrap items-center justify-between gap-4 bg-white/40 backdrop-blur-2xl p-4 md:p-5 rounded-2xl border border-white/60 shadow-xl shadow-slate-200/40"
                 >
                     <div className="flex items-center gap-5">
                         <div className="p-4 bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl text-white shadow-xl shadow-blue-200/50">
                             <Calendar size={24} />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Remuneration Cycle</p>
-                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">Financial Dashboard</h2>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-0.5">Remuneration Cycle</p>
+                            <h2 className="text-xl font-black text-slate-800 tracking-tight">Financial Dashboard</h2>
                         </div>
                     </div>
 
@@ -203,38 +203,38 @@ const MySalary = () => {
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="space-y-10"
+                        className="space-y-6"
                     >
                         {/* Summary Banner Card */}
                         <div className="relative group">
-                            <div className="absolute inset-0 bg-blue-600 rounded-[3rem] blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" />
-                            <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-8 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 p-10 md:p-14 rounded-[3rem] text-white shadow-2xl border border-white/5 overflow-hidden">
+                            <div className="absolute inset-0 bg-blue-600 rounded-3xl blur-3xl opacity-10 group-hover:opacity-20 transition-opacity" />
+                            <div className="relative flex flex-col md:flex-row justify-between items-start md:items-center gap-6 bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-950 p-6 md:p-8 rounded-3xl text-white shadow-2xl border border-white/5 overflow-hidden">
                                 {/* Decorative Gradient Blobs */}
                                 <div className="absolute top-0 right-0 w-64 h-64 bg-blue-600/20 rounded-full blur-[100px] -mr-32 -mt-32" />
                                 <div className="absolute bottom-0 left-0 w-64 h-64 bg-indigo-600/20 rounded-full blur-[100px] -ml-32 -mb-32" />
 
                                 <div className="relative z-10 w-full md:w-auto">
-                                    <div className="flex items-center gap-3 mb-4">
+                                    <div className="flex items-center gap-3 mb-2">
                                         {summary.isManual ? (
-                                            <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 backdrop-blur-md border border-amber-500/30 rounded-full text-amber-400 text-[10px] font-black uppercase tracking-widest shadow-lg">
-                                                <Lock size={12} /> Official Remuneration Access
+                                            <div className="flex items-center gap-2 px-3 py-1 bg-amber-500/20 backdrop-blur-md border border-amber-500/30 rounded-full text-amber-400 text-[9px] font-black uppercase tracking-widest shadow-lg">
+                                                <Lock size={10} /> Official Remuneration Access
                                             </div>
                                         ) : (
-                                            <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-blue-300 text-[10px] font-black uppercase tracking-widest">
-                                                <RefreshCw size={12} className="animate-spin-slow" /> Real-time Simulation
+                                            <div className="flex items-center gap-2 px-3 py-1 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-blue-300 text-[9px] font-black uppercase tracking-widest">
+                                                <RefreshCw size={10} className="animate-spin-slow" /> Real-time Simulation
                                             </div>
                                         )}
                                     </div>
-                                    <h1 className="text-5xl font-black tracking-tight mb-2">My Remuneration</h1>
-                                    <p className="text-blue-200/60 font-black text-xs uppercase tracking-[0.2em]">CYCLE: {summary.cycle.start} — {summary.cycle.end}</p>
+                                    <h1 className="text-4xl font-black tracking-tight mb-1">My Remuneration</h1>
+                                    <p className="text-blue-200/60 font-black text-[10px] uppercase tracking-[0.2em]">CYCLE: {summary.cycle.start} — {summary.cycle.end}</p>
                                 </div>
 
-                                <div className="relative z-10 bg-white/5 backdrop-blur-2xl px-10 py-8 rounded-[2.5rem] border border-white/10 text-right shadow-2xl group-hover:border-white/20 transition-all">
-                                    <div className="flex items-center justify-end gap-2 mb-2">
+                                <div className="relative z-10 bg-white/5 backdrop-blur-2xl px-6 py-5 rounded-2xl border border-white/10 text-right shadow-2xl group-hover:border-white/20 transition-all">
+                                    <div className="flex items-center justify-end gap-2 mb-1">
                                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
                                         <div className="text-[10px] font-black text-white/40 uppercase tracking-widest">Allocated Monthly CTC</div>
                                     </div>
-                                    <div className="text-5xl font-black font-mono tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60">
+                                    <div className="text-4xl font-black font-mono tracking-tighter text-transparent bg-clip-text bg-gradient-to-br from-white to-white/60">
                                         ₹{summary.financials.allocatedSalary.toLocaleString()}
                                     </div>
                                 </div>
@@ -242,7 +242,7 @@ const MySalary = () => {
                         </div>
 
                         {/* Stats Grid */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                             <StatCard
                                 icon={<Calendar size={22} />}
                                 label="Attendance"
@@ -361,13 +361,13 @@ const MySalary = () => {
                                 initial={{ opacity: 0, x: -20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.6 }}
-                                className="lg:col-span-12 xl:col-span-7 bg-white p-10 rounded-[3rem] shadow-xl border border-slate-100 relative overflow-hidden group"
+                                className="lg:col-span-12 xl:col-span-7 bg-white p-6 rounded-2xl shadow-xl border border-slate-100 relative overflow-hidden group"
                             >
                                 <div className="absolute top-0 right-0 p-12 opacity-5 scale-150 rotate-12 group-hover:rotate-45 transition-transform duration-1000">
                                     <TrendingDown size={200} />
                                 </div>
-                                <h3 className="text-2xl font-black text-slate-800 mb-8 flex items-center gap-4">
-                                    <div className="p-3 bg-rose-50 text-rose-600 rounded-2xl shadow-sm"><FileText size={24} /></div>
+                                <h3 className="text-xl font-black text-slate-800 mb-6 flex items-center gap-3">
+                                    <div className="p-2 bg-rose-50 text-rose-600 rounded-xl shadow-sm"><FileText size={20} /></div>
                                     Deduction Breakdown
                                 </h3>
                                 <div className="space-y-6 relative z-10">
@@ -382,12 +382,12 @@ const MySalary = () => {
                                         <DeductionRow label="Variable Management Adjustments" value={summary.financials.manualDeductions} />
                                     )}
 
-                                    <div className="mt-10 pt-8 border-t-2 border-dashed border-slate-100 flex justify-between items-center bg-slate-50 -mx-10 px-10 rounded-b-[3rem]">
+                                    <div className="mt-8 pt-6 border-t-2 border-dashed border-slate-100 flex justify-between items-center bg-slate-50 -mx-6 px-6 rounded-b-2xl">
                                         <div>
-                                            <span className="text-slate-400 font-black text-[10px] uppercase tracking-widest block mb-1">Total Impact</span>
-                                            <span className="text-slate-600 font-bold text-sm">Aggregated Deductions</span>
+                                            <span className="text-slate-400 font-black text-[9px] uppercase tracking-widest block mb-0.5">Total Impact</span>
+                                            <span className="text-slate-600 font-bold text-xs">Aggregated Deductions</span>
                                         </div>
-                                        <div className="text-3xl font-black font-mono text-rose-600 px-6 py-2 bg-rose-50 rounded-2xl border border-rose-100">
+                                        <div className="text-2xl font-black font-mono text-rose-600 px-4 py-1.5 bg-rose-50 rounded-xl border border-rose-100">
                                             - ₹{(summary.financials.absenteeismDeduction + summary.financials.shortageDeduction + summary.financials.manualDeductions).toLocaleString()}
                                         </div>
                                     </div>
@@ -399,27 +399,27 @@ const MySalary = () => {
                                 initial={{ opacity: 0, x: 20 }}
                                 animate={{ opacity: 1, x: 0 }}
                                 transition={{ delay: 0.7 }}
-                                className="lg:col-span-12 xl:col-span-5 bg-gradient-to-br from-emerald-500 to-teal-700 p-12 rounded-[3.5rem] shadow-2xl text-white relative overflow-hidden group"
+                                className="lg:col-span-12 xl:col-span-5 bg-gradient-to-br from-emerald-500 to-teal-700 p-8 rounded-2xl shadow-2xl text-white relative overflow-hidden group"
                             >
                                 <div className="absolute -bottom-20 -right-20 opacity-10 group-hover:opacity-20 transition-opacity duration-1000 rotate-12">
                                     <DollarSign size={400} strokeWidth={1} />
                                 </div>
 
-                                <div className="relative z-10 flex flex-col h-full justify-between min-h-[400px]">
+                                <div className="relative z-10 flex flex-col h-full justify-between min-h-[300px]">
                                     <div>
-                                        <div className="p-4 bg-white/20 backdrop-blur-md rounded-3xl w-fit mb-8 shadow-xl border border-white/20">
-                                            <DollarSign size={32} />
+                                        <div className="p-3 bg-white/20 backdrop-blur-md rounded-2xl w-fit mb-6 shadow-xl border border-white/20">
+                                            <DollarSign size={24} />
                                         </div>
-                                        <h3 className="text-3xl font-black mb-3 tracking-tight">Net Estimated Payout</h3>
-                                        <p className="text-emerald-100/70 font-bold mb-10 leading-relaxed text-sm">The projected on-hand salary after all system logic and management adjustments.</p>
+                                        <h3 className="text-2xl font-black mb-2 tracking-tight">Net Estimated Payout</h3>
+                                        <p className="text-emerald-100/70 font-bold mb-6 leading-relaxed text-xs">The projected on-hand salary after all system logic and management adjustments.</p>
                                     </div>
 
-                                    <div className="space-y-8">
-                                        <div className="p-10 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-[3.5rem] transform hover:scale-105 transition-transform duration-500">
-                                            <div className="text-emerald-600 font-black text-[10px] uppercase tracking-[0.2em] mb-3 flex items-center gap-2">
+                                    <div className="space-y-6">
+                                        <div className="p-6 bg-white shadow-[0_20px_50px_rgba(0,0,0,0.2)] rounded-3xl transform hover:scale-105 transition-transform duration-500">
+                                            <div className="text-emerald-600 font-black text-[9px] uppercase tracking-[0.2em] mb-2 flex items-center gap-2">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" /> Final Disbursement Value
                                             </div>
-                                            <div className="text-6xl font-black tracking-tighter font-mono text-slate-900 overflow-hidden text-ellipsis">
+                                            <div className="text-4xl font-black tracking-tighter font-mono text-slate-900 overflow-hidden text-ellipsis">
                                                 ₹{summary.financials.onHandSalary.toLocaleString()}
                                             </div>
                                         </div>
@@ -455,16 +455,16 @@ const StatCard = ({ icon, label, value, sub, color, delay }) => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay, type: "spring", stiffness: 100 }}
-            className="group bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
+            className="group bg-white p-5 rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/40 hover:shadow-2xl hover:-translate-y-1 transition-all duration-300"
         >
-            <div className="flex items-center gap-5 mb-5 space-y-1">
-                <div className={`p-4 rounded-2xl ${colorStyles[color]} group-hover:scale-110 transition-transform shadow-sm`}>{icon}</div>
+            <div className="flex items-center gap-4 mb-4 space-y-1">
+                <div className={`p-3 rounded-xl ${colorStyles[color]} group-hover:scale-110 transition-transform shadow-sm`}>{icon}</div>
                 <div>
-                    <p className="text-[10px] uppercase font-black tracking-widest text-slate-400 mb-0.5">{sub}</p>
-                    <p className="text-sm font-black text-slate-800 tracking-tight leading-none">{label}</p>
+                    <p className="text-[9px] uppercase font-black tracking-widest text-slate-400 mb-0.5">{sub}</p>
+                    <p className="text-xs font-black text-slate-800 tracking-tight leading-none">{label}</p>
                 </div>
             </div>
-            <div className="text-4xl font-black tracking-tight font-mono text-slate-900 group-hover:text-blue-600 transition-colors">{value}</div>
+            <div className="text-3xl font-black tracking-tight font-mono text-slate-900 group-hover:text-blue-600 transition-colors">{value}</div>
         </motion.div>
     );
 };
