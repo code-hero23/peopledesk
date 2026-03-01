@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
-import { Search, Building2, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Eye, RefreshCw, Download } from 'lucide-react';
+import { Search, Building2, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Eye, RefreshCw, Download, Trash2 } from 'lucide-react';
 import { formatDateTime, formatDate } from '../../utils/dateUtils';
 import axios from 'axios';
 
