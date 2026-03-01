@@ -39,7 +39,7 @@ router.delete('/requests/:type/:id', protect, authorize('ADMIN', 'HR'), deleteRe
 
 // User Management - Admin Only
 router.put('/users/:id/status', protect, authorize('ADMIN'), updateUserStatus);
-router.put('/users/:id', protect, authorize('ADMIN'), updateEmployee);
+router.put('/users/:id', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER'), updateEmployee);
 router.delete('/users/:id', protect, authorize('ADMIN'), deleteEmployee);
 
 module.exports = router;

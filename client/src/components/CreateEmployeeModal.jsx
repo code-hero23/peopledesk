@@ -7,7 +7,9 @@ import { X, Save, AlertCircle, Plus, Trash2 } from 'lucide-react';
 const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
+    const isAdmin = user?.role === 'ADMIN';
     const isAeManager = user?.role === 'AE_MANAGER';
+    const isManager = ['BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && !isAdmin;
 
     const [formData, setFormData] = useState({
         name: '',
@@ -110,7 +112,8 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                         <input
                             type="text"
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                            disabled={isManager}
+                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50 disabled:text-slate-500"
                             value={formData.name}
                             onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                         />
@@ -120,7 +123,8 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                         <input
                             type="email"
                             required
-                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                            disabled={isManager}
+                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50 disabled:text-slate-500"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                         />
@@ -130,14 +134,14 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                         <input
                             type="text"
                             {...(!selectedEmployee && { required: true })}
-                            placeholder={selectedEmployee ? 'New password (optional)' : 'Default password...'}
-                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                            disabled={isManager}
+                            placeholder={isManager ? 'Permission Restricted' : (selectedEmployee ? 'New password (optional)' : 'Default password...')}
+                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50 disabled:text-slate-500"
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                         />
                     </div>
-
-                    {(user?.role === 'ADMIN' || user?.role === 'HR' || user?.role === 'BUSINESS_HEAD') && (
+                    {isAdmin && (
                         <div className="space-y-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
                             <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest">Financial Settings</h4>
                             <div className="grid grid-cols-2 gap-4">
@@ -314,8 +318,12 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                     <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-emerald-500 shadow-sm"></div>
                                 </label>
                             </div>
+                        </div>
+                    )}
 
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-200">
+                    {(isAdmin || isManager) && (
+                        <div className="space-y-4 bg-emerald-50/30 p-4 rounded-xl border border-emerald-100">
+                            <div className="flex items-center justify-between">
                                 <div className="flex items-center gap-2">
                                     <span className="text-lg">🏡</span>
                                     <div>
@@ -343,7 +351,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-sm"
                                 value={formData.role || 'EMPLOYEE'}
                                 onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                disabled={isAeManager}
+                                disabled={isAeManager || isManager}
                             >
                                 <option value="EMPLOYEE">Employee</option>
                                 {!isAeManager && (
@@ -363,7 +371,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-sm disabled:bg-slate-50"
                                 value={formData.designation}
                                 onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                                disabled={isAeManager || (formData.role !== 'EMPLOYEE' && formData.role !== 'AE_MANAGER')}
+                                disabled={isAeManager || isManager || (formData.role !== 'EMPLOYEE' && formData.role !== 'AE_MANAGER')}
                             >
                                 {isAeManager ? (
                                     <option value="AE">Application Engineer (AE)</option>
@@ -422,6 +430,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white"
                                 value={formData.reportingBhId}
                                 onChange={(e) => setFormData({ ...formData, reportingBhId: e.target.value })}
+                                disabled={isManager}
                             >
                                 <option value="">Select Business Head</option>
                                 {businessHeads.map(bh => (

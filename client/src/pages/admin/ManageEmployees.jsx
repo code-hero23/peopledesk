@@ -255,8 +255,8 @@ const ManageEmployees = () => {
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 text-right">
-                                        {user?.role === 'ADMIN' && (
-                                            <div className="flex justify-end gap-2">
+                                        <div className="flex justify-end gap-2">
+                                            {user?.role === 'ADMIN' && (
                                                 <button
                                                     onClick={() => handleStatusToggle(emp.id, emp.status)}
                                                     className={`p-2 rounded-lg transition-colors ${emp.status === 'ACTIVE'
@@ -267,6 +267,9 @@ const ManageEmployees = () => {
                                                 >
                                                     {emp.status === 'ACTIVE' ? '🚫' : '✅'}
                                                 </button>
+                                            )}
+
+                                            {(user?.role === 'ADMIN' || (['BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && emp.reportingBhId === user.id)) && (
                                                 <button
                                                     onClick={() => handleEdit(emp)}
                                                     className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
@@ -274,6 +277,9 @@ const ManageEmployees = () => {
                                                 >
                                                     ✏️
                                                 </button>
+                                            )}
+
+                                            {user?.role === 'ADMIN' && (
                                                 <button
                                                     onClick={() => handleDelete(emp.id)}
                                                     className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -281,8 +287,8 @@ const ManageEmployees = () => {
                                                 >
                                                     🗑️
                                                 </button>
-                                            </div>
-                                        )}
+                                            )}
+                                        </div>
                                     </td>
                                 </tr>
                             ))}

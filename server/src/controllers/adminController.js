@@ -840,27 +840,56 @@ const getActiveStatuses = async (req, res) => {
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
     const { name, email, designation, role, password } = req.body;
+    const requesterRole = req.user.role;
+    const requesterId = req.user.id;
 
     try {
-        let updateData = {
-            name,
-            email,
-            designation,
-            role: role || undefined,
-            reportingBhId: req.body.reportingBhId !== undefined ? (req.body.reportingBhId ? parseInt(req.body.reportingBhId) : null) : undefined,
-            isGlobalAccess: req.body.isGlobalAccess !== undefined ? (req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true') : undefined,
-            allocatedSalary: req.body.allocatedSalary !== undefined ? parseFloat(req.body.allocatedSalary) : undefined,
-            salaryViewEnabled: req.body.salaryViewEnabled !== undefined ? (req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true') : undefined,
-            salaryDeductions: req.body.salaryDeductions !== undefined ? parseFloat(req.body.salaryDeductions) : undefined,
-            salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined,
-            timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined,
-            wfhViewEnabled: req.body.wfhViewEnabled !== undefined ? (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true') : undefined
-        };
+        // Fetch target user to check permissions
+        const targetUser = await prisma.user.findUnique({
+            where: { id: parseInt(id) }
+        });
 
-        // If password is provided, hash it and add to update data
-        if (password && password.trim() !== '') {
-            const salt = await bcrypt.genSalt(10);
-            updateData.password = await bcrypt.hash(password, salt);
+        if (!targetUser) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        let updateData = {};
+
+        // Security Check & Field Restriction
+        if (requesterRole !== 'ADMIN') {
+            // Managers (BH/AE_MANAGER) can only update their own subordinates
+            if (targetUser.reportingBhId !== requesterId) {
+                return res.status(403).json({ message: 'Not authorized to update this employee. They do not report to you.' });
+            }
+
+            // Managers can ONLY update wfhViewEnabled
+            if (req.body.wfhViewEnabled !== undefined) {
+                updateData.wfhViewEnabled = (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true');
+            } else {
+                return res.status(400).json({ message: 'Managers are only permitted to update WFH Request settings.' });
+            }
+        } else {
+            // Admin has full control
+            updateData = {
+                name,
+                email,
+                designation,
+                role: role || undefined,
+                reportingBhId: req.body.reportingBhId !== undefined ? (req.body.reportingBhId ? parseInt(req.body.reportingBhId) : null) : undefined,
+                isGlobalAccess: req.body.isGlobalAccess !== undefined ? (req.body.isGlobalAccess === true || req.body.isGlobalAccess === 'true') : undefined,
+                allocatedSalary: req.body.allocatedSalary !== undefined ? parseFloat(req.body.allocatedSalary) : undefined,
+                salaryViewEnabled: req.body.salaryViewEnabled !== undefined ? (req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true') : undefined,
+                salaryDeductions: req.body.salaryDeductions !== undefined ? parseFloat(req.body.salaryDeductions) : undefined,
+                salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined,
+                timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined,
+                wfhViewEnabled: req.body.wfhViewEnabled !== undefined ? (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true') : undefined
+            };
+
+            // If password is provided, hash it and add to update data
+            if (password && password.trim() !== '') {
+                const salt = await bcrypt.genSalt(10);
+                updateData.password = await bcrypt.hash(password, salt);
+            }
         }
 
         const user = await prisma.user.update({
