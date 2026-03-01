@@ -3,10 +3,11 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus, addProjectReport } from '../../features/employee/employeeSlice';
 import { getProjects } from '../../features/projects/projectSlice';
 import {
-    MapPin, Camera, AlertTriangle, Calendar, Clock, CheckCircle,
+    Send, MapPin, Building, Info, Calendar, Clock, Camera,
     Navigation, Briefcase, Clipboard, HardHat, UserCheck,
-    Wrench, AlertOctagon, CornerDownRight, CheckSquare, Plus, ChevronRight
+    Wrench, AlertOctagon, CornerDownRight, CheckSquare, Plus, ChevronRight, CheckCircle
 } from 'lucide-react';
+import { formatTime } from '../../utils/dateUtils';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -37,7 +38,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     // --- OPENING FORM STATE ---
     const [openingData, setOpeningData] = useState({
-        checkInTime: attendance?.date ? new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '',
+        checkInTime: attendance?.date ? formatTime(attendance.date) : '',
         ae_gpsCoordinates: '',
         ae_siteLocation: '',
         ae_siteStatus: '',
@@ -101,7 +102,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                 const { latitude, longitude } = position.coords;
                 setOpeningData(prev => ({
                     ...prev,
-                    ae_gpsCoordinates: `${latitude}, ${longitude}`
+                    ae_gpsCoordinates: `${latitude}, ${longitude} `
                 }));
                 setLocationLoading(false);
             },
@@ -274,15 +275,15 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         className={`relative p-6 rounded-[2rem] text-left transition-all duration-300 group overflow-hidden ${reportType === 'daily'
                             ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-2xl shadow-slate-900/30 scale-[1.02] ring-4 ring-slate-900/10'
                             : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-300 hover:shadow-xl hover:scale-[1.01]'
-                            }`}
+                            } `}
                     >
                         <div className="relative z-10 flex items-start justify-between">
                             <div>
-                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'daily' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'}`}>
+                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'daily' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'} `}>
                                     <Calendar size={28} strokeWidth={2.5} />
                                 </div>
-                                <h3 className={`text-xl font-black mb-1 ${reportType === 'daily' ? 'text-white' : 'text-slate-800'}`}>Closing Day</h3>
-                                <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'daily' ? 'text-slate-400' : 'text-slate-400'}`}>Final Summary</p>
+                                <h3 className={`text-xl font-black mb-1 ${reportType === 'daily' ? 'text-white' : 'text-slate-800'} `}>Closing Day</h3>
+                                <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'daily' ? 'text-slate-400' : 'text-slate-400'} `}>Final Summary</p>
                             </div>
                             {reportType === 'daily' && <ChevronRight size={20} className="text-white bg-white/20 rounded-full p-1" />}
                         </div>
@@ -293,15 +294,15 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         className={`relative p-6 rounded-[2rem] text-left transition-all duration-300 group overflow-hidden ${reportType === 'project'
                             ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-500/30 scale-[1.02] ring-4 ring-blue-500/10'
                             : 'bg-white text-slate-500 border border-slate-100 hover:border-blue-200 hover:shadow-xl hover:scale-[1.01]'
-                            }`}
+                            } `}
                     >
                         <div className="relative z-10 flex items-start justify-between">
                             <div>
-                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'project' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-500 group-hover:bg-blue-100 group-hover:text-blue-600'}`}>
+                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'project' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-500 group-hover:bg-blue-100 group-hover:text-blue-600'} `}>
                                     <Briefcase size={28} strokeWidth={2.5} />
                                 </div>
-                                <h3 className={`text-xl font-black mb-1 ${reportType === 'project' ? 'text-white' : 'text-slate-800'}`}>Project Wise</h3>
-                                <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'project' ? 'text-blue-200' : 'text-slate-400'}`}>Detailed Task Logs</p>
+                                <h3 className={`text-xl font-black mb-1 ${reportType === 'project' ? 'text-white' : 'text-slate-800'} `}>Project Wise</h3>
+                                <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'project' ? 'text-blue-200' : 'text-slate-400'} `}>Detailed Task Logs</p>
                             </div>
                             {reportType === 'project' && <ChevronRight size={20} className="text-white bg-white/20 rounded-full p-1" />}
                         </div>
@@ -372,7 +373,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                             <Label text="Visit Type" />
                                             <div className="flex flex-wrap gap-2">
                                                 {visitTypes.map(type => (
-                                                    <label key={type} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_visitType.includes(type) ? 'bg-cyan-50 border-cyan-200 text-cyan-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                                    <label key={type} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_visitType.includes(type) ? 'bg-cyan-50 border-cyan-200 text-cyan-700' : 'bg-slate-50 border-slate-100 text-slate-500'} `}>
                                                         <input type="checkbox" checked={projectReport.ae_visitType.includes(type)} onChange={() => handleMultiSelect('ae_visitType', type)} className="hidden" />
                                                         {type}
                                                     </label>
@@ -426,7 +427,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                         <Label text="Tasks Completed" />
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             {tasksList.map(task => (
-                                                <label key={task} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_tasksCompleted.includes(task) ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-100 text-slate-500'}`}>
+                                                <label key={task} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_tasksCompleted.includes(task) ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-100 text-slate-500'} `}>
                                                     <input type="checkbox" checked={projectReport.ae_tasksCompleted.includes(task)} onChange={() => handleMultiSelect('ae_tasksCompleted', task)} className="hidden" />
                                                     {task}
                                                 </label>
@@ -451,7 +452,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                         </div>
                                     </Card>
 
-                                    <div className={`p-5 rounded-2xl border transition-colors ${projectReport.ae_hasIssues ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'}`}>
+                                    <div className={`p-5 rounded-2xl border transition-colors ${projectReport.ae_hasIssues ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'} `}>
                                         <div className="flex justify-between items-center">
                                             <div className="flex items-center gap-2 text-red-600 font-black text-sm uppercase">
                                                 <AlertOctagon size={18} /> Issues Found?
@@ -509,7 +510,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                             {projectReport.ae_clientMet && (
                                                 <div className="flex gap-2">
                                                     {['😊', '😐', '😟'].map(feedback => (
-                                                        <label key={feedback} className={`flex-1 flex justify-center py-2 rounded-xl border cursor-pointer transition-all ${projectReport.ae_clientFeedback === feedback ? 'bg-pink-50 border-pink-300 shadow-sm' : 'border-slate-100 opacity-50 hover:opacity-100'}`}>
+                                                        <label key={feedback} className={`flex-1 flex justify-center py-2 rounded-xl border cursor-pointer transition-all ${projectReport.ae_clientFeedback === feedback ? 'bg-pink-50 border-pink-300 shadow-sm' : 'border-slate-100 opacity-50 hover:opacity-100'} `}>
                                                             <input type="radio" name="ae_clientFeedback" value={feedback} checked={projectReport.ae_clientFeedback === feedback} onChange={handleProjectReportChange} className="hidden" />
                                                             <span className="text-2xl filter drop-shadow-sm">{feedback}</span>
                                                         </label>
@@ -555,7 +556,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <span className={`text-[10px] font-black px-3 py-1 rounded-full ${r.status === 'Completed' || r.ae_siteStatus === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'}`}>
+                                                            <span className={`text-[10px] font-black px-3 py-1 rounded-full ${r.status === 'Completed' || r.ae_siteStatus === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} `}>
                                                                 {r.status || r.ae_siteStatus || 'N/A'}
                                                             </span>
                                                         </div>

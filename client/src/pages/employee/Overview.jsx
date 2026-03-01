@@ -14,6 +14,8 @@ import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 import LeaveRequestForm from '../../components/LeaveRequestForm';
 import PermissionRequestForm from '../../components/PermissionRequestForm';
 import StatCard from '../../components/StatCard';
+import Spinner from '../../components/Spinner';
+import { formatDate } from '../../utils/dateUtils';
 import Modal from '../../components/Modal';
 import BreakSelectionModal from '../../components/BreakSelectionModal';
 import ProjectCreationForm from '../../components/ProjectCreationForm';
@@ -750,7 +752,7 @@ const Overview = () => {
                             ) : workLogs.map(log => (
                                 <div key={log.id} className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
                                     <div className="w-11 h-11 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center text-xs font-bold flex-shrink-0 shadow-sm">
-                                        <span className="text-slate-400 text-[10px] font-normal">{new Date(log.date).toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</span>
+                                        <span className="text-slate-400 text-[10px] font-normal">{new Date(log.date).getMonth() + 1}/{new Date(log.date).getFullYear()}</span>
                                         <span className="text-slate-800 text-sm leading-none">{new Date(log.date).getDate()}</span>
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -779,7 +781,7 @@ const Overview = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-lg">🏖️</div>
                                         <div>
-                                            <p className="font-bold text-slate-800 text-sm">{new Date(req.startDate).toLocaleDateString()} — {new Date(req.endDate).toLocaleDateString()}</p>
+                                            <p className="font-bold text-slate-800 text-sm">{formatDate(req.startDate)} — {formatDate(req.endDate)}</p>
                                             <p className="text-xs text-slate-400">{req.type} · "{req.reason}"</p>
                                         </div>
                                     </div>
@@ -799,7 +801,7 @@ const Overview = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-lg">🕑</div>
                                         <div>
-                                            <p className="font-bold text-slate-800 text-sm">{new Date(req.date).toLocaleDateString()} · {req.startTime} – {req.endTime}</p>
+                                            <p className="font-bold text-slate-800 text-sm">{formatDate(req.date)} · {req.startTime} – {req.endTime}</p>
                                             <p className="text-xs text-slate-400">"{req.reason}"</p>
                                         </div>
                                     </div>

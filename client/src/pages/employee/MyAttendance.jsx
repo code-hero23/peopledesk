@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { getAttendanceHistory } from '../../features/employee/employeeSlice';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { Calendar, Clock, Coffee, MonitorPlay, Users, LogOut, LogIn } from 'lucide-react';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, formatTime } from '../../utils/dateUtils';
 import Spinner from '../../components/Spinner';
 
 const MyAttendance = () => {
@@ -28,10 +28,6 @@ const MyAttendance = () => {
             .reduce((acc, curr) => acc + curr.duration, 0);
     };
 
-    const formatTime = (dateString) => {
-        if (!dateString) return '--:--';
-        return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-    };
 
     const formatMinutes = (minutes) => {
         if (!minutes) return '0m';
@@ -127,8 +123,10 @@ const MyAttendance = () => {
                                                 <tr key={dateString} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
                                                     <td className="p-4 border-r border-gray-100">
                                                         <div className="flex flex-col items-center justify-center">
-                                                            <span className="font-bold text-gray-800">{formatDate(dateObj)}</span>
-                                                            <span className="text-xs text-gray-400 font-medium uppercase">{dateObj.toLocaleDateString('en-US', { weekday: 'short' })}</span>
+                                                            <span className="text-xs text-gray-400 font-medium uppercase">
+                                                                {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'][dateObj.getDay()]}
+                                                            </span>
+                                                            <p className="text-sm font-bold text-gray-800">{formatDate(dateObj)}</p>
                                                         </div>
                                                     </td>
 

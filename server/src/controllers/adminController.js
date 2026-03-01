@@ -571,19 +571,30 @@ const getDailyWorkLogs = async (req, res) => {
         });
 
         // 2. Get work logs for the range
+        const logWhere = {
+            date: {
+                gte: start,
+                lte: end
+            }
+        };
+
+        if (req.user.role === 'AE_MANAGER') {
+            logWhere.user = { designation: 'AE' };
+        } else if (req.user.role === 'BUSINESS_HEAD') {
+            if (!req.user.isGlobalAccess) {
+                logWhere.user = { reportingBhId: req.user.id };
+            }
+        }
+
         const logs = await prisma.workLog.findMany({
-            where: {
-                date: {
-                    gte: start,
-                    lte: end
-                }
-            },
+            where: logWhere,
             include: { user: { select: { id: true, name: true, email: true, designation: true, reportingBhId: true } } },
             orderBy: { date: 'desc' }
         });
 
         // 3. Merge data
         // If it's a specific single day, we show ALL employees (Submitted/Pending)
+        // We use 'users' list (which is already filtered)
         if (!startDate || (startDate === endDate)) {
             const dailyReport = users.map(user => {
                 const log = logs.find(l => l.userId === user.id);
@@ -596,7 +607,7 @@ const getDailyWorkLogs = async (req, res) => {
             return res.json(dailyReport);
         }
 
-        // If it's a range, we only show SUBMITTED logs
+        // If it's a range, we only show logs from users that match our permissions
         const rangeReport = logs.map(log => ({
             user: log.user,
             status: 'SUBMITTED',

@@ -47,7 +47,10 @@ const MySalary = () => {
                 const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
                 const response = await axios.get(`${baseUrl}/payroll/my-summary`, config);
 
-                if (response.data.message && !response.data.financials) {
+                if (response.data.disabled) {
+                    setError("Month Remuneration Cycle is completed for this month");
+                    setSummary(null);
+                } else if (response.data.message && !response.data.financials) {
                     setError(response.data.message);
                     setSummary(null);
                 } else {
@@ -125,7 +128,7 @@ const MySalary = () => {
                             <Calendar size={24} />
                         </div>
                         <div>
-                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Payroll Cycle</p>
+                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1.5">Remuneration Cycle</p>
                             <h2 className="text-2xl font-black text-slate-800 tracking-tight">Financial Dashboard</h2>
                         </div>
                     </div>
@@ -161,7 +164,9 @@ const MySalary = () => {
                 </motion.div>
 
                 {error && (() => {
-                    const isCycleCompleted = error.toLowerCase().includes('cycle is completed') || error.toLowerCase().includes('next month cycle');
+                    const isCycleCompleted = error.toLowerCase().includes('cycle is completed') ||
+                        error.toLowerCase().includes('next month cycle') ||
+                        error.toLowerCase().includes('remuneration cycle');
                     if (isCycleCompleted) {
                         return (
                             <motion.div
@@ -212,7 +217,7 @@ const MySalary = () => {
                                     <div className="flex items-center gap-3 mb-4">
                                         {summary.isManual ? (
                                             <div className="flex items-center gap-2 px-4 py-1.5 bg-amber-500/20 backdrop-blur-md border border-amber-500/30 rounded-full text-amber-400 text-[10px] font-black uppercase tracking-widest shadow-lg">
-                                                <Lock size={12} /> Official Payroll Access
+                                                <Lock size={12} /> Official Remuneration Access
                                             </div>
                                         ) : (
                                             <div className="flex items-center gap-2 px-4 py-1.5 bg-blue-500/20 backdrop-blur-md border border-blue-500/30 rounded-full text-blue-300 text-[10px] font-black uppercase tracking-widest">

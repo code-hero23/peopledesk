@@ -5,7 +5,7 @@ import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteReque
 import { Download, Calendar, X, AlertTriangle } from 'lucide-react';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import axios from 'axios';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, formatDateTime } from '../../utils/dateUtils';
 
 const Approvals = () => {
     const dispatch = useDispatch();
@@ -209,9 +209,9 @@ const Approvals = () => {
                 </div>
 
                 <div className="flex justify-between items-center text-xs font-semibold text-slate-500 mt-2 border-t border-slate-100 pt-2 bg-slate-50/50 -mx-6 px-6 -mb-6 pb-4 rounded-b-xl">
-                    <span className="flex items-center gap-1">📅 Applied: <span className="text-slate-700">{formatDate(req.createdAt)}</span></span>
+                    <span className="flex items-center gap-1">📅 Applied: <span className="text-slate-700">{formatDateTime(req.createdAt)}</span></span>
                     {activeTab === 'history' && (
-                        <span>Updated: {new Date(req.updatedAt || req.createdAt).toLocaleString()}</span>
+                        <span>Updated: {formatDateTime(req.updatedAt || req.createdAt)}</span>
                     )}
                 </div>
             </div>

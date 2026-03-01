@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, ChevronLeft, ChevronRight, Check, Info } from 'lucide-react';
+import { formatDate } from '../../utils/dateUtils';
 import { motion } from 'framer-motion';
 
 /**
@@ -69,8 +70,8 @@ const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
         return {
             startDate: startDate.toISOString(),
             endDate: endDate.toISOString(),
-            label: `${monthLabel} ${cycleYear}`,
-            subLabel: `${new Date(startYear, startMonth, 26).toLocaleDateString()} - ${new Date(endYear, endMonth, 25).toLocaleDateString()}`
+            label: `${monthLabel} ${cycleYear} `,
+            subLabel: `${formatDate(new Date(startYear, startMonth, 26))} - ${formatDate(new Date(endYear, endMonth, 25))} `
         };
     };
 
@@ -126,7 +127,7 @@ const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
                 <div className="text-left">
                     <div className="flex items-center gap-3">
                         <span className="text-base font-black text-slate-800 tracking-tight leading-none">
-                            {selectedDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
+                            {formatDate(selectedDate).split('/').slice(1).join('/')}
                         </span>
                         <motion.div
                             animate={{

@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, reset } from '../features/auth/authSlice';
+import axios from 'axios';
 import {
     LayoutDashboard,
     Users,
@@ -33,6 +34,27 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         dispatch(reset());
         navigate('/login');
     };
+
+    const [globalSettings, setGlobalSettings] = useState({});
+
+    useEffect(() => {
+        const fetchGlobalSettings = async () => {
+            try {
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const response = await axios.get(`${baseUrl}/settings`, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                setGlobalSettings(response.data);
+            } catch (err) {
+                console.error("Failed to fetch global settings", err);
+            }
+        };
+        if (user?.token) {
+            fetchGlobalSettings();
+        }
+    }, [user?.token]);
+
+    const isSalaryEnabled = globalSettings.isSalaryDashboardEnabled !== 'false';
 
     const handleRefresh = () => window.location.reload();
 
@@ -155,7 +177,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                         <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                         <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
-                        <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
+                        {isSalaryEnabled && (
+                            <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
+                        )}
                         {user?.wfhViewEnabled && (
                             <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
                         )}

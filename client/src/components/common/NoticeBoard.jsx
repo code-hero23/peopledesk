@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { AlertCircle, Megaphone, ScrollText, Calendar, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Megaphone, X, ChevronLeft, ChevronRight, Info, Calendar, Clock } from 'lucide-react';
+import { formatDate } from '../../utils/dateUtils';
 import axios from 'axios';
 
 const NoticeBoard = () => {
@@ -111,7 +112,7 @@ const NoticeBoard = () => {
                                         {currentNotice.priority}
                                     </span>
                                     <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">
-                                        {new Date(currentNotice.createdAt).toLocaleDateString()}
+                                        {formatDate(currentNotice.createdAt)}
                                     </span>
                                 </div>
                                 <h3 className="text-base font-bold text-white truncate">
@@ -127,7 +128,7 @@ const NoticeBoard = () => {
                                     {currentNotice.priority}
                                 </span>
                                 <span className="text-[10px] text-slate-500 font-bold uppercase tracking-widest">
-                                    {new Date(currentNotice.createdAt).toLocaleDateString()}
+                                    {formatDate(currentNotice.createdAt)}
                                 </span>
                             </div>
 

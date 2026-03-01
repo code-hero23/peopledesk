@@ -20,6 +20,7 @@ import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { getManageableWfhRequests, getWfhHistory, approveWfhRequest, reset } from '../../features/admin/adminSlice';
 import { toast } from 'react-toastify';
 import Spinner from '../../components/Spinner';
+import { formatDate, formatTime } from '../../utils/dateUtils';
 
 const WFHManagement = () => {
     const dispatch = useDispatch();
@@ -146,7 +147,7 @@ const WFHManagement = () => {
                                                     <span>•</span>
                                                     <span>{request.wfhDays} Days</span>
                                                     <span>•</span>
-                                                    <span className="flex items-center gap-1"><Calendar size={14} /> {new Date(request.startDate).toLocaleDateString()}</span>
+                                                    <span className="flex items-center gap-1"><Calendar size={14} /> {formatDate(request.startDate)}</span>
                                                 </div>
                                             </div>
                                         </div>
@@ -154,7 +155,7 @@ const WFHManagement = () => {
                                             <div className="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full inline-block">
                                                 LEVEL {request.currentLevel}
                                             </div>
-                                            <p className="text-[10px] text-gray-400 mt-1 font-medium">{new Date(request.createdAt).toLocaleTimeString()}</p>
+                                            <p className="text-[10px] text-gray-400 mt-1 font-medium">{formatTime(request.createdAt)}</p>
                                         </div>
                                     </div>
 

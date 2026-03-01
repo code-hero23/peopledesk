@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Megaphone, Plus, Trash2, Edit2, X, Save } from 'lucide-react';
+import { formatDate } from '../../utils/dateUtils';
 import { useNavigate } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
@@ -147,7 +148,7 @@ const AnnouncementManagement = () => {
                         <h4 className="font-bold text-slate-800 mb-2">{announcement.title}</h4>
                         <p className="text-slate-600 text-sm mb-4 line-clamp-3 leading-relaxed">{announcement.content}</p>
                         <div className="mt-4 pt-4 border-t border-slate-100 flex justify-between items-center">
-                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{new Date(announcement.createdAt).toLocaleDateString()}</span>
+                            <span className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">{formatDate(announcement.createdAt)}</span>
                             <span className="text-[10px] text-slate-600 font-bold uppercase tracking-widest">{announcement.type}</span>
                         </div>
                     </div>

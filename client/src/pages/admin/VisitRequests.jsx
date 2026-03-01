@@ -2,7 +2,8 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSelector, useDispatch } from 'react-redux';
 import { getPendingRequests, getRequestHistory, updateRequestStatus, deleteRequest, reset } from '../../features/admin/adminSlice';
-import { Download, MapPin, Building2, Trash2, Calendar, X } from 'lucide-react';
+import { Search, Building2, MapPin, Calendar, Clock, CheckCircle, XCircle, AlertCircle, Eye, RefreshCw, Download } from 'lucide-react';
+import { formatDateTime, formatDate } from '../../utils/dateUtils';
 import axios from 'axios';
 
 const VisitRequests = () => {
@@ -114,7 +115,7 @@ const VisitRequests = () => {
             <div className="space-y-3 mb-6">
                 <div className="flex items-center gap-2 text-sm text-slate-600">
                     <span>📅</span>
-                    <span className="font-medium">{new Date(req.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                    <span className="font-medium">{formatDate(req.date)}</span>
                     <span className="text-slate-300">|</span>
                     <span className="text-slate-500">{req.startTime} - {req.endTime}</span>
                 </div>
@@ -142,6 +143,13 @@ const VisitRequests = () => {
 
                 <div className="bg-blue-50/50 p-3 rounded-lg border-l-2 border-blue-400">
                     <p className="text-xs font-bold text-blue-900 leading-relaxed italic">"{req.reason}"</p>
+                </div>
+
+                <div className="flex justify-between items-center text-[10px] font-bold text-slate-500 mt-4 border-t border-slate-100 pt-3">
+                    <span className="flex items-center gap-1">📅 Applied: <span className="text-slate-700">{formatDateTime(req.createdAt)}</span></span>
+                    {activeTab === 'history' && (
+                        <span>Updated: {formatDateTime(req.updatedAt || req.createdAt)}</span>
+                    )}
                 </div>
             </div>
 

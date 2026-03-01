@@ -6,6 +6,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Users, ClipboardList, BarChart2, Calendar, Building2, FileText, CheckCircle, UserX, Clock, Home } from 'lucide-react';
 import axios from 'axios';
+import { formatDate } from '../utils/dateUtils';
 
 const AdminDashboard = () => {
     const dispatch = useDispatch();
@@ -47,7 +48,7 @@ const AdminDashboard = () => {
             const url = window.URL.createObjectURL(new Blob([response.data]));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `${type}_${new Date().toISOString().split('T')[0]}.csv`);
+            link.setAttribute('download', `${type}_export_${formatDate(new Date()).replace(/\//g, '-')}.csv`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -59,7 +60,7 @@ const AdminDashboard = () => {
 
     const now = new Date();
     const greeting = now.getHours() < 12 ? 'Good Morning' : now.getHours() < 17 ? 'Good Afternoon' : 'Good Evening';
-    const dayLabel = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const dayLabel = `${formatDate(now)} · ${['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()]}`;
 
     const SkeletonCard = () => (
         <div className="bg-white/20 rounded-3xl h-36 animate-pulse" />

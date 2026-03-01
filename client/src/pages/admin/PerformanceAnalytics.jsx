@@ -4,6 +4,7 @@ import { getTeamOverview, getEmployeeStats, reset } from '../../features/analyti
 import { TrendingUp, Users, Clock, AlertTriangle, Calendar, Search, ArrowRight, Award, BarChart3, LineChart as LineIcon, Download, Crown } from 'lucide-react';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import axios from 'axios';
+import { formatTime } from '../../utils/dateUtils';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
     BarChart, Bar, Cell, Legend
@@ -407,7 +408,7 @@ const PerformanceAnalytics = () => {
                                             const date = new Date();
                                             date.setHours(10, 0, 0, 0);
                                             date.setMinutes(date.getMinutes() + employeeStats.avgLateness);
-                                            return date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+                                            return formatTime(date);
                                         })()}
                                         subtext={`Avg ${Math.abs(employeeStats.avgLateness)}m ${employeeStats.avgLateness >= 0 ? 'late' : 'early'}`}
                                         icon={Clock}

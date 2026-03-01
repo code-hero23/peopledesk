@@ -3,6 +3,7 @@ import axios from 'axios';
 import { useSelector } from 'react-redux';
 
 import { Search, Calendar, X, ExternalLink } from 'lucide-react';
+import { formatTime } from '../../utils/dateUtils';
 
 const AttendanceVerification = () => {
     const { user } = useSelector((state) => state.auth);
@@ -137,8 +138,8 @@ const AttendanceVerification = () => {
                                                                 <div className="text-xs font-semibold text-gray-500 mb-2">
                                                                     Session {sIdx + 1}:
                                                                     <span className="ml-2 text-slate-700">
-                                                                        {new Date(session.timeIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} -
-                                                                        {session.timeOut ? new Date(session.timeOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ' Active'}
+                                                                        {formatTime(session.timeIn)} -
+                                                                        {session.timeOut ? formatTime(session.timeOut) : ' Active'}
                                                                     </span>
                                                                 </div>
                                                                 <div className="flex space-x-4">

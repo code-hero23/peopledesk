@@ -5,6 +5,7 @@ import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils } fr
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
+import { formatTime } from '../../utils/dateUtils';
 
 const Attendance = () => {
     const dispatch = useDispatch();
@@ -428,13 +429,13 @@ const Attendance = () => {
 
                                         <td className="px-6 py-4 text-center text-slate-600 font-mono">
                                             {record.timeIn
-                                                ? new Date(record.timeIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                ? formatTime(record.timeIn)
                                                 : '--:--'
                                             }
                                         </td>
                                         <td className="px-6 py-4 text-center text-slate-600 font-mono">
                                             {record.timeOut
-                                                ? new Date(record.timeOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                                ? formatTime(record.timeOut)
                                                 : '--:--'
                                             }
                                         </td>

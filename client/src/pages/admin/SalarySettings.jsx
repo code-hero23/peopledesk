@@ -117,6 +117,7 @@ const SalarySettings = () => {
     };
 
     const isShortageEnabled = settings.isGlobalShortageDeductionEnabled !== 'false';
+    const isDashboardEnabled = settings.isSalaryDashboardEnabled !== 'false';
     const calculationMode = settings.payrollCalculationMode || 'AUTO';
 
     const months = [
@@ -367,6 +368,29 @@ const SalarySettings = () => {
                                 </div>
 
                                 <div className="space-y-6">
+                                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-3 bg-blue-100 rounded-2xl text-blue-600">
+                                                <DollarSign size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-slate-800 mb-1">Global Salary Dashboard</h4>
+                                                <p className="text-[11px] text-slate-500 font-bold max-w-sm leading-tight">Enable or disable the salary view for all employees. When OFF, the "My Salary" link is hidden.</p>
+                                            </div>
+                                        </div>
+
+                                        <label className="relative inline-flex items-center cursor-pointer ml-4">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={isDashboardEnabled}
+                                                onChange={(e) => updateSetting('isSalaryDashboardEnabled', e.target.checked)}
+                                                disabled={saving}
+                                            />
+                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600 shadow-sm"></div>
+                                        </label>
+                                    </div>
+
                                     <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
                                         <div className="flex items-start gap-4">
                                             <div className="p-3 bg-indigo-100 rounded-2xl text-indigo-600">

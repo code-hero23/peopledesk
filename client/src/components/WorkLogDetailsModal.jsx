@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { useReactToPrint } from 'react-to-print';
-import { X, Printer } from 'lucide-react';
+import { X, Printer, Calendar, Clock, MapPin, User, FileText, CheckCircle2, AlertCircle, Info, ExternalLink } from 'lucide-react';
+import { formatDate, formatDateTime } from '../utils/dateUtils';
 
 const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
     const componentRef = useRef();
@@ -21,7 +22,7 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                 <div className="flex justify-between items-center p-6 border-b border-slate-100">
                     <div>
                         <h2 className="text-xl font-bold text-slate-800">Work Log Details</h2>
-                        <p className="text-sm text-slate-500">{user.name} - {new Date(WorkLog.date || WorkLog.createdAt).toLocaleDateString()}</p>
+                        <p className="text-sm text-slate-500">{user.name} - {formatDate(WorkLog.date || WorkLog.createdAt)}</p>
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={handlePrint} className="p-2 hover:bg-slate-100 rounded-full transition-colors text-blue-600" title="Print Report">
@@ -39,9 +40,9 @@ const WorkLogDetailsModal = ({ isOpen, onClose, log }) => {
                         <h1 className="text-2xl font-bold text-slate-800">Daily Work Log Report</h1>
                         <div className="grid grid-cols-2 gap-4 mt-2 text-sm text-slate-600">
                             <p><span className="font-bold">Employee:</span> {user.name} ({user.email})</p>
-                            <p><span className="font-bold">Date:</span> {new Date(WorkLog.date || WorkLog.createdAt).toLocaleDateString()}</p>
+                            <p><span className="font-bold">Date:</span> {formatDate(WorkLog.date || WorkLog.createdAt)}</p>
                             <p><span className="font-bold">Designation:</span> {user.designation || 'N/A'}</p>
-                            <p><span className="font-bold">Generated:</span> {new Date().toLocaleString()}</p>
+                            <p><span className="font-bold">Generated:</span> {formatDateTime(new Date())}</p>
                         </div>
                     </div>
 

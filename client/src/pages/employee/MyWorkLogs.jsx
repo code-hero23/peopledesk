@@ -61,7 +61,7 @@ const MyWorkLogs = () => {
                                 <div key={log.id} className="flex items-center gap-4 p-4 rounded-lg bg-slate-50 border border-slate-100 hover:border-blue-200 transition-colors">
                                     <div className="w-12 h-12 rounded-lg bg-white border border-slate-200 text-blue-600 flex flex-col items-center justify-center font-bold text-xs flex-shrink-0 shadow-sm">
                                         <span className="text-slate-400 font-normal leading-none mb-0.5">{new Date(log.date).getDate()}</span>
-                                        <span className="leading-none">{new Date(log.date).toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</span>
+                                        <span className="leading-none text-[8px] font-black italic">{new Date(log.date).getMonth() + 1}/{new Date(log.date).getFullYear()}</span>
                                     </div>
 
                                     <div className="flex-1 min-w-0">

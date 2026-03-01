@@ -305,11 +305,11 @@ const WorkLogs = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-100">
                             {isLoading ? (
-                                <tr><td colSpan="3" className="text-center py-8">Loading...</td></tr>
+                                <tr><td colSpan="5" className="text-center py-8">Loading...</td></tr>
                             ) : dailyWorkLogs.length === 0 ? (
-                                <tr><td colSpan="3" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr><td colSpan="5" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : filteredLogs.length === 0 ? (
-                                <tr><td colSpan="3" className="text-center py-8 text-slate-400 italic">No logs found matching your search.</td></tr>
+                                <tr><td colSpan="5" className="text-center py-8 text-slate-400 italic">No logs found matching your search.</td></tr>
                             ) : (
                                 filteredLogs.map((record) => {
                                     const log = record.workLog;

@@ -26,6 +26,7 @@ import ShowroomVisitRequestForm from '../components/ShowroomVisitRequestForm';
 import CheckInPhotoModal from '../components/CheckInPhotoModal';
 import { getDeviceType } from '../utils/deviceUtils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { formatDate, formatTime } from '../utils/dateUtils';
 
 // ─── Helper: Request browser notification permission ───────────────────────────
 const requestNotifPermission = async () => {
@@ -322,7 +323,7 @@ const EmployeeDashboard = () => {
                         <div className="flex items-center gap-2 flex-wrap">
                             <span className="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs px-3 py-1 rounded-full font-bold">{user?.designation || '—'}</span>
                             <span className="text-slate-500 text-xs">•</span>
-                            <span className="text-slate-400 text-xs">{now.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
+                            <span className="text-slate-400 text-xs">{formatDate(now)} · {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][now.getDay()]}</span>
                         </div>
                     </div>
 
@@ -362,7 +363,7 @@ const EmployeeDashboard = () => {
                             <div className="space-y-2 mb-4">
                                 <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
                                     <span>🕒</span>
-                                    <span className="text-sm font-medium">In at <span className="font-black">{new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+                                    <span className="text-sm font-medium">In at <span className="font-black">{formatTime(attendance.date)}</span></span>
                                 </div>
                                 {/* Live elapsed timer */}
                                 <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
@@ -384,7 +385,7 @@ const EmployeeDashboard = () => {
                             <div className="space-y-2 mb-4">
                                 <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
                                     <span>🏁</span>
-                                    <span className="text-sm font-medium">Out at <span className="font-black">{new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span></span>
+                                    <span className="text-sm font-medium">Out at <span className="font-black">{formatTime(attendance.checkoutTime)}</span></span>
                                 </div>
                                 <div className="flex items-center gap-2 bg-white/10 rounded-xl px-4 py-2">
                                     <span>⚡</span>
@@ -482,7 +483,7 @@ const EmployeeDashboard = () => {
                             ) : workLogs.map(log => (
                                 <div key={log.id} className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
                                     <div className="w-11 h-11 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center text-xs font-bold flex-shrink-0 shadow-sm">
-                                        <span className="text-slate-400 text-[10px] font-normal">{new Date(log.date).toLocaleDateString(undefined, { month: 'short' }).toUpperCase()}</span>
+                                        <span className="text-slate-400 text-[10px] font-normal">{new Date(log.date).getMonth() + 1}/{new Date(log.date).getFullYear()}</span>
                                         <span className="text-slate-800 text-sm leading-none">{new Date(log.date).getDate()}</span>
                                     </div>
                                     <div className="flex-1 min-w-0">
@@ -511,7 +512,7 @@ const EmployeeDashboard = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-lg">🏖️</div>
                                         <div>
-                                            <p className="font-bold text-slate-800 text-sm">{new Date(req.startDate).toLocaleDateString()} — {new Date(req.endDate).toLocaleDateString()}</p>
+                                            <p className="font-bold text-slate-800 text-sm">{formatDate(req.startDate)} — {formatDate(req.endDate)}</p>
                                             <p className="text-xs text-slate-400">{req.type} · "{req.reason}"</p>
                                         </div>
                                     </div>
@@ -531,7 +532,7 @@ const EmployeeDashboard = () => {
                                     <div className="flex items-center gap-3">
                                         <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-lg">🕑</div>
                                         <div>
-                                            <p className="font-bold text-slate-800 text-sm">{new Date(req.date).toLocaleDateString()} · {req.startTime} – {req.endTime}</p>
+                                            <p className="font-bold text-slate-800 text-sm">{formatDate(req.date)} · {req.startTime} – {req.endTime}</p>
                                             <p className="text-xs text-slate-400">"{req.reason}"</p>
                                         </div>
                                     </div>

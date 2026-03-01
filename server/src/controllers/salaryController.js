@@ -22,6 +22,30 @@ const getMySalarySummary = async (req, res) => {
             }
         });
 
+        // Initial Check: Fetch Global Settings (Safe fetch)
+        let isGlobalDashboardEnabled = true;
+        let isGlobalShortageEnabled = true;
+        let calculationMode = 'AUTO';
+        try {
+            const settings = await prisma.globalSetting.findMany();
+            const dashboardSetting = settings.find(s => s.key === 'isSalaryDashboardEnabled');
+            const shortageSetting = settings.find(s => s.key === 'isGlobalShortageDeductionEnabled');
+            const modeSetting = settings.find(s => s.key === 'payrollCalculationMode');
+
+            if (dashboardSetting) isGlobalDashboardEnabled = dashboardSetting.value !== 'false';
+            if (shortageSetting) isGlobalShortageEnabled = shortageSetting.value === 'true';
+            if (modeSetting) calculationMode = modeSetting.value;
+        } catch (dbError) {
+            console.error('Global settings error:', dbError.message);
+        }
+
+        if (!isGlobalDashboardEnabled) {
+            return res.status(200).json({
+                disabled: true,
+                message: 'Global Salary Dashboard is currently disabled by Admin. Please contact HR for details.'
+            });
+        }
+
         if (!user.salaryViewEnabled) {
             return res.status(200).json({ message: 'This month cycle is completed wait for next month cycle' });
         }
@@ -115,20 +139,6 @@ const getMySalarySummary = async (req, res) => {
         let expectedHours = 0;
         let permissionCreditHours = 0;
 
-        // Fetch Global Settings (Safe fetch)
-        let isGlobalEnabled = true;
-        let calculationMode = 'AUTO';
-        try {
-            const settings = await prisma.globalSetting.findMany();
-            const shortageSetting = settings.find(s => s.key === 'isGlobalShortageDeductionEnabled');
-            const modeSetting = settings.find(s => s.key === 'payrollCalculationMode');
-
-            if (shortageSetting) isGlobalEnabled = shortageSetting.value === 'true';
-            if (modeSetting) calculationMode = modeSetting.value;
-        } catch (dbError) {
-            console.error('Global settings error:', dbError.message);
-        }
-
         // Date Display Formatting (Fixing IST display)
         const formatDate = (d) => {
             if (!d) return '';
@@ -176,7 +186,7 @@ const getMySalarySummary = async (req, res) => {
         }
         // ------------------------------
 
-        if (isGlobalEnabled && user.timeShortageDeductionEnabled) {
+        if (isGlobalShortageEnabled && user.timeShortageDeductionEnabled) {
             expectedHours = presentDays * 8;
             const creditedPermissionCount = Math.min(approvedPermissions, 4); // Max 4 perms allowed
             permissionCreditHours = creditedPermissionCount * 2;

@@ -1,6 +1,7 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, Calendar as CalendarIcon, Info, CheckCircle2, Clock } from 'lucide-react';
+import { formatDate } from '../utils/dateUtils';
 
 const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory, leaves, permissions }) => {
     // Generate dates from 26th to 25th
@@ -221,7 +222,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                                             `}
                                         >
                                             <span className="text-sm font-black">{date.getDate()}</span>
-                                            <span className="text-[7px] font-bold opacity-70 uppercase tracking-tighter">{date.toLocaleDateString('en-US', { month: 'short' })}</span>
+                                            <span className="text-[7px] font-bold opacity-70 uppercase tracking-tighter">{formatDate(date).split('/')[1]}</span>
                                         </motion.div>
 
                                         {/* Tooltip */}
