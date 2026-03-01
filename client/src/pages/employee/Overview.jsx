@@ -92,10 +92,14 @@ const Overview = () => {
     }, []);
 
     useEffect(() => {
+        if (user?.wfhViewEnabled) {
+            navigate('/dashboard/wfh');
+            return;
+        }
         dispatch(getAttendanceStatus());
         // Initial getMyWorkLogs and getMyRequests handled by MonthCycleSelector
         return () => { dispatch(reset()); };
-    }, [dispatch]);
+    }, [dispatch, user, navigate]);
 
     const handleCycleChange = (range) => {
         const params = {

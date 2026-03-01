@@ -22,7 +22,7 @@ const WFHRequestForm = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
-    const { isLoading, isSuccess, isError, message, businessHeads } = useSelector((state) => state.employee);
+    const { isLoading, wfhSubmitted, isError, message, businessHeads } = useSelector((state) => state.employee);
 
     const [formData, setFormData] = useState({
         employeeName: user?.name || '',
@@ -80,7 +80,7 @@ const WFHRequestForm = () => {
             dispatch(reset());
         }
 
-        if (isSuccess) {
+        if (wfhSubmitted) {
             toast.success('WFH Request Submitted Successfully');
 
             // Redirect back to dashboard if it's mandatory
@@ -112,7 +112,7 @@ const WFHRequestForm = () => {
             dispatch(reset());
         }
 
-    }, [isError, isSuccess, message, dispatch]);
+    }, [isError, wfhSubmitted, message, dispatch]);
 
     const onChange = (e) => {
         const { name, value, type, checked } = e.target;

@@ -17,6 +17,7 @@ const initialState = {
     isPaused: false,
     activeBreak: null,
     isRequestsFetched: false,
+    wfhSubmitted: false,
 };
 
 // Check attendance status for today
@@ -442,6 +443,7 @@ export const employeeSlice = createSlice({
             state.isError = false;
             state.isSuccess = false;
             state.message = '';
+            state.wfhSubmitted = false;
         },
     },
     extraReducers: (builder) => {
@@ -685,6 +687,7 @@ export const employeeSlice = createSlice({
             .addCase(createWfhRequest.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.isSuccess = true;
+                state.wfhSubmitted = true;
                 if (!state.requests.wfh) {
                     state.requests.wfh = [];
                 }
