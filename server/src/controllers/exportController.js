@@ -345,11 +345,19 @@ const exportWorkLogs = async (req, res) => {
 // @access  Private (Admin)
 const exportAttendance = async (req, res) => {
     try {
-        const { date, month, year, userId, search } = req.query;
+        const { date, month, year, userId, search, startDate: queryStartDate, endDate: queryEndDate } = req.query;
         let attendanceWhere = {};
         let userWhere = { status: 'ACTIVE' };
 
-        if (date) {
+        let startDate, endDate;
+
+        if (queryStartDate && queryEndDate) {
+            startDate = new Date(queryStartDate);
+            startDate.setHours(0, 0, 0, 0);
+            endDate = new Date(queryEndDate);
+            endDate.setHours(23, 59, 59, 999);
+            attendanceWhere.date = { gte: startDate, lte: endDate };
+        } else if (date) {
             const d = new Date(date);
             attendanceWhere.date = { gte: new Date(d.setHours(0, 0, 0, 0)), lte: new Date(d.setHours(23, 59, 59, 999)) };
         } else if (month && year) {

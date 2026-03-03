@@ -47,12 +47,14 @@ const Attendance = () => {
     };
 
     // Default to today's date in LOCAL time
-    const [selectedDate, setSelectedDate] = useState(() => {
-        const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
+    const [startDate, setStartDate] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    });
+
+    const [endDate, setEndDate] = useState(() => {
+        const d = new Date();
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
     });
 
     const [searchTerm, setSearchTerm] = useState('');
@@ -79,7 +81,7 @@ const Attendance = () => {
 
     useEffect(() => {
         if (user && user.token) {
-            dispatch(getDailyAttendance(selectedDate));
+            dispatch(getDailyAttendance(startDate)); // Table view still defaults to start date
             fetchActiveStatuses();
 
             const pollInterval = setInterval(fetchActiveStatuses, 30000);
@@ -91,7 +93,7 @@ const Attendance = () => {
                 clearInterval(timeInterval);
             };
         }
-    }, [user, dispatch, selectedDate]);
+    }, [user, dispatch, startDate]);
 
     const getDuration = (startTime) => {
         const start = new Date(startTime);
@@ -120,15 +122,8 @@ const Attendance = () => {
                 responseType: 'blob',
             };
 
-            // Force Today's Date for export as per requirement
-            const today = new Date();
-            const year = today.getFullYear();
-            const month = String(today.getMonth() + 1).padStart(2, '0');
-            const day = String(today.getDate()).padStart(2, '0');
-            const todayStr = `${year}-${month}-${day}`;
-
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            let apiUrl = `${baseUrl}/export/attendance?date=${todayStr}`;
+            let apiUrl = `${baseUrl}/export/attendance?startDate=${startDate}&endDate=${endDate}`;
 
             if (searchTerm) {
                 apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
@@ -138,7 +133,7 @@ const Attendance = () => {
             const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `attendance_today_${todayStr}.xlsx`);
+            link.setAttribute('download', `attendance_report_${startDate}_to_${endDate}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -259,14 +254,26 @@ const Attendance = () => {
                         </button>
                     )}
                     <MonthCycleSelector onCycleChange={handleCycleChange} />
-                    <div className="relative">
-                        <Calendar className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                        <input
-                            type="date"
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                            className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"
-                        />
+                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase">From</span>
+                            <input
+                                type="date"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                                className="bg-transparent border-none focus:ring-0 text-slate-600 font-bold text-xs outline-none"
+                            />
+                        </div>
+                        <div className="w-[1px] h-4 bg-slate-200"></div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-[10px] font-black text-slate-400 uppercase">To</span>
+                            <input
+                                type="date"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                                className="bg-transparent border-none focus:ring-0 text-slate-600 font-bold text-xs outline-none"
+                            />
+                        </div>
                     </div>
                 </div>
             </div>

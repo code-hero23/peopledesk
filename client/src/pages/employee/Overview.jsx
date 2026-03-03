@@ -69,6 +69,7 @@ const Overview = () => {
     const [showCalendarModal, setShowCalendarModal] = useState(false);
     const [selectedCycle, setSelectedCycle] = useState(null);
     const [siteVisitInitialData, setSiteVisitInitialData] = useState(null);
+    const [isMandatorySiteVisit, setIsMandatorySiteVisit] = useState(false);
 
 
 
@@ -217,13 +218,48 @@ const Overview = () => {
         }
     };
 
-    // Robust Lateness Check
+    // Robust Mandatory Redirection Check (Lateness & Site Login)
     useEffect(() => {
-        if (attendance?.status === 'PRESENT' && isRequestsFetched && activeModal !== 'permission' && user?.designation !== 'AE' && !hasCheckedLateness) {
-            checkLatenessAndRedirect(attendance.date, true);
+        if (attendance?.status === 'PRESENT' && isRequestsFetched && !hasCheckedLateness) {
+
+            // 1. Mandatory Site Visit Check (for refresh persistence)
+            const isSiteLogin = attendance.deviceInfo?.includes('SITE_LOGIN');
+            const todayLocal = new Date(attendance.date).toLocaleDateString('en-CA');
+
+            const hasSubmittedSiteVisit = requests?.siteVisits?.some(s => {
+                const sDate = new Date(s.date).toLocaleDateString('en-CA');
+                return sDate === todayLocal;
+            });
+
+            if (isSiteLogin && !hasSubmittedSiteVisit && activeModal !== 'site-visit') {
+                const checkInDate = new Date(attendance.date);
+                const formatTime = (dateObj) => {
+                    let h = dateObj.getHours();
+                    const m = dateObj.getMinutes().toString().padStart(2, '0');
+                    const ampm = h >= 12 ? 'PM' : 'AM';
+                    h = h % 12 || 12;
+                    return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+                };
+
+                setSiteVisitInitialData({
+                    date: todayLocal,
+                    startTime: formatTime(checkInDate),
+                    reason: 'Logged in from site.'
+                });
+                setIsMandatorySiteVisit(true);
+                setActiveModal('site-visit');
+                setHasCheckedLateness(true); // Treat as checked to stop loop
+                return;
+            }
+
+            // 2. Lateness Check
+            if (activeModal !== 'permission' && user?.designation !== 'AE') {
+                checkLatenessAndRedirect(attendance.date, true);
+            }
+
             setHasCheckedLateness(true);
         }
-    }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness]);
+    }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests]);
 
     const executeAttendanceAction = (actionName, isSiteLogin = false) => {
         const deviceInfo = navigator.userAgent;
@@ -266,6 +302,7 @@ const Overview = () => {
                                 startTime: formatTime(checkInDate),
                                 reason: 'Logged in from site.'
                             });
+                            setIsMandatorySiteVisit(true);
                             setActiveModal('site-visit');
                         } else {
                             // If WFH is enabled for this employee, force redirection to WFH form
@@ -425,6 +462,7 @@ const Overview = () => {
         setPermissionInitialData(null);
         setSiteVisitInitialData(null);
         setIsAutoPermission(false);
+        setIsMandatorySiteVisit(false);
     };
 
     const renderWorkLogForm = () => {
@@ -478,15 +516,15 @@ const Overview = () => {
                     activeModal === 'worklog' ? 'Submit Daily Work Log' :
                         activeModal === 'leave' ? 'Request Leave' :
                             activeModal === 'permission' ? (isAutoPermission ? 'Mandatory Permission Request' : 'Request Permission') :
-                                activeModal === 'site-visit' ? 'Update Site Visit' :
+                                activeModal === 'site-visit' ? (isMandatorySiteVisit ? 'Mandatory Site Visit Log' : 'Update Site Visit') :
                                     activeModal === 'showroom-visit' ? 'Showroom Visit' : 'Create New Project'
                 } onClose={closeModal}
-                    showClose={!isAutoPermission}
-                    closeOnClickOutside={!isAutoPermission}>
+                    showClose={!isAutoPermission && !isMandatorySiteVisit}
+                    closeOnClickOutside={!isAutoPermission && !isMandatorySiteVisit}>
                     {activeModal === 'worklog' && renderWorkLogForm()}
                     {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
                     {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} isMandatory={isAutoPermission} />}
-                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} initialData={siteVisitInitialData} />}
+                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} initialData={siteVisitInitialData} isMandatory={isMandatorySiteVisit} />}
                     {activeModal === 'site-visit-standalone' && <SiteVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
                     {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}

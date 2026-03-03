@@ -16,6 +16,7 @@ import {
     Check
 } from 'lucide-react';
 import { createWfhRequest, getBusinessHeads, reset } from '../../features/employee/employeeSlice';
+import { getMe } from '../../features/auth/authSlice';
 import { toast } from 'react-toastify';
 
 const WFHRequestForm = () => {
@@ -82,6 +83,9 @@ const WFHRequestForm = () => {
 
         if (wfhSubmitted) {
             toast.success('WFH Request Submitted Successfully');
+
+            // Refresh user profile to clear wfhViewEnabled flag in Redux/localStorage
+            dispatch(getMe());
 
             // Redirect back to dashboard if it's mandatory
             if (user?.wfhViewEnabled) {

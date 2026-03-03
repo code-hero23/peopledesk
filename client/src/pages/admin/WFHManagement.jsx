@@ -50,12 +50,20 @@ const WFHManagement = () => {
     useEffect(() => {
         if (isError) {
             toast.error(message);
+            dispatch(reset());
         }
         if (isSuccess && !isLoading) {
             // Success handled by individual thunks if needed
+            dispatch(reset());
         }
-        dispatch(reset());
-    }, [isError, isSuccess, message, dispatch]);
+    }, [isError, isSuccess, message, dispatch, isLoading]);
+
+    // Cleanup on unmount
+    useEffect(() => {
+        return () => {
+            dispatch(reset());
+        };
+    }, [dispatch]);
 
     const handleApprove = (id) => {
         dispatch(approveWfhRequest({ id, status: 'APPROVED', remarks }));

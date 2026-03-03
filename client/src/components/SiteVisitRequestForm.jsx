@@ -3,7 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { createSiteVisitRequest, getBusinessHeads } from '../features/employee/employeeSlice';
 import SuccessModal from './SuccessModal';
 
-const SiteVisitRequestForm = ({ onSuccess, initialData }) => {
+const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const dispatch = useDispatch();
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
@@ -40,7 +40,11 @@ const SiteVisitRequestForm = ({ onSuccess, initialData }) => {
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
-            {/* Removed Business Head Selection as per new HR-only approval flow */}
+            {isMandatory && (
+                <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl mb-2">
+                    <p className="text-rose-700 text-[10px] font-black uppercase tracking-widest text-center">Mandatory Site Visit Log Required</p>
+                </div>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
@@ -112,19 +116,21 @@ const SiteVisitRequestForm = ({ onSuccess, initialData }) => {
                 />
             </div>
 
-            <div className="flex gap-3 pt-2">
-                <button
-                    type="button"
-                    onClick={onSuccess}
-                    className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
-                >
-                    Cancel
-                </button>
+            <div className={`flex gap-3 pt-2`}>
+                {!isMandatory && (
+                    <button
+                        type="button"
+                        onClick={onSuccess}
+                        className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                    >
+                        Cancel
+                    </button>
+                )}
                 <button
                     type="submit"
                     className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
                 >
-                    Update Site Visit
+                    {isMandatory ? 'Submit Mandatory Report' : 'Update Site Visit'}
                 </button>
             </div>
 
@@ -134,7 +140,7 @@ const SiteVisitRequestForm = ({ onSuccess, initialData }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Site Visit Updated!"
+                message={isMandatory ? "Site Visit Logged!" : "Site Visit Updated!"}
                 subMessage="HR will be notified for approval."
             />
         </form>

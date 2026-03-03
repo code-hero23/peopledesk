@@ -72,6 +72,12 @@ const createWfhRequest = async (req, res) => {
             data: requestData
         });
 
+        // Clear the mandatory WFH flag once the request is submitted
+        await prisma.user.update({
+            where: { id: userId },
+            data: { wfhViewEnabled: false }
+        });
+
         res.status(201).json(wfhRequest);
     } catch (error) {
         console.error('SERVER ERROR IN createWfhRequest:', error);
