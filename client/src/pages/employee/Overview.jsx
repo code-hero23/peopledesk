@@ -504,7 +504,6 @@ const Overview = () => {
         { id: 'permission', label: 'Permission', sub: 'Late / Early exit', icon: '🕑', color: 'from-violet-500 to-purple-600' },
         ['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
         { id: 'site-visit', label: 'Site Visit', sub: 'Update visit log', icon: '🏗️', color: 'from-green-500 to-emerald-600' },
-        !isCheckedIn && { id: 'site-login', label: 'Site Login', sub: 'Mobile Check-In', icon: '📍', color: 'from-rose-500 to-red-600' },
         { id: 'showroom-visit', label: 'Showroom Visit', sub: 'Cross-showroom move', icon: '🏢', color: 'from-indigo-500 to-blue-600' },
     ].filter(Boolean);
 
@@ -710,10 +709,10 @@ const Overview = () => {
                             {!isCheckedIn && !isCheckedOut ? (
                                 <motion.button
                                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                    onClick={handleMarkAttendance} disabled={isLoading}
+                                    onClick={() => handleMarkAttendance(isMobile)} disabled={isLoading}
                                     className={`w-full py-5 rounded-2xl font-black text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3
-                                        ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 cursor-not-allowed text-slate-300' : 'bg-white text-slate-900 hover:shadow-white/20'}`}>
-                                    {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> Desktop Only</> : <><span>👆</span> TAP TO SIGN IN</>}
+                                        bg-white text-slate-900 hover:shadow-white/20`}>
+                                    <span>👆</span> TAP TO SIGN IN
                                 </motion.button>
                             ) : isCheckedIn ? (
                                 <div className="flex flex-col gap-3">
