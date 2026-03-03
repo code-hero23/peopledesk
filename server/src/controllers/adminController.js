@@ -151,14 +151,15 @@ const getAllPendingRequests = async (req, res) => {
         if (allBhIds.length > 0) {
             const bhUsers = await prisma.user.findMany({
                 where: { id: { in: allBhIds } },
-                select: { id: true, name: true }
+                select: { id: true, name: true, designation: true }
             });
-            bhUsers.forEach(u => bhMap[u.id] = u.name);
+            bhUsers.forEach(u => bhMap[u.id] = { name: u.name, designation: u.designation });
         }
 
         const enrichWithBhName = (req) => ({
             ...req,
-            bhName: req.bhId ? bhMap[req.bhId] : null
+            bhName: req.bhId ? (bhMap[req.bhId]?.name || bhMap[req.bhId]) : null,
+            bhDesignation: req.bhId ? bhMap[req.bhId]?.designation : 'BH'
         });
 
         const leaves = leavesRaw.map(enrichWithBhName);
@@ -302,14 +303,15 @@ const getRequestHistory = async (req, res) => {
         if (allBhIds.length > 0) {
             const bhUsers = await prisma.user.findMany({
                 where: { id: { in: allBhIds } },
-                select: { id: true, name: true }
+                select: { id: true, name: true, designation: true }
             });
-            bhUsers.forEach(u => bhMap[u.id] = u.name);
+            bhUsers.forEach(u => bhMap[u.id] = { name: u.name, designation: u.designation });
         }
 
         const enrichWithBhName = (req) => ({
             ...req,
-            bhName: req.bhId ? bhMap[req.bhId] : null
+            bhName: req.bhId ? (bhMap[req.bhId]?.name || bhMap[req.bhId]) : null,
+            bhDesignation: req.bhId ? bhMap[req.bhId]?.designation : 'BH'
         });
 
         const leaves = leavesRaw.map(enrichWithBhName);

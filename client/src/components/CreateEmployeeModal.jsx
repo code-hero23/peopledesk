@@ -367,34 +367,44 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Designation</label>
-                            <select
-                                className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-sm disabled:bg-slate-50"
-                                value={formData.designation}
-                                onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
-                                disabled={isAeManager || isManager || (formData.role !== 'EMPLOYEE' && formData.role !== 'AE_MANAGER')}
-                            >
-                                {isAeManager ? (
-                                    <option value="AE">Application Engineer (AE)</option>
-                                ) : (
-                                    <>
-                                        <option value="LA">Loading Architect (LA)</option>
-                                        <option value="CRE">Customer Relationship Executive (CRE)</option>
-                                        <option value="FA">Feasibility Architect (FA)</option>
+                            {formData.role === 'BUSINESS_HEAD' || formData.role === 'ADMIN' || formData.role === 'HR' ? (
+                                <input
+                                    type="text"
+                                    placeholder="e.g. Chief Operational Officer"
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-sm"
+                                    value={formData.designation}
+                                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                                />
+                            ) : (
+                                <select
+                                    className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all bg-white text-sm disabled:bg-slate-50"
+                                    value={formData.designation}
+                                    onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
+                                    disabled={isAeManager || isManager}
+                                >
+                                    {isAeManager ? (
                                         <option value="AE">Application Engineer (AE)</option>
-                                        <option value="OFFICE-ADMINISTRATION">Office Admn</option>
-                                        <option value="ACCOUNT">Account</option>
-                                        <option value="LEAD-OPERATION">Lead Ops</option>
-                                        <option value="LEAD-CONVERSION">Lead Conv</option>
-                                        <option value="DIGITAL-MARKETING">Digital Mktg</option>
-                                        <option value="VENDOR-MANAGEMENT">Vendor Mgmt</option>
-                                        <option value="CUSTOMER-RELATIONSHIP">Customer Rel</option>
-                                        <option value="CLIENT-CARE">Client Care</option>
-                                        <option value="ESCALATION">Escalation</option>
-                                        <option value="CLIENT-FACILITATOR">Client Fac.</option>
-                                        <option value="N/A">N/A</option>
-                                    </>
-                                )}
-                            </select>
+                                    ) : (
+                                        <>
+                                            <option value="LA">Loading Architect (LA)</option>
+                                            <option value="CRE">Customer Relationship Executive (CRE)</option>
+                                            <option value="FA">Feasibility Architect (FA)</option>
+                                            <option value="AE">Application Engineer (AE)</option>
+                                            <option value="OFFICE-ADMINISTRATION">Office Admn</option>
+                                            <option value="ACCOUNT">Account</option>
+                                            <option value="LEAD-OPERATION">Lead Ops</option>
+                                            <option value="LEAD-CONVERSION">Lead Conv</option>
+                                            <option value="DIGITAL-MARKETING">Digital Mktg</option>
+                                            <option value="VENDOR-MANAGEMENT">Vendor Mgmt</option>
+                                            <option value="CUSTOMER-RELATIONSHIP">Customer Rel</option>
+                                            <option value="CLIENT-CARE">Client Care</option>
+                                            <option value="ESCALATION">Escalation</option>
+                                            <option value="CLIENT-FACILITATOR">Client Fac.</option>
+                                            <option value="N/A">N/A</option>
+                                        </>
+                                    )}
+                                </select>
+                            )}
                         </div>
                     </div>
 

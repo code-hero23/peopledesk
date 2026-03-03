@@ -145,7 +145,7 @@ const AdminDashboard = () => {
                         <p className="text-slate-400 text-sm">{dayLabel}</p>
                         <div className="mt-3 flex items-center gap-2">
                             <span className="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs px-3 py-1 rounded-full font-bold">
-                                {user?.role?.replace('_', ' ')}
+                                {user?.role === 'BUSINESS_HEAD' ? user?.designation : user?.role?.replace('_', ' ')}
                             </span>
                             <span className="text-slate-500 text-xs">• People Desk Admin</span>
                         </div>

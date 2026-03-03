@@ -179,17 +179,17 @@ const Approvals = () => {
                 )}
                 {req.bhStatus === 'PENDING' && (
                     <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
-                        ⏳ Waiting for BH
+                        ⏳ Waiting for {req.bhDesignation || 'BH'}
                     </span>
                 )}
                 {req.bhStatus === 'APPROVED' && (
                     <span className="bg-emerald-100 text-emerald-800 text-xs px-2 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
-                        ✅ Verified by {req.bhName || 'BH'}
+                        ✅ Verified by {req.bhName || req.bhDesignation || 'BH'}
                     </span>
                 )}
                 {req.bhStatus === 'REJECTED' && (
                     <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full border border-red-200 flex items-center gap-1">
-                        ❌ Rejected by {req.bhName || 'BH'}
+                        ❌ Rejected by {req.bhName || req.bhDesignation || 'BH'}
                     </span>
                 )}
             </div>
@@ -220,7 +220,7 @@ const Approvals = () => {
                     {/* For Global BH: In 'others' tab, always show monitoring badge */}
                     {(isGlobalBH && bhView === 'others') ? (
                         <div className="col-span-2 py-2.5 bg-amber-50 rounded-lg text-center text-amber-600 text-[10px] font-bold border border-amber-100 uppercase tracking-widest">
-                            🌐 Monitoring — Other BH's Approval
+                            🌐 Monitoring — Other {req.bhDesignation || 'BH'}'s Approval
                         </div>
                     ) : (user.role !== 'BUSINESS_HEAD' && user.role !== 'AE_MANAGER' ||
                         (req.targetBhId === user.id || req.user.reportingBhId === user.id)) ? (

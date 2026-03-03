@@ -68,7 +68,7 @@ const MyRequests = () => {
                                                 <span className="px-2 py-1 rounded text-xs font-bold bg-red-100 text-red-700">REJECTED</span>
                                             ) : (
                                                 <span className="px-2 py-1 rounded text-xs font-bold bg-orange-100 text-orange-700">
-                                                    {req.bhStatus === 'PENDING' ? 'Waiting for BH' : req.hrStatus === 'PENDING' ? 'Waiting for HR' : 'PENDING'}
+                                                    {req.bhStatus === 'PENDING' ? `Waiting for ${req.bhDesignation || 'BH'}` : req.hrStatus === 'PENDING' ? 'Waiting for HR' : 'PENDING'}
                                                 </span>
                                             )}
                                         </td>
@@ -109,7 +109,7 @@ const MyRequests = () => {
                                     }`}>
                                     {req.status === 'APPROVED' ? 'APPROVED' :
                                         req.status === 'REJECTED' ? 'REJECTED' :
-                                            req.bhStatus === 'PENDING' ? 'Wait for BH' :
+                                            req.bhStatus === 'PENDING' ? `Wait for ${req.bhDesignation || 'BH'}` :
                                                 req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
                                 </span>
                             </div>
@@ -199,7 +199,7 @@ const MyRequests = () => {
                                     }`}>
                                     {req.status === 'APPROVED' ? 'APPROVED' :
                                         req.status === 'REJECTED' ? 'REJECTED' :
-                                            req.bhStatus === 'PENDING' ? 'Wait for BH' :
+                                            req.bhStatus === 'PENDING' ? `Wait for ${req.bhDesignation || 'BH'}` :
                                                 req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
                                 </span>
                             </div>

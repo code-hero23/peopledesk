@@ -219,7 +219,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <p className="text-sm font-medium truncate text-white">{user?.name}</p>
                             <p className="text-xs text-slate-400 capitalize truncate">
                                 {isAdmin
-                                    ? user?.role.replace(/_/g, ' ').toLowerCase()
+                                    ? (user?.role === 'BUSINESS_HEAD' ? user?.designation : user?.role.replace(/_/g, ' ').toLowerCase())
                                     : user?.designation}
                             </p>
                         </div>
