@@ -190,42 +190,10 @@ const EmployeeDashboard = () => {
     // Robust Mandatory Redirection Check (Lateness & Site Login)
     useEffect(() => {
         if (attendance?.status === 'PRESENT' && isRequestsFetched && !hasCheckedLateness) {
-
-            // 1. Mandatory Site Visit Check (for refresh persistence)
-            const isSiteLogin = attendance.deviceInfo?.includes('SITE_LOGIN');
-            const todayLocal = new Date(attendance.date).toLocaleDateString('en-CA');
-
-            const hasSubmittedSiteVisit = requests?.siteVisits?.some(s => {
-                const sDate = new Date(s.date).toLocaleDateString('en-CA');
-                return sDate === todayLocal;
-            });
-
-            if (isSiteLogin && !hasSubmittedSiteVisit && activeModal !== 'site-visit') {
-                const checkInDate = new Date(attendance.date);
-                const formatTimeLocal = (dateObj) => {
-                    let h = dateObj.getHours();
-                    const m = dateObj.getMinutes().toString().padStart(2, '0');
-                    const ampm = h >= 12 ? 'PM' : 'AM';
-                    h = h % 12 || 12;
-                    return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
-                };
-
-                setSiteVisitInitialData({
-                    date: todayLocal,
-                    startTime: formatTimeLocal(checkInDate),
-                    reason: 'Logged in from site.'
-                });
-                setIsMandatorySiteVisit(true);
-                setActiveModal('site-visit');
-                setHasCheckedLateness(true);
-                return;
-            }
-
-            // 2. Lateness Check
+            // Lateness Check
             if (activeModal !== 'permission' && user?.designation !== 'AE') {
                 checkLatenessAndRedirect(attendance.date);
             }
-
             setHasCheckedLateness(true);
         }
     }, [attendance, isRequestsFetched, hasCheckedLateness, checkLatenessAndRedirect, requests, activeModal, user]);
@@ -256,19 +224,11 @@ const EmployeeDashboard = () => {
                         dispatch(getAttendanceStatus());
                         const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
 
-                        if (isSiteLogin) {
-                            const date = checkInDate.toLocaleDateString('en-CA');
-                            const formatT = (d) => { let h = d.getHours(); const m = d.getMinutes().toString().padStart(2, '0'); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${String(h).padStart(2, '0')}:${m} ${ap}`; };
-                            setSiteVisitInitialData({ date, startTime: formatT(checkInDate), reason: 'Logged in from site.' });
-                            setIsMandatorySiteVisit(true);
-                            setActiveModal('site-visit');
-                        } else {
-                            if (user?.wfhViewEnabled) {
-                                navigate('/dashboard/wfh');
-                                return;
-                            }
-                            checkLatenessAndRedirect(checkInDate);
+                        if (user?.wfhViewEnabled) {
+                            navigate('/dashboard/wfh');
+                            return;
                         }
+                        checkLatenessAndRedirect(checkInDate);
                     } else {
                         alert(res.payload || 'Check-in failed.');
                     }
@@ -278,7 +238,7 @@ const EmployeeDashboard = () => {
     };
 
     const handleMarkAttendance = (isSiteLogin = false) => {
-        if (isMobile && user?.designation !== 'AE' && !isSiteLogin) { alert('Mobile Check-In is restricted to AE. Please use a Desktop or select "Site Login".'); return; }
+        if (isMobile && user?.designation !== 'AE') { alert('Mobile sign-in is restricted to AE. Please use a Desktop.'); return; }
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
             if (user?.designation === 'AE') { setIsCheckingOut(true); setShowCheckInModal(true); }
             else {

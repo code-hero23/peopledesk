@@ -221,42 +221,10 @@ const Overview = () => {
     // Robust Mandatory Redirection Check (Lateness & Site Login)
     useEffect(() => {
         if (attendance?.status === 'PRESENT' && isRequestsFetched && !hasCheckedLateness) {
-
-            // 1. Mandatory Site Visit Check (for refresh persistence)
-            const isSiteLogin = attendance.deviceInfo?.includes('SITE_LOGIN');
-            const todayLocal = new Date(attendance.date).toLocaleDateString('en-CA');
-
-            const hasSubmittedSiteVisit = requests?.siteVisits?.some(s => {
-                const sDate = new Date(s.date).toLocaleDateString('en-CA');
-                return sDate === todayLocal;
-            });
-
-            if (isSiteLogin && !hasSubmittedSiteVisit && activeModal !== 'site-visit') {
-                const checkInDate = new Date(attendance.date);
-                const formatTime = (dateObj) => {
-                    let h = dateObj.getHours();
-                    const m = dateObj.getMinutes().toString().padStart(2, '0');
-                    const ampm = h >= 12 ? 'PM' : 'AM';
-                    h = h % 12 || 12;
-                    return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
-                };
-
-                setSiteVisitInitialData({
-                    date: todayLocal,
-                    startTime: formatTime(checkInDate),
-                    reason: 'Logged in from site.'
-                });
-                setIsMandatorySiteVisit(true);
-                setActiveModal('site-visit');
-                setHasCheckedLateness(true); // Treat as checked to stop loop
-                return;
-            }
-
-            // 2. Lateness Check
+            // Lateness Check
             if (activeModal !== 'permission' && user?.designation !== 'AE') {
                 checkLatenessAndRedirect(attendance.date, true);
             }
-
             setHasCheckedLateness(true);
         }
     }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests]);
@@ -287,32 +255,13 @@ const Overview = () => {
 
                         const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
 
-                        if (isSiteLogin) {
-                            // Auto-trigger Site Visit Form
-                            const date = checkInDate.toLocaleDateString('en-CA');
-                            const formatTime = (dateObj) => {
-                                let h = dateObj.getHours();
-                                const m = dateObj.getMinutes().toString().padStart(2, '0');
-                                const ampm = h >= 12 ? 'PM' : 'AM';
-                                h = h % 12 || 12;
-                                return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
-                            };
-                            setSiteVisitInitialData({
-                                date,
-                                startTime: formatTime(checkInDate),
-                                reason: 'Logged in from site.'
-                            });
-                            setIsMandatorySiteVisit(true);
-                            setActiveModal('site-visit');
-                        } else {
-                            // If WFH is enabled for this employee, force redirection to WFH form
-                            if (user?.wfhViewEnabled) {
-                                navigate('/dashboard/wfh');
-                                return;
-                            }
-                            // Auto-redirect if late
-                            checkLatenessAndRedirect(checkInDate, true);
+                        // If WFH is enabled for this employee, force redirection to WFH form
+                        if (user?.wfhViewEnabled) {
+                            navigate('/dashboard/wfh');
+                            return;
                         }
+                        // Auto-redirect if late
+                        checkLatenessAndRedirect(checkInDate, true);
                     } else {
                         alert(res.payload || "Check-in failed. You might be already checked in.");
                     }
@@ -322,8 +271,8 @@ const Overview = () => {
     };
 
     const handleMarkAttendance = (isSiteLogin = false) => {
-        if (isMobile && user?.designation !== 'AE' && !isSiteLogin) {
-            alert('Mobile Check-In is restricted to AE. Please use a Desktop or select "Site Login".');
+        if (isMobile && user?.designation !== 'AE') {
+            alert('Mobile sign-in is restricted to AE. Please use a Desktop.');
             return;
         }
 
@@ -709,7 +658,7 @@ const Overview = () => {
                             {!isCheckedIn && !isCheckedOut ? (
                                 <motion.button
                                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleMarkAttendance(isMobile)} disabled={isLoading}
+                                    onClick={() => handleMarkAttendance()} disabled={isLoading}
                                     className={`w-full py-5 rounded-2xl font-black text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3
                                         bg-white text-slate-900 hover:shadow-white/20`}>
                                     <span>👆</span> TAP TO SIGN IN
