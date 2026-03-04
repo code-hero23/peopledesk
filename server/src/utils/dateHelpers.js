@@ -136,10 +136,31 @@ const getLatestCompletedCycle = () => {
     return { year, month }; // Returns start anchor for getCycleStartDateIST
 };
 
+/**
+ * Robustly parse a date string. 
+ * Supports YYYY-MM-DD (standard) and DD/MM/YYYY (user-custom).
+ */
+const parseRobustDate = (dateStr) => {
+    if (!dateStr) return new Date();
+    if (dateStr instanceof Date) return dateStr;
+
+    // Check if it's DD/MM/YYYY
+    if (typeof dateStr === 'string' && dateStr.includes('/') && dateStr.split('/').length === 3) {
+        const [day, month, year] = dateStr.split('/').map(Number);
+        // JS Date month is 0-indexed
+        return new Date(year, month - 1, day);
+    }
+
+    // Fallback to standard constructor (handles YYYY-MM-DD)
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? new Date() : d;
+};
+
 module.exports = {
     getStartOfDayIST,
     getEndOfDayIST,
     getCycleStartDateIST,
     getCycleEndDateIST,
-    getLatestCompletedCycle
+    getLatestCompletedCycle,
+    parseRobustDate
 };

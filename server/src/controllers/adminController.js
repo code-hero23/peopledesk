@@ -1148,6 +1148,7 @@ const deleteRequest = async (req, res) => {
         else if (type === 'permission') model = prisma.permissionRequest;
         else if (type === 'site-visit') model = prisma.siteVisitRequest;
         else if (type === 'showroom-visit') model = prisma.showroomVisitRequest;
+        else if (type === 'wfh') model = prisma.wfhRequest;
         else return res.status(400).json({ message: 'Invalid request type' });
 
         await model.delete({

@@ -9,6 +9,16 @@ const initAttendanceCron = () => {
         console.log('Running 3-Day Absence Check Cron Job');
         console.log(new Date().toLocaleString());
 
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const today = new Date(); // Added today declaration
+        const istTime = new Date(today.getTime() + istOffset);
+        const dayOfWeek = istTime.getUTCDay();
+
+        if (dayOfWeek === 0) {
+            console.log('Skipping sync: It is Sunday in IST.');
+            return;
+        }
+
         try {
             // 0. Auto-close stale breaks from previous days
             const yesterday = new Date(today);

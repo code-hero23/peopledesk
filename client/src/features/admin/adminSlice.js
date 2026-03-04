@@ -511,6 +511,12 @@ export const adminSlice = createSlice({
                             (req) => req.id !== id
                         );
                     }
+                } else if (type === 'wfh') {
+                    if (state.pendingRequests.wfh) {
+                        state.pendingRequests.wfh = state.pendingRequests.wfh.filter(
+                            (req) => req.id !== id
+                        );
+                    }
                 }
             })
             // Update User Status
@@ -546,8 +552,11 @@ export const adminSlice = createSlice({
                     state.pendingRequests.siteVisits = state.pendingRequests.siteVisits.filter(req => req.id !== id);
                     if (state.requestHistory.siteVisits) state.requestHistory.siteVisits = state.requestHistory.siteVisits.filter(req => req.id !== id);
                 } else if (type === 'showroom-visit') {
-                    state.pendingRequests.showroomVisits = state.pendingRequests.showroomVisits.filter(req => req.id !== id);
+                    state.pendingRequests.showroomVisits = (state.pendingRequests.showroomVisits || []).filter(req => req.id !== id);
                     if (state.requestHistory.showroomVisits) state.requestHistory.showroomVisits = state.requestHistory.showroomVisits.filter(req => req.id !== id);
+                } else if (type === 'wfh') {
+                    state.pendingRequests.wfh = (state.pendingRequests.wfh || []).filter(req => req.id !== id);
+                    if (state.requestHistory.wfh) state.requestHistory.wfh = state.requestHistory.wfh.filter(req => req.id !== id);
                 }
                 state.isLoading = false;
                 state.isSuccess = true;

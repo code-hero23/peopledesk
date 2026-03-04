@@ -39,3 +39,19 @@ export const formatTime = (dateString) => {
 
     return `${strHours}:${minutes} ${ampm}`;
 };
+
+/**
+ * Robustly parse a date string in DD/MM/YYYY format
+ * This prevents common M/D/Y vs D/M/Y displacement issues in JS Date()
+ */
+export const parseDateDDMMYYYY = (dateStr) => {
+    if (!dateStr || typeof dateStr !== 'string') return null;
+    const parts = dateStr.split('/');
+    if (parts.length !== 3) return new Date(dateStr); // Fallback to native if not our expected format
+
+    const day = parseInt(parts[0], 10);
+    const month = parseInt(parts[1], 10) - 1; // JS month is 0-indexed
+    const year = parseInt(parts[2], 10);
+
+    return new Date(year, month, day);
+};

@@ -17,13 +17,20 @@ const LeaveRequestForm = ({ onSuccess }) => {
     const calculateDays = (start, end, type) => {
         if (!start || !end) return 0;
         if (type === 'HALF_DAY') return 0.5;
-        const diffTime = Math.abs(new Date(end) - new Date(start));
+        // Robust calculation for duration
+        const startDate = new Date(start);
+        const endDate = new Date(end);
+        const diffTime = Math.abs(endDate - startDate);
         return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
     };
 
     const totalExistingDays = requests.leaves
         .filter(req => {
+            // Robustly check month/year of the record
             const d = new Date(req.startDate);
+            // If the application stores as Date, d.getMonth() is localized.
+            // If it's 2/3 and was misparsed as Feb 3rd in DB, this logic reflects that.
+            // But for THE FUTURE, it will be correct.
             return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
         })
         .reduce((sum, req) => sum + calculateDays(req.startDate, req.endDate, req.type), 0);

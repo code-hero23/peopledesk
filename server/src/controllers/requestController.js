@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
+const { getCycleStartDateIST, getCycleEndDateIST, parseRobustDate } = require('../utils/dateHelpers');
 
 // @desc    Get all Business Heads
 // @route   GET /api/requests/business-heads
@@ -111,8 +111,8 @@ const createLeaveRequest = async (req, res) => {
             data: {
                 userId,
                 type,
-                startDate: new Date(startDate),
-                endDate: new Date(endDate),
+                startDate: parseRobustDate(startDate),
+                endDate: parseRobustDate(endDate),
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING',
@@ -141,8 +141,8 @@ const createPermissionRequest = async (req, res) => {
         const userId = req.user.id;
 
         // Check for 4+ PERMISSION requests this month (using custom cycle: 26th to 25th)
-        const cycleStart = getCycleStartDateIST(date);
-        const cycleEnd = getCycleEndDateIST(date);
+        const cycleStart = getCycleStartDateIST(parseRobustDate(date));
+        const cycleEnd = getCycleEndDateIST(parseRobustDate(date));
 
         const permCount = await prisma.permissionRequest.count({
             where: {
@@ -155,7 +155,7 @@ const createPermissionRequest = async (req, res) => {
         const existingPermission = await prisma.permissionRequest.findFirst({
             where: {
                 userId,
-                date: new Date(date)
+                date: parseRobustDate(date)
             }
         });
 
@@ -166,7 +166,7 @@ const createPermissionRequest = async (req, res) => {
         const permissionRequest = await prisma.permissionRequest.create({
             data: {
                 userId,
-                date: new Date(date),
+                date: parseRobustDate(date),
                 startTime,
                 endTime,
                 reason,
@@ -201,7 +201,7 @@ const createSiteVisitRequest = async (req, res) => {
                 userId,
                 projectName,
                 location,
-                date: new Date(date),
+                date: parseRobustDate(date),
                 startTime,
                 endTime,
                 reason,
@@ -233,7 +233,7 @@ const createShowroomVisitRequest = async (req, res) => {
         const showroomVisitRequest = await prisma.showroomVisitRequest.create({
             data: {
                 userId,
-                date: new Date(date),
+                date: parseRobustDate(date),
                 startTime,
                 endTime,
                 sourceShowroom,
@@ -261,8 +261,8 @@ const getMyRequests = async (req, res) => {
 
         let start, end;
         if (startDate && endDate) {
-            start = new Date(startDate);
-            end = new Date(endDate);
+            start = parseRobustDate(startDate);
+            end = parseRobustDate(endDate);
             end.setHours(23, 59, 59, 999);
         } else {
             start = getCycleStartDateIST();

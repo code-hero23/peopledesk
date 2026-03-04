@@ -1,5 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const { parseRobustDate } = require('../utils/dateHelpers');
 
 // @desc    Create new WFH request
 // @route   POST /api/wfh
@@ -30,8 +31,8 @@ const createWfhRequest = async (req, res) => {
             designation: user.designation || "",
             reportingManager: req.body.reportingManager || "",
             wfhDays: parseInt(req.body.wfhDays) || 0,
-            startDate: req.body.startDate ? new Date(req.body.startDate) : new Date(),
-            endDate: req.body.endDate ? new Date(req.body.endDate) : new Date(),
+            startDate: req.body.startDate ? parseRobustDate(req.body.startDate) : new Date(),
+            endDate: req.body.endDate ? parseRobustDate(req.body.endDate) : new Date(),
 
             realReason: req.body.realReason || "",
             necessityReason: req.body.necessityReason || "",
@@ -202,10 +203,10 @@ const getWfhHistory = async (req, res) => {
         if (startDate && endDate) {
             dateFilter = {
                 startDate: {
-                    lte: new Date(endDate),
+                    lte: parseRobustDate(endDate),
                 },
                 endDate: {
-                    gte: new Date(startDate)
+                    gte: parseRobustDate(startDate)
                 }
             };
         }
