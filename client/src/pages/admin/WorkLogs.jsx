@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
 import { Calendar, Download, Eye, Search } from 'lucide-react';
-import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
@@ -11,14 +10,10 @@ const WorkLogs = () => {
     const { user } = useSelector((state) => state.auth);
     const { dailyWorkLogs, employees, isLoading, isError, message } = useSelector((state) => state.admin);
 
-    // Date Range handled by CycleSelector
-    const [startDate, setStartDate] = useState('');
-    const [endDate, setEndDate] = useState('');
-
-    const handleCycleChange = (range) => {
-        setStartDate(range.startDate.split('T')[0]);
-        setEndDate(range.endDate.split('T')[0]);
-    };
+    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
+    // Start and end are same for single date, keeping variable names for existing backend compat
+    const startDate = selectedDate;
+    const endDate = selectedDate;
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDesignation, setSelectedDesignation] = useState('');
 
@@ -286,7 +281,12 @@ const WorkLogs = () => {
                     <button onClick={onExportMonth} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                         <Calendar size={16} /> Monthly
                     </button>
-                    <MonthCycleSelector onCycleChange={handleCycleChange} />
+                    <input
+                        type="date"
+                        value={selectedDate}
+                        onChange={(e) => setSelectedDate(e.target.value)}
+                        className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 bg-white shadow-sm font-medium"
+                    />
                 </div>
             </div>
 

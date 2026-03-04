@@ -3,7 +3,6 @@ import { useSelector, useDispatch } from 'react-redux';
 import { getMyWorkLogs, reset } from '../../features/employee/employeeSlice';
 import { Eye } from 'lucide-react';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
-import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 
 const MyWorkLogs = () => {
     const dispatch = useDispatch();
@@ -14,17 +13,13 @@ const MyWorkLogs = () => {
     const [selectedLog, setSelectedLog] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    useEffect(() => {
-        // Initial fetch handled by CycleSelector on mount
-        return () => { dispatch(reset()); };
-    }, [dispatch]);
+    // Date Filter State
+    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
 
-    const handleCycleChange = (range) => {
-        dispatch(getMyWorkLogs({
-            startDate: range.startDate,
-            endDate: range.endDate
-        }));
-    };
+    useEffect(() => {
+        dispatch(getMyWorkLogs({ date: selectedDate }));
+        return () => { dispatch(reset()); };
+    }, [dispatch, selectedDate]);
 
     const handleViewDetails = (log) => {
         setSelectedLog(log);
@@ -45,7 +40,12 @@ const MyWorkLogs = () => {
                     <h2 className="text-3xl font-bold text-slate-800">My Work Reports</h2>
                     <p className="text-slate-500">History of your daily submitted reports.</p>
                 </div>
-                <MonthCycleSelector onCycleChange={handleCycleChange} />
+                <input
+                    type="date"
+                    value={selectedDate}
+                    onChange={(e) => setSelectedDate(e.target.value)}
+                    className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 bg-white shadow-sm font-medium"
+                />
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
