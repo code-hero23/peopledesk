@@ -29,7 +29,8 @@ const createWfhRequest = async (req, res) => {
             employeeId: user.employeeId || "",
             department: user.department || "",
             designation: user.designation || "",
-            reportingManager: req.body.reportingManager || "",
+            reportingManager: req.body.reportingManagerName || "",
+            reportingManagerId: req.body.reportingManagerId ? parseInt(req.body.reportingManagerId) : null,
             wfhDays: parseInt(req.body.wfhDays) || 0,
             startDate: req.body.startDate ? parseRobustDate(req.body.startDate) : new Date(),
             endDate: req.body.endDate ? parseRobustDate(req.body.endDate) : new Date(),
@@ -214,13 +215,17 @@ const getWfhHistory = async (req, res) => {
         let whereClause = { ...dateFilter };
 
         if (role === 'ADMIN' || role === 'HR') {
-            // Admins and HR can see all history
-            whereClause.status = { in: ['APPROVED', 'REJECTED'] };
+            // Admins and HR can see all history they acted on OR final state
+            whereClause.OR = [
+                { status: { in: ['APPROVED', 'REJECTED'] } },
+                { hrStatus: { not: 'PENDING' } }
+            ];
         } else if (role === 'BUSINESS_HEAD') {
-            // BH can see history for requests they were involved in or their direct reports (assuming reportingManager matches their name, or just approved/rejected by them)
-            // Simplified: if they are BH, they see all approved/rejected where they are the reporting manager
-            whereClause.reportingManager = req.user.name;
-            whereClause.status = { in: ['APPROVED', 'REJECTED'] };
+            // BH can see history for requests they were involved in
+            whereClause.OR = [
+                { status: { in: ['APPROVED', 'REJECTED'] }, reportingManager: req.user.name },
+                { bhStatus: { not: 'PENDING' } }
+            ];
         } else {
             return res.status(403).json({ message: 'Not authorized' });
         }
@@ -237,10 +242,44 @@ const getWfhHistory = async (req, res) => {
     }
 };
 
+// @desc    Delete WFH Request
+// @route   DELETE /api/wfh/:id
+// @access  Private (Admin/HR/BH or Owner)
+const deleteWfhRequest = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+        const userRole = req.user.role;
+
+        const request = await prisma.wfhRequest.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!request) {
+            return res.status(404).json({ message: 'Request not found' });
+        }
+
+        // Only Admin, HR, or the owner can delete
+        if (userRole !== 'ADMIN' && userRole !== 'HR' && request.userId !== userId) {
+            return res.status(403).json({ message: 'Not authorized to delete this request' });
+        }
+
+        await prisma.wfhRequest.delete({
+            where: { id: parseInt(id) }
+        });
+
+        res.json({ message: 'WFH request deleted successfully' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     createWfhRequest,
     getManageableWfhRequests,
     getMyWfhRequests,
     approveWfhRequest,
-    getWfhHistory
+    getWfhHistory,
+    deleteWfhRequest
 };

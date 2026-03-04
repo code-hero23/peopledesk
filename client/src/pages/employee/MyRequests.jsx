@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getMyRequests, reset } from '../../features/employee/employeeSlice';
+import { getMyRequests, reset, deleteWfhRequest } from '../../features/employee/employeeSlice';
 import { formatDate } from '../../utils/dateUtils';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
+import { Trash2 } from 'lucide-react';
+import { toast } from 'react-toastify';
 
 const MyRequests = () => {
     const dispatch = useDispatch();
@@ -18,6 +20,16 @@ const MyRequests = () => {
             startDate: range.startDate,
             endDate: range.endDate
         }));
+    };
+
+    const handleDeleteWfh = (id) => {
+        if (window.confirm('Are you sure you want to delete this WFH request?')) {
+            dispatch(deleteWfhRequest(id)).then((res) => {
+                if (!res.error) {
+                    toast.success('WFH Request deleted');
+                }
+            });
+        }
     };
 
     return (
@@ -194,14 +206,25 @@ const MyRequests = () => {
                                     <p className="text-sm text-slate-500">{req.wfhDays} Day(s)</p>
                                     <p className="text-xs text-slate-400 mt-1 italic">"{req.realReason}"</p>
                                 </div>
-                                <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
-                                    req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
-                                    }`}>
-                                    {req.status === 'APPROVED' ? 'APPROVED' :
-                                        req.status === 'REJECTED' ? 'REJECTED' :
-                                            req.bhStatus === 'PENDING' ? `Wait for ${req.bhDesignation || 'BH'}` :
-                                                req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
-                                </span>
+                                <div className="flex items-center gap-3">
+                                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
+                                        req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'
+                                        }`}>
+                                        {req.status === 'APPROVED' ? 'APPROVED' :
+                                            req.status === 'REJECTED' ? 'REJECTED' :
+                                                req.bhStatus === 'PENDING' ? `Wait for ${req.bhDesignation || 'BH'}` :
+                                                    req.hrStatus === 'PENDING' ? 'Wait for HR' : 'PENDING'}
+                                    </span>
+                                    {(req.status === 'PENDING' || (req.bhStatus === 'PENDING' && req.hrStatus === 'PENDING')) && (
+                                        <button
+                                            onClick={() => handleDeleteWfh(req.id)}
+                                            className="p-2 text-rose-500 hover:bg-rose-50 rounded-lg transition-colors"
+                                            title="Delete Request"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
                         ))}
                         {(!requests.wfh || requests.wfh.length === 0) && <p className="text-slate-400 italic text-center">No WFH requests found.</p>}

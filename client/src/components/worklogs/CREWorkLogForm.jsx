@@ -1,17 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
+import { useNavigate } from 'react-router-dom';
+import { createWorkLog, closeWorkLog, getTodayLogStatus, syncCallLogs } from '../../features/employee/employeeSlice';
+import { Capacitor } from '@capacitor/core';
+import { getCallLogPlugin } from '../../utils/capacitorPlugins';
+import { toast } from 'react-toastify';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import {
     Phone, Star, MapPin, MessageSquare, FileText,
     ShoppingCart, Send, ClipboardList, CheckSquare,
-    Clock, TrendingUp
+    Clock, TrendingUp, RefreshCw
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 
+const CallLog = getCallLogPlugin();
+
 const CREWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
@@ -65,6 +72,51 @@ const CREWorkLogForm = ({ onSuccess }) => {
         },
         notes: ''
     });
+
+    const handleSyncCalls = async () => {
+        try {
+            console.log("Device Info:", {
+                platform: Capacitor.getPlatform(),
+                isNative: Capacitor.isNativePlatform(),
+                plugins: Object.keys(Capacitor.Plugins)
+            });
+
+            if (!Capacitor.isNativePlatform()) {
+                toast.warning("This feature only works on a real Android device.");
+                return;
+            }
+
+            // Check if plugin is registered
+            const isAvailable = Capacitor.isPluginAvailable('CallLog');
+            console.log("Is CallLog Plugin Available?", isAvailable);
+
+            if (!isAvailable) {
+                toast.error("Bridge Error: CallLog plugin not found in Capacitor bridge.");
+                return;
+            }
+
+            // Attempt to call the native method
+            const result = await CallLog.getCallLogs();
+
+            if (result.logs && result.logs.length > 0) {
+                dispatch(syncCallLogs(result.logs)).then((res) => {
+                    if (!res.error) {
+                        toast.success(`Synced ${result.logs.length} calls successfully!`);
+                    }
+                });
+            } else {
+                toast.info("No recent calls found to sync.");
+            }
+        } catch (error) {
+            console.error("Sync Error:", error);
+            const errorMessage = error.message || error.toString();
+            if (errorMessage.includes("not implemented")) {
+                toast.error("Call Log plugin is not implemented on this platform.");
+            } else {
+                toast.error(`Sync Error: ${errorMessage}`);
+            }
+        }
+    };
 
     const handleOpeningChange = (e, section) => {
         if (section) {
@@ -226,6 +278,29 @@ const CREWorkLogForm = ({ onSuccess }) => {
                         </div>
                         <InputGroup label="Site Msmt/Disc" name="siteMsmtDisc" value={closingData.cre_closing_metrics.siteMsmtDisc} onChange={handleClosingChange} />
                         <InputGroup label="WhatsApp Sent" name="whatsappSent" value={closingData.cre_closing_metrics.whatsappSent} onChange={handleClosingChange} />
+
+                        {/* Capacitor Sync Button */}
+                        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                            <button
+                                type="button"
+                                onClick={handleSyncCalls}
+                                className="w-full flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-900 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all shadow-lg active:scale-95"
+                            >
+                                <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} /> Force Analytics Sync
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => navigate('/dashboard/call-reports')}
+                                className="w-full text-center text-[10px] font-black text-blue-600 hover:text-blue-700 transition-colors py-2 bg-blue-50 rounded-lg"
+                            >
+                                VIEW DETAILED ANALYTICS →
+                            </button>
+                            {todayLog?.cre_synced_calls && (
+                                <p className="text-[10px] text-emerald-600 font-bold mt-1 text-center">
+                                    ✓ {Array.isArray(todayLog.cre_synced_calls) ? todayLog.cre_synced_calls.length : 0} calls synced today
+                                </p>
+                            )}
+                        </div>
                     </MetricCard>
 
                     <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex flex-col gap-3">

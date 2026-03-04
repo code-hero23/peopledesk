@@ -89,15 +89,17 @@ const WFHRequestForm = () => {
 
             // Redirect back to dashboard if it's mandatory
             if (user?.wfhViewEnabled) {
-                navigate('/dashboard');
+                setTimeout(() => navigate('/dashboard'), 2000);
             }
 
             // Optional: reset form after success
             setFormData({
                 ...formData,
-                reportingManager: '',
+                reportingManagerId: '',
+                reportingManagerName: '',
                 startDate: '',
                 endDate: '',
+                wfhDays: 1,
                 realReason: '',
                 necessityReason: '',
                 impactIfRejected: '',
@@ -120,18 +122,43 @@ const WFHRequestForm = () => {
 
     const onChange = (e) => {
         const { name, value, type, checked } = e.target;
+
+        if (name === 'reportingManagerId') {
+            const bh = businessHeads.find(b => b.id.toString() === value);
+            setFormData(prev => ({
+                ...prev,
+                reportingManagerId: value,
+                reportingManagerName: bh ? bh.name : ''
+            }));
+            return;
+        }
+
         setFormData((prevState) => ({
             ...prevState,
             [name]: type === 'checkbox' ? checked : value,
         }));
     };
 
+    // Auto-calculate WFH Days
+    useEffect(() => {
+        if (formData.startDate && formData.endDate) {
+            const start = new Date(formData.startDate);
+            const end = new Date(formData.endDate);
+            const diffTime = Math.abs(end - start);
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            if (diffDays > 0) {
+                setFormData(prev => ({ ...prev, wfhDays: diffDays }));
+            }
+        }
+    }, [formData.startDate, formData.endDate]);
+
     const onSubmit = (e) => {
         e.preventDefault();
 
         // Manual Validations because unmounted react components bypass HTML5 required validation
         const requiredFields = [
-            'reportingManager', 'startDate', 'endDate',
+            'reportingManagerId', 'startDate', 'endDate',
             'wfhDays', 'realReason', 'necessityReason', 'impactIfRejected',
             'primaryProject', 'deliverables', 'deadline',
             'workingHours', 'communicationPlan', 'responseTime',
@@ -231,21 +258,21 @@ const WFHRequestForm = () => {
                                             <div className="col-span-2 sm:col-span-1">
                                                 <label className="text-sm font-semibold text-gray-700">Reporting Manager *</label>
                                                 <select
-                                                    name="reportingManager"
+                                                    name="reportingManagerId"
                                                     required
-                                                    value={formData.reportingManager}
+                                                    value={formData.reportingManagerId}
                                                     onChange={onChange}
                                                     className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500 bg-white"
                                                 >
                                                     <option value="">Select Manager</option>
                                                     {businessHeads?.map(bh => (
-                                                        <option key={bh.id} value={bh.name}>{bh.name}</option>
+                                                        <option key={bh.id} value={bh.id}>{bh.name}</option>
                                                     ))}
                                                 </select>
                                             </div>
                                             <div className="col-span-2 sm:col-span-1">
-                                                <label className="text-sm font-semibold text-gray-700">WFH Days *</label>
-                                                <input type="number" name="wfhDays" min="1" required value={formData.wfhDays} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" />
+                                                <label className="text-sm font-semibold text-gray-700">WFH Days (Auto)</label>
+                                                <input readOnly type="number" name="wfhDays" value={formData.wfhDays} className="w-full p-3 bg-gray-50 border rounded-lg mt-1 outline-none font-bold text-blue-600" />
                                             </div>
                                             <div className="col-span-2 sm:col-span-1">
                                                 <label className="text-sm font-semibold text-gray-700">Start Date *</label>
@@ -424,7 +451,7 @@ const WFHRequestForm = () => {
 
                                         <div className="bg-yellow-50 p-4 rounded-xl border border-yellow-200 flex gap-3 text-sm text-yellow-800">
                                             <AlertTriangle className="flex-shrink-0" size={20} />
-                                            <p>This request will be routed through **HR**, **Business Head**, and <br></br>**raakesh natrajan** for approval. Submission does not guarantee WFH.</p>
+                                            <p>This request will be routed through **HR**, **Business Head**, and **Management** for approval. Submission does not guarantee WFH.</p>
                                         </div>
 
                                         <button

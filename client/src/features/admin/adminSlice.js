@@ -14,6 +14,7 @@ const initialState = {
     isError: false,
     isSuccess: false,
     message: '',
+    callStats: [],
 };
 
 // Create Employee
@@ -383,6 +384,27 @@ export const deleteRequest = createAsyncThunk('admin/deleteRequest', async ({ ty
     }
 });
 
+const API_WORKLOG_BASE = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/worklogs/';
+
+// Get Call Stats for Admin
+export const getCallStats = createAsyncThunk(
+    'admin/getCallStats',
+    async (params, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+                params: params || {}
+            };
+            const response = await axios.get(API_WORKLOG_BASE + 'call-stats', config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 export const adminSlice = createSlice({
     name: 'admin',
     initialState,
@@ -603,6 +625,19 @@ export const adminSlice = createSlice({
                 state.pendingRequests.wfh = state.pendingRequests.wfh.filter(req => req.id !== action.payload.id);
             })
             .addCase(approveWfhRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Call Stats
+            .addCase(getCallStats.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getCallStats.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.callStats = action.payload;
+            })
+            .addCase(getCallStats.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

@@ -19,6 +19,9 @@ import {
     RefreshCw,
     DollarSign,
     Home,
+    Phone,
+    Sparkles,
+    LifeBuoy,
     X
 } from 'lucide-react';
 
@@ -175,6 +178,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
                         <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
                         <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
+                        {['ADMIN', 'HR'].includes(user?.role) && (
+                            <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
+                        )}
 
                         {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
@@ -191,6 +197,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         {['ADMIN', 'HR'].includes(user?.role) && (
                             <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" />
                         )}
+                        <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
+                        <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
                     </>
                 ) : (
                     <>
@@ -204,6 +212,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         {user?.wfhViewEnabled && (
                             <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
                         )}
+                        {user?.designation === 'CRE' && (
+                            <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
+                        )}
+                        <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
+                        <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
                     </>
                 )}
             </nav>

@@ -28,7 +28,7 @@ app.use(helmet({
             scriptSrc: ["'self'", "'unsafe-inline'", "'unsafe-eval'", "https://accounts.google.com"],
             styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
             imgSrc: ["'self'", "data:", "blob:", "https://*.googleusercontent.com"],
-            connectSrc: ["'self'", "https://accounts.google.com"],
+            connectSrc: ["*"],
             fontSrc: ["'self'", "https://fonts.gstatic.com"],
             objectSrc: ["'none'"],
             upgradeInsecureRequests: [],
@@ -38,12 +38,12 @@ app.use(helmet({
     crossOriginResourcePolicy: { policy: "cross-origin" },
 })); // Set security headers
 
-// Hardened CORS
+// Multi-origin CORS for development and mobile
 const corsOptions = {
-    origin: process.env.CLIENT_URL || '*', // In production, replace '*' with your actual frontend URL
+    origin: true, // Reflect request origin
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
+    credentials: false, // Set to false since we use Bearer tokens, makes wildcard/reflecting easier
 };
 app.use(cors(corsOptions));
 
@@ -79,6 +79,10 @@ app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/payroll', require('./routes/payrollRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/wfh', require('./routes/wfhRoutes'));
+
+app.get('/api', (req, res) => {
+    res.json({ message: 'Welcome to PeopleDesk API', status: 'Running' });
+});
 
 
 app.get('/', (req, res) => {

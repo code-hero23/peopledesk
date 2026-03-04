@@ -352,6 +352,24 @@ export const createWfhRequest = createAsyncThunk(
     }
 );
 
+// Delete WFH Request
+export const deleteWfhRequest = createAsyncThunk(
+    'employee/deleteWfhRequest',
+    async (id, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            await axios.delete(API_URL + `wfh/${id}`, config);
+            return id;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Get My WFH Requests
 export const getMyWfhRequests = createAsyncThunk(
     'employee/getMyWfhRequests',
@@ -429,6 +447,24 @@ export const getBusinessHeads = createAsyncThunk(
             return response.data;
         } catch (error) {
             const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Sync Call Logs (CRE)
+export const syncCallLogs = createAsyncThunk(
+    'employee/syncCallLogs',
+    async (logs, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.put(API_URL + 'worklogs/sync-calls', { logs }, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
             return thunkAPI.rejectWithValue(message);
         }
     }
@@ -711,9 +747,44 @@ export const employeeSlice = createSlice({
                 state.isError = true;
                 state.message = action.payload;
             })
+            // Delete WFH
+            .addCase(deleteWfhRequest.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(deleteWfhRequest.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                if (state.requests.wfh) {
+                    state.requests.wfh = state.requests.wfh.filter(req => req.id !== action.payload);
+                }
+            })
+            .addCase(deleteWfhRequest.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
             // Get Business Heads
             .addCase(getBusinessHeads.fulfilled, (state, action) => {
                 state.businessHeads = action.payload;
+            })
+            // Sync Call Logs
+            .addCase(syncCallLogs.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(syncCallLogs.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                // Find existing log and update synced calls
+                const index = state.workLogs.findIndex(log => log.id === action.payload.id);
+                if (index !== -1) {
+                    state.workLogs[index] = action.payload;
+                }
+                state.todayLog = action.payload;
+            })
+            .addCase(syncCallLogs.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
             });
     },
 });

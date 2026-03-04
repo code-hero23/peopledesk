@@ -21,6 +21,10 @@ import AnnouncementManagement from './pages/admin/AnnouncementManagement';
 import SalarySettings from './pages/admin/SalarySettings';
 import WFHRequestForm from './pages/employee/WFHRequestForm';
 import WFHManagement from './pages/admin/WFHManagement';
+import CRECallReports from './pages/employee/CRECallReports';
+import AdminCallReports from './pages/admin/AdminCallReports';
+import OSCDirectory from './pages/OSCDirectory';
+import DecoraAI from './pages/DecoraAI';
 import Layout from './components/MainLayout';
 import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
@@ -48,6 +52,7 @@ function App() {
                 <Route path="/dashboard/attendance" element={<MyAttendance />} />
                 <Route path="/dashboard/salary" element={<MySalary />} />
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
+                <Route path="/dashboard/call-reports" element={<CRECallReports />} />
               </Route>
 
               {/* Admin Routes */}
@@ -63,6 +68,9 @@ function App() {
               <Route path="/admin/announcements" element={<AnnouncementManagement />} />
               <Route path="/admin/salary-settings" element={<SalarySettings />} />
               <Route path="/admin/wfh" element={<WFHManagement />} />
+              <Route path="/admin/call-reports" element={<AdminCallReports />} />
+              <Route path="/osc-directory" element={<OSCDirectory />} />
+              <Route path="/decora-ai" element={<DecoraAI />} />
             </Route>
 
             {/* Smart Root Redirect */}

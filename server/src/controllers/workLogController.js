@@ -175,6 +175,7 @@ const createWorkLog = async (req, res) => {
 
                 // Generic
                 customFields: customFields ? customFields : undefined,
+                cre_synced_calls: typeof req.body.cre_synced_calls === 'string' ? JSON.parse(req.body.cre_synced_calls) : req.body.cre_synced_calls,
                 notes: notes,
 
                 date: new Date(),
@@ -261,6 +262,7 @@ const closeWorkLog = async (req, res) => {
                 } : undefined, // Merge customFields
                 process: process || undefined,
                 remarks: remarks || undefined,
+                cre_synced_calls: typeof req.body.cre_synced_calls === 'string' ? JSON.parse(req.body.cre_synced_calls) : req.body.cre_synced_calls,
                 notes: notes || undefined
             }
         });
@@ -387,4 +389,96 @@ const getMyWorkLogs = async (req, res) => {
     }
 };
 
-module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, addProjectReport };
+// @desc    Sync Call Logs separately
+// @route   PUT /api/worklogs/sync-calls
+// @access  Private (CRE)
+const syncCallLogs = async (req, res) => {
+    const { logs } = req.body;
+
+    try {
+        const userId = req.user.id;
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        const existingLog = await prisma.workLog.findFirst({
+            where: {
+                userId,
+                date: { gte: startOfDay, lte: endOfDay }
+            }
+        });
+
+        if (!existingLog) {
+            return res.status(404).json({ message: 'No work log found for today to sync calls.' });
+        }
+
+        const newLogs = typeof logs === 'string' ? JSON.parse(logs) : logs;
+        const currentLogs = existingLog.cre_synced_calls || [];
+
+        // Deduplicate using combination of date and number
+        const consolidatedLogs = [...currentLogs];
+        const existingKeys = new Set(currentLogs.map(l => `${l.date}-${l.number}`));
+
+        newLogs.forEach(log => {
+            const key = `${log.date}-${log.number}`;
+            if (!existingKeys.has(key)) {
+                consolidatedLogs.push(log);
+                existingKeys.add(key);
+            }
+        });
+
+        const updatedLog = await prisma.workLog.update({
+            where: { id: existingLog.id },
+            data: {
+                cre_synced_calls: consolidatedLogs
+            }
+        });
+
+        res.json(updatedLog);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Get all call stats for Admin
+// @route   GET /api/worklogs/call-stats
+// @access  Private (Admin)
+const getAllCallStats = async (req, res) => {
+    try {
+        const { startDate, endDateRange } = req.query;
+        let start = startDate ? new Date(startDate) : new Date();
+        start.setHours(0, 0, 0, 0);
+        let end = endDateRange ? new Date(endDateRange) : new Date();
+        end.setHours(23, 59, 59, 999);
+
+        const logs = await prisma.workLog.findMany({
+            where: {
+                date: { gte: start, lte: end },
+                cre_synced_calls: { not: null }
+            },
+            include: {
+                user: {
+                    select: { name: true, employeeId: true }
+                }
+            }
+        });
+
+        // Group by user
+        const stats = logs.map(log => ({
+            id: log.id,
+            date: log.date,
+            user: log.user.name,
+            empId: log.user.employeeId,
+            calls: log.cre_synced_calls
+        }));
+
+        res.json(stats);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, addProjectReport, syncCallLogs, getAllCallStats };

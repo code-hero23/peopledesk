@@ -196,6 +196,7 @@ model WorkLog {
   ae_closing_metrics         Json?
   ae_opening_metrics         Json?
   ae_project_reports         Json?
+  cre_synced_calls          Json?
   notes                      String?
   fa_project_reports         Json?
   project                    Project?  @relation(fields: [projectId], references: [id])
@@ -346,6 +347,7 @@ model WfhRequest {
   department            String
   designation           String
   reportingManager      String
+  reportingManagerId    Int?
   wfhDays               Int
   startDate             DateTime
   endDate               DateTime

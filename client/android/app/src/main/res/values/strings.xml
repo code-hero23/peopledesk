@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">PeopleDesk</string>
+    <string name="title_activity_main">PeopleDesk</string>
+    <string name="package_name">com.peopledesk.app</string>
+    <string name="custom_url_scheme">com.peopledesk.app</string>
+</resources>

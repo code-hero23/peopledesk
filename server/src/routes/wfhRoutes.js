@@ -5,7 +5,8 @@ const {
     getManageableWfhRequests,
     getMyWfhRequests,
     approveWfhRequest,
-    getWfhHistory
+    getWfhHistory,
+    deleteWfhRequest
 } = require('../controllers/wfhController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
@@ -23,5 +24,8 @@ router.route('/history')
 
 router.route('/:id/approve')
     .put(protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), approveWfhRequest);
+
+router.route('/:id')
+    .delete(protect, deleteWfhRequest);
 
 module.exports = router;

@@ -25,7 +25,7 @@ import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { getManageableWfhRequests, getWfhHistory, approveWfhRequest, deleteRequest, reset } from '../../features/admin/adminSlice';
 import { toast } from 'react-toastify';
 import Spinner from '../../components/Spinner';
-import { formatDate, formatTime } from '../../utils/dateUtils';
+import { formatDate, formatTime, formatDateTime } from '../../utils/dateUtils';
 import { WFHPrintTemplate } from '../../components/admin/WFHPrintTemplate';
 
 const WFHManagement = () => {
@@ -94,9 +94,16 @@ const WFHManagement = () => {
     };
 
     const onDelete = (id) => {
-        if (window.confirm('Are you sure you want to PERMANENTLY DELETE this WFH request?')) {
-            dispatch(deleteRequest({ type: 'wfh', id }));
-            setSelectedRequest(null);
+        if (window.confirm('Are you sure you want to PERMANENTLY DELETE this WFH request? This action cannot be undone.')) {
+            dispatch(deleteRequest({ type: 'wfh', id }))
+                .unwrap()
+                .then(() => {
+                    toast.success('Request deleted successfully');
+                    setSelectedRequest(null);
+                })
+                .catch((err) => {
+                    toast.error(err || 'Failed to delete request');
+                });
             setRemarks('');
         }
     };
@@ -216,9 +223,9 @@ const WFHManagement = () => {
                 </div>
 
                 {/* Content */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="grid grid-cols-1 gap-8">
                     {/* List View */}
-                    <div className="lg:col-span-2 space-y-5">
+                    <div className="space-y-5">
                         {isLoading && (!displayRequests || displayRequests.length === 0) ? (
                             <div className="flex justify-center items-center py-32 bg-white rounded-[2rem] border border-slate-100 shadow-sm">
                                 <Spinner />
@@ -285,6 +292,18 @@ const WFHManagement = () => {
                                             <span className="text-[10px] text-gray-400 font-black uppercase tracking-widest">Route</span>
                                         </div>
                                         <div className="flex items-center gap-2">
+                                            {['ADMIN', 'HR'].includes(user?.role) && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        onDelete(request.id);
+                                                    }}
+                                                    className="p-2.5 bg-rose-50 text-rose-500 rounded-xl hover:bg-rose-100 transition-all border border-rose-100/50"
+                                                    title="Delete Request"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            )}
                                             <button className="flex items-center gap-2 bg-slate-50 text-slate-600 px-4 py-2.5 rounded-xl text-xs font-black shadow-sm border border-slate-100 hover:bg-white transition-all">
                                                 REVIEW <Eye size={14} />
                                             </button>
@@ -295,140 +314,238 @@ const WFHManagement = () => {
                         )}
                     </div>
 
-                    {/* Detail View / Actions */}
-                    <div className="lg:col-span-1">
-                        <AnimatePresence mode="wait">
-                            {selectedRequest ? (
+                    {/* Redesigned Selection Modal (Full Screen Overlay) */}
+                    <AnimatePresence>
+                        {selectedRequest && (
+                            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6">
                                 <motion.div
-                                    initial={{ opacity: 0, x: 20 }}
-                                    animate={{ opacity: 1, x: 0 }}
-                                    exit={{ opacity: 0, x: 20 }}
-                                    className="bg-white rounded-3xl shadow-2xl overflow-hidden border border-blue-100 flex flex-col h-[750px] sticky top-6"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    exit={{ opacity: 0 }}
+                                    onClick={() => setSelectedRequest(null)}
+                                    className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+                                />
+
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                                    className="bg-white w-full max-w-5xl rounded-[2.5rem] shadow-2xl relative z-10 overflow-hidden flex flex-col max-h-[90vh] border border-blue-100"
                                 >
-                                    <div className="p-6 bg-gradient-to-br from-gray-900 to-blue-900 text-white relative overflow-hidden">
-                                        <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12 scale-150">
-                                            <Shield size={120} />
-                                        </div>
-                                        <div className="relative z-10 flex justify-between items-start">
+                                    {/* Modal Header (Sticky) */}
+                                    <div className="p-6 bg-gradient-to-br from-slate-900 to-blue-900 text-white flex justify-between items-center shrink-0">
+                                        <div className="flex items-center gap-4">
+                                            <div className="p-2 bg-blue-600 rounded-xl shadow-lg ring-4 ring-blue-500/20">
+                                                <Shield size={20} />
+                                            </div>
                                             <div>
-                                                <p className="text-blue-400 text-[10px] font-black tracking-[0.2em] uppercase mb-1">Strict Request Protocol</p>
-                                                <h2 className="text-2xl font-black">Case File #{selectedRequest.id}</h2>
-                                                <p className="text-blue-200/60 text-xs font-medium uppercase tracking-widest mt-1 italic">{selectedRequest.employeeName}</p>
+                                                <h2 className="text-xl font-black tracking-tight uppercase">Strategic Case Review</h2>
+                                                <p className="text-[10px] uppercase font-black tracking-widest text-blue-300/60">ID #WFH-{selectedRequest.id} • Internal Compliance Audit</p>
                                             </div>
-                                            <div className="flex gap-2">
-                                                <button onClick={handlePrint} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all" title="Generate PDF">
-                                                    <FileDown size={18} />
-                                                </button>
-                                                <button onClick={() => setSelectedRequest(null)} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
-                                                    <X size={18} />
-                                                </button>
-                                            </div>
+                                        </div>
+                                        <div className="flex gap-2">
+                                            <button onClick={handlePrint} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all" title="Print PDF">
+                                                <Printer size={20} />
+                                            </button>
+                                            <button onClick={() => setSelectedRequest(null)} className="p-2.5 bg-white/10 hover:bg-white/20 rounded-xl transition-all">
+                                                <X size={20} />
+                                            </button>
                                         </div>
                                     </div>
 
-                                    <div className="flex-1 overflow-y-auto p-6 space-y-6 scrollbar-thin scrollbar-thumb-slate-200">
-                                        {/* Deletion Option (Admin/HR Only) */}
-                                        {['ADMIN', 'HR'].includes(user?.role) && (
-                                            <div className="flex justify-end">
-                                                <button
-                                                    onClick={() => onDelete(selectedRequest.id)}
-                                                    className="flex items-center gap-1.5 text-[10px] font-black text-red-400 hover:text-red-600 uppercase tracking-widest bg-red-50 px-3 py-1.5 rounded-lg transition-all"
-                                                >
-                                                    <Trash2 size={12} /> Delete Case
-                                                </button>
+                                    {/* Modal Body (Scrollable) */}
+                                    <div className="flex-1 overflow-y-auto p-8 sm:p-12 space-y-12 bg-slate-50/50 custom-scrollbar">
+                                        {/* Employee Profile Header */}
+                                        <div className="flex flex-col md:flex-row justify-between items-start gap-8 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm relative overflow-hidden">
+                                            <div className="absolute top-0 right-0 p-12 opacity-[0.03] -rotate-12 scale-150 pointer-events-none">
+                                                <User size={120} />
                                             </div>
-                                        )}
-
-                                        {/* Core Details */}
-                                        <div className="space-y-5">
-                                            <DetailSection icon={<Info size={16} />} title="Primary Reason" content={selectedRequest.realReason} color="slate" />
-                                            <DetailSection icon={<Home size={16} />} title="Necessity" content={selectedRequest.necessityReason} color="blue" />
-                                            <DetailSection icon={<AlertCircle size={16} />} title="Risk Projection" content={selectedRequest.impactIfRejected} color="red" />
-
-                                            <div className="h-px bg-gradient-to-r from-transparent via-slate-100 to-transparent my-4" />
-
-                                            <DetailSection icon={<Briefcase size={16} />} title="Project Focus" content={selectedRequest.primaryProject || "N/A"} color="indigo" />
-                                            <DetailSection icon={<CheckCircle2 size={16} />} title="Deliverables" content={selectedRequest.deliverables} color="purple" />
-
-                                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100">
-                                                <div className="flex items-center gap-2 mb-3">
-                                                    <Clock size={16} className="text-blue-600" />
-                                                    <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest">Availability</p>
+                                            <div className="flex gap-6 items-center relative z-10">
+                                                <div className="h-20 w-20 bg-blue-600 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-blue-200">
+                                                    {selectedRequest.employeeName[0]}
                                                 </div>
-                                                <p className="text-sm font-bold text-slate-800 leading-relaxed italic">"{selectedRequest.workingHours}"</p>
-                                                <div className="mt-3 pt-3 border-t border-slate-200 flex justify-between items-center">
-                                                    <span className="text-[10px] text-slate-400 font-bold uppercase">Response Time</span>
-                                                    <span className="text-xs font-black text-blue-600">{selectedRequest.responseTime} MINS</span>
+                                                <div>
+                                                    <h3 className="text-3xl font-black text-slate-900 leading-tight">{selectedRequest.employeeName}</h3>
+                                                    <div className="flex flex-wrap items-center gap-3 mt-2">
+                                                        <span className="bg-blue-50 text-blue-600 px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest border border-blue-100">{selectedRequest.designation}</span>
+                                                        <span className="h-1.5 w-1.5 bg-slate-200 rounded-full" />
+                                                        <span className="text-xs font-bold text-slate-400">ID: {selectedRequest.userId}</span>
+                                                        <span className="h-1.5 w-1.5 bg-slate-200 rounded-full" />
+                                                        <div className="flex items-center gap-1.5 text-slate-500">
+                                                            <Clock size={12} className="text-blue-500" />
+                                                            <span className="text-[10px] font-black uppercase tracking-widest">Applied: {formatDateTime(selectedRequest.createdAt)}</span>
+                                                        </div>
+                                                    </div>
                                                 </div>
                                             </div>
-
-                                            <div className="bg-emerald-50/50 p-5 rounded-3xl border border-emerald-100 space-y-4">
-                                                <div className="flex justify-between items-center text-[10px] font-black text-emerald-700 uppercase tracking-[0.2em]">
-                                                    <span>Setup Compliance</span>
-                                                    <Shield size={14} />
+                                            <div className="flex items-center gap-6 relative z-10">
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Duration Requested</p>
+                                                    <div className="flex items-center gap-2 justify-end">
+                                                        <Calendar size={16} className="text-blue-500" />
+                                                        <span className="text-2xl font-black text-slate-800">{selectedRequest.wfhDays} Days</span>
+                                                    </div>
+                                                    <p className="text-xs font-bold text-slate-500 mt-1">Starting {formatDate(selectedRequest.startDate)}</p>
                                                 </div>
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <ComplianceBadge label="Internet" active={selectedRequest.hasStableInternet} />
-                                                    <ComplianceBadge label="Power" active={selectedRequest.hasPowerBackup} />
-                                                    <ComplianceBadge label="Workspace" active={selectedRequest.hasDedicatedWorkspace} />
-                                                    <ComplianceBadge label="Office Visit" active={selectedRequest.officeVisitCommitment} />
+                                                <div className="h-12 w-px bg-slate-100 mx-2" />
+                                                <div className="text-right">
+                                                    <p className="text-[10px] font-black text-slate-300 uppercase tracking-widest mb-1">Current Approval Status</p>
+                                                    <div className="flex -space-x-1.5 mt-2">
+                                                        <ChainCircle status={selectedRequest.hrStatus} label="HR" />
+                                                        <ChainCircle status={selectedRequest.bhStatus} label="BH" />
+                                                        <ChainCircle status={selectedRequest.adminStatus} label="AD" />
+                                                    </div>
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {/* Remarks Section */}
-                                        <div className="pt-6 border-t border-gray-100">
-                                            <label className="text-[10px] font-black text-gray-400 uppercase tracking-[0.2em] block mb-3">Decision Remarks</label>
-                                            <div className="relative group">
+                                        {/* Details Grid */}
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {/* Left Side: Reasons */}
+                                            <div className="space-y-8">
+                                                <div className="space-y-6">
+                                                    <h4 className="text-[10px] font-black text-blue-600 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                        <div className="h-1.5 w-1.5 bg-blue-600 rounded-full" /> Personal Justification
+                                                    </h4>
+                                                    <div className="bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm space-y-6">
+                                                        <DetailSection icon={<Info size={20} />} title="Primary Reason" content={selectedRequest.realReason} color="slate" />
+                                                        <DetailSection icon={<Home size={20} />} title="Necessity Assessment" content={selectedRequest.necessityReason} color="blue" />
+                                                    </div>
+                                                </div>
+
+                                                <div className="space-y-6">
+                                                    <h4 className="text-[10px] font-black text-rose-500 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                        <div className="h-1.5 w-1.5 bg-rose-500 rounded-full" /> Impact Risk Profile
+                                                    </h4>
+                                                    <div className="bg-rose-50/50 p-8 rounded-[2rem] border border-rose-100 shadow-sm relative overflow-hidden group">
+                                                        <div className="absolute top-0 right-0 p-8 opacity-[0.05] group-hover:scale-110 transition-transform"><AlertCircle size={60} /></div>
+                                                        <p className="text-sm font-black text-rose-900 leading-relaxed italic relative z-10">"{selectedRequest.impactIfRejected}"</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Right Side: Work Plan */}
+                                            <div className="space-y-8">
+                                                <div className="space-y-6 h-full flex flex-col">
+                                                    <h4 className="text-[10px] font-black text-indigo-600 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                        <div className="h-1.5 w-1.5 bg-indigo-600 rounded-full" /> Operational Execution
+                                                    </h4>
+                                                    <div className="bg-slate-900 text-white p-8 rounded-[2rem] shadow-2xl relative overflow-hidden flex-1 group">
+                                                        <div className="absolute -top-10 -right-10 p-20 opacity-[0.03] rotate-12 group-hover:scale-110 transition-transform"><Briefcase size={200} /></div>
+                                                        <div className="relative z-10 space-y-6">
+                                                            <div>
+                                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Targeted Project Focus</p>
+                                                                <p className="text-xl font-black text-blue-400">{selectedRequest.primaryProject || "N/A"}</p>
+                                                            </div>
+                                                            <div>
+                                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Concrete Deliverables</p>
+                                                                <p className="text-sm font-medium text-slate-300 leading-relaxed">{selectedRequest.deliverables}</p>
+                                                            </div>
+                                                            <div className="pt-6 border-t border-white/5 flex flex-col gap-4">
+                                                                <div className="flex justify-between items-center">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="p-2 bg-white/5 rounded-lg"><Clock size={16} className="text-blue-400" /></div>
+                                                                        <span className="text-[10px] font-black text-slate-400 uppercase">Availability Window</span>
+                                                                    </div>
+                                                                    <span className="text-xs font-black text-white italic">{selectedRequest.workingHours}</span>
+                                                                </div>
+                                                                <div className="flex justify-between items-center">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className="p-2 bg-white/5 rounded-lg"><MessageSquare size={16} className="text-purple-400" /></div>
+                                                                        <span className="text-[10px] font-black text-slate-400 uppercase">Comm. Strategy</span>
+                                                                    </div>
+                                                                    <span className="text-xs font-black text-white">{selectedRequest.communicationPlan || "N/A"}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Infrastructure Compliance Row */}
+                                        <div className="space-y-6">
+                                            <h4 className="text-[10px] font-black text-emerald-600 uppercase tracking-[0.3em] flex items-center gap-2">
+                                                <div className="h-1.5 w-1.5 bg-emerald-600 rounded-full" /> Infrastructure Compliance
+                                            </h4>
+                                            <div className="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-6">
+                                                <ComplianceBadge label="Internet Integrity" active={selectedRequest.hasStableInternet} />
+                                                <ComplianceBadge label="Power Sustenance" active={selectedRequest.hasPowerBackup} />
+                                                <ComplianceBadge label="Setup Assessment" active={selectedRequest.hasDedicatedWorkspace} />
+                                                <ComplianceBadge label="Protocol Commitment" active={selectedRequest.officeVisitCommitment} />
+                                            </div>
+                                        </div>
+
+                                        {/* Action Remarks */}
+                                        <div className="space-y-4">
+                                            <div className="flex justify-between items-center px-1">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">Institutional Remarks (Internal)</label>
+                                                <span className="text-[10px] font-black text-blue-500 uppercase tracking-widest bg-blue-50 px-3 py-1 rounded-full">Formal Decision Required</span>
+                                            </div>
+                                            <div className="relative group shadow-xl shadow-slate-200/50 rounded-[2rem]">
                                                 <textarea
                                                     value={remarks}
                                                     onChange={(e) => setRemarks(e.target.value)}
-                                                    className="w-full p-4 bg-gray-50 border-2 border-gray-100 focus:border-blue-500 focus:bg-white rounded-2xl outline-none transition-all h-28 text-sm font-medium leading-relaxed"
-                                                    placeholder="Provide context for your decision..."
+                                                    className="w-full p-8 bg-white border-2 border-slate-100 focus:border-blue-500 rounded-[2rem] outline-none transition-all h-32 text-sm font-medium leading-relaxed resize-none"
+                                                    placeholder="Provide detailed context for this decision entry..."
                                                 />
-                                                <MessageSquare className="absolute right-4 bottom-4 text-gray-300 pointer-events-none group-focus-within:text-blue-400 transition-colors" size={18} />
+                                                <MessageSquare className="absolute right-8 bottom-8 text-slate-200 group-focus-within:text-blue-500 transition-colors" size={24} />
                                             </div>
                                         </div>
                                     </div>
 
-                                    {/* Footer Buttons */}
-                                    <div className="p-6 bg-gray-50 border-t flex gap-3">
-                                        {activeTab === 'pending' ? (
-                                            <>
-                                                <button
-                                                    onClick={() => handleReject(selectedRequest.id)}
-                                                    disabled={isLoading}
-                                                    className="flex-1 py-4 px-4 bg-white border-2 border-red-50 text-red-500 font-black rounded-2xl hover:bg-red-50 active:scale-95 transition-all text-xs uppercase tracking-widest shadow-sm"
-                                                >
-                                                    Reject
-                                                </button>
-                                                <button
-                                                    onClick={() => handleApprove(selectedRequest.id)}
-                                                    disabled={isLoading}
-                                                    className="flex-[2] py-4 px-4 bg-blue-600 text-white font-black rounded-2xl shadow-xl shadow-blue-200 hover:bg-blue-700 active:scale-95 transition-all text-xs uppercase tracking-widest flex items-center justify-center gap-2"
-                                                >
-                                                    <Check size={16} /> Approve Layer
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <div className={`w-full text-center py-4 rounded-2xl font-black text-xs uppercase tracking-widest border-2 ${selectedRequest.status === 'APPROVED' ? 'bg-green-50 text-green-600 border-green-100' : 'bg-red-50 text-red-600 border-red-100'
-                                                }`}>
-                                                {selectedRequest.status}
-                                            </div>
-                                        )}
+                                    {/* Modal Footer */}
+                                    <div className="p-8 bg-white border-t border-slate-100 shrink-0 flex flex-col items-center">
+                                        <div className="w-full flex gap-4 max-w-2xl mx-auto">
+                                            {activeTab === 'pending' ? (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleReject(selectedRequest.id)}
+                                                        className="flex-1 py-5 bg-white border-2 border-rose-100 text-rose-500 font-black rounded-[1.5rem] hover:bg-rose-50 transition-all text-xs uppercase tracking-[0.2em] active:scale-95 shadow-sm"
+                                                    >
+                                                        Deny Request
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleApprove(selectedRequest.id)}
+                                                        className="flex-[2] py-5 bg-blue-600 text-white font-black rounded-[1.5rem] shadow-2xl shadow-blue-200 hover:bg-blue-700 transition-all text-xs uppercase tracking-[0.2em] active:scale-95 flex items-center justify-center gap-3"
+                                                    >
+                                                        <Check size={20} strokeWidth={3} /> Approve Protocol Layer
+                                                    </button>
+                                                    {['ADMIN', 'HR'].includes(user?.role) && (
+                                                        <button
+                                                            onClick={() => onDelete(selectedRequest.id)}
+                                                            className="p-5 bg-rose-50 text-rose-500 font-black rounded-[1.5rem] hover:bg-rose-100 transition-all flex items-center justify-center shadow-sm"
+                                                            title="Permanently Delete Request"
+                                                        >
+                                                            <Trash2 size={24} />
+                                                        </button>
+                                                    )}
+                                                </>
+                                            ) : (
+                                                <div className="w-full flex gap-4">
+                                                    <div className={`flex-[3] text-center py-6 rounded-[1.5rem] font-black text-sm uppercase tracking-[0.4em] border-2 shadow-sm ${selectedRequest.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 'bg-rose-50 text-rose-600 border-rose-100'}`}>
+                                                        VERIFICATION STATUS: {selectedRequest.status}
+                                                    </div>
+                                                    {['ADMIN', 'HR'].includes(user?.role) && (
+                                                        <button
+                                                            onClick={() => onDelete(selectedRequest.id)}
+                                                            className="flex-1 py-6 bg-rose-50 text-rose-500 font-black rounded-[1.5rem] hover:bg-rose-100 transition-all flex items-center justify-center border-2 border-rose-100 shadow-sm"
+                                                            title="Permanently Delete Records"
+                                                        >
+                                                            <Trash2 size={20} />
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            )}
+                                        </div>
+                                        <p className="mt-4 text-[9px] font-black text-slate-300 uppercase tracking-widest text-center">
+                                            Data integrity secured via localized encryption • Case ID #WFH-{selectedRequest.id}
+                                        </p>
                                     </div>
                                 </motion.div>
-                            ) : (
-                                <div className="hidden lg:flex flex-col items-center justify-center h-[750px] border-4 border-dashed border-slate-100 rounded-[40px] text-slate-300 p-12 text-center group transition-all hover:border-blue-50 hover:bg-blue-50/5">
-                                    <div className="h-20 w-20 bg-slate-50 rounded-3xl flex items-center justify-center mb-6 shadow-sm group-hover:scale-110 group-hover:bg-blue-100 group-hover:text-blue-600 transition-all duration-500">
-                                        <Shield size={40} className="opacity-40" />
-                                    </div>
-                                    <p className="font-black text-xl text-slate-400 group-hover:text-blue-900 transition-colors">Case Insight Panel</p>
-                                    <p className="text-xs mt-4 font-bold leading-relaxed text-slate-300 group-hover:text-slate-500 transition-colors">Select a request file to begin high-level review of personal justification, infrastructure compliance, and work deliverables.</p>
-                                </div>
-                            )}
-                        </AnimatePresence>
-                    </div>
+                            </div>
+                        )}
+                    </AnimatePresence>
                 </div>
             </div>
         </div>
@@ -471,11 +588,9 @@ const ComplianceBadge = ({ label, active }) => (
         }`}>
         <span className={`text-[8px] font-black uppercase tracking-widest ${active ? 'text-emerald-700' : 'text-red-700'}`}>{label}</span>
         <span className={`text-[10px] font-extrabold flex items-center gap-1 ${active ? 'text-emerald-600' : 'text-red-500'}`}>
-            {active ? (<><CheckCircle2 size={10} /> VERIFIED</>) : (<><XCircle size={10} /> MISSING</>)}
+            {active ? (<><CheckCircle2 size={10} /> VERIFIED</>) : (<><X size={10} strokeWidth={2} /> MISSING</>)}
         </span>
     </div>
 );
-
-const XCircle = ({ size, className }) => <X size={size} className={className} />;
 
 export default WFHManagement;
