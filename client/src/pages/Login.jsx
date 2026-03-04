@@ -24,7 +24,8 @@ function Login() {
     useEffect(() => {
         if (isSuccess || user) {
             // Mobile restriction block: block all users on mobile EXCEPT those with designation 'AE'
-            if (getDeviceType() === 'mobile' && user?.designation !== 'AE') {
+            const isMobileView = window.innerWidth < 768;
+            if (isMobileView && user && user.designation !== 'AE') {
                 alert('Mobile login is restricted to AE. Please login from a Desktop browser.');
                 dispatch(logout());
                 dispatch(reset());
