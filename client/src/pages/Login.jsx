@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { login, googleLogin, reset, logout } from '../features/auth/authSlice';
+import { login, googleLogin, reset } from '../features/auth/authSlice';
 import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
-import { getDeviceType } from '../utils/deviceUtils';
 
 function Login() {
     const [formData, setFormData] = useState({
@@ -23,15 +22,6 @@ function Login() {
 
     useEffect(() => {
         if (isSuccess || user) {
-            // Mobile restriction block: block all users on mobile EXCEPT those with designation 'AE'
-            const isMobileView = window.innerWidth < 768;
-            if (isMobileView && user && user.designation !== 'AE') {
-                alert('Mobile login is restricted to AE. Please login from a Desktop browser.');
-                dispatch(logout());
-                dispatch(reset());
-                return;
-            }
-
             if (['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user.role)) {
                 navigate('/admin-dashboard');
             } else {

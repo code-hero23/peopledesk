@@ -658,10 +658,10 @@ const Overview = () => {
                             {!isCheckedIn && !isCheckedOut ? (
                                 <motion.button
                                     whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleMarkAttendance()} disabled={isLoading}
+                                    onClick={() => handleMarkAttendance()} disabled={isLoading || (isMobile && user?.designation !== 'AE')}
                                     className={`w-full py-5 rounded-2xl font-black text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3
-                                        bg-white text-slate-900 hover:shadow-white/20`}>
-                                    <span>👆</span> TAP TO SIGN IN
+                                        ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 text-white/40 cursor-not-allowed' : 'bg-white text-slate-900 hover:shadow-white/20'}`}>
+                                    {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> DESKTOP ONLY</> : <><span>👆</span> TAP TO SIGN IN</>}
                                 </motion.button>
                             ) : isCheckedIn ? (
                                 <div className="flex flex-col gap-3">

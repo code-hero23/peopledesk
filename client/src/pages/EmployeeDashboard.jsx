@@ -457,7 +457,7 @@ const EmployeeDashboard = () => {
                     {/* CTA Button */}
                     <div className="relative z-10 mt-4">
                         {!isCheckedIn && !isCheckedOut ? (
-                            <button onClick={handleMarkAttendance} disabled={isLoading}
+                            <button onClick={handleMarkAttendance} disabled={isLoading || (isMobile && user?.designation !== 'AE')}
                                 className={`w-full py-4 rounded-2xl font-black text-sm shadow-lg transition-all active:scale-95 flex items-center justify-center gap-3
                                     ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 cursor-not-allowed' : 'bg-white text-slate-900 hover:bg-blue-50'}`}>
                                 {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> Desktop Only</> : <><span>👆</span> Tap to Check In</>}
