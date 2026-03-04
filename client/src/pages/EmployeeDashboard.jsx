@@ -162,13 +162,30 @@ const EmployeeDashboard = () => {
     }, [attendance]);
 
     // ── Lateness check ────────────────────────────────────────────────────────
-    const checkLatenessAndRedirect = useCallback((checkInTimeRaw) => {
-        const todayLocal = new Date().toLocaleDateString('en-CA');
-        const hasPermission = requests?.permissions?.some(p => new Date(p.date).toLocaleDateString('en-CA') === todayLocal);
-        if (hasPermission || user?.designation === 'AE') return;
+    const checkLatenessAndRedirect = useCallback((checkInTimeRaw, isAuto = false) => {
+        // Exempt AE (Area Engineers) from this restriction
+        if (user?.designation === 'AE') return;
 
         const checkInTime = new Date(checkInTimeRaw);
-        const totalMinutes = checkInTime.getHours() * 60 + checkInTime.getMinutes();
+        const hours = checkInTime.getHours();
+        const minutes = checkInTime.getMinutes();
+        const totalMinutes = hours * 60 + minutes;
+
+        const todayLocal = checkInTime.toLocaleDateString('en-CA');
+
+        // Check for ANY approved leave for today
+        const hasApprovedLeave = requests?.leaves?.some(l => {
+            const lStart = new Date(l.startDate).toLocaleDateString('en-CA');
+            const lEnd = new Date(l.endDate).toLocaleDateString('en-CA');
+            return l.status === 'APPROVED' && todayLocal >= lStart && todayLocal <= lEnd;
+        });
+
+        if (hasApprovedLeave) {
+            console.log('Skipping mandatory permission: Approved leave found for today.');
+            return;
+        }
+
+        // Check for ANY half-day leave for today (pending or approved)
         const hasHalfDay = requests?.leaves?.some(l => {
             if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
             const lS = new Date(l.startDate).toLocaleDateString('en-CA');
@@ -176,13 +193,46 @@ const EmployeeDashboard = () => {
             return todayLocal >= lS && todayLocal <= lE;
         });
 
-        const threshold = hasHalfDay ? 840 : 630;
-        const label = hasHalfDay ? '2:00 PM' : '10:30 AM';
+        // Base threshold is 10:30 AM (630 mins). If half day, it shifts to 2:00 PM (840 mins)
+        let thresholdMinutes = hasHalfDay ? 840 : 630;
 
-        if (totalMinutes > threshold) {
+        // Check for ANY permission (Pending/Approved) for today
+        const hasPermission = requests?.permissions?.some(p => {
+            const pDate = new Date(p.date).toLocaleDateString('en-CA');
+            return pDate === todayLocal;
+        });
+
+        // If they have a permission, they get a +2 hour (120 mins) grace period before being "Late" again.
+        if (hasPermission) {
+            thresholdMinutes += 120; // 10:30 AM becomes 12:30 PM (or 2:00 PM becomes 4:00 PM)
+        }
+
+        if (totalMinutes > thresholdMinutes) {
             const date = checkInTime.toLocaleDateString('en-CA');
-            const fmt = d => { let h = d.getHours(); const m = d.getMinutes().toString().padStart(2, '0'); const ap = h >= 12 ? 'PM' : 'AM'; h = h % 12 || 12; return `${String(h).padStart(2, '0')}:${m} ${ap}`; };
-            setPermissionInitialData({ date, startTime: fmt(checkInTime), endTime: fmt(new Date(checkInTime.getTime() + 7200000)), reason: `Late Check-In (After ${label})` });
+            const formatTime = (dateObj) => {
+                let h = dateObj.getHours();
+                const m = dateObj.getMinutes().toString().padStart(2, '0');
+                const ampm = h >= 12 ? 'PM' : 'AM';
+                h = h % 12 || 12;
+                return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
+            };
+
+            const startTime = formatTime(checkInTime);
+            const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
+            const endTime = formatTime(endTimeObj);
+
+            // Format labels for reason
+            const labelTime = hasPermission
+                ? (hasHalfDay ? '4:00 PM' : '12:30 PM')
+                : (hasHalfDay ? '2:00 PM' : '10:30 AM');
+
+            setPermissionInitialData({
+                date,
+                startTime,
+                endTime,
+                reason: `Late Check-In (After ${labelTime})`
+            });
+            setIsAutoPermission(isAuto);
             setActiveModal('permission');
         }
     }, [requests, user]);

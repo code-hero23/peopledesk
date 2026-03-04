@@ -166,52 +166,68 @@ const Overview = () => {
         const checkInTime = new Date(checkInTimeRaw);
         const hours = checkInTime.getHours();
         const minutes = checkInTime.getMinutes();
+        const totalMinutes = hours * 60 + minutes;
 
-        // 10:30 AM = 10 * 60 + 30 = 630 minutes
-        if (hours * 60 + minutes > 630) {
-            // Check if user already has a valid permission or approved leave for this time
-            const todayLocal = checkInTime.toLocaleDateString('en-CA');
+        const todayLocal = checkInTime.toLocaleDateString('en-CA');
 
-            // 1. Check for ANY permission (Pending/Approved) for today
-            const hasExistingPermission = requests?.permissions?.some(p => {
-                const pDate = new Date(p.date).toLocaleDateString('en-CA');
-                return pDate === todayLocal;
-            });
+        // Check for ANY approved leave for today
+        const hasApprovedLeave = requests?.leaves?.some(l => {
+            const lStart = new Date(l.startDate).toLocaleDateString('en-CA');
+            const lEnd = new Date(l.endDate).toLocaleDateString('en-CA');
+            return l.status === 'APPROVED' && todayLocal >= lStart && todayLocal <= lEnd;
+        });
 
-            // 2. Check for ANY approved leave for today
-            const hasApprovedLeave = requests?.leaves?.some(l => {
-                const lStart = new Date(l.startDate).toLocaleDateString('en-CA');
-                const lEnd = new Date(l.endDate).toLocaleDateString('en-CA');
-                return l.status === 'APPROVED' && todayLocal >= lStart && todayLocal <= lEnd;
-            });
+        if (hasApprovedLeave) {
+            console.log('Skipping mandatory permission: Approved leave found for today.');
+            return;
+        }
 
-            if (hasExistingPermission || hasApprovedLeave) {
-                console.log('Skipping mandatory permission: Existing request or approved leave found for today.');
-                return;
-            }
+        // Check for ANY half-day leave for today (pending or approved)
+        const hasHalfDay = requests?.leaves?.some(l => {
+            if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
+            const lS = new Date(l.startDate).toLocaleDateString('en-CA');
+            const lE = new Date(l.endDate).toLocaleDateString('en-CA');
+            return todayLocal >= lS && todayLocal <= lE;
+        });
 
-            // Use local date (YYYY-MM-DD format for input[type="date"])
+        // Base threshold is 10:30 AM (630 mins). If half day, it shifts to 2:00 PM (840 mins)
+        let thresholdMinutes = hasHalfDay ? 840 : 630;
+
+        // Check for ANY permission (Pending/Approved) for today
+        const hasPermission = requests?.permissions?.some(p => {
+            const pDate = new Date(p.date).toLocaleDateString('en-CA');
+            return pDate === todayLocal;
+        });
+
+        // If they have a permission, they get a +2 hour (120 mins) grace period before being "Late" again.
+        if (hasPermission) {
+            thresholdMinutes += 120; // 10:30 AM becomes 12:30 PM (or 2:00 PM becomes 4:00 PM)
+        }
+
+        if (totalMinutes > thresholdMinutes) {
             const date = checkInTime.toLocaleDateString('en-CA');
-
             const formatTime = (dateObj) => {
                 let h = dateObj.getHours();
                 const m = dateObj.getMinutes().toString().padStart(2, '0');
                 const ampm = h >= 12 ? 'PM' : 'AM';
-                h = h % 12;
-                h = h ? h : 12; // the hour '0' should be '12'
+                h = h % 12 || 12;
                 return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
             };
 
             const startTime = formatTime(checkInTime);
-
             const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
             const endTime = formatTime(endTimeObj);
+
+            // Format labels for reason
+            const labelTime = hasPermission
+                ? (hasHalfDay ? '4:00 PM' : '12:30 PM')
+                : (hasHalfDay ? '2:00 PM' : '10:30 AM');
 
             setPermissionInitialData({
                 date,
                 startTime,
                 endTime,
-                reason: 'Late Check-In (After 10:30 AM)'
+                reason: `Late Check-In (After ${labelTime})`
             });
             setIsAutoPermission(isAuto);
             setActiveModal('permission');
