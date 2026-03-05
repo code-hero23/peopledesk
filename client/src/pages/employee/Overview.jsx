@@ -2,6 +2,8 @@ import { useEffect, useState, useRef, useCallback } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
 import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance, getAttendanceHistory } from '../../features/employee/employeeSlice';
+import { toast } from 'react-toastify';
+import axios from 'axios';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 
 import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
@@ -16,7 +18,7 @@ import LeaveRequestForm from '../../components/LeaveRequestForm';
 import PermissionRequestForm from '../../components/PermissionRequestForm';
 import StatCard from '../../components/StatCard';
 import Spinner from '../../components/Spinner';
-import { formatDate } from '../../utils/dateUtils';
+import { formatDate, formatTime } from '../../utils/dateUtils';
 import Modal from '../../components/Modal';
 import BreakSelectionModal from '../../components/BreakSelectionModal';
 import ProjectCreationForm from '../../components/ProjectCreationForm';
@@ -42,7 +44,7 @@ const showBrowserNotif = (title, body) => {
         new Notification(title, { body, icon: '/logo.png' });
     }
 };
-
+const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/';
 
 
 const Overview = () => {
@@ -171,10 +173,7 @@ const Overview = () => {
 
         // If login is after 2:00 PM (14:00)
         if (totalMinutes >= 840) {
-            setIsMandatoryPermission(true);
-            setPendingPermissionCount(1);
-            // Force Half-Day Leave request instead of Permission
-            // We set requestType which the PermissionRequestModal should respect
+            setIsAutoPermission(true);
             toast.info("Late login detected. Please submit a half-day leave request.");
             return;
         }
@@ -260,50 +259,51 @@ const Overview = () => {
         }
     }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests]);
 
-    const handleMarkAttendance = async (isSiteLogin = false) => {
-        try {
-            await executeAttendanceAction(isSiteLogin);
-        } catch (error) {
-            console.error(error);
-        }
-    };
-
-    const executeAttendanceAction = async (isSiteLogin = false) => {
-        if (!location) {
-            toast.error('Location access is required for attendance.');
+    const handleMarkAttendance = (isSiteLogin = false) => {
+        if (isMobile && user?.designation !== 'AE') {
+            toast.warning('Mobile sign-in is restricted to AE. Please use a Desktop.');
             return;
         }
+        executeAttendanceAction(isSiteLogin);
+    };
 
-        setIsCheckingAttendance(true);
-        try {
-            const formData = new FormData();
-            formData.append('latitude', location.latitude);
-            formData.append('longitude', location.longitude);
-            if (photo) {
-                const blob = await fetch(photo).then((res) => res.blob());
-                formData.append('photo', blob, 'attendance.jpg');
+    const executeAttendanceAction = (isSiteLogin = false) => {
+        const deviceInfo = navigator.userAgent;
+        const deviceType = getDeviceType();
+        const formData = new FormData();
+        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
+
+        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
+            // Check-Out Logic
+            if (user?.designation === 'AE') {
+                setIsCheckingOut(true);
+                setShowCheckInModal(true);
+            } else {
+                dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
             }
+        } else {
+            // Check-In Logic
+            if (user?.designation === 'AE') {
+                setIsCheckingOut(false);
+                setShowCheckInModal(true);
+            } else {
+                dispatch(markAttendance(formData)).then((res) => {
+                    if (!res.error) {
+                        dispatch(getAttendanceStatus());
+                        const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
 
-            const res = await axios.post(`${API_URL}attendance/mark`, formData, {
-                headers: {
-                    Authorization: `Bearer ${user.token}`,
-                    'Content-Type': 'multipart/form-data',
-                },
-            });
-
-            toast.success(res.data.status === 'PRESENT' ? 'Check-in successful' : 'Check-out successful');
-            dispatch(getAttendanceStatus());
-
-            // Mandatory Redirection for Site Login
-            if (isSiteLogin && res.data.status === 'PRESENT') {
-                setIsMandatorySiteVisit(true);
-                setActiveModal('site-visit');
+                        // Mandatory Redirection for Site Login
+                        if (isSiteLogin) {
+                            setIsMandatorySiteVisit(true);
+                            setActiveModal('site-visit');
+                        } else {
+                            checkLatenessAndRedirect(checkInDate);
+                        }
+                    } else {
+                        toast.error(res.payload || 'Check-in failed.');
+                    }
+                });
             }
-        } catch (error) {
-            toast.error(error.response?.data?.message || 'Attendance action failed');
-        } finally {
-            setIsCheckingAttendance(false);
-            setPhoto(null);
         }
     };
 
