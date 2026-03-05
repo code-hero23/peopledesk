@@ -26,8 +26,8 @@ const createWfhRequest = async (req, res) => {
         const requestData = {
             userId,
             employeeName: user.name || "",
-            employeeId: user.employeeId || "",
-            department: user.department || "",
+            employeeId: `EMP-${userId}`,
+            department: req.body.department || "",
             designation: user.designation || "",
             reportingManager: req.body.reportingManagerName || "",
             reportingManagerId: req.body.reportingManagerId ? parseInt(req.body.reportingManagerId) : null,

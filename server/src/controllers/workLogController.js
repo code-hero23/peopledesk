@@ -447,10 +447,10 @@ const syncCallLogs = async (req, res) => {
 // @access  Private (Admin)
 const getAllCallStats = async (req, res) => {
     try {
-        const { startDate, endDateRange } = req.query;
+        const { startDate, endDate } = req.query;
         let start = startDate ? new Date(startDate) : new Date();
         start.setHours(0, 0, 0, 0);
-        let end = endDateRange ? new Date(endDateRange) : new Date();
+        let end = endDate ? new Date(endDate) : new Date();
         end.setHours(23, 59, 59, 999);
 
         const logs = await prisma.workLog.findMany({
@@ -460,7 +460,7 @@ const getAllCallStats = async (req, res) => {
             },
             include: {
                 user: {
-                    select: { name: true, employeeId: true }
+                    select: { name: true, id: true }
                 }
             }
         });
@@ -470,7 +470,7 @@ const getAllCallStats = async (req, res) => {
             id: log.id,
             date: log.date,
             user: log.user.name,
-            empId: log.user.employeeId,
+            empId: `EMP-${log.user.id}`, // Using id since employeeId is not in User schema
             calls: log.cre_synced_calls
         }));
 
