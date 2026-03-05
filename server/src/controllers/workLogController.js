@@ -465,9 +465,9 @@ const getMyCallLogs = async (req, res) => {
 
         let start, end;
         if (startDate && endDate) {
-            start = new Date(startDate);
-            end = new Date(endDate);
-            end.setHours(23, 59, 59, 999);
+            // Force local time parsing instead of UTC
+            start = new Date(startDate + 'T00:00:00');
+            end = new Date(endDate + 'T23:59:59.999');
         } else {
             start = getCycleStartDateIST();
             end = getCycleEndDateIST();
@@ -497,10 +497,10 @@ const getMyCallLogs = async (req, res) => {
 const getAllCallStats = async (req, res) => {
     try {
         const { startDate, endDate } = req.query;
-        let start = startDate ? new Date(startDate) : new Date();
+        // Interpret date strings as local midnight instead of UTC midnight
+        let start = startDate ? new Date(startDate + 'T00:00:00') : new Date();
         start.setHours(0, 0, 0, 0);
-        let end = endDate ? new Date(endDate) : new Date();
-        end.setHours(23, 59, 59, 999);
+        let end = endDate ? new Date(endDate + 'T23:59:59.999') : new Date();
 
         const callLogs = await prisma.callLog.findMany({
             where: {

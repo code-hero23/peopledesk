@@ -22,8 +22,8 @@ const AdminCallReports = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [dateRange, setDateRange] = useState({
-        startDate: new Date().toISOString().split('T')[0],
-        endDate: new Date().toISOString().split('T')[0]
+        startDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD in local time
+        endDate: new Date().toLocaleDateString('en-CA')
     });
 
     useEffect(() => {
@@ -33,6 +33,18 @@ const AdminCallReports = () => {
     const handleRefresh = () => {
         dispatch(getCallStats(dateRange));
     };
+
+    // Auto-sync drill-down data when stats update
+    useEffect(() => {
+        if (selectedEmployee) {
+            const updated = metricsArray.find(m => m.empId === selectedEmployee.empId);
+            if (updated) {
+                setSelectedEmployee(updated);
+            } else {
+                setSelectedEmployee(null);
+            }
+        }
+    }, [callStats]);
 
     // Data Processing
     const employeeMetrics = callStats.reduce((acc, log) => {
@@ -341,87 +353,102 @@ const AdminCallReports = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                         {/* Profile & Pie Chart */}
                         <div className="lg:col-span-4 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-2xl flex flex-col items-center">
-                            <div className="w-24 h-24 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-3xl font-black mb-4 shadow-xl shadow-blue-200">
+                            <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black mb-4 shadow-xl shadow-blue-200">
                                 {selectedEmployee.name.charAt(0)}
                             </div>
-                            <h2 className="text-2xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
+                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
                             <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
 
-                            <div className="h-[250px] w-full mt-4">
-                                <ResponsiveContainer width="100%" height="100%">
-                                    <PieChart>
-                                        <Pie
-                                            data={getPieData(selectedEmployee)}
-                                            cx="50%" cy="50%"
-                                            innerRadius={60} outerRadius={80}
-                                            paddingAngle={5}
-                                            dataKey="value"
-                                        >
-                                            {getPieData(selectedEmployee).map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                        />
-                                        <Legend verticalAlign="bottom" iconType="circle" />
-                                    </PieChart>
-                                </ResponsiveContainer>
+                            <div className="w-full space-y-4">
+                                <div className="h-[250px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <PieChart>
+                                            <Pie
+                                                data={getPieData(selectedEmployee)}
+                                                cx="50%" cy="50%"
+                                                innerRadius={60} outerRadius={80}
+                                                paddingAngle={5}
+                                                dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {getPieData(selectedEmployee).map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                            />
+                                            <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900' }} />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                </div>
                             </div>
                         </div>
 
-                        {/* Recent Activity Log */}
-                        <div className="lg:col-span-8 bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl overflow-hidden flex flex-col">
-                            <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                                <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-3">
-                                    <Activity className="text-blue-500" size={16} /> Raw Log Transmission
-                                </h3>
-                                <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                    Total Records: {selectedEmployee.logs.length}
-                                </div>
+                        {/* Analysis Metrics Grid */}
+                        <div className="lg:col-span-8 space-y-8">
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                <MetricBox label="Identified" value={selectedEmployee.totalCalls} color="blue" icon={Hash} />
+                                <MetricBox label="Incoming" value={selectedEmployee.incoming} color="emerald" icon={PhoneIncoming} />
+                                <MetricBox label="Outgoing" value={selectedEmployee.outgoing} color="sky" icon={PhoneOutgoing} />
+                                <MetricBox label="Missed" value={selectedEmployee.missed} color="rose" icon={PhoneMissed} />
+                                <MetricBox label="Unique Leads" value={new Set(selectedEmployee.logs.map(l => l.number)).size} color="indigo" icon={User} />
+                                <MetricBox label="Session Time" value={formatDuration(selectedEmployee.duration)} color="fuchsia" icon={Clock} />
                             </div>
-                            <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                                <table className="w-full text-left">
-                                    <thead className="bg-slate-50/50 sticky top-0 z-10">
-                                        <tr>
-                                            <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descriptor</th>
-                                            <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identifier</th>
-                                            <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
-                                            <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-50">
-                                        {selectedEmployee.logs.sort((a, b) => b.date - a.date).map((call, idx) => (
-                                            <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-8 py-4">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                            {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
-                                                        </div>
-                                                        <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-4 px-8 py-4">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-black text-slate-800">{call.number}</span>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-4">
-                                                    <div className="flex flex-col">
-                                                        <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
-                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-8 py-4 text-right">
-                                                    <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                                        {call.duration}s
-                                                    </span>
-                                                </td>
+
+                            {/* Recent Activity Log */}
+                            <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl overflow-hidden flex flex-col">
+                                <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                                    <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-3">
+                                        <Activity className="text-blue-500" size={16} /> Raw Log Transmission
+                                    </h3>
+                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                        Total Records: {selectedEmployee.logs.length}
+                                    </div>
+                                </div>
+                                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                                    <table className="w-full text-left">
+                                        <thead className="bg-slate-50/50 sticky top-0 z-10">
+                                            <tr>
+                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descriptor</th>
+                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identifier</th>
+                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
+                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody className="divide-y divide-slate-50">
+                                            {selectedEmployee.logs.sort((a, b) => b.date - a.date).map((call, idx) => (
+                                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                    <td className="px-8 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
+                                                            </div>
+                                                            <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-4 px-8 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-sm font-black text-slate-800">{call.number}</span>
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-4">
+                                                        <div className="flex flex-col">
+                                                            <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
+                                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-8 py-4 text-right">
+                                                        <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                            {call.duration}s
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     </div>
