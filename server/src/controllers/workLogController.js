@@ -455,6 +455,42 @@ const syncCallLogs = async (req, res) => {
     }
 };
 
+// @desc    Get my individual call logs (CRE)
+// @route   GET /api/worklogs/my-calls
+// @access  Private (CRE)
+const getMyCallLogs = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { startDate, endDate } = req.query;
+
+        let start, end;
+        if (startDate && endDate) {
+            start = new Date(startDate);
+            end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            start = getCycleStartDateIST();
+            end = getCycleEndDateIST();
+        }
+
+        const logs = await prisma.callLog.findMany({
+            where: {
+                userId,
+                date: {
+                    gte: start,
+                    lte: end
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        res.json(logs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Get all call stats for Admin
 // @route   GET /api/worklogs/call-stats
 // @access  Private (Admin)
@@ -493,4 +529,4 @@ const getAllCallStats = async (req, res) => {
     }
 };
 
-module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, addProjectReport, syncCallLogs, getAllCallStats };
+module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, addProjectReport, syncCallLogs, getMyCallLogs, getAllCallStats };

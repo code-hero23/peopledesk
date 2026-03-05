@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { getMyWorkLogs, syncCallLogs } from '../../features/employee/employeeSlice';
+import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
 import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
@@ -16,7 +16,7 @@ const CallLog = getCallLogPlugin();
 
 const CRECallReports = () => {
     const dispatch = useDispatch();
-    const { workLogs, isLoading } = useSelector((state) => state.employee);
+    const { callLogs, workLogs, isLoading } = useSelector((state) => state.employee);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('ALL');
     const [simFilter, setSimFilter] = useState('ALL');
@@ -27,7 +27,8 @@ const CRECallReports = () => {
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
     useEffect(() => {
-        dispatch(getMyWorkLogs());
+        dispatch(getMyCallLogs());
+
         if (Capacitor.isNativePlatform()) {
             handleAutomatedSync();
         }
@@ -41,7 +42,7 @@ const CRECallReports = () => {
                 const res = await dispatch(syncCallLogs(result.logs));
                 if (!res.error) {
                     setLastSyncTime(new Date());
-                    dispatch(getMyWorkLogs());
+                    dispatch(getMyCallLogs());
                 }
             }
         } catch (error) {
@@ -65,11 +66,11 @@ const CRECallReports = () => {
         );
     };
 
-    // Extract & Merge
-    const allSyncedCalls = workLogs
-        .filter(log => log.cre_synced_calls && Array.isArray(log.cre_synced_calls))
+    // Extract & Merge from Decoupled State
+    const allSyncedCalls = (callLogs || [])
+        .filter(log => log.calls && Array.isArray(log.calls))
         .flatMap(log => {
-            return log.cre_synced_calls.map(call => ({
+            return log.calls.map(call => ({
                 ...call,
                 workLogDate: log.date,
             }));
@@ -110,7 +111,7 @@ const CRECallReports = () => {
         return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
 
-    if (isLoading && workLogs.length === 0) {
+    if (isLoading && allSyncedCalls.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[500px] space-y-6">
                 <div className="relative">

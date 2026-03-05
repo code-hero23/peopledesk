@@ -6,6 +6,7 @@ const {
     closeWorkLog,
     addProjectReport,
     syncCallLogs,
+    getMyCallLogs,
     getAllCallStats
 } = require('../controllers/workLogController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
@@ -16,6 +17,7 @@ router.post('/', protect, upload.array('ae_photos', 5), createWorkLog);
 router.put('/close', protect, upload.array('ae_photos', 5), closeWorkLog);
 router.put('/project-report', protect, upload.array('ae_photos', 5), addProjectReport);
 router.put('/sync-calls', protect, syncCallLogs);
+router.get('/my-calls', protect, getMyCallLogs);
 router.get('/call-stats', protect, authorize(['ADMIN', 'HR']), getAllCallStats); // Admin/HR endpoint
 router.get('/', protect, getMyWorkLogs);
 

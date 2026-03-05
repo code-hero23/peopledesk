@@ -7,6 +7,7 @@ const initialState = {
     attendance: null,
     attendanceHistory: [],
     workLogs: [],
+    callLogs: [], // New state for decoupled Call Logs
     requests: { leaves: [], permissions: [], siteVisits: [], showroomVisits: [], wfh: [] },
     businessHeads: [],
     isLoading: false,
@@ -470,6 +471,30 @@ export const syncCallLogs = createAsyncThunk(
     }
 );
 
+// Get My Call Logs (CRE)
+export const getMyCallLogs = createAsyncThunk(
+    'employee/getMyCallLogs',
+    async (params, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${token}`,
+                },
+                params: params || {}
+            };
+            const response = await axios.get(API_URL + 'worklogs/my-calls', config);
+            return response.data;
+        } catch (error) {
+            const message =
+                (error.response && error.response.data && error.response.data.message) ||
+                error.message ||
+                error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 export const employeeSlice = createSlice({
     name: 'employee',
     initialState,
@@ -774,14 +799,29 @@ export const employeeSlice = createSlice({
             .addCase(syncCallLogs.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.isSuccess = true;
-                // Find existing log and update synced calls
-                const index = state.workLogs.findIndex(log => log.id === action.payload.id);
+
+                // Update the decoupled callLogs state instead of workLogs
+                const index = state.callLogs.findIndex(log => log.id === action.payload.id);
                 if (index !== -1) {
-                    state.workLogs[index] = action.payload;
+                    state.callLogs[index] = action.payload;
+                } else {
+                    state.callLogs.unshift(action.payload);
                 }
-                state.todayLog = action.payload;
             })
             .addCase(syncCallLogs.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Get My Call Logs
+            .addCase(getMyCallLogs.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getMyCallLogs.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.callLogs = action.payload;
+            })
+            .addCase(getMyCallLogs.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;
