@@ -28,6 +28,7 @@ import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
 
 import { getDeviceType } from '../../utils/deviceUtils';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Building2 } from 'lucide-react';
 
 // ─── Helper: Request browser notification permission ───────────────────────────
 const requestNotifPermission = async () => {
