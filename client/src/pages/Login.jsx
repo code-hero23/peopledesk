@@ -44,7 +44,8 @@ function Login() {
 
     const onSubmit = (e) => {
         e.preventDefault();
-        dispatch(login({ email, password }));
+        const normalizedEmail = email.toLowerCase().trim();
+        dispatch(login({ email: normalizedEmail, password }));
     };
 
     const handleWhatsAppClick = () => {

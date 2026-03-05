@@ -178,7 +178,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
                         <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
                         <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
-                        {['ADMIN', 'HR'].includes(user?.role) && (
+                        {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                             <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
                         )}
 

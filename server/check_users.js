@@ -1,21 +1,22 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-async function checkUsers() {
-    try {
-        const cres = await prisma.user.findMany({
-            where: {
-                designation: 'CRE'
-            }
-        });
-        console.log('CRE Users found:', cres.length);
-        cres.forEach(u => console.log(`ID: ${u.id}, Name: ${u.name}, Designation: ${u.designation}, Role: ${u.role}`));
+async function main() {
+    const users = await prisma.user.findMany({
+        select: {
+            id: true,
+            email: true,
+            role: true,
+            password: true // Just check if it's there
+        }
+    });
 
-    } catch (error) {
-        console.error('Error:', error);
-    } finally {
-        await prisma.$disconnect();
-    }
+    console.log(`Total users: ${users.length}`);
+    users.forEach(u => {
+        console.log(`- ${u.email} (${u.role}) | Password set: ${!!u.password}`);
+    });
 }
 
-checkUsers();
+main()
+    .catch(e => console.error(e))
+    .finally(() => prisma.$disconnect());

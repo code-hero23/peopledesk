@@ -10,7 +10,10 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 // @route   POST /api/auth/login
 // @access  Public
 const loginUser = async (req, res) => {
-    const { email, password } = req.body;
+    const email = req.body.email ? req.body.email.toLowerCase().trim() : '';
+    const { password } = req.body;
+
+    console.log(`Login attempt for: ${email}`);
 
     try {
         const user = await prisma.user.findUnique({

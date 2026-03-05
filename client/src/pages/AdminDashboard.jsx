@@ -1,10 +1,10 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getAllEmployees, getPendingRequests, getDailyAttendance, reset } from '../features/admin/adminSlice';
+import { getAllEmployees, getPendingRequests, getDailyAttendance, getDailyWorkLogs, reset } from '../features/admin/adminSlice';
 import StatCard from '../components/StatCard';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, ClipboardList, BarChart2, Calendar, Building2, FileText, CheckCircle, UserX, Clock, Home } from 'lucide-react';
+import { Users, ClipboardList, BarChart2, Calendar, Building2, FileText, CheckCircle, UserX, Clock, Home, Phone, MapPin } from 'lucide-react';
 import axios from 'axios';
 import { formatDate } from '../utils/dateUtils';
 
@@ -14,13 +14,45 @@ const AdminDashboard = () => {
     const { employees, pendingRequests, dailyAttendance, isLoading } = useSelector((state) => state.admin);
     const { user } = useSelector((state) => state.auth);
 
+    const [searchTerm, setSearchTerm] = useState('');
+    const [siteVisits, setSiteVisits] = useState([]);
+    const [showroomHistory, setShowroomHistory] = useState([]);
+    const [isReportsLoading, setIsReportsLoading] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Added selectedDate state
+
+    useEffect(() => {
+        const fetchDashboardData = async () => {
+            if (!user?.token) return;
+            setIsReportsLoading(true);
+            try {
+                const today = new Date().toISOString().split('T')[0];
+                const [siteRes, showroomRes] = await Promise.all([
+                    axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/requests/history?type=SITE_VISIT&startDate=${today}`, {
+                        headers: { Authorization: `Bearer ${user.token}` }
+                    }),
+                    axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/requests/history?type=SHOWROOM_VISIT&startDate=${today}`, {
+                        headers: { Authorization: `Bearer ${user.token}` }
+                    })
+                ]);
+                setSiteVisits(siteRes.data.filter(v => v.status === 'APPROVED'));
+                setShowroomHistory(showroomRes.data.filter(v => v.status === 'APPROVED'));
+            } catch (error) {
+                console.error("Dashboard list fetch failed:", error);
+            } finally {
+                setIsReportsLoading(false);
+            }
+        };
+        fetchDashboardData();
+    }, [user?.token]); // Removed dispatch from dependencies as it's not used here
+
     useEffect(() => {
         dispatch(getAllEmployees());
-        dispatch(getPendingRequests());
-        dispatch(getDailyAttendance());
+        dispatch(getDailyAttendance(selectedDate));
+        dispatch(getDailyWorkLogs({ date: selectedDate }));
+        dispatch(getPendingRequests(selectedDate));
 
         return () => { dispatch(reset()); };
-    }, [dispatch]);
+    }, [dispatch, selectedDate]);
 
     // IDs of employees to include (exclude admin, business head, HR, AE manager)
     const includedEmployeeIds = employees
@@ -116,11 +148,11 @@ const AdminDashboard = () => {
             roles: ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'],
         },
         {
-            to: '/admin/analytics',
-            icon: <BarChart2 size={24} />,
-            label: 'Analytics',
-            desc: 'Deep-dive into team performance metrics.',
-            color: 'from-pink-500 to-rose-600',
+            to: '/admin/call-reports',
+            icon: <Phone size={24} />,
+            label: 'Call Analytics',
+            desc: 'Monitor CRE call performance and metrics.',
+            color: 'from-blue-600 to-cyan-500',
             roles: ['ADMIN', 'BUSINESS_HEAD', 'HR'],
         },
     ].filter(link => link.roles.includes(user?.role));
@@ -254,112 +286,101 @@ const AdminDashboard = () => {
                             </h3>
                             <Link to="/admin/attendance" className="text-xs font-bold text-blue-500 hover:underline">Full Report →</Link>
                         </div>
-                        <div className="p-5 space-y-4">
-                            {/* Ratio bar */}
-                            <div>
-                                <div className="flex justify-between text-xs font-bold mb-1.5">
-                                    <span className="text-teal-600">✅ Present — {todayPresentCount}</span>
-                                    <span className="text-red-500">🚫 Absent — {todayAbsentCount}</span>
-                                </div>
-                                <div className="w-full h-3 bg-slate-100 rounded-full overflow-hidden flex">
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${actualEmployeeCount > 0 ? (todayPresentCount / actualEmployeeCount) * 100 : 0}%` }}
-                                        transition={{ duration: 1, ease: 'easeOut' }}
-                                        className="h-full bg-gradient-to-r from-teal-400 to-emerald-500 rounded-l-full"
-                                    />
-                                    <motion.div
-                                        initial={{ width: 0 }}
-                                        animate={{ width: `${actualEmployeeCount > 0 ? (todayAbsentCount / actualEmployeeCount) * 100 : 0}%` }}
-                                        transition={{ duration: 1, ease: 'easeOut', delay: 0.1 }}
-                                        className="h-full bg-gradient-to-r from-red-400 to-rose-500"
-                                    />
-                                </div>
-                                <p className="text-[11px] text-slate-400 mt-1 text-right">{actualEmployeeCount} total employees</p>
-                            </div>
-                            {/* Absent list */}
-                            {todayAbsentCount > 0 && (
+                        <div className="p-5 space-y-6">
+                            {/* Absent list - This is the "absent showing as list" the user mentioned keeping as a reference style */}
+                            {todayAbsentCount > 0 ? (
                                 <div>
-                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Absent Today</p>
-                                    <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                                    <div className="flex justify-between items-center mb-3">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Absent Today</p>
+                                        <span className="text-[10px] font-black bg-red-50 text-red-600 px-2 py-0.5 rounded-full border border-red-100 uppercase">
+                                            {todayAbsentCount} Total
+                                        </span>
+                                    </div>
+                                    <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
                                         {dailyAttendance.filter(a => a.status === 'ABSENT').map(att => (
-                                            <div key={att.user.id} className="flex items-center gap-2.5 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
-                                                <div className="w-7 h-7 rounded-full bg-red-200 flex items-center justify-center text-red-700 text-xs font-black flex-shrink-0">
+                                            <div key={att.user.id} className="flex items-center gap-2.5 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 hover:bg-white hover:shadow-sm transition-all duration-300">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 text-xs font-black flex-shrink-0">
                                                     {att.user.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
                                                     <p className="text-xs font-bold text-slate-800 truncate leading-none">{att.user.name}</p>
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">{att.user.designation || '—'}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">{att.user.designation || 'Employee'}</p>
                                                 </div>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
-                            )}
-                            {todayAbsentCount === 0 && !isLoading && (
-                                <p className="text-sm text-teal-600 font-bold text-center py-2">🎉 Full attendance today!</p>
+                            ) : (
+                                <div className="p-10 text-center">
+                                    <p className="text-[10px] text-teal-500 font-black uppercase tracking-[0.2em]">Full Attendance Reached</p>
+                                </div>
                             )}
                         </div>
                     </div>
 
-                    {/* Right: Approval Inbox */}
-                    {user?.role !== 'ADMIN' && (
+                    {/* Middle: Visit Lists */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:col-span-2">
+                        {/* Site Visits List */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center">
+                            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
-                                    <Clock size={15} className="text-amber-500" /> Approval Inbox
+                                    <Building2 size={15} className="text-indigo-500" /> Today's Site Visits
                                 </h3>
-                                <Link to="/admin/approvals" className="text-xs font-bold text-blue-500 hover:underline">Manage →</Link>
+                                <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100 uppercase">
+                                    {siteVisits.length} Active
+                                </span>
                             </div>
-                            <div className="divide-y divide-slate-100">
-                                {[
-                                    { label: 'Leave Requests', count: pendingLeavesCount, icon: '🗓️', color: 'bg-orange-50 text-orange-700 border-orange-100', to: '/admin/approvals' },
-                                    { label: 'Permissions', count: pendingPermissionsCount, icon: '🕑', color: 'bg-violet-50 text-violet-700 border-violet-100', to: '/admin/approvals' },
-                                    { label: 'WFH Requests', count: pendingWfhCount, icon: '🏠', color: 'bg-indigo-50 text-indigo-700 border-indigo-100', to: '/admin/wfh' },
-                                ].map(item => (
-                                    <Link key={item.label} to={item.to} className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xl">{item.icon}</span>
-                                            <span className="text-sm font-semibold text-slate-700">{item.label}</span>
+                            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                                {siteVisits.length > 0 ? siteVisits.map((visit, idx) => (
+                                    <div key={idx} className="px-5 py-3 hover:bg-slate-50 transition-colors">
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <span className="text-xs font-bold text-slate-800">{visit.user?.name}</span>
+                                            <span className="text-[10px] font-bold text-slate-400">{visit.startTime} - {visit.endTime}</span>
                                         </div>
-                                        <span className={`text-xs font-black px-2.5 py-1 rounded-full border ${item.color} ${item.count === 0 ? 'opacity-40' : ''}`}>
-                                            {item.count === 0 ? 'All clear' : `${item.count} pending`}
-                                        </span>
-                                    </Link>
-                                ))}
+                                        <p className="text-[10px] text-slate-500 font-semibold truncate flex items-center gap-1">
+                                            <MapPin size={10} /> {visit.projectName || visit.location}
+                                        </p>
+                                    </div>
+                                )) : (
+                                    <div className="p-10 text-center">
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No Site Visits</p>
+                                    </div>
+                                )}
                             </div>
-                            {totalPendingCount === 0 && pendingWfhCount === 0 && (
-                                <p className="text-sm text-slate-400 italic text-center py-4">No pending requests 🎉</p>
-                            )}
                         </div>
-                    )}
 
-                    {/* Right: Active Users breakdown for ADMIN role */}
-                    {user?.role === 'ADMIN' && (
+                        {/* Showroom History List */}
                         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100">
+                            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                                 <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
-                                    <Users size={15} className="text-blue-500" /> Employee Status Breakdown
+                                    <Home size={15} className="text-emerald-500" /> Showroom History
                                 </h3>
+                                <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100 uppercase">
+                                    Today
+                                </span>
                             </div>
-                            <div className="divide-y divide-slate-100">
-                                {[
-                                    { label: 'Active Employees', count: employees.filter(e => e.status === 'ACTIVE').length, icon: '🟢', color: 'bg-emerald-50 text-emerald-700 border-emerald-100', to: '/admin/employees' },
-                                    { label: 'Blocked Employees', count: employees.filter(e => e.status === 'BLOCKED').length, icon: '🔴', color: 'bg-red-50 text-red-700 border-red-100', to: '/admin/employees' },
-                                ].map(item => (
-                                    <Link key={item.label} to={item.to} className="flex items-center justify-between px-5 py-3.5 hover:bg-slate-50 transition-colors">
-                                        <div className="flex items-center gap-3">
-                                            <span className="text-xl">{item.icon}</span>
-                                            <span className="text-sm font-semibold text-slate-700">{item.label}</span>
+                            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                                {showroomHistory.length > 0 ? showroomHistory.map((visit, idx) => (
+                                    <div key={idx} className="px-5 py-3 hover:bg-slate-50 transition-colors">
+                                        <div className="flex justify-between items-start mb-0.5">
+                                            <span className="text-xs font-bold text-slate-800">{visit.user?.name}</span>
+                                            <span className="text-[10px] font-bold text-slate-400">
+                                                {new Date(visit.date).toLocaleDateString()}
+                                            </span>
                                         </div>
-                                        <span className={`text-xs font-black px-2.5 py-1 rounded-full border ${item.color}`}>
-                                            {item.count}
-                                        </span>
-                                    </Link>
-                                ))}
+                                        <p className="text-[10px] text-slate-500 font-semibold truncate flex items-center gap-1">
+                                            <Building2 size={10} /> {visit.showroomName}
+                                        </p>
+                                    </div>
+                                )) : (
+                                    <div className="p-10 text-center">
+                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">No Showroom History</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
-                    )}
+                    </div>
+
                 </motion.div>
             )}
 

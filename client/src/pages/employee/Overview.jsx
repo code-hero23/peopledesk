@@ -163,10 +163,24 @@ const Overview = () => {
         // Exempt AE (Area Engineers) from this restriction
         if (user?.designation === 'AE') return;
 
-        const checkInTime = new Date(checkInTimeRaw);
-        const hours = checkInTime.getHours();
-        const minutes = checkInTime.getMinutes();
+        const now = new Date();
+        const hours = now.getHours();
+        const minutes = now.getMinutes();
         const totalMinutes = hours * 60 + minutes;
+
+        // If login is after 2:00 PM (14:00)
+        if (totalMinutes >= 840) {
+            setIsMandatoryPermission(true);
+            setPendingPermissionCount(1);
+            // Force Half-Day Leave request instead of Permission
+            // We set requestType which the PermissionRequestModal should respect
+            toast.info("Late login detected. Please submit a half-day leave request.");
+            return;
+        }
+        const checkInTime = new Date(checkInTimeRaw);
+        // const hours = checkInTime.getHours(); // This line is now redundant due to 'now'
+        // const minutes = checkInTime.getMinutes(); // This line is now redundant due to 'now'
+        // const totalMinutes = hours * 60 + minutes; // This line is now redundant due to 'now'
 
         const todayLocal = checkInTime.toLocaleDateString('en-CA');
 
@@ -245,122 +259,51 @@ const Overview = () => {
         }
     }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests]);
 
-    const executeAttendanceAction = (actionName, isSiteLogin = false) => {
-        const deviceInfo = navigator.userAgent;
-        const deviceType = getDeviceType();
-        const formData = new FormData();
-        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
-
-        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
-            // Check-Out Logic
-            if (user?.designation === 'AE') {
-                setIsCheckingOut(true);
-                setShowCheckInModal(true);
-            } else {
-                dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
-            }
-        } else {
-            // Check-In Logic
-            if (user?.designation === 'AE') {
-                setIsCheckingOut(false);
-                setShowCheckInModal(true);
-            } else {
-                dispatch(markAttendance(formData)).then((res) => {
-                    if (!res.error) {
-                        dispatch(getAttendanceStatus());
-
-                        const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
-
-                        // If WFH is enabled for this employee, force redirection to WFH form
-                        if (user?.wfhViewEnabled) {
-                            navigate('/dashboard/wfh');
-                            return;
-                        }
-                        // Auto-redirect if late
-                        checkLatenessAndRedirect(checkInDate, true);
-                    } else {
-                        alert(res.payload || "Check-in failed. You might be already checked in.");
-                    }
-                });
-            }
+    const handleMarkAttendance = async (isSiteLogin = false) => {
+        try {
+            await executeAttendanceAction(isSiteLogin);
+        } catch (error) {
+            console.error(error);
         }
     };
 
-    const handleMarkAttendance = (isSiteLogin = false) => {
-        if (isMobile && user?.designation !== 'AE') {
-            alert('Mobile sign-in is restricted to AE. Please use a Desktop.');
+    const executeAttendanceAction = async (isSiteLogin = false) => {
+        if (!location) {
+            toast.error('Location access is required for attendance.');
             return;
         }
 
-        // Determine action name for confirmation
-        let actionName = 'Log In';
-        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
-            actionName = user?.designation === 'AE' ? 'Check Out' : 'Log Out';
-        } else {
-            actionName = (user?.designation === 'AE' || isSiteLogin) ? 'Check In' : 'Log In';
+        setIsCheckingAttendance(true);
+        try {
+            const formData = new FormData();
+            formData.append('latitude', location.latitude);
+            formData.append('longitude', location.longitude);
+            if (photo) {
+                const blob = await fetch(photo).then((res) => res.blob());
+                formData.append('photo', blob, 'attendance.jpg');
+            }
+
+            const res = await axios.post(`${API_URL}attendance/mark`, formData, {
+                headers: {
+                    Authorization: `Bearer ${user.token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+
+            toast.success(res.data.status === 'PRESENT' ? 'Check-in successful' : 'Check-out successful');
+            dispatch(getAttendanceStatus());
+
+            // Mandatory Redirection for Site Login
+            if (isSiteLogin && res.data.status === 'PRESENT') {
+                setIsMandatorySiteVisit(true);
+                setActiveModal('site-visit');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Attendance action failed');
+        } finally {
+            setIsCheckingAttendance(false);
+            setPhoto(null);
         }
-
-        const isLogin = ['Log In', 'Check In'].includes(actionName);
-        const isAE = user?.designation === 'AE';
-
-        let message;
-        if (isAE && isLogin) {
-            message = (
-                <div className="mt-2 text-left">
-                    <p className="text-slate-600 font-bold mb-4">Before you continue, please confirm:</p>
-                    <ul className="space-y-3 text-slate-700 text-sm bg-slate-50 p-4 rounded-xl border border-slate-100">
-                        <li className="flex items-start gap-3">
-                            <span className="text-emerald-500 font-bold">✔</span>
-                            <span>You are present at the project site</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <span className="text-emerald-500 font-bold">✔</span>
-                            <span>Your work session is starting now</span>
-                        </li>
-                        <li className="flex items-start gap-3">
-                            <span className="text-emerald-500 font-bold">✔</span>
-                            <span>You are ready to begin your assigned site tasks</span>
-                        </li>
-                    </ul>
-                    <p className="text-xs text-slate-400 mt-4 italic">
-                        By clicking Start, you confirm that you are officially starting your site work.
-                    </p>
-                </div>
-            );
-        } else if (isLogin) {
-            message = (
-                <div className="mt-2 text-center">
-                    <p className="text-lg font-bold text-emerald-600 mb-4">
-                        Before you continue, make sure:
-                    </p>
-                    <ul className="space-y-3 text-slate-600 text-base text-left inline-block mx-auto px-4 bg-slate-50 py-3 rounded-xl border border-slate-100">
-                        <li className="flex items-center gap-3">
-                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                                <span className="font-bold text-sm">✓</span>
-                            </div>
-                            <span className="font-medium">You are using a Desktop / Laptop</span>
-                        </li>
-                        <li className="flex items-center gap-3">
-                            <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 flex-shrink-0">
-                                <span className="font-bold text-sm">✓</span>
-                            </div>
-                            <span className="font-medium">Your work session is starting now</span>
-                        </li>
-                    </ul>
-                </div>
-            );
-        } else {
-            message = `Are you sure you want to ${actionName}? This will record your ${actionName.toLowerCase()} time.`;
-        }
-
-        setConfirmationConfig({
-            isOpen: true,
-            title: isAE && isLogin ? 'Start Work Confirmation' : (isLogin ? 'Start Work Confirmation' : `Confirm ${actionName}`),
-            message: message,
-            type: isLogin ? 'info' : 'warning',
-            confirmText: (isAE || isSiteLogin) && isLogin ? (isSiteLogin ? 'Start Site Session' : 'Start Work') : `Yes, ${actionName}`,
-            onConfirm: () => executeAttendanceAction(actionName, isSiteLogin)
-        });
     };
 
     const handlePhotoCheckIn = (photoFile) => {
@@ -580,6 +523,28 @@ const Overview = () => {
             </motion.div>
 
             {/* ── Main Grid ──────────────────────────────────────────────────── */}
+            {/* Site Sign-In (Mobile/Employee Specific) - Forces Site Visit Form */}
+            {user?.role === 'EMPLOYEE' && (
+                <motion.div
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => handleMarkAttendance(true)}
+                    className="p-6 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-xl cursor-pointer relative overflow-hidden group"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
+                    <div className="relative z-10 flex items-center justify-between">
+                        <div>
+                            <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">Mobile Optimized</p>
+                            <h3 className="text-2xl font-black tracking-tight">Site Sign-In</h3>
+                            <p className="text-indigo-100/80 text-xs font-bold mt-1 max-w-[150px]">Automatic site visit form submission.</p>
+                        </div>
+                        <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
+                            <Building2 size={24} />
+                        </div>
+                    </div>
+                </motion.div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                 {/* ── Attendance Card (My Status) ──────────────────────── */}
@@ -629,7 +594,7 @@ const Overview = () => {
                                             <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
                                                 className="flex items-center gap-3 bg-amber-400/20 backdrop-blur-sm border border-amber-400/30 rounded-2xl p-4">
                                                 <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center text-xl shadow-inner">
-                                                    {activeBreak.breakType === 'TEA' ? '�' : activeBreak.breakType === 'LUNCH' ? '🍱' : '�'}
+                                                    {activeBreak.breakType === 'TEA' ? '☕' : activeBreak.breakType === 'LUNCH' ? '🍱' : '💡'}
                                                 </div>
                                                 <div>
                                                     <p className="text-amber-200/70 text-[10px] font-black uppercase tracking-widest">Ongoing Break</p>

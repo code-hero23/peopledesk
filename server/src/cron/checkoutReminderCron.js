@@ -1,88 +1,82 @@
 const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
-const { sendEmail } = require('../utils/emailService');
-const { getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
 const prisma = new PrismaClient();
+const { getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
+const { sendEmail } = require('../utils/emailService');
 
 const initCheckoutReminderCron = () => {
-    // Run every day at 23:30 (11:30 PM)
+    // @desc    Reminder to Checkout (Daily at 11:30 PM IST)
+    // Runs at 23:30 (11:30 PM) for users who haven't checked out
     cron.schedule('30 23 * * *', async () => {
-        console.log('--------------------------------');
-        console.log('Running 11:30 PM Checkout Reminder Cron Job');
-        console.log(new Date().toLocaleString());
+        console.log('CRON: Running Checkout Reminder Job [11:30 PM IST]...');
 
         try {
-            // Get start and end of today in IST
-            const startOfDay = getStartOfDayIST();
-            const endOfDay = getEndOfDayIST();
+            const start = getStartOfDayIST();
+            const end = getEndOfDayIST();
 
-            // Fetch attendance records from today where checkoutTime is null
-            const incompleteAttendances = await prisma.attendance.findMany({
+            console.log(`CRON: Checking attendance range: ${start.toISOString()} - ${end.toISOString()}`);
+
+            const incompleteAttendance = await prisma.attendance.findMany({
                 where: {
-                    date: { gte: startOfDay, lte: endOfDay },
-                    checkoutTime: null
+                    date: {
+                        gte: start,
+                        lte: end,
+                    },
+                    checkoutTime: null,
+                    status: 'PRESENT',
                 },
                 include: {
-                    user: {
-                        select: { id: true, name: true, email: true, status: true }
-                    }
-                }
+                    user: true,
+                },
             });
 
-            if (incompleteAttendances.length === 0) {
-                console.log('All employees have checked out today. No emails to send.');
-                return;
-            }
+            console.log(`CRON: Found ${incompleteAttendance.length} users who haven't checked out.`);
 
-            console.log(`Found ${incompleteAttendances.length} employees who haven't checked out.`);
+            for (const record of incompleteAttendance) {
+                const user = record.user;
+                if (!user.email) {
+                    console.log(`CRON: Skipping user ${user.name} - No email configured.`);
+                    continue;
+                }
 
-            let emailsSent = 0;
-            for (const record of incompleteAttendances) {
-                // Ensure user status is active and email exists
-                if (record.user && record.user.status === 'ACTIVE' && record.user.email) {
+                const mailContent = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; margin: 0 auto; line-height: 1.6;">
+                    <h2 style="color: #dc2626; border-bottom: 2px solid #fee2e2; padding-bottom: 10px;">Logout Warning!</h2>
+                    <p>Hi <strong>${user.name}</strong>,</p>
+                    <p>Our records show that you have not checked out for today (<strong>${new Date().toLocaleDateString('en-IN')}</strong>).</p>
+                    <p>Please log in to the PeopleDesk portal and mark your check-out to avoid attendance discrepancies.</p>
+                    <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
+                    <p style="font-size: 12px; color: #777;">This is an automated reminder. If you have already checked out, please ignore this email.</p>
+                </div>
+            `;
 
-                    const emailBody = `
-                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; line-height: 1.6;">
-                            <h2 style="color: #dc2626; border-bottom: 2px solid #fee2e2; padding-bottom: 10px;">Action Required: Logout Not Recorded</h2>
-                            <p>Hello <b>${record.user.name}</b>,</p>
-                            
-                            <p>Today, it has been noticed that your logout was not properly recorded in PeopleDesk.</p>
-                            
-                            <p>Please note that regular login and logout are mandatory for attendance and salary processing. Missing logout entries may lead to salary deduction as per company policy.</p>
-                            
-                            <p>Kindly ensure proper logout in PeopleDesk every day by <b>11:59 PM</b> to avoid such issues in the future. If you are still working, you may ignore this message until your shift ends.</p>
-                            
-                            <p>If you believe this is an error or require any clarification, please contact the HR team immediately.</p>
-                            
-                            <p>Thank you for your cooperation.</p>
-                            
-                            <br/>
-                            <p style="margin-bottom: 0;">Regards,</p>
-                            <p style="margin-top: 0; font-weight: bold; color: #1e3a8a;">HR Team<br/>Cookscape</p>
-                        </div>
-                    `;
+                try {
+                    const emailSent = await sendEmail(
+                        user.email,
+                        'Action Required: Daily Logout Reminder',
+                        mailContent
+                    );
 
-                    // Send the email
-                    const success = await sendEmail({
-                        to: record.user.email,
-                        subject: 'Action Required: Logout Not Recorded Today in PeopleDesk',
-                        html: emailBody
-                    });
-
-                    if (success) {
-                        emailsSent++;
+                    if (emailSent) {
+                        console.log(`CRON: Email sent successfully to ${user.email} (${user.name})`);
+                    } else {
+                        console.error(`CRON: Failed to send email to ${user.email} - sendEmail returned false.`);
                     }
+                } catch (emailError) {
+                    console.error(`CRON: SMTP Error for ${user.email}:`, emailError.message);
                 }
             }
 
-            console.log(`Successfully sent ${emailsSent} reminder emails.`);
-
+            console.log('CRON: Checkout Reminder Job completed.');
         } catch (error) {
-            console.error('Error in Checkout Reminder Cron:', error);
+            console.error('CRON FATAL: Error in checkoutReminderCron:', error.message);
         }
+    }, {
+        scheduled: true,
+        timezone: "Asia/Kolkata"
     });
 
-    console.log('Checkout Reminder Cron Job Initialized (Runs daily at 11:30 PM)');
+    console.log('Checkout Reminder Cron Job Initialized');
 };
 
 module.exports = initCheckoutReminderCron;
