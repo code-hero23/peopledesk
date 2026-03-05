@@ -10,6 +10,9 @@ import {
     RefreshCw, CheckCircle2, ChevronRight, Activity, Smartphone,
     Zap, Layers, Share2
 } from 'lucide-react';
+import {
+    PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend
+} from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CallLog = getCallLogPlugin();
@@ -99,17 +102,34 @@ const CRECallReports = () => {
             case 'INCOMING': return <PhoneIncoming className="text-emerald-500" size={16} />;
             case 'OUTGOING': return <PhoneOutgoing className="text-blue-500" size={16} />;
             case 'MISSED': return <PhoneMissed className="text-rose-500" size={16} />;
-            case 'REJECTED': return <PhoneMissed className="text-slate-400" size={16} />;
+            case 'REJECTED': return <PhoneMissed className="text-amber-500" size={16} />;
             default: return <Phone className="text-slate-300" size={16} />;
         }
     };
 
     const formatDuration = (seconds) => {
         if (!seconds) return '0s';
-        const mins = Math.floor(seconds / 60);
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
         const secs = seconds % 60;
+        if (hrs > 0) return `${hrs}h ${mins}m`;
         return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
+
+    // Calculate aggregated stats for Pie Chart
+    const stats = {
+        INCOMING: displayLogs.filter(c => c.type === 'INCOMING').length,
+        OUTGOING: displayLogs.filter(c => c.type === 'OUTGOING').length,
+        MISSED: displayLogs.filter(c => c.type === 'MISSED').length,
+        REJECTED: displayLogs.filter(c => c.type === 'REJECTED').length
+    };
+
+    const pieData = [
+        { name: 'Incoming', value: stats.INCOMING, color: '#10b981' }, // emerald-500
+        { name: 'Outgoing', value: stats.OUTGOING, color: '#3b82f6' }, // blue-500
+        { name: 'Missed', value: stats.MISSED, color: '#f43f5e' }, // rose-500
+        { name: 'Rejected', value: stats.REJECTED, color: '#f59e0b' } // amber-500
+    ].filter(d => d.value > 0);
 
     if (isLoading && allSyncedCalls.length === 0) {
         return (
@@ -215,12 +235,59 @@ const CRECallReports = () => {
                 </div>
             </motion.header>
 
-            {/* Live Metrics Grid */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-6">
-                <MetricBox label="Identified Calls" value={displayLogs.length} color="blue" icon={Hash} />
-                <MetricBox label="VoIP Duration" value={formatDuration(displayLogs.reduce((acc, curr) => acc + (curr.duration || 0), 0))} color="emerald" icon={Clock} />
-                <MetricBox label="Unique Leads" value={new Set(displayLogs.map(l => l.number)).size} color="amber" icon={User} />
-                <MetricBox label="Automated Sync" value={lastSyncTime ? lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Pending"} color="purple" icon={RefreshCw} />
+            {/* Premium Analytics Section */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+                {/* Visual Chart Card */}
+                <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                    className="lg:col-span-5 bg-white p-8 rounded-[3.5rem] border border-white shadow-2xl relative overflow-hidden flex flex-col items-center justify-center min-h-[350px]"
+                >
+                    <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50/50 rounded-full blur-3xl -mr-20 -mt-20"></div>
+                    <h3 className="text-slate-800 font-black uppercase text-xs tracking-widest self-start mb-4">Volume Distribution</h3>
+
+                    {pieData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%" cy="50%"
+                                    innerRadius={70} outerRadius={100}
+                                    paddingAngle={5} dataKey="value"
+                                    stroke="none"
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                    ))}
+                                </Pie>
+                                <RechartsTooltip
+                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                    itemStyle={{ fontWeight: 'black' }}
+                                />
+                                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.1em' }} />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="flex flex-col items-center justify-center opacity-50 space-y-4">
+                            <PieChart className="text-slate-300" size={48} />
+                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">No Intelligence Gathered</p>
+                        </div>
+                    )}
+                </motion.div>
+
+                {/* Live Metrics Grid */}
+                <div className="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-4">
+                    <MetricBox label="Total Calls" value={displayLogs.length} color="blue" icon={Hash} subtext="Aggregated volume" />
+                    <MetricBox label="Incoming" value={stats.INCOMING} color="emerald" icon={PhoneIncoming} subtext="Received intelligence" />
+                    <MetricBox label="Outgoing" value={stats.OUTGOING} color="sky" icon={PhoneOutgoing} subtext="Dispatched signals" />
+                    <MetricBox label="Missed" value={stats.MISSED} color="rose" icon={PhoneMissed} subtext="Dropped connections" />
+                    <MetricBox label="Rejected" value={stats.REJECTED} color="amber" icon={PhoneMissed} subtext="Declined handshakes" />
+                    <MetricBox label="Unique Leads" value={new Set(displayLogs.map(l => l.number)).size} color="indigo" icon={User} subtext="Distinct entities" />
+                    <div className="col-span-2 md:col-span-3">
+                        <MetricBox label="Total Talk Time" value={formatDuration(displayLogs.reduce((acc, curr) => acc + (curr.duration || 0), 0))} color="fuchsia" icon={Clock} subtext="Cumulative VoIP Duration" />
+                    </div>
+                </div>
+
             </div>
 
             {/* Smart Data Table */}

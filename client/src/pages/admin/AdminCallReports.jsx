@@ -73,17 +73,53 @@ const AdminCallReports = () => {
         TalkTime: Math.round(m.duration / 60)
     }));
 
+    // Global Stats Aggregation
+    const globalStats = {
+        total: 0,
+        incoming: 0,
+        outgoing: 0,
+        missed: 0,
+        rejected: 0,
+        duration: 0,
+        uniqueNumbers: new Set()
+    };
+
+    callStats.forEach(log => {
+        const calls = log.calls || [];
+        globalStats.total += calls.length;
+        calls.forEach(c => {
+            if (c.type === 'INCOMING') globalStats.incoming++;
+            if (c.type === 'OUTGOING') globalStats.outgoing++;
+            if (c.type === 'MISSED') globalStats.missed++;
+            if (c.type === 'REJECTED') globalStats.rejected++;
+            globalStats.duration += (c.duration || 0);
+            if (c.number) globalStats.uniqueNumbers.add(c.number);
+        });
+    });
+
+    const globalPieData = [
+        { name: 'Incoming', value: globalStats.incoming, color: '#10b981' }, // emerald-500
+        { name: 'Outgoing', value: globalStats.outgoing, color: '#3b82f6' }, // blue-500
+        { name: 'Missed', value: globalStats.missed, color: '#f43f5e' }, // rose-500
+        { name: 'Rejected', value: globalStats.rejected, color: '#f59e0b' } // amber-500
+    ].filter(d => d.value > 0);
+
     const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 
     const getPieData = (metrics) => [
-        { name: 'Incoming', value: metrics.incoming },
-        { name: 'Outgoing', value: metrics.outgoing },
-        { name: 'Missed', value: metrics.missed }
+        { name: 'Incoming', value: metrics.incoming, color: '#10b981' },
+        { name: 'Outgoing', value: metrics.outgoing, color: '#3b82f6' },
+        { name: 'Missed', value: metrics.missed, color: '#f43f5e' },
+        { name: 'Rejected', value: metrics.rejected, color: '#f59e0b' }
     ].filter(d => d.value > 0);
 
     const formatDuration = (seconds) => {
-        const mins = Math.floor(seconds / 60);
-        return `${mins}m`;
+        if (!seconds) return '0s';
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        if (hrs > 0) return `${hrs}h ${mins}m`;
+        return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
 
     if (isLoading && callStats.length === 0) {
@@ -133,33 +169,71 @@ const AdminCallReports = () => {
 
             {!selectedEmployee ? (
                 <>
-                    {/* High Level Overview */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    {/* Premium Analytics Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8">
                         {/* Summary Stats */}
-                        <div className="lg:col-span-1 grid grid-cols-1 gap-4">
-                            <MetricBox label="Global Call Volume" value={metricsArray.reduce((acc, m) => acc + m.totalCalls, 0)} color="blue" icon={Activity} />
+                        <div className="lg:col-span-5 grid grid-cols-2 gap-4">
+                            <MetricBox label="Global Volume" value={globalStats.total} color="blue" icon={Activity} />
                             <MetricBox label="Active Personnel" value={metricsArray.length} color="purple" icon={Users} />
-                            <MetricBox label="Avg engagement" value={metricsArray.length ? Math.round(metricsArray.reduce((acc, m) => acc + m.totalCalls, 0) / metricsArray.length) : 0} color="emerald" icon={TrendingUp} />
+                            <MetricBox label="Incoming" value={globalStats.incoming} color="emerald" icon={PhoneIncoming} />
+                            <MetricBox label="Outgoing" value={globalStats.outgoing} color="sky" icon={PhoneOutgoing} />
+                            <MetricBox label="Missed" value={globalStats.missed} color="rose" icon={PhoneMissed} />
+                            <MetricBox label="Rejected" value={globalStats.rejected} color="amber" icon={PhoneMissed} />
+                            <div className="col-span-2">
+                                <MetricBox label="Global Talk Time" value={formatDuration(globalStats.duration)} color="fuchsia" icon={Clock} />
+                            </div>
                         </div>
 
-                        {/* Chart Grid */}
-                        <div className="lg:col-span-2 bg-white p-8 rounded-[3rem] border border-slate-100 shadow-xl flex flex-col">
-                            <div className="flex items-center justify-between mb-8">
-                                <h3 className="text-slate-800 font-black uppercase text-xs tracking-widest flex items-center gap-2">
-                                    <BarChart3 className="text-blue-500" size={16} /> Top Performers (Calls)
+                        {/* Visual Chart Card */}
+                        <div className="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
+                            <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-2">Global Distribution</h3>
+                            {globalPieData.length > 0 ? (
+                                <ResponsiveContainer width="100%" height={220}>
+                                    <PieChart>
+                                        <Pie
+                                            data={globalPieData}
+                                            cx="50%" cy="50%"
+                                            innerRadius={50} outerRadius={80}
+                                            paddingAngle={5} dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {globalPieData.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip
+                                            contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                            itemStyle={{ fontWeight: 'black' }}
+                                        />
+                                        <Legend iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: '900', letterSpacing: '0.1em' }} />
+                                    </PieChart>
+                                </ResponsiveContainer>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full">
+                                    <PieChartIcon className="text-slate-300" size={48} />
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Signals Detected</p>
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Top Performers Chart */}
+                        <div className="lg:col-span-4 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col">
+                            <div className="flex items-center justify-between mb-4">
+                                <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                    <BarChart3 className="text-blue-500" size={14} /> Top Performers
                                 </h3>
                             </div>
-                            <div className="h-[250px] w-full">
+                            <div className="h-[200px] w-full items-end pb-4">
                                 <ResponsiveContainer width="100%" height="100%">
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
-                                        <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }} />
+                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
+                                        <YAxis axisLine={false} tickLine={false} width={30} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
                                         <Tooltip
                                             contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
                                             cursor={{ fill: '#f8fafc' }}
                                         />
-                                        <Bar dataKey="Calls" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={32} />
+                                        <Bar dataKey="Calls" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
                                     </BarChart>
                                 </ResponsiveContainer>
                             </div>
@@ -284,7 +358,7 @@ const AdminCallReports = () => {
                                             dataKey="value"
                                         >
                                             {getPieData(selectedEmployee).map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                                <Cell key={`cell-${index}`} fill={entry.color} />
                                             ))}
                                         </Pie>
                                         <Tooltip
@@ -357,16 +431,29 @@ const AdminCallReports = () => {
     );
 };
 
-const MetricBox = ({ label, value, color, icon: Icon }) => (
-    <div className="bg-white p-7 rounded-[2.5rem] border border-slate-100 shadow-xl flex items-center justify-between group hover:border-blue-100 transition-all">
-        <div className="space-y-1">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{label}</span>
-            <p className="text-3xl font-black text-slate-800 tracking-tighter">{value}</p>
+const MetricBox = ({ label, value, color, icon: Icon }) => {
+    const colorMap = {
+        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100',
+        amber: 'bg-amber-50 text-amber-600 border-amber-100',
+        purple: 'bg-purple-50 text-purple-600 border-purple-100',
+        rose: 'bg-rose-50 text-rose-600 border-rose-100',
+        sky: 'bg-sky-50 text-sky-600 border-sky-100',
+        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+        fuchsia: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100',
+    };
+
+    return (
+        <div className={`p-5 rounded-[2rem] border shadow-xl flex items-center justify-between group hover:-translate-y-1 transition-all duration-300 ${colorMap[color]}`}>
+            <div className="space-y-1">
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-80">{label}</span>
+                <p className="text-2xl font-black tracking-tighter">{value}</p>
+            </div>
+            <div className="w-10 h-10 bg-white/50 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110">
+                <Icon size={20} className="opacity-90" />
+            </div>
         </div>
-        <div className={`p-4 bg-${color}-50 text-${color}-600 rounded-3xl transition-all group-hover:scale-110`}>
-            <Icon size={24} />
-        </div>
-    </div>
-);
+    );
+};
 
 export default AdminCallReports;

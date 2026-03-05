@@ -940,8 +940,9 @@ const deleteEmployee = async (req, res) => {
                 where: { attendance: { userId: userId } }
             }),
 
-            // 5. Delete workLogs, requests, and announcements
+            // 5. Delete workLogs, callLogs, requests, and announcements
             prisma.workLog.deleteMany({ where: { userId } }),
+            prisma.callLog.deleteMany({ where: { userId } }),
             prisma.leaveRequest.deleteMany({ where: { userId } }),
             prisma.permissionRequest.deleteMany({ where: { userId } }),
             prisma.loginAccessRequest.deleteMany({ where: { userId } }),
