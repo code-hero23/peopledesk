@@ -16,7 +16,7 @@ import com.getcapacitor.annotation.PermissionCallback;
 @CapacitorPlugin(
     name = "CallLog",
     permissions = {
-        @Permission(strings = { Manifest.permission.READ_CALL_LOG }, alias = "callLog")
+        @Permission(strings = { Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_PHONE_STATE }, alias = "callLog")
     }
 )
 public class CallLogPlugin extends Plugin {
@@ -71,7 +71,14 @@ public class CallLogPlugin extends Plugin {
                     JSObject log = new JSObject();
                     log.put("number", cursor.getString(numberIndex));
                     log.put("name", cursor.getString(nameIndex)); // Contact name if exists
-                    log.put("simId", cursor.getString(simIdIndex)); // For SIM selection
+                    
+                    // Safe access for simId
+                    String simId = null;
+                    if (simIdIndex != -1) {
+                         simId = cursor.getString(simIdIndex);
+                    }
+                    log.put("simId", simId); // For SIM selection
+                    
                     log.put("type", getCallType(cursor.getInt(typeIndex)));
                     log.put("date", cursor.getLong(dateIndex));
                     log.put("duration", cursor.getInt(durationIndex));

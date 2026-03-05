@@ -83,7 +83,7 @@ const CRECallReports = () => {
         const matchesSearch = call.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (call.name && call.name.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = filterType === 'ALL' || call.type === filterType;
-        const matchesSim = simFilter === 'ALL' || call.simId === simFilter;
+        const matchesSim = simFilter === 'ALL' || String(call.simId) === String(simFilter);
         return matchesSearch && matchesType && matchesSim;
     });
 
@@ -200,7 +200,7 @@ const CRECallReports = () => {
                             >
                                 <option value="ALL">ALL SIMS</option>
                                 {availableSims.map(sim => (
-                                    <option key={sim} value={sim}>Slot {sim.length > 3 ? sim.substring(0, 3) : sim}</option>
+                                    <option key={sim} value={sim}>Slot {sim ? (sim.length > 3 ? sim.substring(0, 3) : sim) : 'Unknown'}</option>
                                 ))}
                             </select>
                         </div>
@@ -278,7 +278,7 @@ const CRECallReports = () => {
                                             <td className="px-10 py-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-2.5 h-2.5 rounded-full bg-slate-200 group-hover:bg-blue-500 transition-all duration-500"></div>
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover:text-slate-600 transition-colors">{call.simId ? `SLOT ${call.simId.substring(0, 4)}` : 'PRIMARY'}</span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover:text-slate-600 transition-colors">{call.simId ? `SLOT ${String(call.simId).substring(0, 4)}` : 'PRIMARY'}</span>
                                                 </div>
                                             </td>
                                         </motion.tr>
