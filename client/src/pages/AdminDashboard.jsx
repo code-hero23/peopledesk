@@ -34,8 +34,8 @@ const AdminDashboard = () => {
                         headers: { Authorization: `Bearer ${user.token}` }
                     })
                 ]);
-                setSiteVisits(siteRes.data.filter(v => v.status === 'APPROVED'));
-                setShowroomHistory(showroomRes.data.filter(v => v.status === 'APPROVED'));
+                setSiteVisits((siteRes.data.siteVisits || []).filter(v => v.status === 'APPROVED'));
+                setShowroomHistory((showroomRes.data.showroomVisits || []).filter(v => v.status === 'APPROVED'));
             } catch (error) {
                 console.error("Dashboard list fetch failed:", error);
             } finally {

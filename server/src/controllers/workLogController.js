@@ -393,22 +393,29 @@ const getMyWorkLogs = async (req, res) => {
 // @route   PUT /api/worklogs/sync-calls
 // @access  Private (CRE)
 const syncCallLogs = async (req, res) => {
-    const { logs } = req.body;
+    const { logs, syncDate, simFilter } = req.body;
 
     try {
         const userId = req.user.id;
-        const startOfDay = new Date();
-        startOfDay.setHours(0, 0, 0, 0);
 
-        const newLogs = typeof logs === 'string' ? JSON.parse(logs) : logs;
+        // Use provided syncDate or default to current day
+        const targetDate = syncDate ? new Date(syncDate) : new Date();
+        targetDate.setHours(0, 0, 0, 0);
+
+        let newLogs = typeof logs === 'string' ? JSON.parse(logs) : logs;
+
+        // Filter by SIM slot if requested
+        if (simFilter !== undefined && simFilter !== null) {
+            const slot = parseInt(simFilter);
+            newLogs = newLogs.filter(log => parseInt(log.simSlot) === slot);
+        }
 
         // Use upsert into the dedicated CallLog table
-        // This decouples Call Analytics from the manual WorkLog table
         const existingCallLog = await prisma.callLog.findUnique({
             where: {
                 userId_date: {
                     userId,
-                    date: startOfDay
+                    date: targetDate
                 }
             }
         });
@@ -433,7 +440,7 @@ const syncCallLogs = async (req, res) => {
             where: {
                 userId_date: {
                     userId,
-                    date: startOfDay
+                    date: targetDate
                 }
             },
             update: {
@@ -442,7 +449,7 @@ const syncCallLogs = async (req, res) => {
             },
             create: {
                 userId,
-                date: startOfDay,
+                date: targetDate,
                 calls: consolidatedLogs,
                 totalCalls: consolidatedLogs.length
             }

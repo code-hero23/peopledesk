@@ -200,7 +200,7 @@ const AdminCallReports = () => {
                         <div className="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
                             <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-2">Global Distribution</h3>
                             {globalPieData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={220}>
+                                <ResponsiveContainer width="100%" height={220} minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={globalPieData}
@@ -236,7 +236,7 @@ const AdminCallReports = () => {
                                 </h3>
                             </div>
                             <div className="h-[200px] w-full items-end pb-4">
-                                <ResponsiveContainer width="100%" height="100%">
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
@@ -361,7 +361,7 @@ const AdminCallReports = () => {
 
                             <div className="w-full space-y-4">
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <PieChart>
                                             <Pie
                                                 data={getPieData(selectedEmployee)}
