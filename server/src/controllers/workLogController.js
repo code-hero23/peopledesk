@@ -399,43 +399,56 @@ const syncCallLogs = async (req, res) => {
         const userId = req.user.id;
         const startOfDay = new Date();
         startOfDay.setHours(0, 0, 0, 0);
-        const endOfDay = new Date();
-        endOfDay.setHours(23, 59, 59, 999);
-
-        const existingLog = await prisma.workLog.findFirst({
-            where: {
-                userId,
-                date: { gte: startOfDay, lte: endOfDay }
-            }
-        });
-
-        if (!existingLog) {
-            return res.status(404).json({ message: 'No work log found for today to sync calls.' });
-        }
 
         const newLogs = typeof logs === 'string' ? JSON.parse(logs) : logs;
-        const currentLogs = existingLog.cre_synced_calls || [];
 
-        // Deduplicate using combination of date and number
-        const consolidatedLogs = [...currentLogs];
-        const existingKeys = new Set(currentLogs.map(l => `${l.date}-${l.number}`));
-
-        newLogs.forEach(log => {
-            const key = `${log.date}-${log.number}`;
-            if (!existingKeys.has(key)) {
-                consolidatedLogs.push(log);
-                existingKeys.add(key);
+        // Use upsert into the dedicated CallLog table
+        // This decouples Call Analytics from the manual WorkLog table
+        const existingCallLog = await prisma.callLog.findUnique({
+            where: {
+                userId_date: {
+                    userId,
+                    date: startOfDay
+                }
             }
         });
 
-        const updatedLog = await prisma.workLog.update({
-            where: { id: existingLog.id },
-            data: {
-                cre_synced_calls: consolidatedLogs
+        let consolidatedLogs = [];
+        if (existingCallLog) {
+            consolidatedLogs = [...existingCallLog.calls];
+            const existingKeys = new Set(consolidatedLogs.map(l => `${l.date}-${l.number}`));
+
+            newLogs.forEach(log => {
+                const key = `${log.date}-${log.number}`;
+                if (!existingKeys.has(key)) {
+                    consolidatedLogs.push(log);
+                    existingKeys.add(key);
+                }
+            });
+        } else {
+            consolidatedLogs = newLogs;
+        }
+
+        const callLog = await prisma.callLog.upsert({
+            where: {
+                userId_date: {
+                    userId,
+                    date: startOfDay
+                }
+            },
+            update: {
+                calls: consolidatedLogs,
+                totalCalls: consolidatedLogs.length
+            },
+            create: {
+                userId,
+                date: startOfDay,
+                calls: consolidatedLogs,
+                totalCalls: consolidatedLogs.length
             }
         });
 
-        res.json(updatedLog);
+        res.json(callLog);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -453,10 +466,9 @@ const getAllCallStats = async (req, res) => {
         let end = endDate ? new Date(endDate) : new Date();
         end.setHours(23, 59, 59, 999);
 
-        const logs = await prisma.workLog.findMany({
+        const callLogs = await prisma.callLog.findMany({
             where: {
-                date: { gte: start, lte: end },
-                cre_synced_calls: { not: null }
+                date: { gte: start, lte: end }
             },
             include: {
                 user: {
@@ -465,13 +477,13 @@ const getAllCallStats = async (req, res) => {
             }
         });
 
-        // Group by user
-        const stats = logs.map(log => ({
+        // Map to format expected by frontend
+        const stats = callLogs.map(log => ({
             id: log.id,
             date: log.date,
             user: log.user.name,
-            empId: `EMP-${log.user.id}`, // Using id since employeeId is not in User schema
-            calls: log.cre_synced_calls
+            empId: `EMP-${log.user.id}`,
+            calls: log.calls || []
         }));
 
         res.json(stats);
