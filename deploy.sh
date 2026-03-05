@@ -30,8 +30,8 @@ cd android
 ./gradlew assembleDebug
 
 # Move APK to a public web path for easy download if needed
-# mkdir -p ../../server/uploads/apks/
-# cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/peopledesk-latest.apk
+mkdir -p ../../server/uploads/apks/
+cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/peopledesk-latest.apk
 
 cd ../..
 
