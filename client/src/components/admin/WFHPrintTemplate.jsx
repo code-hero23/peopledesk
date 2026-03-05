@@ -15,7 +15,7 @@ export const WFHPrintTemplate = React.forwardRef(({ request }, ref) => {
     ];
 
     return (
-        <div ref={ref} className="p-8 text-slate-800 bg-white min-h-screen font-sans text-[11px] leading-tight">
+        <div ref={ref} className="p-4 text-slate-800 bg-white min-h-screen font-sans text-[10px] leading-tight">
             {/* Header */}
             <div className="flex justify-between items-center border-b-2 border-blue-600 pb-4 mb-6">
                 <div>
@@ -28,7 +28,7 @@ export const WFHPrintTemplate = React.forwardRef(({ request }, ref) => {
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-6 mb-6">
+            <div className="grid grid-cols-2 gap-4 mb-4">
                 {/* Employee Info */}
                 <div className="space-y-3">
                     <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest border-l-3 border-blue-600 pl-2">Personnel Profile</h3>
@@ -51,22 +51,22 @@ export const WFHPrintTemplate = React.forwardRef(({ request }, ref) => {
             </div>
 
             {/* Justification & Impact */}
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 mb-4">
                 <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest border-l-3 border-blue-600 pl-2">Strategic Justification</h3>
                 <div className="grid grid-cols-2 gap-4">
                     <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                         <p className="text-[9px] font-black text-slate-400 uppercase mb-1">Reason for Request</p>
-                        <p className="font-bold text-slate-700 leading-snug">{request.realReason}</p>
+                        <p className="font-bold text-slate-700 leading-tight">{request.realReason}</p>
                     </div>
                     <div className="bg-rose-50/50 p-4 rounded-lg border border-rose-100">
                         <p className="text-[9px] font-black text-rose-400 uppercase mb-1">Impact of Rejection</p>
-                        <p className="font-bold text-rose-900 leading-snug italic">"{request.impactIfRejected}"</p>
+                        <p className="font-bold text-rose-900 leading-tight italic">"{request.impactIfRejected}"</p>
                     </div>
                 </div>
             </div>
 
             {/* Work Plan */}
-            <div className="space-y-4 mb-6">
+            <div className="space-y-3 mb-4">
                 <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest border-l-3 border-blue-600 pl-2">Work Execution Plan</h3>
                 <div className="bg-slate-900 text-white p-4 rounded-lg space-y-3">
                     <div className="grid grid-cols-2 gap-4 border-b border-slate-800 pb-3">
@@ -81,7 +81,7 @@ export const WFHPrintTemplate = React.forwardRef(({ request }, ref) => {
                     </div>
                     <div>
                         <p className="text-[8px] font-black text-slate-500 uppercase mb-1">Target Deliverables</p>
-                        <p className="text-[10px] font-medium text-slate-200 leading-relaxed">{request.deliverables}</p>
+                        <p className="text-[9px] font-medium text-slate-200 leading-tight">{request.deliverables}</p>
                     </div>
                     <div className="grid grid-cols-3 gap-2 pt-1">
                         <div className="bg-white/5 p-2 rounded border border-white/5">
@@ -101,7 +101,7 @@ export const WFHPrintTemplate = React.forwardRef(({ request }, ref) => {
             </div>
 
             {/* Compliance Matrix */}
-            <div className="space-y-3 mb-8">
+            <div className="space-y-3 mb-6">
                 <h3 className="text-[9px] font-black text-blue-600 uppercase tracking-widest border-l-3 border-blue-600 pl-2">Infrastructure Compliance Matrix</h3>
                 <div className="grid grid-cols-4 gap-2">
                     {complianceFields.map((field, i) => (
@@ -116,7 +116,7 @@ export const WFHPrintTemplate = React.forwardRef(({ request }, ref) => {
             </div>
 
             {/* Signatures */}
-            <div className="grid grid-cols-3 gap-8 mt-auto pt-8 border-t border-slate-200">
+            <div className="grid grid-cols-3 gap-6 mt-auto pt-4 border-t border-slate-200">
                 <SignatureBlock
                     label="Business Head Approval"
                     status={request.bhStatus}

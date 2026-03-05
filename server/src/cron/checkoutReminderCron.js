@@ -51,11 +51,11 @@ const initCheckoutReminderCron = () => {
             `;
 
                 try {
-                    const emailSent = await sendEmail(
-                        user.email,
-                        'Action Required: Daily Logout Reminder',
-                        mailContent
-                    );
+                    const emailSent = await sendEmail({
+                        to: user.email,
+                        subject: 'Action Required: Daily Logout Reminder',
+                        html: mailContent
+                    });
 
                     if (emailSent) {
                         console.log(`CRON: Email sent successfully to ${user.email} (${user.name})`);
