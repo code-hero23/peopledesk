@@ -124,7 +124,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     return (
         <aside
             className={`bg-slate-900 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-xl
-                fixed md:relative z-40 h-full
+                fixed md:relative z-[70] h-full
                 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
                 ${isCollapsed ? 'w-20' : 'w-64'}
             `}

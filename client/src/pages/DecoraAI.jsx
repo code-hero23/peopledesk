@@ -104,7 +104,7 @@ const DecoraAI = () => {
             </div>
 
             {/* Premium Navigation */}
-            <header className="fixed top-0 left-0 w-full z-50 px-8 py-6 backdrop-blur-md bg-slate-950/40 border-b border-white/5">
+            <header className="sticky top-0 left-0 w-full z-40 px-8 py-6 backdrop-blur-md bg-slate-950/40 border-b border-white/5">
                 <div className="max-w-7xl mx-auto flex justify-between items-center">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}

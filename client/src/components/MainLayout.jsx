@@ -36,7 +36,7 @@ const Layout = () => {
             {/* Mobile Sidebar Overlay Backdrop */}
             {isMobileMenuOpen && (
                 <div
-                    className="fixed inset-0 bg-black/50 z-30 md:hidden animate-fade-in"
+                    className="fixed inset-0 bg-black/50 z-[60] md:hidden animate-fade-in"
                     onClick={() => setIsMobileMenuOpen(false)}
                 />
             )}
@@ -49,7 +49,7 @@ const Layout = () => {
 
             {/* Mobile Header & Main Content */}
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-                <header className="bg-white shadow-sm border-b border-slate-200 md:hidden p-4 flex justify-between items-center sticky top-0 z-10 animate-fade-in-down">
+                <header className="bg-white shadow-sm border-b border-slate-200 md:hidden p-4 flex justify-between items-center sticky top-0 z-[50] animate-fade-in-down">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setIsMobileMenuOpen(true)}
