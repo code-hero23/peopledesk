@@ -198,7 +198,7 @@ PeopleDesk User`)}`}
                                     className={`w-full py-4.5 rounded-xl font-bold uppercase tracking-widest text-white shadow-xl transition-all duration-300 ${isLoading ? 'bg-red-400 cursor-not-allowed' : 'bg-[#d00000] hover:bg-[#ff0000] shadow-red-600/20'
                                         }`}
                                 >
-                                    {isLoading ? 'Signing In...' : 'Sign In'}
+                                    {isLoading ? 'Logging In...' : 'Login'}
                                 </motion.button>
 
                                 <div className="relative flex py-4 items-center">

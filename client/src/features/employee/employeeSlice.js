@@ -796,6 +796,13 @@ export const employeeSlice = createSlice({
             .addCase(getBusinessHeads.fulfilled, (state, action) => {
                 state.businessHeads = action.payload;
             })
+            // Reset state on logout
+            .addMatcher(
+                (action) => action.type === 'auth/logout/fulfilled',
+                (state) => {
+                    Object.assign(state, initialState);
+                }
+            )
             // Sync Call Logs
             .addCase(syncCallLogs.pending, (state) => {
                 state.isLoading = true;

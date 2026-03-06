@@ -241,13 +241,19 @@ const Overview = () => {
 
     // Lateness Effect
     useEffect(() => {
-        if (isCheckedIn && isRequestsFetched && !hasCheckedLateness) {
-            if (activeModal !== 'permission') {
-                checkLatenessAndRedirect(attendance?.date || new Date(), true);
+        if (isCheckedIn && isRequestsFetched && !hasCheckedLateness && user?.id) {
+            const today = new Date().toLocaleDateString('en-CA');
+            const attendanceDay = new Date(attendance?.date).toLocaleDateString('en-CA');
+
+            // Only check lateness for today's attendance
+            if (attendanceDay === today) {
+                if (activeModal !== 'permission') {
+                    checkLatenessAndRedirect(attendance?.date || new Date(), true);
+                }
+                setHasCheckedLateness(true);
             }
-            setHasCheckedLateness(true);
         }
-    }, [isCheckedIn, isRequestsFetched, hasCheckedLateness, activeModal, attendance, checkLatenessAndRedirect]);
+    }, [isCheckedIn, isRequestsFetched, hasCheckedLateness, activeModal, attendance, checkLatenessAndRedirect, user?.id]);
 
     // Worklog Enforcement Effect
     const { todayLog } = useSelector((state) => state.employee);
@@ -266,7 +272,13 @@ const Overview = () => {
     useEffect(() => {
         let stream = null;
         if (showCheckInModal && videoRef.current) {
-            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+            navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 720 },
+                    height: { ideal: 1280 }
+                }
+            })
                 .then(s => {
                     stream = s;
                     if (videoRef.current) {
@@ -749,7 +761,7 @@ const Overview = () => {
                             <div className="p-8 lg:p-10 space-y-8 text-center">
                                 <div className="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-[2rem]"><Camera size={32} /></div>
                                 <h3 className="text-3xl font-black text-slate-900 tracking-tight">Smile!</h3>
-                                <div className="relative aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden">
+                                <div className="relative aspect-[3/4] bg-slate-900 rounded-[2.5rem] overflow-hidden">
                                     {!photo ? (
                                         <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
                                     ) : (
@@ -775,42 +787,43 @@ const Overview = () => {
                                             ctx.setTransform(1, 0, 0, 1, 0, 0);
 
                                             // Draw metadata overlay
+                                            const overlayHeight = 120;
                                             ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                                            ctx.fillRect(0, c.height - 70, c.width, 70);
+                                            ctx.fillRect(0, c.height - overlayHeight, c.width, overlayHeight);
 
                                             ctx.fillStyle = 'white';
-                                            ctx.font = 'bold 20px Inter, sans-serif';
+                                            ctx.font = 'bold 32px Inter, sans-serif';
 
                                             const now = new Date();
                                             const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                                             const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
                                             const locStr = location.address || 'Location Unavailable';
 
-                                            ctx.fillText(dateStr, 24, c.height - 75);
-                                            ctx.fillText(`| ${timeStr}`, 150, c.height - 75);
-                                            ctx.font = '500 13px Inter, sans-serif';
+                                            ctx.fillText(dateStr, 32, c.height - (overlayHeight - 40));
+                                            ctx.fillText(`| ${timeStr}`, 250, c.height - (overlayHeight - 40));
+                                            ctx.font = '500 22px Inter, sans-serif';
 
                                             // Word wrap for long addresses
                                             const words = locStr.split(', ');
                                             let line = '📍 ';
-                                            let y = c.height - 45;
+                                            let y = c.height - (overlayHeight - 80);
                                             words.forEach((word, i) => {
                                                 const testLine = line + word + (i < words.length - 1 ? ', ' : '');
-                                                if (ctx.measureText(testLine).width > c.width - 48) {
-                                                    ctx.fillText(line, 24, y);
+                                                if (ctx.measureText(testLine).width > c.width - 64) {
+                                                    ctx.fillText(line, 32, y);
                                                     line = word + (i < words.length - 1 ? ', ' : '');
-                                                    y += 20;
+                                                    y += 28;
                                                 } else {
                                                     line = testLine;
                                                 }
                                             });
-                                            ctx.fillText(line, 24, y);
+                                            ctx.fillText(line, 32, y);
 
                                             // Draw coordinates small in corner
                                             if (location.lat) {
-                                                ctx.font = '400 10px Inter, sans-serif';
+                                                ctx.font = '400 14px Inter, sans-serif';
                                                 ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                                                ctx.fillText(`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`, c.width - 100, c.height - 15);
+                                                ctx.fillText(`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`, c.width - 130, c.height - 15);
                                             }
 
                                             setPhoto(c.toDataURL('image/jpeg', 0.9));
