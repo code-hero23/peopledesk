@@ -486,20 +486,22 @@ const Overview = () => {
                             <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-12">
                                 <div className="space-y-8">
                                     <div className="space-y-4">
-                                        <div className="inline-flex py-1 px-1 bg-slate-100 rounded-2xl">
-                                            <button
-                                                onClick={() => setIsSiteLogin(false)}
-                                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isSiteLogin ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                Office Login
-                                            </button>
-                                            <button
-                                                onClick={() => setIsSiteLogin(true)}
-                                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSiteLogin ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
-                                            >
-                                                Site Login
-                                            </button>
-                                        </div>
+                                        {getDeviceType() === 'mobile' && (
+                                            <div className="inline-flex py-1 px-1 bg-slate-100 rounded-2xl">
+                                                <button
+                                                    onClick={() => setIsSiteLogin(false)}
+                                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isSiteLogin ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >
+                                                    Office
+                                                </button>
+                                                <button
+                                                    onClick={() => setIsSiteLogin(true)}
+                                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSiteLogin ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                >
+                                                    Site
+                                                </button>
+                                            </div>
+                                        )}
                                         <div className="space-y-2">
                                             <h2 className="text-3xl font-black text-slate-900">
                                                 {isCheckedIn ? 'Session Active' : (isSessionFinished ? 'Session Completed' : 'Ready to Start?')}
