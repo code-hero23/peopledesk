@@ -306,8 +306,9 @@ const Overview = () => {
             navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'user',
-                    width: { ideal: 720 },
-                    height: { ideal: 1280 }
+                    width: { ideal: 1080 },
+                    height: { ideal: 1920 },
+                    aspectRatio: { ideal: 0.5625 } // 9:16 portrait
                 }
             })
                 .then(s => {
@@ -811,7 +812,7 @@ const Overview = () => {
                         <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl relative z-10">
                             <div className="p-8 lg:p-10 space-y-8 text-center">
                                 <div className="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-[2rem]"><Camera size={32} /></div>
-                                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Smile!</h3>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Take a picture with site</h3>
                                 <div className="relative aspect-[3/4] bg-slate-900 rounded-[2.5rem] overflow-hidden">
                                     {!photo ? (
                                         <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
