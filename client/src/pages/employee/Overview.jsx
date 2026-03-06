@@ -508,7 +508,7 @@ const Overview = () => {
                             className="flex items-center gap-3 px-6 py-4 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all"
                         >
                             <Sparkles size={20} />
-                            <span className="font-bold">Log Tasks</span>
+                            <span className="font-bold">Work Log</span>
                         </motion.button>
                     </div>
                 </div>
