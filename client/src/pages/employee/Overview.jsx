@@ -48,11 +48,19 @@ const Overview = () => {
     const [logoutAlert, setLogoutAlert] = useState(false);
     const [confirmationConfig, setConfirmationConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { }, type: 'info' });
     const [isMandatoryWorkLog, setIsMandatoryWorkLog] = useState(false);
-    const [location, setLocation] = useState({ lat: null, lng: null, address: 'Locating...' });
+    // Explicitly add an error flag to block capture if needed
+    const [location, setLocation] = useState({ lat: null, lng: null, address: 'Locating...', error: null });
+    const [cameraState, setCameraState] = useState({ active: false, error: null });
+
+    useEffect(() => {
+        if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
+            setIsSiteLogin(true);
+        }
+    }, [user]);
 
     const fetchLocation = useCallback(() => {
         if (!navigator.geolocation) {
-            setLocation(prev => ({ ...prev, address: 'Geolocation Unsupported' }));
+            setLocation(prev => ({ ...prev, address: 'Geolocation Unsupported', error: true }));
             return;
         }
 
@@ -77,15 +85,15 @@ const Overview = () => {
                         addr.country
                     ].filter(Boolean);
 
-                    setLocation({ lat, lng, address: parts.join(', ') || data.display_name || 'Address Found' });
+                    setLocation({ lat, lng, address: parts.join(', ') || data.display_name || 'Address Found', error: false });
                 } catch (err) {
                     console.error("Geocoding error:", err);
-                    setLocation({ lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+                    setLocation({ lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, error: false });
                 }
             },
             (err) => {
                 console.error("Location error:", err);
-                setLocation(prev => ({ ...prev, address: 'Location Access Denied' }));
+                setLocation(prev => ({ ...prev, address: 'Location Access Denied. Please enable GPS.', error: true }));
             },
             { enableHighAccuracy: true, timeout: 10000 }
         );
@@ -255,23 +263,12 @@ const Overview = () => {
         }
     }, [isCheckedIn, isRequestsFetched, hasCheckedLateness, activeModal, attendance, checkLatenessAndRedirect, user?.id]);
 
-    // Worklog Enforcement Effect
-    const { todayLog } = useSelector((state) => state.employee);
-    useEffect(() => {
-        if (isCheckedIn && isRequestsFetched && activeModal === null && hasCheckedLateness) {
-            // Force worklog if missing for CRE/AE (Opening report)
-            const isSpecializedRole = ['CRE', 'AE', 'AE MANAGER', 'CRE MANAGER'].includes(user?.designation?.toUpperCase());
-            if (isSpecializedRole && !todayLog) {
-                setIsMandatoryWorkLog(true);
-                setActiveModal('worklog');
-            }
-        }
-    }, [isCheckedIn, isRequestsFetched, todayLog, user, activeModal, hasCheckedLateness]);
 
     // Camera Effect for AE
     useEffect(() => {
         let stream = null;
         if (showCheckInModal && videoRef.current) {
+            setCameraState({ active: false, error: null });
             navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'user',
@@ -283,11 +280,13 @@ const Overview = () => {
                     stream = s;
                     if (videoRef.current) {
                         videoRef.current.srcObject = s;
+                        setCameraState({ active: true, error: null });
                     }
                 })
                 .catch(err => {
                     console.error("Camera error:", err);
-                    toast.error("Could not access camera. Please check permissions.");
+                    setCameraState({ active: false, error: 'Camera access denied' });
+                    toast.error("Could not access camera. Please allow permissions to check in.");
                 });
 
             // Ensure we have fresh location when modal opens
@@ -336,21 +335,22 @@ const Overview = () => {
                         setIsCheckingOut(false);
                         setShowCheckInModal(true);
                     } else {
-                        dispatch(markAttendance(formData)).then((res) => {
-                            if (!res.error) {
-                                dispatch(getAttendanceStatus());
-                                if (isSiteLoginAction) {
-                                    setIsMandatorySiteVisit(true);
-                                    setVisitInitialData({
-                                        date: new Date().toLocaleDateString('en-CA'),
-                                        startTime: getHHMM(new Date())
-                                    });
-                                    setActiveModal('site-visit');
-                                } else {
+                        if (isSiteLoginAction) {
+                            setIsMandatorySiteVisit(true);
+                            setVisitInitialData({
+                                date: new Date().toLocaleDateString('en-CA'),
+                                startTime: getHHMM(new Date()),
+                                isCheckInTrigger: true
+                            });
+                            setActiveModal('site-visit');
+                        } else {
+                            dispatch(markAttendance(formData)).then((res) => {
+                                if (!res.error) {
+                                    dispatch(getAttendanceStatus());
                                     checkLatenessAndRedirect(new Date(), true);
                                 }
-                            }
-                        });
+                            });
+                        }
                     }
                 }
             }
@@ -486,7 +486,7 @@ const Overview = () => {
                             <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-12">
                                 <div className="space-y-8">
                                     <div className="space-y-4">
-                                        {getDeviceType() === 'mobile' && (
+                                        {user?.designation !== 'AE' && user?.designation !== 'AE MANAGER' && getDeviceType() === 'mobile' && (
                                             <div className="inline-flex py-1 px-1 bg-slate-100 rounded-2xl">
                                                 <button
                                                     onClick={() => setIsSiteLogin(false)}
@@ -619,7 +619,7 @@ const Overview = () => {
                             <div className="space-y-4">
                                 {[
                                     { icon: Calendar, label: 'Leave Request', sub: 'Casual / Sick', type: 'leave', color: 'rose' },
-                                    { icon: Clock, label: 'One-hour Permit', sub: 'Early / Late', type: 'permission', color: 'amber' },
+                                    { icon: Clock, label: 'Two-hours Permit', sub: 'Early / Late', type: 'permission', color: 'amber' },
                                     { icon: MapPin, label: 'Site Visit', sub: 'Project Reporting', type: 'site-visit', color: 'emerald' },
                                     { icon: Building2, label: 'Showroom Visit', sub: 'Inter-Branch', type: 'showroom-visit', color: 'indigo' }
                                 ].map((act, i) => (
@@ -695,7 +695,22 @@ const Overview = () => {
                         <SiteVisitRequestForm
                             isMandatory={isMandatorySiteVisit}
                             initialData={visitInitialData}
-                            onSuccess={() => { setActiveModal(null); setIsMandatorySiteVisit(false); dispatch(getMyRequests()); }}
+                            onSuccess={() => {
+                                setActiveModal(null);
+                                setIsMandatorySiteVisit(false);
+                                dispatch(getMyRequests());
+                                if (visitInitialData?.isCheckInTrigger) {
+                                    const formData = new FormData();
+                                    const deviceType = getDeviceType();
+                                    formData.append('deviceInfo', `${deviceType.toUpperCase()} | SITE_LOGIN | ${navigator.userAgent}`);
+                                    dispatch(markAttendance(formData)).then((res) => {
+                                        if (!res.error) {
+                                            dispatch(getAttendanceStatus());
+                                            checkLatenessAndRedirect(new Date(), true);
+                                        }
+                                    });
+                                }
+                            }}
                             onCancel={() => !isMandatorySiteVisit && setActiveModal(null)}
                         />
                     </Modal>
@@ -775,61 +790,78 @@ const Overview = () => {
                                 </div>
                                 <div className="flex gap-4">
                                     {!photo ? (
-                                        <button onClick={() => {
-                                            const v = videoRef.current;
-                                            const c = document.createElement('canvas');
-                                            c.width = v.videoWidth; c.height = v.videoHeight;
-                                            const ctx = c.getContext('2d');
+                                        <div className="w-full space-y-4">
+                                            {(!cameraState.active || location.error || !location.lat) && (
+                                                <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl flex items-start gap-3 text-sm font-bold text-left">
+                                                    <AlertCircle className="shrink-0 mt-0.5" size={18} />
+                                                    <p>Camera and Location access must be enabled to check in. Please allow permissions and try again.</p>
+                                                </div>
+                                            )}
+                                            <button
+                                                disabled={!cameraState.active || location.error || !location.lat}
+                                                onClick={() => {
+                                                    const v = videoRef.current;
+                                                    const c = document.createElement('canvas');
+                                                    c.width = v.videoWidth; c.height = v.videoHeight;
+                                                    const ctx = c.getContext('2d');
 
-                                            // Flip horizontally for user-facing camera
-                                            ctx.translate(c.width, 0); ctx.scale(-1, 1);
-                                            ctx.drawImage(v, 0, 0);
+                                                    // Flip horizontally for user-facing camera
+                                                    ctx.translate(c.width, 0); ctx.scale(-1, 1);
+                                                    ctx.drawImage(v, 0, 0);
 
-                                            // Reset transform to draw text
-                                            ctx.setTransform(1, 0, 0, 1, 0, 0);
+                                                    // Reset transform to draw text
+                                                    ctx.setTransform(1, 0, 0, 1, 0, 0);
 
-                                            // Draw metadata overlay
-                                            const overlayHeight = 120;
-                                            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                                            ctx.fillRect(0, c.height - overlayHeight, c.width, overlayHeight);
+                                                    // Draw metadata overlay
+                                                    const overlayHeight = 120;
+                                                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                                                    ctx.fillRect(0, c.height - overlayHeight, c.width, overlayHeight);
 
-                                            ctx.fillStyle = 'white';
-                                            ctx.font = 'bold 32px Inter, sans-serif';
+                                                    ctx.fillStyle = 'white';
+                                                    ctx.font = 'bold 32px Inter, sans-serif';
 
-                                            const now = new Date();
-                                            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                                            const locStr = location.address || 'Location Unavailable';
+                                                    const now = new Date();
+                                                    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                                    const locStr = location.address || 'Location Unavailable';
 
-                                            ctx.fillText(dateStr, 32, c.height - (overlayHeight - 40));
-                                            ctx.fillText(`| ${timeStr}`, 250, c.height - (overlayHeight - 40));
-                                            ctx.font = '500 22px Inter, sans-serif';
+                                                    ctx.fillText(dateStr, 32, c.height - (overlayHeight - 40));
+                                                    ctx.fillText(`| ${timeStr}`, 250, c.height - (overlayHeight - 40));
+                                                    ctx.font = '500 22px Inter, sans-serif';
 
-                                            // Word wrap for long addresses
-                                            const words = locStr.split(', ');
-                                            let line = '📍 ';
-                                            let y = c.height - (overlayHeight - 80);
-                                            words.forEach((word, i) => {
-                                                const testLine = line + word + (i < words.length - 1 ? ', ' : '');
-                                                if (ctx.measureText(testLine).width > c.width - 64) {
+                                                    // Word wrap for long addresses
+                                                    const words = locStr.split(', ');
+                                                    let line = '📍 ';
+                                                    let y = c.height - (overlayHeight - 80);
+                                                    words.forEach((word, i) => {
+                                                        const testLine = line + word + (i < words.length - 1 ? ', ' : '');
+                                                        if (ctx.measureText(testLine).width > c.width - 64) {
+                                                            ctx.fillText(line, 32, y);
+                                                            line = word + (i < words.length - 1 ? ', ' : '');
+                                                            y += 28;
+                                                        } else {
+                                                            line = testLine;
+                                                        }
+                                                    });
                                                     ctx.fillText(line, 32, y);
-                                                    line = word + (i < words.length - 1 ? ', ' : '');
-                                                    y += 28;
-                                                } else {
-                                                    line = testLine;
-                                                }
-                                            });
-                                            ctx.fillText(line, 32, y);
 
-                                            // Draw coordinates small in corner
-                                            if (location.lat) {
-                                                ctx.font = '400 14px Inter, sans-serif';
-                                                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                                                ctx.fillText(`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`, c.width - 130, c.height - 15);
-                                            }
+                                                    // Draw coordinates small in corner
+                                                    if (location.lat) {
+                                                        ctx.font = '400 14px Inter, sans-serif';
+                                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                                                        ctx.fillText(`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`, c.width - 130, c.height - 15);
+                                                    }
 
-                                            setPhoto(c.toDataURL('image/jpeg', 0.9));
-                                        }} className="flex-1 py-6 bg-slate-900 text-white rounded-[2rem] font-bold">Capture</button>
+                                                    setPhoto(c.toDataURL('image/jpeg', 0.9));
+                                                }}
+                                                className={`w-full py-6 rounded-[2rem] font-bold transition-all ${(!cameraState.active || location.error || !location.lat)
+                                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
+                                                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl hover:shadow-2xl hover:-translate-y-1'
+                                                    }`}
+                                            >
+                                                {(!cameraState.active || location.error || !location.lat) ? 'Waiting for Permissions...' : 'Capture Photo'}
+                                            </button>
+                                        </div>
                                     ) : (
                                         <button onClick={() => {
                                             const formData = new FormData();
@@ -846,11 +878,7 @@ const Overview = () => {
                                                 if (!res.error) {
                                                     dispatch(getAttendanceStatus());
                                                     setPhoto(null); setShowCheckInModal(false);
-                                                    if (!isCheckingOut && isSiteLogin) {
-                                                        setIsMandatorySiteVisit(true);
-                                                        setVisitInitialData({ date: new Date().toLocaleDateString('en-CA'), startTime: getHHMM(new Date()) });
-                                                        setActiveModal('site-visit');
-                                                    } else if (!isCheckingOut) {
+                                                    if (!isCheckingOut) {
                                                         checkLatenessAndRedirect(new Date(), true);
                                                     }
                                                 }
