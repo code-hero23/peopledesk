@@ -25,6 +25,17 @@ const CRECallReports = () => {
     const [simFilter, setSimFilter] = useState('ALL');
     const [isUniqueOnly, setIsUniqueOnly] = useState(false);
 
+    // Persisted SIM slot preference — default SIM 2
+    const [officialSim, setOfficialSim] = useState(() =>
+        parseInt(localStorage.getItem('cre_official_sim') || '2')
+    );
+
+    const handleSimChange = (slot) => {
+        const parsed = parseInt(slot);
+        setOfficialSim(parsed);
+        localStorage.setItem('cre_official_sim', String(parsed));
+    };
+
     // Automation States
     const [isFetchingLocal, setIsFetchingLocal] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
@@ -42,7 +53,7 @@ const CRECallReports = () => {
         try {
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
-                const res = await dispatch(syncCallLogs(result.logs));
+                const res = await dispatch(syncCallLogs({ logs: result.logs, simFilter: officialSim }));
                 if (!res.error) {
                     setLastSyncTime(new Date());
                     dispatch(getMyCallLogs());
@@ -171,6 +182,29 @@ const CRECallReports = () => {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
+                        {/* SIM Slot Selector */}
+                        <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
+                            <span className="text-[9px] font-black text-slate-400 uppercase px-2">SIM</span>
+                            <button
+                                onClick={() => handleSimChange(1)}
+                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === 1
+                                        ? 'bg-slate-900 text-white shadow'
+                                        : 'text-slate-400 hover:bg-white hover:shadow-sm'
+                                    }`}
+                            >
+                                1
+                            </button>
+                            <button
+                                onClick={() => handleSimChange(2)}
+                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === 2
+                                        ? 'bg-slate-900 text-white shadow'
+                                        : 'text-slate-400 hover:bg-white hover:shadow-sm'
+                                    }`}
+                            >
+                                2
+                            </button>
+                        </div>
+
                         <div className="flex bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
                             <button onClick={checkBridge} className="p-3 bg-white text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm active:scale-90">
                                 <Smartphone size={18} />

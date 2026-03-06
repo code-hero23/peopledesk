@@ -22,16 +22,17 @@ const AdminCallReports = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [dateRange, setDateRange] = useState({
-        startDate: new Date().toLocaleDateString('en-CA'), // YYYY-MM-DD in local time
+        startDate: new Date().toLocaleDateString('en-CA'),
         endDate: new Date().toLocaleDateString('en-CA')
     });
+    const [simFilter, setSimFilter] = useState('ALL');
 
     useEffect(() => {
-        dispatch(getCallStats(dateRange));
-    }, [dispatch, dateRange]);
+        dispatch(getCallStats({ ...dateRange, simFilter }));
+    }, [dispatch, dateRange, simFilter]);
 
     const handleRefresh = () => {
-        dispatch(getCallStats(dateRange));
+        dispatch(getCallStats({ ...dateRange, simFilter }));
     };
 
     // Auto-sync drill-down data when stats update
@@ -62,7 +63,9 @@ const AdminCallReports = () => {
             };
         }
 
-        const calls = log.calls || [];
+        const calls = (log.calls || []).filter(c =>
+            simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter)
+        );
         acc[key].totalCalls += calls.length;
         acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date })));
 
@@ -97,7 +100,9 @@ const AdminCallReports = () => {
     };
 
     callStats.forEach(log => {
-        const calls = log.calls || [];
+        const calls = (log.calls || []).filter(c =>
+            simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter)
+        );
         globalStats.total += calls.length;
         calls.forEach(c => {
             if (c.type === 'INCOMING') globalStats.incoming++;
@@ -160,18 +165,31 @@ const AdminCallReports = () => {
 
                 <div className="flex flex-wrap items-center gap-4 relative z-10">
                     <div className="flex items-center gap-3 bg-slate-800 p-2 rounded-2xl border border-slate-700">
-                        <Calendar size={16} className="text-slate-400 ml-2" />
+                        <Calendar size={16} className="text-blue-400 ml-2" />
                         <input
                             type="date" value={dateRange.startDate}
                             onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                            className="bg-transparent text-xs font-bold text-white outline-none"
+                            className="bg-transparent text-xs font-bold text-white outline-none [color-scheme:dark]"
                         />
-                        <span className="text-slate-600 font-black text-xs">TO</span>
+                        <span className="text-slate-500 font-black text-[10px]">TO</span>
                         <input
                             type="date" value={dateRange.endDate}
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                            className="bg-transparent text-xs font-bold text-white outline-none"
+                            className="bg-transparent text-xs font-bold text-white outline-none [color-scheme:dark]"
                         />
+                    </div>
+
+                    <div className="flex items-center gap-3 bg-slate-800 p-2 px-4 rounded-2xl border border-slate-700">
+                        <Smartphone size={16} className="text-blue-400" />
+                        <select
+                            value={simFilter}
+                            onChange={(e) => setSimFilter(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
+                        >
+                            <option value="ALL" className="text-slate-900">ALL SIMS</option>
+                            <option value="1" className="text-slate-900">SIM 1 ONLY</option>
+                            <option value="2" className="text-slate-900">SIM 2 ONLY</option>
+                        </select>
                     </div>
                     <button onClick={handleRefresh} className="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-xl active:scale-90">
                         <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
@@ -403,7 +421,7 @@ const AdminCallReports = () => {
                                         <Activity className="text-blue-500" size={16} /> Raw Log Transmission
                                     </h3>
                                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        Total Records: {selectedEmployee.logs.length}
+                                        Total Records: {selectedEmployee.logs.filter(c => simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter)).length}
                                     </div>
                                 </div>
                                 <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -417,35 +435,38 @@ const AdminCallReports = () => {
                                             </tr>
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
-                                            {selectedEmployee.logs.sort((a, b) => b.date - a.date).map((call, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                    <td className="px-8 py-4">
-                                                        <div className="flex items-center gap-3">
-                                                            <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                                {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
+                                            {selectedEmployee.logs
+                                                .filter(c => simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter))
+                                                .sort((a, b) => b.date - a.date)
+                                                .map((call, idx) => (
+                                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                        <td className="px-8 py-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                    {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
+                                                                </div>
+                                                                <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
                                                             </div>
-                                                            <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-4 px-8 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-black text-slate-800">{call.number}</span>
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-4">
-                                                        <div className="flex flex-col">
-                                                            <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
-                                                            <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="px-8 py-4 text-right">
-                                                        <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                                            {call.duration}s
-                                                        </span>
-                                                    </td>
-                                                </tr>
-                                            ))}
+                                                        </td>
+                                                        <td className="px-8 py-4 px-8 py-4">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-sm font-black text-slate-800">{call.number}</span>
+                                                                <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-4">
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
+                                                                <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                            </div>
+                                                        </td>
+                                                        <td className="px-8 py-4 text-right">
+                                                            <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                                {call.duration}s
+                                                            </span>
+                                                        </td>
+                                                    </tr>
+                                                ))}
                                         </tbody>
                                     </table>
                                 </div>

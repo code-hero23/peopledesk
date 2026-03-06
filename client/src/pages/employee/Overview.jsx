@@ -73,6 +73,7 @@ const Overview = () => {
     const [selectedCycle, setSelectedCycle] = useState(null);
     const [siteVisitInitialData, setSiteVisitInitialData] = useState(null);
     const [isMandatorySiteVisit, setIsMandatorySiteVisit] = useState(false);
+    const [isSiteLogin, setIsSiteLogin] = useState(false);
 
 
 
@@ -164,11 +165,11 @@ const Overview = () => {
 
     const checkLatenessAndRedirect = (checkInTimeRaw, isAuto = false) => {
         // Exempt AE (Area Engineers) from this restriction
-        if (user?.designation === 'AE') return;
+        if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') return;
 
-        const now = new Date();
-        const hours = now.getHours();
-        const minutes = now.getMinutes();
+        const checkInTime = new Date(checkInTimeRaw);
+        const hours = checkInTime.getHours();
+        const minutes = checkInTime.getMinutes();
         const totalMinutes = hours * 60 + minutes;
 
         // If login is after 2:00 PM (14:00)
@@ -177,10 +178,6 @@ const Overview = () => {
             toast.info("Late login detected. Please submit a half-day leave request.");
             return;
         }
-        const checkInTime = new Date(checkInTimeRaw);
-        // const hours = checkInTime.getHours(); // This line is now redundant due to 'now'
-        // const minutes = checkInTime.getMinutes(); // This line is now redundant due to 'now'
-        // const totalMinutes = hours * 60 + minutes; // This line is now redundant due to 'now'
 
         const todayLocal = checkInTime.toLocaleDateString('en-CA');
 
@@ -250,14 +247,14 @@ const Overview = () => {
 
     // Robust Mandatory Redirection Check (Lateness & Site Login)
     useEffect(() => {
-        if (attendance?.status === 'PRESENT' && isRequestsFetched && !hasCheckedLateness) {
+        if (isCheckedIn && isRequestsFetched && !hasCheckedLateness) {
             // Lateness Check
-            if (activeModal !== 'permission' && user?.designation !== 'AE') {
+            if (activeModal !== 'permission' && user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
                 checkLatenessAndRedirect(attendance.date, true);
             }
             setHasCheckedLateness(true);
         }
-    }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests]);
+    }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests, isCheckedIn]);
 
     const handleMarkAttendance = (isSiteLogin = false) => {
         if (isMobile && user?.designation !== 'AE') {
@@ -267,15 +264,16 @@ const Overview = () => {
         executeAttendanceAction(isSiteLogin);
     };
 
-    const executeAttendanceAction = (isSiteLogin = false) => {
+    const executeAttendanceAction = (siteLogin = false) => {
+        setIsSiteLogin(siteLogin);
         const deviceInfo = navigator.userAgent;
         const deviceType = getDeviceType();
         const formData = new FormData();
-        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
+        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${siteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
 
         if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
             // Check-Out Logic
-            if (user?.designation === 'AE') {
+            if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
                 setIsCheckingOut(true);
                 setShowCheckInModal(true);
             } else {
@@ -283,7 +281,7 @@ const Overview = () => {
             }
         } else {
             // Check-In Logic
-            if (user?.designation === 'AE') {
+            if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
                 setIsCheckingOut(false);
                 setShowCheckInModal(true);
             } else {
@@ -293,7 +291,7 @@ const Overview = () => {
                         const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
 
                         // Mandatory Redirection for Site Login
-                        if (isSiteLogin) {
+                        if (siteLogin) {
                             setIsMandatorySiteVisit(true);
                             setActiveModal('site-visit');
                         } else {
@@ -309,8 +307,8 @@ const Overview = () => {
 
     const handlePhotoCheckIn = (photoFile) => {
         const formData = new FormData();
-        formData.append('photo', photoFile);
-        formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${navigator.userAgent}`);
+        formData.append('attendancePhoto', photoFile);
+        formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${navigator.userAgent}`);
 
         const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
 
@@ -318,13 +316,19 @@ const Overview = () => {
             if (!res.error) {
                 setShowCheckInModal(false);
                 dispatch(getAttendanceStatus());
-                // Auto-redirect if late and it was a check-in
+                // Auto-redirect logic
                 if (!isCheckingOut) {
                     const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
-                    checkLatenessAndRedirect(checkInDate, true);
+                    if (isSiteLogin) {
+                        setIsMandatorySiteVisit(true);
+                        setActiveModal('site-visit');
+                    } else {
+                        checkLatenessAndRedirect(checkInDate, true);
+                    }
                 }
+                setIsSiteLogin(false); // Reset
             } else {
-                alert(res.payload || "Action failed.");
+                toast.error(res.payload || "Action failed.");
             }
         });
     };
@@ -401,8 +405,8 @@ const Overview = () => {
     };
 
     // derived
-    const isCheckedIn = attendance?.status === 'PRESENT' && !attendance?.checkoutTime;
-    const isCheckedOut = !!attendance?.checkoutTime;
+    const isCheckedIn = !!attendance && attendance.status === 'PRESENT' && !attendance.checkoutTime;
+    const isCheckedOut = !!attendance && !!attendance.checkoutTime;
     const pendingCount = (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0);
     const greetHour = new Date().getHours();
     const greeting = greetHour < 12 ? 'Good Morning' : greetHour < 17 ? 'Good Afternoon' : 'Good Evening';
@@ -414,6 +418,8 @@ const Overview = () => {
         ['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
         { id: 'site-visit', label: 'Site Visit', sub: 'Update visit log', icon: '🏗️', color: 'from-green-500 to-emerald-600' },
         { id: 'showroom-visit', label: 'Showroom Visit', sub: 'Cross-showroom move', icon: '🏢', color: 'from-indigo-500 to-blue-600' },
+        // Mobile-centric Sign In Action
+        isMobile && !isCheckedIn && !isCheckedOut && { id: 'site-login', label: 'Site Sign In', sub: 'Quick Entry', icon: '🏁', color: 'from-rose-500 to-orange-600' },
     ].filter(Boolean);
 
     return (

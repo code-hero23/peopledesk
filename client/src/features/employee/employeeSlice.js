@@ -456,13 +456,13 @@ export const getBusinessHeads = createAsyncThunk(
 // Sync Call Logs (CRE)
 export const syncCallLogs = createAsyncThunk(
     'employee/syncCallLogs',
-    async (logs, thunkAPI) => {
+    async ({ logs, simFilter = 1 }, thunkAPI) => {
         try {
             const token = thunkAPI.getState().auth.user.token;
             const config = {
                 headers: { Authorization: `Bearer ${token}` },
             };
-            const response = await axios.put(API_URL + 'worklogs/sync-calls', { logs }, config);
+            const response = await axios.put(API_URL + 'worklogs/sync-calls', { logs, simFilter }, config);
             return response.data;
         } catch (error) {
             const message = (error.response?.data?.message) || error.message || error.toString();

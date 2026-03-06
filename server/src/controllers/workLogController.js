@@ -382,7 +382,27 @@ const getMyWorkLogs = async (req, res) => {
             orderBy: { date: 'desc' }
         });
 
-        res.json(logs);
+        // Merge call counts from the CallLog table into the WorkLog response
+        // so that manual worklogs still "reflect" the synced data in reports.
+        const workLogDates = logs.map(l => l.date);
+        const callSummary = await prisma.callLog.findMany({
+            where: {
+                userId,
+                date: { in: workLogDates }
+            }
+        });
+
+        const callMap = callSummary.reduce((acc, log) => {
+            acc[log.date.toISOString().split('T')[0]] = log.totalCalls || 0;
+            return acc;
+        }, {});
+
+        const mergedLogs = logs.map(log => ({
+            ...log,
+            cre_totalCalls: callMap[log.date.toISOString().split('T')[0]] || log.cre_totalCalls || 0
+        }));
+
+        res.json(mergedLogs);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -406,8 +426,11 @@ const syncCallLogs = async (req, res) => {
 
         // Filter by SIM slot if requested
         if (simFilter !== undefined && simFilter !== null) {
-            const slot = parseInt(simFilter);
-            newLogs = newLogs.filter(log => parseInt(log.simSlot) === slot);
+            const slot = String(simFilter);
+            newLogs = newLogs.filter(log => {
+                const logSlot = String(log.simSlot || log.simId || "");
+                return logSlot === slot || logSlot.includes(slot);
+            });
         }
 
         // Use upsert into the dedicated CallLog table
@@ -422,11 +445,12 @@ const syncCallLogs = async (req, res) => {
 
         let consolidatedLogs = [];
         if (existingCallLog) {
-            consolidatedLogs = [...existingCallLog.calls];
-            const existingKeys = new Set(consolidatedLogs.map(l => `${l.date}-${l.number}`));
+            consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
+            // Robust deduplication key: combine date and number, ensure both are strings
+            const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}`));
 
             newLogs.forEach(log => {
-                const key = `${log.date}-${log.number}`;
+                const key = `${String(log.date)}-${String(log.number)}`;
                 if (!existingKeys.has(key)) {
                     consolidatedLogs.push(log);
                     existingKeys.add(key);
@@ -503,7 +527,7 @@ const getMyCallLogs = async (req, res) => {
 // @access  Private (Admin)
 const getAllCallStats = async (req, res) => {
     try {
-        const { startDate, endDate } = req.query;
+        const { startDate, endDate, simFilter } = req.query;
         // Interpret date strings as local midnight instead of UTC midnight
         let start = startDate ? new Date(startDate + 'T00:00:00') : new Date();
         start.setHours(0, 0, 0, 0);
@@ -520,14 +544,38 @@ const getAllCallStats = async (req, res) => {
             }
         });
 
-        // Map to format expected by frontend
-        const stats = callLogs.map(log => ({
-            id: log.id,
-            date: log.date,
-            user: log.user.name,
-            empId: `EMP-${log.user.id}`,
-            calls: log.calls || []
-        }));
+        // Filter inner calls by specific date and SIM slot
+        const stats = callLogs.map(log => {
+            let filteredCalls = log.calls || [];
+
+            // 1. Filter by DATE (to remove вчерашние logs synced today)
+            if (startDate && endDate) {
+                const s = new Date(startDate + 'T00:00:00').getTime();
+                const e = new Date(endDate + 'T23:59:59.999').getTime();
+                filteredCalls = filteredCalls.filter(c => {
+                    const cDate = new Date(c.date).getTime();
+                    return cDate >= s && cDate <= e;
+                });
+            }
+
+            // 2. Filter by SIM if provided
+            if (simFilter && simFilter !== 'ALL') {
+                const slot = String(simFilter);
+                filteredCalls = filteredCalls.filter(c => {
+                    const cSlot = String(c.simSlot || c.simId || "");
+                    return cSlot === slot || cSlot.includes(slot);
+                });
+            }
+
+            return {
+                id: log.id,
+                date: log.date,
+                user: log.user.name,
+                empId: `EMP-${log.user.id}`,
+                calls: filteredCalls,
+                totalCalls: filteredCalls.length
+            };
+        }).filter(log => log.calls.length > 0); // Only return if there are matching calls
 
         res.json(stats);
     } catch (error) {
