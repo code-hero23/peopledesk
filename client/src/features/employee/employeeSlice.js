@@ -605,6 +605,9 @@ export const employeeSlice = createSlice({
             .addCase(getMyWorkLogs.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.workLogs = action.payload;
+                const today = new Date().toISOString().split('T')[0];
+                const todaysLog = action.payload.find(log => log.date.startsWith(today));
+                state.todayLog = todaysLog || null;
             })
             .addCase(getMyWorkLogs.rejected, (state, action) => {
                 state.isLoading = false;
@@ -619,6 +622,7 @@ export const employeeSlice = createSlice({
                 state.isLoading = false;
                 state.isSuccess = true;
                 state.workLogs.unshift(action.payload); // Add new log to top
+                state.todayLog = action.payload;
             })
             .addCase(createWorkLog.rejected, (state, action) => {
                 state.isLoading = false;

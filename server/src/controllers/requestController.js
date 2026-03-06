@@ -254,6 +254,9 @@ const createShowroomVisitRequest = async (req, res) => {
 // @desc    Get all my requests (Leaves + Permissions)
 // @route   GET /api/requests
 // @access  Private
+// @desc    Get all my requests (Leaves + Permissions + Stats)
+// @route   GET /api/requests
+// @access  Private
 const getMyRequests = async (req, res) => {
     try {
         const userId = req.user.id;
@@ -310,8 +313,46 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
-        // Combine and sort or return separately. Returning object with all arrays is cleaner.
-        res.json({ leaves, permissions, siteVisits, showroomVisits, wfh });
+        const attendanceHistory = await prisma.attendance.findMany({
+            where: {
+                userId,
+                date: { gte: start, lte: end }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        // Construct cycleData for the frontend calendar
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        // For label, we use IST-adjusted dates
+        const istOffset = 5.5 * 60 * 60 * 1000;
+        const startIST = new Date(start.getTime() + istOffset);
+        const endIST = new Date(end.getTime() + istOffset);
+
+        const label = `${startIST.getUTCDate()} ${monthNames[startIST.getUTCMonth()]} - ${endIST.getUTCDate()} ${monthNames[endIST.getUTCMonth()]}`;
+
+        const cycleData = {
+            startDate: start.toISOString(),
+            endDate: end.toISOString(),
+            label,
+            subLabel: "Current Attendance Cycle"
+        };
+
+        const stats = {
+            presentDays: attendanceHistory.length,
+            leaveDays: leaves.filter(l => l.status === 'APPROVED').length,
+            permissionDays: permissions.filter(p => p.status === 'APPROVED').length
+        };
+
+        res.json({
+            leaves,
+            permissions,
+            siteVisits,
+            showroomVisits,
+            wfh,
+            attendanceHistory,
+            cycleData,
+            stats
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

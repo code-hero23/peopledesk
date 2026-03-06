@@ -89,9 +89,8 @@ const getCycleEndDateIST = (dateInput = new Date(), yearParam, monthParam) => {
     }
 
     const istOffset = 5.5 * 60 * 60 * 1000;
-    // End is 25th of the NEXT logical month relative to start
-    // If start was 26th Jan, end is 25th Feb.
-    let endMonth = month + 1;
+    // The 'month' variable here represents the month of the 25th.
+    let endMonth = month;
     let endYear = year;
     if (endMonth > 11) {
         endMonth = 0;

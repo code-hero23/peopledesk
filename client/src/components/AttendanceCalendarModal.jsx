@@ -1,9 +1,9 @@
 import React, { useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Calendar as CalendarIcon, Info, CheckCircle2, Clock } from 'lucide-react';
-import { formatDate } from '../utils/dateUtils';
+import { X, Calendar as CalendarIcon, Info, CheckCircle2, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { formatDate, getYYYYMMDD } from '../utils/dateUtils';
 
-const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory, leaves, permissions }) => {
+const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory, leaves, permissions, onNavigate }) => {
     // Generate dates from 26th to 25th
     const calendarDays = useMemo(() => {
         if (!cycleData?.startDate || !cycleData?.endDate) return [];
@@ -42,7 +42,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
             while (curr <= end) {
                 // Only count if within cycle
                 if (curr >= cycleStart && curr <= cycleEnd) {
-                    leaveDates.add(curr.toISOString().split('T')[0]);
+                    leaveDates.add(getYYYYMMDD(curr));
                 }
                 curr.setDate(curr.getDate() + 1);
             }
@@ -61,7 +61,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         return new Set(
             permissions
                 .filter(p => p.status === 'APPROVED')
-                .map(p => new Date(p.date).toISOString().split('T')[0])
+                .map(p => getYYYYMMDD(p.date))
                 .filter(dateStr => {
                     const d = new Date(dateStr);
                     return d >= cycleStart && d <= cycleEnd;
@@ -70,14 +70,14 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
     }, [permissions, cycleData]);
 
     const getDayStatus = (date) => {
-        const dateStr = date.toISOString().split('T')[0];
+        const dateStr = getYYYYMMDD(date);
         const today = new Date();
         today.setHours(0, 0, 0, 0);
         const checkDate = new Date(date);
         checkDate.setHours(0, 0, 0, 0);
 
         // 1. Check Attendance (Green)
-        const isPresent = attendanceHistory?.some(a => a.date.startsWith(dateStr));
+        const isPresent = attendanceHistory?.some(a => getYYYYMMDD(a.date) === dateStr);
         if (isPresent) return 'PRESENT';
 
         // 2. Check Leaves (Blue/Orange)
@@ -116,7 +116,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl overflow-hidden pointer-events-auto border border-white/20"
+                    className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl flex flex-col max-h-[95vh] pointer-events-auto border border-white/20 overflow-hidden"
                 >
                     {/* Header */}
                     <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 text-white relative">
@@ -141,9 +141,33 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                                 <X size={20} />
                             </button>
                         </div>
+
+                        {/* Navigation */}
+                        <div className="flex items-center justify-between mt-6 bg-white/10 rounded-2xl p-2 backdrop-blur-md border border-white/5">
+                            <button
+                                onClick={() => onNavigate && onNavigate('PREV')}
+                                className="p-2 hover:bg-white/10 rounded-xl transition-all text-white/70 hover:text-white flex items-center gap-1 group"
+                            >
+                                <ChevronLeft size={20} className="group-hover:-translate-x-1 transition-transform" />
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Prev Cycle</span>
+                            </button>
+
+                            <div className="text-center px-4">
+                                <p className="text-[9px] font-black text-indigo-300 uppercase tracking-[0.3em]">Viewing Cycle</p>
+                                <p className="text-sm font-bold text-white">{cycleData?.label}</p>
+                            </div>
+
+                            <button
+                                onClick={() => onNavigate && onNavigate('NEXT')}
+                                className="p-2 hover:bg-white/10 rounded-xl transition-all text-white/70 hover:text-white flex items-center gap-1 group"
+                            >
+                                <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Next Cycle</span>
+                                <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+                            </button>
+                        </div>
                     </div>
 
-                    <div className="p-6">
+                    <div className="p-6 overflow-y-auto custom-scrollbar">
                         {/* Stats Summary */}
                         <div className="grid grid-cols-4 gap-3 mb-8">
                             <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100/50 group hover:bg-emerald-50 transition-colors">
@@ -185,7 +209,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
 
                             {calendarDays.map((date, idx) => {
                                 const status = getDayStatus(date);
-                                const dateStr = date.toISOString().split('T')[0]; // Define dateStr here
+                                const dateStr = getYYYYMMDD(date); // Define dateStr here
                                 const isToday = date.toDateString() === new Date().toDateString();
 
                                 const getStatusStyles = (status) => {

@@ -1,151 +1,156 @@
-import { useEffect, useState, useRef, useCallback } from 'react';
-import { useSelector, useDispatch } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
-import { getAttendanceStatus, markAttendance, checkoutAttendance, getMyWorkLogs, getMyRequests, reset, pauseAttendance, resumeAttendance, getAttendanceHistory } from '../../features/employee/employeeSlice';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { motion, AnimatePresence } from 'framer-motion';
+import {
+    Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
+    Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
+    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send
+} from 'lucide-react';
+import {
+    getAttendanceStatus,
+    markAttendance,
+    checkoutAttendance,
+    pauseAttendance,
+    resumeAttendance,
+    getMyWorkLogs,
+    createWorkLog,
+    getMyRequests
+} from '../../features/employee/employeeSlice';
 import { toast } from 'react-toastify';
-import axios from 'axios';
-import MonthCycleSelector from '../../components/common/MonthCycleSelector';
-
-import WorkLogForm from '../../components/WorkLogForm'; // Default (LA)
-import LAWorkLogForm from '../../components/worklogs/LAWorkLogForm'; // Detailed (LA)
-import CREWorkLogForm from '../../components/worklogs/CREWorkLogForm';
-import FAWorkLogForm from '../../components/worklogs/FAWorkLogForm';
-import AEWorkLogForm from '../../components/worklogs/AEWorkLogForm'; // Added AE Import
-import DynamicWorkLogForm from '../../components/worklogs/DynamicWorkLogForm';
-import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
-
+import Modal from '../../components/Modal';
 import LeaveRequestForm from '../../components/LeaveRequestForm';
 import PermissionRequestForm from '../../components/PermissionRequestForm';
-import StatCard from '../../components/StatCard';
-import Spinner from '../../components/Spinner';
-import { formatDate, formatTime } from '../../utils/dateUtils';
-import Modal from '../../components/Modal';
-import BreakSelectionModal from '../../components/BreakSelectionModal';
-import ProjectCreationForm from '../../components/ProjectCreationForm';
 import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
+import WorkLogForm from '../../components/WorkLogForm';
 import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
-import CheckInPhotoModal from '../../components/CheckInPhotoModal';
-import ConfirmationModal from '../../components/ConfirmationModal';
+import { formatDateTime, formatDate, formatTime, getHHMM } from '../../utils/dateUtils';
 import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
-
-import { getDeviceType } from '../../utils/deviceUtils';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Building2 } from 'lucide-react';
-
-// ─── Helper: Request browser notification permission ───────────────────────────
-const requestNotifPermission = async () => {
-    if ('Notification' in window && Notification.permission === 'default') {
-        await Notification.requestPermission();
-    }
-};
-
-const showBrowserNotif = (title, body) => {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        new Notification(title, { body, icon: '/logo.png' });
-    }
-};
-const API_URL = import.meta.env.VITE_API_BASE_URL + '/api/';
-
+import ConfirmationModal from '../../components/ConfirmationModal';
+import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
 
 const Overview = () => {
     const dispatch = useDispatch();
-    const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
-    const { attendance, workLogs, requests, isLoading, isPaused, activeBreak, isRequestsFetched, attendanceHistory } = useSelector((state) => state.employee);
+    const { attendance, requests, loading, isRequestsFetched, activeBreak } = useSelector((state) => state.employee);
 
-    // Alerts state
-    const [breakAlert, setBreakAlert] = useState(false);   // 30-min break overrun
-    const [logoutAlert, setLogoutAlert] = useState(false); // 10PM reminder
-    const breakTimerRef = useRef(null);
+    // States
+    const [activeModal, setActiveModal] = useState(null);
+    const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const [isCheckingOut, setIsCheckingOut] = useState(false);
+    const [photo, setPhoto] = useState(null);
+    const [isAutoPermission, setIsAutoPermission] = useState(false);
+    const [permissionInitialData, setPermissionInitialData] = useState(null);
+    const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
+    const [isAttendanceCalendarOpen, setIsAttendanceCalendarOpen] = useState(false);
+    const [isSiteLogin, setIsSiteLogin] = useState(false);
+    const [isMandatorySiteVisit, setIsMandatorySiteVisit] = useState(false);
+    const [visitInitialData, setVisitInitialData] = useState(null);
+    const [logoutAlert, setLogoutAlert] = useState(false);
+    const [confirmationConfig, setConfirmationConfig] = useState({ isOpen: false, title: '', message: '', onConfirm: () => { }, type: 'info' });
+    const [isMandatoryWorkLog, setIsMandatoryWorkLog] = useState(false);
+    const [location, setLocation] = useState({ lat: null, lng: null, address: 'Locating...' });
+
+    const fetchLocation = useCallback(() => {
+        if (!navigator.geolocation) {
+            setLocation(prev => ({ ...prev, address: 'Geolocation Unsupported' }));
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            async (pos) => {
+                const { latitude: lat, longitude: lng } = pos.coords;
+                try {
+                    // Reverse geocode using Nominatim (no key required for low volume)
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                    const data = await res.json();
+
+                    // Construct a detailed address similar to the user's image
+                    const addr = data.address;
+                    const parts = [
+                        addr.road,
+                        addr.suburb || addr.neighbourhood,
+                        addr.city_district || addr.county,
+                        addr.city || addr.town || addr.village,
+                        addr.state_district,
+                        addr.state,
+                        addr.postcode,
+                        addr.country
+                    ].filter(Boolean);
+
+                    setLocation({ lat, lng, address: parts.join(', ') || data.display_name || 'Address Found' });
+                } catch (err) {
+                    console.error("Geocoding error:", err);
+                    setLocation({ lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}` });
+                }
+            },
+            (err) => {
+                console.error("Location error:", err);
+                setLocation(prev => ({ ...prev, address: 'Location Access Denied' }));
+            },
+            { enableHighAccuracy: true, timeout: 10000 }
+        );
+    }, []);
+
+    // Initial location fetch
+    useEffect(() => {
+        fetchLocation();
+    }, [fetchLocation]);
+
+    // Refs
+    const videoRef = useRef(null);
     const logoutTimerRef = useRef(null);
 
-    // UI State
-    const [activeTab, setActiveTab] = useState('logs');
-    const [activeModal, setActiveModal] = useState(null); // 'worklog', 'leave', 'permission', 'project'
-    const [showCheckInModal, setShowCheckInModal] = useState(false);
-    const [showBreakModal, setShowBreakModal] = useState(false);
-    const [isCheckingOut, setIsCheckingOut] = useState(false);
-    const [permissionInitialData, setPermissionInitialData] = useState(null);
-    const [isAutoPermission, setIsAutoPermission] = useState(false);
-    const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
-    const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-    const [showCalendarModal, setShowCalendarModal] = useState(false);
-    const [selectedCycle, setSelectedCycle] = useState(null);
-    const [siteVisitInitialData, setSiteVisitInitialData] = useState(null);
-    const [isMandatorySiteVisit, setIsMandatorySiteVisit] = useState(false);
-    const [isSiteLogin, setIsSiteLogin] = useState(false);
-
-
-
-    // Confirmation Modal State
-    const [confirmationConfig, setConfirmationConfig] = useState({
-        isOpen: false,
-        title: '',
-        message: '',
-        onConfirm: () => { },
-        type: 'info'
-    });
-
-    // ── Request notif permission on mount ──────────────────────────────────────
-    useEffect(() => { requestNotifPermission(); }, []);
-
-    // ── Mobile resize ──────────────────────────────────────────────────────────
+    // Fetch Initial Data
     useEffect(() => {
-        const h = () => setIsMobile(window.innerWidth < 768);
-        window.addEventListener('resize', h);
-        return () => window.removeEventListener('resize', h);
+        dispatch(getAttendanceStatus());
+        dispatch(getMyWorkLogs());
+        dispatch(getMyRequests());
+    }, [dispatch]);
+
+    const isCheckedIn = useMemo(() =>
+        attendance?.status === 'PRESENT' && !attendance.checkoutTime,
+        [attendance]);
+
+    const isSessionFinished = useMemo(() =>
+        attendance?.status === 'PRESENT' && !!attendance.checkoutTime && user?.designation !== 'AE' && user?.designation !== 'AE MANAGER',
+        [attendance, user]);
+
+    const [sessionDuration, setSessionDuration] = useState('00:00:00');
+
+    useEffect(() => {
+        let interval;
+        if (isCheckedIn && attendance?.date) {
+            const startTime = new Date(attendance.date).getTime();
+            const update = () => {
+                const diff = Date.now() - startTime;
+                const h = Math.floor(diff / 3600000);
+                const m = Math.floor((diff % 3600000) / 60000);
+                const s = Math.floor((diff % 60000) / 1000);
+                setSessionDuration(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+            };
+            update();
+            interval = setInterval(update, 1000);
+        } else if (attendance?.checkoutTime && attendance?.date) {
+            const diff = new Date(attendance.checkoutTime).getTime() - new Date(attendance.date).getTime();
+            const h = Math.floor(diff / 3600000);
+            const m = Math.floor((diff % 3600000) / 60000);
+            const s = Math.floor((diff % 60000) / 1000);
+            setSessionDuration(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+        } else {
+            setSessionDuration('00:00:00');
+        }
+        return () => clearInterval(interval);
+    }, [isCheckedIn, attendance]);
+
+    // Handle 10 PM Logout Reminders
+    const showBrowserNotif = useCallback((title, body) => {
+        if (Notification.permission === 'granted') {
+            new Notification(title, { body, icon: '/logo.png' });
+        }
     }, []);
 
     useEffect(() => {
-        if (user?.wfhViewEnabled) {
-            navigate('/dashboard/wfh');
-            return;
-        }
-        dispatch(getAttendanceStatus());
-        // Initial getMyWorkLogs and getMyRequests handled by MonthCycleSelector
-        return () => { dispatch(reset()); };
-    }, [dispatch, user, navigate]);
-
-    const handleCycleChange = (range) => {
-        const params = {
-            startDate: range.startDate,
-            endDate: range.endDate
-        };
-        setSelectedCycle(range);
-        dispatch(getMyWorkLogs(params));
-        dispatch(getMyRequests(params));
-        dispatch(getAttendanceHistory(params));
-    };
-
-    // ── Break overrun alert: 30 min after break starts (TEA / LUNCH only) ─────
-    useEffect(() => {
-        if (breakTimerRef.current) clearTimeout(breakTimerRef.current);
-        setBreakAlert(false);
-
-        if (isPaused && activeBreak && ['TEA', 'LUNCH'].includes(activeBreak.breakType) && activeBreak.startTime) {
-            const breakStart = new Date(activeBreak.startTime).getTime();
-            const elapsed = Date.now() - breakStart;
-            const remaining = 30 * 60 * 1000 - elapsed; // 30 minutes
-
-            if (remaining <= 0) {
-                setBreakAlert(true);
-                showBrowserNotif('⏰ Break Overrun!', `Your ${activeBreak.breakType.toLowerCase()} break has exceeded 30 minutes. Please resume work.`);
-            } else {
-                breakTimerRef.current = setTimeout(() => {
-                    setBreakAlert(true);
-                    showBrowserNotif('⏰ Break Overrun!', `Your ${activeBreak.breakType.toLowerCase()} break has exceeded 30 minutes. Please resume work.`);
-                }, remaining);
-            }
-        }
-        return () => { if (breakTimerRef.current) clearTimeout(breakTimerRef.current); };
-    }, [isPaused, activeBreak]);
-
-    // ── Logout Reminder at 10 PM ──────────────────────────────────────────────
-    useEffect(() => {
-        if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current);
-        setLogoutAlert(false);
-
-        if (attendance?.status === 'PRESENT' && !attendance?.checkoutTime) {
+        if (isCheckedIn && !logoutAlert) {
             const target = new Date();
             target.setHours(22, 0, 0, 0); // 10:00 PM
             const remaining = target.getTime() - Date.now();
@@ -161,23 +166,15 @@ const Overview = () => {
             }
         }
         return () => { if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current); };
-    }, [attendance]);
+    }, [isCheckedIn, logoutAlert, showBrowserNotif]);
 
-    const checkLatenessAndRedirect = (checkInTimeRaw, isAuto = false) => {
-        // Exempt AE (Area Engineers) from this restriction
+    const checkLatenessAndRedirect = useCallback((checkInTimeRaw, isAuto = false) => {
         if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') return;
 
         const checkInTime = new Date(checkInTimeRaw);
         const hours = checkInTime.getHours();
         const minutes = checkInTime.getMinutes();
         const totalMinutes = hours * 60 + minutes;
-
-        // If login is after 2:00 PM (14:00)
-        if (totalMinutes >= 840) {
-            setIsAutoPermission(true);
-            toast.info("Late login detected. Please submit a half-day leave request.");
-            return;
-        }
 
         const todayLocal = checkInTime.toLocaleDateString('en-CA');
 
@@ -188,12 +185,9 @@ const Overview = () => {
             return l.status === 'APPROVED' && todayLocal >= lStart && todayLocal <= lEnd;
         });
 
-        if (hasApprovedLeave) {
-            console.log('Skipping mandatory permission: Approved leave found for today.');
-            return;
-        }
+        if (hasApprovedLeave) return;
 
-        // Check for ANY half-day leave for today (pending or approved)
+        // Check for ANY half-day leave for today
         const hasHalfDay = requests?.leaves?.some(l => {
             if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
             const lS = new Date(l.startDate).toLocaleDateString('en-CA');
@@ -201,23 +195,24 @@ const Overview = () => {
             return todayLocal >= lS && todayLocal <= lE;
         });
 
-        // Base threshold is 10:30 AM (630 mins). If half day, it shifts to 2:00 PM (840 mins)
-        let thresholdMinutes = hasHalfDay ? 840 : 630;
+        let thresholdMinutes = hasHalfDay ? 840 : 640; // 2:00 PM or 10:40 AM (10 minute buffer for 10:30 AM)
 
-        // Check for ANY permission (Pending/Approved) for today
         const hasPermission = requests?.permissions?.some(p => {
             const pDate = new Date(p.date).toLocaleDateString('en-CA');
-            return pDate === todayLocal;
+            return pDate === todayLocal && p.status !== 'REJECTED';
         });
 
-        // If they have a permission, they get a +2 hour (120 mins) grace period before being "Late" again.
-        if (hasPermission) {
-            thresholdMinutes += 120; // 10:30 AM becomes 12:30 PM (or 2:00 PM becomes 4:00 PM)
+        // Deadlock Fix: If permission already exists and this is auto-redirect, skip
+        if (isAuto && hasPermission) return;
+
+        // Add 2 hour grace only if they have permission AND it's NOT a mandatory check-in check
+        if (hasPermission && !isAuto) {
+            thresholdMinutes += 120;
         }
 
         if (totalMinutes > thresholdMinutes) {
-            const date = checkInTime.toLocaleDateString('en-CA');
-            const formatTime = (dateObj) => {
+            const date = todayLocal;
+            const formatTimeLocal = (dateObj) => {
                 let h = dateObj.getHours();
                 const m = dateObj.getMinutes().toString().padStart(2, '0');
                 const ampm = h >= 12 ? 'PM' : 'AM';
@@ -225,11 +220,10 @@ const Overview = () => {
                 return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
             };
 
-            const startTime = formatTime(checkInTime);
+            const startTime = formatTimeLocal(checkInTime);
             const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
-            const endTime = formatTime(endTimeObj);
+            const endTime = formatTimeLocal(endTimeObj);
 
-            // Format labels for reason
             const labelTime = hasPermission
                 ? (hasHalfDay ? '4:00 PM' : '12:30 PM')
                 : (hasHalfDay ? '2:00 PM' : '10:30 AM');
@@ -243,597 +237,649 @@ const Overview = () => {
             setIsAutoPermission(isAuto);
             setActiveModal('permission');
         }
-    };
+    }, [user, requests]);
 
-    // Robust Mandatory Redirection Check (Lateness & Site Login)
+    // Lateness Effect
     useEffect(() => {
         if (isCheckedIn && isRequestsFetched && !hasCheckedLateness) {
-            // Lateness Check
-            if (activeModal !== 'permission' && user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
-                checkLatenessAndRedirect(attendance.date, true);
+            if (activeModal !== 'permission') {
+                checkLatenessAndRedirect(attendance?.date || new Date(), true);
             }
             setHasCheckedLateness(true);
         }
-    }, [attendance, isRequestsFetched, activeModal, user, hasCheckedLateness, requests, isCheckedIn]);
+    }, [isCheckedIn, isRequestsFetched, hasCheckedLateness, activeModal, attendance, checkLatenessAndRedirect]);
 
-    const handleMarkAttendance = (isSiteLogin = false) => {
-        if (isMobile && user?.designation !== 'AE') {
-            toast.warning('Mobile sign-in is restricted to AE. Please use a Desktop.');
-            return;
-        }
-        executeAttendanceAction(isSiteLogin);
-    };
-
-    const executeAttendanceAction = (siteLogin = false) => {
-        setIsSiteLogin(siteLogin);
-        const deviceInfo = navigator.userAgent;
-        const deviceType = getDeviceType();
-        const formData = new FormData();
-        formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${siteLogin ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
-
-        if (attendance?.status === 'PRESENT' && !attendance.checkoutTime) {
-            // Check-Out Logic
-            if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
-                setIsCheckingOut(true);
-                setShowCheckInModal(true);
-            } else {
-                dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
+    // Worklog Enforcement Effect
+    const { todayLog } = useSelector((state) => state.employee);
+    useEffect(() => {
+        if (isCheckedIn && isRequestsFetched && activeModal === null && hasCheckedLateness) {
+            // Force worklog if missing for CRE/AE (Opening report)
+            const isSpecializedRole = ['CRE', 'AE', 'AE MANAGER', 'CRE MANAGER'].includes(user?.designation?.toUpperCase());
+            if (isSpecializedRole && !todayLog) {
+                setIsMandatoryWorkLog(true);
+                setActiveModal('worklog');
             }
-        } else {
-            // Check-In Logic
-            if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
-                setIsCheckingOut(false);
-                setShowCheckInModal(true);
-            } else {
-                dispatch(markAttendance(formData)).then((res) => {
-                    if (!res.error) {
-                        dispatch(getAttendanceStatus());
-                        const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
+        }
+    }, [isCheckedIn, isRequestsFetched, todayLog, user, activeModal, hasCheckedLateness]);
 
-                        // Mandatory Redirection for Site Login
-                        if (siteLogin) {
-                            setIsMandatorySiteVisit(true);
-                            setActiveModal('site-visit');
-                        } else {
-                            checkLatenessAndRedirect(checkInDate);
-                        }
-                    } else {
-                        toast.error(res.payload || 'Check-in failed.');
+    // Camera Effect for AE
+    useEffect(() => {
+        let stream = null;
+        if (showCheckInModal && videoRef.current) {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+                .then(s => {
+                    stream = s;
+                    if (videoRef.current) {
+                        videoRef.current.srcObject = s;
                     }
+                })
+                .catch(err => {
+                    console.error("Camera error:", err);
+                    toast.error("Could not access camera. Please check permissions.");
                 });
-            }
+
+            // Ensure we have fresh location when modal opens
+            fetchLocation();
         }
-    };
-
-    const handlePhotoCheckIn = (photoFile) => {
-        const formData = new FormData();
-        formData.append('attendancePhoto', photoFile);
-        formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE_LOGIN | ' : ''}${navigator.userAgent}`);
-
-        const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
-
-        dispatch(action).then((res) => {
-            if (!res.error) {
-                setShowCheckInModal(false);
-                dispatch(getAttendanceStatus());
-                // Auto-redirect logic
-                if (!isCheckingOut) {
-                    const checkInDate = res.payload?.date ? new Date(res.payload.date) : new Date();
-                    if (isSiteLogin) {
-                        setIsMandatorySiteVisit(true);
-                        setActiveModal('site-visit');
-                    } else {
-                        checkLatenessAndRedirect(checkInDate, true);
-                    }
-                }
-                setIsSiteLogin(false); // Reset
-            } else {
-                toast.error(res.payload || "Action failed.");
+        return () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
             }
-        });
+        };
+    }, [showCheckInModal, fetchLocation]);
+
+    const getDeviceType = () => {
+        const ua = navigator.userAgent;
+        if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return 'tablet';
+        if (/Mobile|android|iphone|ipod|blackberry|benq|palm|windows ce|x11/i.test(ua)) return 'mobile';
+        return 'desktop';
     };
 
-    const handleBreakSelect = (breakType) => {
-        // Close break modal first
-        setShowBreakModal(false);
-
-        const breakLabels = {
-            'TEA': 'Tea Break',
-            'LUNCH': 'Lunch Break',
-            'CLIENT_MEETING': 'Client Meeting',
-            'BH_MEETING': 'BH Meeting'
-        };
-
-        const label = breakLabels[breakType] || 'Break';
-
+    const handleMarkAttendance = (isSiteLoginAction = false) => {
         setConfirmationConfig({
             isOpen: true,
-            title: `Confirm ${label}`,
-            message: `Are you sure you want to start ${label}?`,
-            type: 'info',
-            confirmText: `Start ${label}`,
+            title: isCheckedIn ? 'Confirm Sign-Out' : (isSiteLoginAction ? 'Confirm Site Sign-In' : 'Confirm Office Sign-In'),
+            message: isCheckedIn
+                ? 'Are you sure you want to finish your session for today?'
+                : `Are you ready to start your session via ${isSiteLoginAction ? 'Site' : 'Office'}?`,
+            type: isCheckedIn ? 'warning' : 'info',
             onConfirm: () => {
-                dispatch(pauseAttendance({ breakType })).then((res) => {
-                    if (!res.error) {
-                        dispatch(getAttendanceStatus());
+                setIsSiteLogin(isSiteLoginAction);
+                const deviceInfo = navigator.userAgent;
+                const deviceType = getDeviceType();
+                const formData = new FormData();
+                formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLoginAction ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
+
+                if (isCheckedIn) {
+                    // Check-Out
+                    if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
+                        setIsCheckingOut(true);
+                        setShowCheckInModal(true);
+                    } else {
+                        dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
                     }
-                });
+                } else {
+                    // Check-In
+                    if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
+                        setIsCheckingOut(false);
+                        setShowCheckInModal(true);
+                    } else {
+                        dispatch(markAttendance(formData)).then((res) => {
+                            if (!res.error) {
+                                dispatch(getAttendanceStatus());
+                                if (isSiteLoginAction) {
+                                    setIsMandatorySiteVisit(true);
+                                    setVisitInitialData({
+                                        date: new Date().toLocaleDateString('en-CA'),
+                                        startTime: getHHMM(new Date())
+                                    });
+                                    setActiveModal('site-visit');
+                                } else {
+                                    checkLatenessAndRedirect(new Date(), true);
+                                }
+                            }
+                        });
+                    }
+                }
             }
         });
     };
 
-    const handleResume = () => {
-        dispatch(resumeAttendance()).then((res) => {
-            if (!res.error) {
-                dispatch(getAttendanceStatus());
-            }
-        });
-    };
+    const handleNavigateCycle = (direction) => {
+        const currentStart = new Date(requests?.cycleData?.startDate);
+        if (isNaN(currentStart.getTime())) return;
 
-    const closeModal = () => {
-        setActiveModal(null);
-        setPermissionInitialData(null);
-        setSiteVisitInitialData(null);
-        setIsAutoPermission(false);
-        setIsMandatorySiteVisit(false);
-    };
-
-    const renderWorkLogForm = () => {
-        switch (user?.designation) {
-            case 'CRE':
-                return <CREWorkLogForm onSuccess={closeModal} />;
-            case 'FA':
-                return <FAWorkLogForm onSuccess={closeModal} />;
-            case 'AE': // Added AE Case
-                return <AEWorkLogForm onSuccess={closeModal} />;
-
-            default:
-                // Check for new roles in config
-                if (user?.designation && WORK_LOG_CONFIG[user.designation]) {
-                    return <DynamicWorkLogForm role={user.designation} onSuccess={closeModal} />;
-                }
-
-                // Fallback for LA or legacy
-                if (user?.designation === 'LA' || !user?.designation) {
-                    if (user?.designation === 'LA') {
-                        return <LAWorkLogForm onSuccess={closeModal} />;
-                    }
-                    return <WorkLogForm onSuccess={closeModal} />;
-                }
-                return <WorkLogForm onSuccess={closeModal} />;
+        let targetDate = new Date(currentStart);
+        if (direction === 'PREV') {
+            targetDate.setMonth(targetDate.getMonth() - 1);
+        } else {
+            targetDate.setMonth(targetDate.getMonth() + 1);
         }
+
+        const year = targetDate.getFullYear();
+        const month = targetDate.getMonth();
+
+        const newStart = new Date(year, month, 26);
+        const newEnd = new Date(year, month + 1, 25);
+
+        dispatch(getMyRequests({
+            startDate: getYYYYMMDD(newStart),
+            endDate: getYYYYMMDD(newEnd)
+        }));
     };
-
-    // derived
-    const isCheckedIn = !!attendance && attendance.status === 'PRESENT' && !attendance.checkoutTime;
-    const isCheckedOut = !!attendance && !!attendance.checkoutTime;
-    const pendingCount = (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0);
-    const greetHour = new Date().getHours();
-    const greeting = greetHour < 12 ? 'Good Morning' : greetHour < 17 ? 'Good Afternoon' : 'Good Evening';
-
-    const quickActions = [
-        { id: 'worklog', label: 'Log Work', sub: `${user?.designation || 'General'} Report`, icon: '📝', color: 'from-blue-500 to-indigo-600' },
-        { id: 'leave', label: 'Request Leave', sub: 'Full / Half Day', icon: '🏖️', color: 'from-orange-400 to-amber-500' },
-        { id: 'permission', label: 'Permission', sub: 'Late / Early exit', icon: '🕑', color: 'from-violet-500 to-purple-600' },
-        ['LA', 'FA', 'AE', 'AE MANAGER', 'ADMIN'].includes(user?.designation) && { id: 'project', label: 'Create Project', sub: 'New assignment', icon: '🚀', color: 'from-emerald-500 to-teal-600' },
-        { id: 'site-visit', label: 'Site Visit', sub: 'Update visit log', icon: '🏗️', color: 'from-green-500 to-emerald-600' },
-        { id: 'showroom-visit', label: 'Showroom Visit', sub: 'Cross-showroom move', icon: '🏢', color: 'from-indigo-500 to-blue-600' },
-        // Mobile-centric Sign In Action
-        isMobile && !isCheckedIn && !isCheckedOut && { id: 'site-login', label: 'Site Sign In', sub: 'Quick Entry', icon: '🏁', color: 'from-rose-500 to-orange-600' },
-    ].filter(Boolean);
 
     return (
-        <div className="space-y-6 animate-fade-in pb-20">
+        <div className="min-h-screen bg-[#F8FAFC] pb-24 lg:pb-8">
+            <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-8">
+                {/* Active Break Notification */}
+                <AnimatePresence>
+                    {activeBreak && (
+                        <motion.div
+                            initial={{ height: 0, opacity: 0, y: -20 }}
+                            animate={{ height: 'auto', opacity: 1, y: 0 }}
+                            exit={{ height: 0, opacity: 0, y: -20 }}
+                            className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 p-[2px] rounded-[2rem] shadow-lg shadow-amber-200/50 overflow-hidden"
+                        >
+                            <div className="bg-white/95 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-4">
+                                    <div className="relative">
+                                        <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
+                                            <Coffee size={24} className="animate-bounce" />
+                                        </div>
+                                        <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
+                                            <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+                                        </span>
+                                    </div>
+                                    <div>
+                                        <h4 className="text-lg font-black text-slate-800 tracking-tight">Break Session Active</h4>
+                                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                            Currently on {activeBreak.breakType} break since {formatTime(activeBreak.startTime)}
+                                        </p>
+                                    </div>
+                                </div>
+                                <motion.button
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
+                                    onClick={() => {
+                                        setConfirmationConfig({
+                                            isOpen: true,
+                                            title: 'End Break',
+                                            message: `Are you sure you want to end your ${activeBreak.breakType} break and resume work?`,
+                                            type: 'info',
+                                            onConfirm: () => {
+                                                dispatch(resumeAttendance()).then(() => dispatch(getAttendanceStatus()));
+                                                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+                                            }
+                                        });
+                                    }}
+                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:shadow-xl transition-all flex items-center gap-2 group"
+                                >
+                                    Resume Work <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
+                                </motion.button>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
+                {/* Header Section */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 lg:p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider">
+                                Employee Dashboard
+                            </span>
+                            <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
+                        </div>
+                        <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
+                            Welcome back, <span className="text-indigo-600">{user?.name}</span>
+                        </h1>
+                        <p className="text-slate-500 font-medium flex items-center gap-2">
+                            <Calendar size={18} className="text-slate-400" />
+                            {formatDate(new Date())} • {user?.designation}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-4">
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setIsAttendanceCalendarOpen(true)}
+                            className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl hover:border-indigo-200 transition-all group"
+                        >
+                            <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                                <TrendingUp size={20} />
+                            </div>
+                            <div className="text-left">
+                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">View Stats</p>
+                                <p className="text-sm font-black text-slate-900">Attendance</p>
+                            </div>
+                        </motion.button>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => setActiveModal('worklog')}
+                            className="flex items-center gap-3 px-6 py-4 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                        >
+                            <Sparkles size={20} />
+                            <span className="font-bold">Log Tasks</span>
+                        </motion.button>
+                    </div>
+                </div>
+
+                <div className="grid lg:grid-cols-12 gap-8">
+                    {/* Left Column */}
+                    <div className="lg:col-span-8 space-y-8">
+                        <div className="bg-white rounded-[3rem] p-8 lg:p-12 shadow-sm border border-slate-100 relative overflow-hidden group">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-12">
+                                <div className="space-y-8">
+                                    <div className="space-y-4">
+                                        <div className="inline-flex py-1 px-1 bg-slate-100 rounded-2xl">
+                                            <button
+                                                onClick={() => setIsSiteLogin(false)}
+                                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isSiteLogin ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Office Login
+                                            </button>
+                                            <button
+                                                onClick={() => setIsSiteLogin(true)}
+                                                className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSiteLogin ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                            >
+                                                Site Login
+                                            </button>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h2 className="text-3xl font-black text-slate-900">
+                                                {isCheckedIn ? 'Session Active' : (isSessionFinished ? 'Session Completed' : 'Ready to Start?')}
+                                            </h2>
+                                            <div className="flex flex-col gap-1">
+                                                <p className="text-slate-500 font-medium text-lg">
+                                                    {isCheckedIn
+                                                        ? `Started at ${formatTime(attendance?.date)}`
+                                                        : (isSessionFinished
+                                                            ? `Completed session at ${formatTime(attendance?.checkoutTime)}`
+                                                            : 'Your daily progress begins here. Don\'t forget to sign in!')}
+                                                </p>
+                                                {(isCheckedIn || isSessionFinished) && (
+                                                    <div className="flex items-center gap-6 mt-2 pt-4 border-t border-slate-100">
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                                                                <Clock size={14} />
+                                                            </div>
+                                                            <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Duration:</span>
+                                                            <span className="text-sm font-bold text-slate-700 tabular-nums">{sessionDuration}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                                                                <MapPinned size={14} />
+                                                            </div>
+                                                            <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Type:</span>
+                                                            <span className="text-sm font-bold text-slate-700">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site' : 'Office'}</span>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-4">
+                                        {!isSessionFinished && (
+                                            <motion.button
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => handleMarkAttendance(isSiteLogin)}
+                                                className={`px-10 py-5 ${isCheckedIn ? 'bg-rose-500' : (isSiteLogin ? 'bg-emerald-500' : 'bg-indigo-600')} text-white rounded-[2rem] font-bold text-lg flex items-center gap-3 shadow-xl transition-all`}
+                                            >
+                                                {isCheckedIn ? <LogOut size={24} /> : (isSiteLogin ? <MapPinned size={24} /> : <Monitor size={24} />)}
+                                                {isCheckedIn ? 'Finish Session' : (isSiteLogin ? 'Site Sign-In' : 'Office Sign-In')}
+                                            </motion.button>
+                                        )}
+
+                                        {isSessionFinished && (
+                                            <div className="flex items-center gap-3 px-8 py-5 bg-slate-100 text-slate-500 rounded-[2rem] font-bold border border-slate-200">
+                                                <CheckCircle2 size={24} className="text-emerald-500" />
+                                                Attendance Blocked for Today
+                                            </div>
+                                        )}
+
+                                        {isCheckedIn && (
+                                            <motion.button
+                                                whileHover={{ scale: 1.02 }}
+                                                whileTap={{ scale: 0.98 }}
+                                                onClick={() => {
+                                                    if (activeBreak) {
+                                                        setConfirmationConfig({
+                                                            isOpen: true,
+                                                            title: 'End Break',
+                                                            message: `Are you sure you want to end your ${activeBreak.breakType} break and resume work?`,
+                                                            type: 'info',
+                                                            onConfirm: () => {
+                                                                dispatch(resumeAttendance()).then(() => dispatch(getAttendanceStatus()));
+                                                                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+                                                            }
+                                                        });
+                                                    } else {
+                                                        setActiveModal('break');
+                                                    }
+                                                }}
+                                                className={`px-8 py-5 ${activeBreak ? 'bg-amber-100 text-amber-600 border-2 border-amber-200' : 'bg-white border-2 border-slate-100 text-slate-600'} rounded-[2rem] font-bold flex items-center gap-3 transition-all`}
+                                            >
+                                                {activeBreak ? <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" /> End {activeBreak.breakType}</span> : <><Coffee size={24} /> Take Break</>}
+                                            </motion.button>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="hidden md:flex lg:w-48 lg:h-48 xl:w-64 xl:h-64 rounded-full bg-indigo-50 border-[12px] border-white shadow-xl flex-col items-center justify-center relative">
+                                    <Clock size={48} className="text-indigo-500 mb-2" />
+                                    <p className="text-2xl font-black text-slate-900 tabular-nums">
+                                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="grid md:grid-cols-3 gap-6">
+                            {[
+                                { icon: Calendar, title: 'Cycle Stats', label: 'Days Present', value: requests?.stats?.presentDays || 0, color: 'indigo' },
+                                { icon: AlertCircle, title: 'Requests', label: 'Pending', value: (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0), color: 'rose' },
+                                { icon: Star, title: 'Leaves', label: 'Available', value: Math.max(0, 4 - (requests?.leaves?.filter(l => l.status === 'APPROVED').length || 0)), color: 'emerald' }
+                            ].map((stat, i) => (
+                                <div key={i} className={`bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-${stat.color}-100 transition-all`}>
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className={`p-3 bg-${stat.color}-50 text-${stat.color}-600 rounded-2xl`}><stat.icon size={24} /></div>
+                                        <h4 className="font-bold text-slate-600">{stat.title}</h4>
+                                    </div>
+                                    <div className="flex items-baseline gap-2">
+                                        <span className="text-4xl font-black text-slate-900 tabular-nums">{stat.value}</span>
+                                        <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">{stat.label}</span>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Right Column */}
+                    <div className="lg:col-span-4 space-y-8">
+                        <div className="bg-slate-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
+                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Sparkles className="text-indigo-400" size={24} /> Quick Actions</h3>
+                            <div className="space-y-4">
+                                {[
+                                    { icon: Calendar, label: 'Leave Request', sub: 'Casual / Sick', type: 'leave', color: 'rose' },
+                                    { icon: Clock, label: 'One-hour Permit', sub: 'Early / Late', type: 'permission', color: 'amber' },
+                                    { icon: MapPin, label: 'Site Visit', sub: 'Project Reporting', type: 'site-visit', color: 'emerald' },
+                                    { icon: Building2, label: 'Showroom Visit', sub: 'Inter-Branch', type: 'showroom-visit', color: 'indigo' }
+                                ].map((act, i) => (
+                                    <button
+                                        key={i}
+                                        onClick={() => setActiveModal(act.type)}
+                                        className="w-full flex items-center justify-between p-5 bg-white/5 hover:bg-white/10 rounded-2xl transition-all border border-white/5 group"
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={`p-3 bg-${act.color}-500/20 text-${act.color}-400 rounded-xl`}><act.icon size={22} /></div>
+                                            <div className="text-left">
+                                                <p className="font-black text-sm">{act.label}</p>
+                                                <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{act.sub}</p>
+                                            </div>
+                                        </div>
+                                        <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-all" />
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
+                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-slate-900"><History className="text-slate-400" size={24} /> Recent Updates</h3>
+                            <div className="space-y-6">
+                                {requests?.workLogs?.slice(0, 3).map((log, idx) => (
+                                    <div key={idx} className="flex gap-4">
+                                        <div className="flex flex-col items-center">
+                                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
+                                            {idx !== 2 && <div className="w-0.5 h-full bg-slate-100" />}
+                                        </div>
+                                        <div className="flex-1 pb-6">
+                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatDate(log.date)}</p>
+                                            <p className="text-sm font-black text-slate-800 line-clamp-1">{log.projectName || 'General Work'}</p>
+                                            <p className="text-xs text-slate-500 line-clamp-1">{log.tasks}</p>
+                                        </div>
+                                    </div>
+                                )) || <p className="text-sm text-slate-400 text-center py-4">No recent logs</p>}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             {/* Modals */}
-            {activeModal && (
-                <Modal title={
-                    activeModal === 'worklog' ? 'Submit Daily Work Log' :
-                        activeModal === 'leave' ? 'Request Leave' :
-                            activeModal === 'permission' ? (isAutoPermission ? 'Mandatory Permission Request' : 'Request Permission') :
-                                activeModal === 'site-visit' ? (isMandatorySiteVisit ? 'Mandatory Site Visit Log' : 'Update Site Visit') :
-                                    activeModal === 'showroom-visit' ? 'Showroom Visit' : 'Create New Project'
-                } onClose={closeModal}
-                    showClose={!isAutoPermission && !isMandatorySiteVisit}
-                    closeOnClickOutside={!isAutoPermission && !isMandatorySiteVisit}>
-                    {activeModal === 'worklog' && renderWorkLogForm()}
-                    {activeModal === 'leave' && <LeaveRequestForm onSuccess={closeModal} />}
-                    {activeModal === 'permission' && <PermissionRequestForm onSuccess={closeModal} initialData={permissionInitialData} isMandatory={isAutoPermission} />}
-                    {activeModal === 'site-visit' && <SiteVisitRequestForm onSuccess={closeModal} initialData={siteVisitInitialData} isMandatory={isMandatorySiteVisit} />}
-                    {activeModal === 'site-visit-standalone' && <SiteVisitRequestForm onSuccess={closeModal} />}
-                    {activeModal === 'showroom-visit' && <ShowroomVisitRequestForm onSuccess={closeModal} />}
-                    {activeModal === 'project' && <ProjectCreationForm onSuccess={closeModal} />}
-                </Modal>
-            )}
-
-            <CheckInPhotoModal isOpen={showCheckInModal} onClose={() => setShowCheckInModal(false)} onSubmit={handlePhotoCheckIn} isLoading={isLoading} isCheckingOut={isCheckingOut} />
-
-            <BreakSelectionModal
-                isOpen={showBreakModal}
-                onClose={() => setShowBreakModal(false)}
-                onSelect={handleBreakSelect}
+            <AttendanceCalendarModal
+                isOpen={isAttendanceCalendarOpen}
+                onClose={() => setIsAttendanceCalendarOpen(false)}
+                cycleData={requests?.cycleData}
+                attendanceHistory={requests?.attendanceHistory}
+                leaves={requests?.leaves}
+                permissions={requests?.permissions}
+                onNavigate={handleNavigateCycle}
             />
+
+            <AnimatePresence>
+                {activeModal === 'leave' && (
+                    <Modal isOpen onClose={() => setActiveModal(null)} title="Request Leave">
+                        <LeaveRequestForm onSuccess={() => { setActiveModal(null); dispatch(getMyRequests()); }} />
+                    </Modal>
+                )}
+                {activeModal === 'permission' && (
+                    <Modal isOpen onClose={() => !isAutoPermission && setActiveModal(null)} title={isAutoPermission ? "Mandatory Permission" : "Request Permission"}>
+                        <PermissionRequestForm
+                            isMandatory={isAutoPermission}
+                            initialData={permissionInitialData}
+                            onSuccess={() => { setActiveModal(null); setIsAutoPermission(false); dispatch(getMyRequests()); }}
+                            onCancel={() => !isAutoPermission && setActiveModal(null)}
+                        />
+                    </Modal>
+                )}
+                {activeModal === 'site-visit' && (
+                    <Modal isOpen onClose={() => !isMandatorySiteVisit && setActiveModal(null)} title={isMandatorySiteVisit ? "Mandatory Reporting" : "Site Visit"}>
+                        <SiteVisitRequestForm
+                            isMandatory={isMandatorySiteVisit}
+                            initialData={visitInitialData}
+                            onSuccess={() => { setActiveModal(null); setIsMandatorySiteVisit(false); dispatch(getMyRequests()); }}
+                            onCancel={() => !isMandatorySiteVisit && setActiveModal(null)}
+                        />
+                    </Modal>
+                )}
+                {activeModal === 'showroom-visit' && (
+                    <Modal isOpen onClose={() => setActiveModal(null)} title="Showroom Visit">
+                        <ShowroomVisitRequestForm onSuccess={() => { setActiveModal(null); dispatch(getMyRequests()); }} />
+                    </Modal>
+                )}
+                {activeModal === 'worklog' && (
+                    <Modal isOpen onClose={() => !isMandatoryWorkLog && setActiveModal(null)} title={isMandatoryWorkLog ? "Mandatory Work Log" : "Work Log"}>
+                        <WorkLogFormSelector
+                            designation={user?.designation}
+                            onSuccess={() => {
+                                setActiveModal(null);
+                                setIsMandatoryWorkLog(false);
+                                dispatch(getMyWorkLogs());
+                            }}
+                        />
+                    </Modal>
+                )}
+                {activeModal === 'break' && (
+                    <Modal isOpen onClose={() => setActiveModal(null)} title="Take Break">
+                        <div className="grid grid-cols-2 gap-4 p-4">
+                            {[
+                                { id: 'TEA', icon: Coffee, title: 'Tea', color: 'indigo' },
+                                { id: 'LUNCH', icon: Utensils, title: 'Lunch', color: 'rose' },
+                                { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client', color: 'emerald' },
+                                { id: 'BH_MEETING', icon: MessageSquare, title: 'BH', color: 'amber' }
+                            ].map((t) => (
+                                <button
+                                    key={t.id}
+                                    onClick={() => {
+                                        setConfirmationConfig({
+                                            isOpen: true,
+                                            title: `Start ${t.title} Break`,
+                                            message: `Are you sure you want to take a ${t.title} break now?`,
+                                            type: 'info',
+                                            onConfirm: () => {
+                                                dispatch(pauseAttendance({ breakType: t.id })).then(() => {
+                                                    setActiveModal(null);
+                                                    dispatch(getAttendanceStatus());
+                                                });
+                                                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+                                            }
+                                        });
+                                    }}
+                                    className="flex flex-col items-center p-6 bg-slate-50 hover:bg-white hover:shadow-xl transition-all rounded-[2rem] border-2 border-transparent hover:border-indigo-100 group"
+                                >
+                                    <div className={`p-4 bg-${t.color}-50 text-${t.color}-500 rounded-[1.5rem] mb-4 group-hover:scale-110 transition-transform`}><t.icon size={32} /></div>
+                                    <p className="font-black text-slate-800 tracking-tight">{t.title}</p>
+                                </button>
+                            ))}
+                        </div>
+                    </Modal>
+                )}
+            </AnimatePresence>
+
+            {/* AE Modal */}
+            <AnimatePresence>
+                {showCheckInModal && (
+                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => !loading && setShowCheckInModal(false)} />
+                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl relative z-10">
+                            <div className="p-8 lg:p-10 space-y-8 text-center">
+                                <div className="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-[2rem]"><Camera size={32} /></div>
+                                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Smile!</h3>
+                                <div className="relative aspect-video bg-slate-900 rounded-[2.5rem] overflow-hidden">
+                                    {!photo ? (
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
+                                    ) : (
+                                        <div className="relative w-full h-full">
+                                            <img src={photo} alt="Verification" className="w-full h-full object-cover scale-x-[-1]" />
+                                            <button onClick={() => setPhoto(null)} className="absolute top-6 right-6 p-4 bg-white/90 rounded-2xl shadow-xl"><X size={24} /></button>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex gap-4">
+                                    {!photo ? (
+                                        <button onClick={() => {
+                                            const v = videoRef.current;
+                                            const c = document.createElement('canvas');
+                                            c.width = v.videoWidth; c.height = v.videoHeight;
+                                            const ctx = c.getContext('2d');
+
+                                            // Flip horizontally for user-facing camera
+                                            ctx.translate(c.width, 0); ctx.scale(-1, 1);
+                                            ctx.drawImage(v, 0, 0);
+
+                                            // Reset transform to draw text
+                                            ctx.setTransform(1, 0, 0, 1, 0, 0);
+
+                                            // Draw metadata overlay
+                                            ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+                                            ctx.fillRect(0, c.height - 70, c.width, 70);
+
+                                            ctx.fillStyle = 'white';
+                                            ctx.font = 'bold 20px Inter, sans-serif';
+
+                                            const now = new Date();
+                                            const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                            const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                            const locStr = location.address || 'Location Unavailable';
+
+                                            ctx.fillText(dateStr, 24, c.height - 75);
+                                            ctx.fillText(`| ${timeStr}`, 150, c.height - 75);
+                                            ctx.font = '500 13px Inter, sans-serif';
+
+                                            // Word wrap for long addresses
+                                            const words = locStr.split(', ');
+                                            let line = '📍 ';
+                                            let y = c.height - 45;
+                                            words.forEach((word, i) => {
+                                                const testLine = line + word + (i < words.length - 1 ? ', ' : '');
+                                                if (ctx.measureText(testLine).width > c.width - 48) {
+                                                    ctx.fillText(line, 24, y);
+                                                    line = word + (i < words.length - 1 ? ', ' : '');
+                                                    y += 20;
+                                                } else {
+                                                    line = testLine;
+                                                }
+                                            });
+                                            ctx.fillText(line, 24, y);
+
+                                            // Draw coordinates small in corner
+                                            if (location.lat) {
+                                                ctx.font = '400 10px Inter, sans-serif';
+                                                ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+                                                ctx.fillText(`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`, c.width - 100, c.height - 15);
+                                            }
+
+                                            setPhoto(c.toDataURL('image/jpeg', 0.9));
+                                        }} className="flex-1 py-6 bg-slate-900 text-white rounded-[2rem] font-bold">Capture</button>
+                                    ) : (
+                                        <button onClick={() => {
+                                            const formData = new FormData();
+                                            const blob = dataURLtoBlob(photo);
+                                            if (!blob) {
+                                                toast.error("Failed to process photo. Please try again.");
+                                                return;
+                                            }
+                                            // FIXED: Backend expects field name 'photo'
+                                            formData.append('photo', blob, 'photo.jpg');
+                                            formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE | ' : ''}${navigator.userAgent}`);
+                                            const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
+                                            dispatch(action).then((res) => {
+                                                if (!res.error) {
+                                                    dispatch(getAttendanceStatus());
+                                                    setPhoto(null); setShowCheckInModal(false);
+                                                    if (!isCheckingOut && isSiteLogin) {
+                                                        setIsMandatorySiteVisit(true);
+                                                        setVisitInitialData({ date: new Date().toLocaleDateString('en-CA'), startTime: getHHMM(new Date()) });
+                                                        setActiveModal('site-visit');
+                                                    } else if (!isCheckingOut) {
+                                                        checkLatenessAndRedirect(new Date(), true);
+                                                    }
+                                                }
+                                            });
+                                        }} className="flex-1 py-6 bg-indigo-600 text-white rounded-[2rem] font-bold">Confirm</button>
+                                    )}
+                                    <button onClick={() => setShowCheckInModal(false)} className="px-10 py-6 bg-slate-100 rounded-[2rem]">Cancel</button>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
 
             <ConfirmationModal
                 isOpen={confirmationConfig.isOpen}
-                onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                onClose={() => setConfirmationConfig({ ...confirmationConfig, isOpen: false })}
                 onConfirm={confirmationConfig.onConfirm}
                 title={confirmationConfig.title}
                 message={confirmationConfig.message}
                 type={confirmationConfig.type}
-                confirmText={confirmationConfig.confirmText}
             />
-
-            <AttendanceCalendarModal
-                isOpen={showCalendarModal}
-                onClose={() => setShowCalendarModal(false)}
-                cycleData={selectedCycle}
-                attendanceHistory={attendanceHistory}
-                leaves={requests?.leaves}
-                permissions={requests?.permissions}
-            />
-
-            {/* ── Smart Alert Banners ─────────────────────────────────────── */}
-            <AnimatePresence>
-                {breakAlert && (
-                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                        className="bg-amber-500 text-white px-5 py-3 rounded-2xl flex items-center justify-between shadow-lg shadow-amber-200 mb-4">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl animate-bounce">⏰</span>
-                            <div>
-                                <p className="font-black text-sm">Break Overrun — 30 minutes exceeded!</p>
-                                <p className="text-amber-100 text-xs">Your {activeBreak?.breakType?.toLowerCase() || ''} break is past 30 minutes. Please resume work.</p>
-                            </div>
-                        </div>
-                        <button onClick={() => setBreakAlert(false)} className="text-amber-100 hover:text-white ml-4 text-lg font-bold">✕</button>
-                    </motion.div>
-                )}
-                {logoutAlert && (
-                    <motion.div initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}
-                        className="bg-red-600 text-white px-5 py-3 rounded-2xl flex items-center justify-between shadow-lg shadow-red-200 mb-4">
-                        <div className="flex items-center gap-3">
-                            <span className="text-2xl animate-pulse">🚨</span>
-                            <div>
-                                <p className="font-black text-sm">It's past 10 PM — Don't forget to Check Out!</p>
-                                <p className="text-red-100 text-xs">Please tap the Check Out button before leaving for the day.</p>
-                            </div>
-                        </div>
-                        <button onClick={() => setLogoutAlert(false)} className="text-red-100 hover:text-white ml-4 text-lg font-bold">✕</button>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* ── Hero Header ────────────────────────────────────────────────── */}
-            <motion.div initial={{ opacity: 0, y: -16 }} animate={{ opacity: 1, y: 0 }}
-                className="relative overflow-hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 rounded-3xl p-7 shadow-2xl">
-                <div className="absolute top-0 right-0 w-72 h-72 bg-indigo-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4 pointer-events-none" />
-                <div className="absolute bottom-0 left-0 w-48 h-48 bg-blue-500/15 rounded-full blur-3xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
-
-                <div className="relative z-10 flex flex-col md:flex-row justify-between md:items-center gap-5">
-                    <div>
-                        <p className="text-indigo-300 text-xs font-bold uppercase tracking-widest mb-1">{greeting} 👋</p>
-                        <h2 className="text-3xl md:text-4xl font-black text-white mb-1 tracking-tight">
-                            {user?.name?.split(' ')[0]}
-                        </h2>
-                        <div className="flex items-center gap-2 flex-wrap">
-                            <span className="bg-indigo-500/30 border border-indigo-400/30 text-indigo-200 text-xs px-3 py-1 rounded-full font-bold">{user?.designation || '—'}</span>
-                            <span className="text-slate-500 text-xs">•</span>
-                            <span className="text-slate-400 text-xs">{new Date().toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' })}</span>
-                        </div>
-                    </div>
-
-
-                    {/* Month Selector on the right corner */}
-                    <div className="shrink-0 scale-90 sm:scale-100 origin-right">
-                        <MonthCycleSelector onCycleChange={handleCycleChange} onCardClick={() => setShowCalendarModal(true)} />
-                    </div>
-                </div>
-            </motion.div>
-
-            {/* ── Main Grid ──────────────────────────────────────────────────── */}
-            {/* Site Sign-In (Mobile/Employee Specific) - Forces Site Visit Form */}
-            {user?.role === 'EMPLOYEE' && (
-                <motion.div
-                    whileHover={{ scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
-                    onClick={() => handleMarkAttendance(true)}
-                    className="p-6 rounded-[2.5rem] bg-gradient-to-br from-indigo-500 to-blue-600 text-white shadow-xl cursor-pointer relative overflow-hidden group"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full blur-2xl -mr-16 -mt-16 group-hover:scale-110 transition-transform"></div>
-                    <div className="relative z-10 flex items-center justify-between">
-                        <div>
-                            <p className="text-indigo-100 text-[10px] font-black uppercase tracking-widest mb-1">Mobile Optimized</p>
-                            <h3 className="text-2xl font-black tracking-tight">Site Sign-In</h3>
-                            <p className="text-indigo-100/80 text-xs font-bold mt-1 max-w-[150px]">Automatic site visit form submission.</p>
-                        </div>
-                        <div className="bg-white/20 p-4 rounded-2xl backdrop-blur-md">
-                            <Building2 size={24} />
-                        </div>
-                    </div>
-                </motion.div>
-            )}
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-                {/* ── Attendance Card (My Status) ──────────────────────── */}
-                <motion.div initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.1 }}
-                    className={`lg:col-span-1 rounded-[2.5rem] p-8 text-white shadow-2xl flex flex-col justify-between relative overflow-hidden min-h-[340px] border border-white/10
-                        ${isCheckedOut ? 'bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 shadow-emerald-200/50'
-                            : isCheckedIn ? 'bg-gradient-to-br from-indigo-600 via-blue-600 to-indigo-700 shadow-indigo-200/50'
-                                : 'bg-gradient-to-br from-slate-700 via-slate-800 to-slate-900 shadow-slate-200/50'}`}>
-
-                    {/* Glassmorphic decorative elements */}
-                    <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
-                    <div className="absolute bottom-0 left-0 w-40 h-40 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/4 pointer-events-none" />
-
-                    <div className="relative z-10 h-full flex flex-col">
-                        <div className="flex justify-between items-center mb-6">
-                            <span className="text-white/70 text-[10px] font-black uppercase tracking-[0.2em]">Live Status</span>
-                            <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider backdrop-blur-md border 
-                                ${isCheckedOut ? 'bg-white/10 border-white/20 text-white'
-                                    : isCheckedIn ? 'bg-emerald-400 text-emerald-950 border-emerald-300'
-                                        : 'bg-white/10 border-white/20 text-white/70'}`}>
-                                <motion.div
-                                    animate={isCheckedIn && !isPaused ? { scale: [1, 1.3, 1], opacity: [1, 0.5, 1] } : {}}
-                                    transition={{ duration: 2, repeat: Infinity }}
-                                    className={`w-2 h-2 rounded-full ${isCheckedOut ? 'bg-white' : isCheckedIn ? (isPaused ? 'bg-amber-400' : 'bg-emerald-400') : 'bg-white/40'}`}
-                                />
-                                {isCheckedOut ? 'Session Ended' : isCheckedIn ? (isPaused ? 'On Break' : 'Work Session Active') : 'System Idle'}
-                            </div>
-                        </div>
-
-                        <div className="mb-auto">
-                            <h3 className="text-4xl font-black tracking-tight mb-4 leading-tight">
-                                {isCheckedOut ? 'Session Ended' : isCheckedIn ? 'Logged In' : 'Sign In To Start'}
-                            </h3>
-
-                            <div className="space-y-3">
-                                {isCheckedIn && (
-                                    <>
-                                        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10 group hover:bg-white/10 transition-colors">
-                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shadow-inner">🕒</div>
-                                            <div>
-                                                <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">Entry Time</p>
-                                                <p className="text-lg font-black">{new Date(attendance.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                            </div>
-                                        </div>
-
-                                        {isPaused && activeBreak && (
-                                            <motion.div initial={{ x: -20, opacity: 0 }} animate={{ x: 0, opacity: 1 }}
-                                                className="flex items-center gap-3 bg-amber-400/20 backdrop-blur-sm border border-amber-400/30 rounded-2xl p-4">
-                                                <div className="w-10 h-10 rounded-xl bg-amber-400/20 flex items-center justify-center text-xl shadow-inner">
-                                                    {activeBreak.breakType === 'TEA' ? '☕' : activeBreak.breakType === 'LUNCH' ? '🍱' : '💡'}
-                                                </div>
-                                                <div>
-                                                    <p className="text-amber-200/70 text-[10px] font-black uppercase tracking-widest">Ongoing Break</p>
-                                                    <p className="text-amber-100 font-black">{activeBreak.breakType?.split('_').join(' ')}</p>
-                                                </div>
-                                            </motion.div>
-                                        )}
-                                    </>
-                                )}
-
-                                {isCheckedOut && (
-                                    <>
-                                        <div className="flex items-center gap-3 bg-white/5 backdrop-blur-sm rounded-2xl p-4 border border-white/10">
-                                            <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center text-xl shadow-inner">🏁</div>
-                                            <div>
-                                                <p className="text-white/50 text-[10px] font-black uppercase tracking-widest">Exit Time</p>
-                                                <p className="text-lg font-black">{new Date(attendance.checkoutTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3 bg-emerald-400/10 backdrop-blur-sm border border-emerald-400/20 rounded-2xl p-4">
-                                            <div className="w-10 h-10 rounded-xl bg-emerald-400/20 flex items-center justify-center text-xl shadow-inner text-emerald-300">⚡</div>
-                                            <div>
-                                                <p className="text-emerald-200/70 text-[10px] font-black uppercase tracking-widest">Total Duration</p>
-                                                <p className="text-emerald-50 font-black tracking-tight">
-                                                    {Math.abs((new Date(attendance.checkoutTime) - new Date(attendance.date)) / (1000 * 60 * 60)).toFixed(1)} <span className="text-xs">HRS</span>
-                                                </p>
-                                            </div>
-                                        </div>
-                                    </>
-                                )}
-
-                                {!attendance && !isCheckedIn && !isCheckedOut && (
-                                    <p className="text-white/40 text-xs font-bold bg-black/5 rounded-xl p-4 border border-white/5 italic">
-                                        ✨ Your today's work journey starts here.
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* CTA Button Actions */}
-                        <div className="mt-8">
-                            {!isCheckedIn && !isCheckedOut ? (
-                                <motion.button
-                                    whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                    onClick={() => handleMarkAttendance()} disabled={isLoading || (isMobile && user?.designation !== 'AE')}
-                                    className={`w-full py-5 rounded-2xl font-black text-sm shadow-[0_10px_30px_-10px_rgba(0,0,0,0.3)] transition-all flex items-center justify-center gap-3
-                                        ${isMobile && user?.designation !== 'AE' ? 'bg-white/10 text-white/40 cursor-not-allowed' : 'bg-white text-slate-900 hover:shadow-white/20'}`}>
-                                    {isMobile && user?.designation !== 'AE' ? <><span>🔒</span> DESKTOP ONLY</> : <><span>👆</span> TAP TO SIGN IN</>}
-                                </motion.button>
-                            ) : isCheckedIn ? (
-                                <div className="flex flex-col gap-3">
-                                    {isPaused ? (
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                            onClick={handleResume} disabled={isLoading}
-                                            className="w-full py-4 rounded-2xl font-black text-sm bg-amber-500 hover:bg-amber-400 text-white shadow-lg flex items-center justify-center gap-3 shadow-amber-900/40">
-                                            <span>▶️</span> RESUME WORK
-                                        </motion.button>
-                                    ) : (
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                            onClick={() => setShowBreakModal(true)} disabled={isLoading}
-                                            className="w-full py-4 rounded-2xl font-black text-sm bg-white/10 hover:bg-white/20 text-white border border-white/20 flex items-center justify-center gap-3 shadow-xl">
-                                            <span>☕</span> TAKE A BREAK
-                                        </motion.button>
-                                    )}
-                                    <div className="flex items-center gap-4 py-1">
-                                        <div className="h-[1px] flex-1 bg-white/10"></div>
-                                        <span className="text-[8px] font-black text-white/30 uppercase tracking-[0.3em]">OR</span>
-                                        <div className="h-[1px] flex-1 bg-white/10"></div>
-                                    </div>
-                                    <motion.button
-                                        whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                        onClick={handleMarkAttendance} disabled={isLoading}
-                                        className="w-full py-4 rounded-2xl font-black text-sm bg-black/20 hover:bg-black/40 text-white border border-white/5 flex items-center justify-center gap-3 shadow-lg">
-                                        <span>👋</span> CHECK OUT
-                                    </motion.button>
-                                </div>
-                            ) : (
-                                <div className="space-y-3">
-                                    <div className="w-full py-4 rounded-2xl text-center text-emerald-100 bg-white/10 text-[10px] font-black uppercase tracking-[0.2em] border border-white/10">
-                                        ✓ Cycle Progress Saved
-                                    </div>
-                                    {user?.designation === 'AE' && (
-                                        <motion.button
-                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
-                                            onClick={handleMarkAttendance} disabled={isLoading}
-                                            className="w-full bg-white text-emerald-900 font-black py-4 rounded-2xl shadow-xl flex items-center justify-center gap-2"
-                                        >
-                                            🔄 START NEW SESSION
-                                        </motion.button>
-                                    )}
-                                </div>
-                            )}
-                        </div>
-                    </div>
-                </motion.div>
-
-                {/* ── Right Column ─────────────────────────────────────────── */}
-                <div className="lg:col-span-2 flex flex-col gap-5">
-
-                    {/* Stats row */}
-                    <div className="grid grid-cols-3 gap-4">
-                        <StatCard title="Work Logs" value={workLogs?.length || 0} icon="📝" color="blue" />
-                        <StatCard title="Approved Leaves" value={requests?.leaves?.filter(l => l.status === 'APPROVED').length || 0} icon="🏖️" color="orange" />
-                        <StatCard title="Pending" value={pendingCount} icon="⏳" color="purple" />
-                    </div>
-
-                    {/* Quick Actions */}
-                    <div className="flex-1 bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
-                        <h4 className="font-black text-slate-700 text-sm uppercase tracking-widest mb-4 flex items-center gap-2">
-                            <span>⚡</span> Quick Actions
-                        </h4>
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 flex-1">
-                            {quickActions.map(action => (
-                                <motion.button key={action.id} whileHover={{ scale: 1.03, y: -2 }} whileTap={{ scale: 0.97 }}
-                                    onClick={() => {
-                                        if (action.id === 'permission') setPermissionInitialData(null);
-                                        if (action.id === 'site-login') {
-                                            handleMarkAttendance(true);
-                                            return;
-                                        }
-                                        if (action.id === 'site-visit') {
-                                            setActiveModal('site-visit-standalone');
-                                            return;
-                                        }
-                                        setActiveModal(action.id);
-                                    }}
-                                    className="flex flex-col items-start gap-2 p-4 rounded-2xl bg-slate-50 hover:bg-slate-100 border border-slate-100 hover:border-slate-200 transition-all text-left group min-h-[110px]">
-                                    <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${action.color} flex items-center justify-center text-xl shadow-sm group-hover:scale-110 transition-transform`}>
-                                        {action.icon}
-                                    </div>
-                                    <div>
-                                        <p className="font-bold text-slate-800 text-sm leading-tight">{action.label}</p>
-                                        <p className="text-slate-400 text-[11px] mt-0.5">{action.sub}</p>
-                                    </div>
-                                </motion.button>
-                            ))}
-                        </div>
-                    </div>
-
-                </div>
-            </div>
-
-            {/* ── Recent Activity Tabs ────────────────────────────────────── */}
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }}
-                className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-                <div className="border-b border-slate-100 flex overflow-x-auto">
-                    {(['logs', 'leaves', 'permissions'])
-                        .map(tab => (
-                            <button key={tab} onClick={() => setActiveTab(tab)}
-                                className={`px-6 py-4 text-sm font-bold whitespace-nowrap transition-colors capitalize border-b-2 ${activeTab === tab ? 'text-blue-600 border-blue-500 bg-blue-50/40' : 'text-slate-400 border-transparent hover:text-slate-600'}`}>
-                                {tab === 'logs' ? '📋 Work Logs' : tab === 'leaves' ? '🏖️ Leaves' : '🕑 Permissions'}
-                            </button>
-                        ))}
-                </div>
-
-                <div className="p-6">
-                    {/* Work Logs Tab */}
-                    {activeTab === 'logs' && (
-                        <div className="space-y-3">
-                            {!workLogs || workLogs.length === 0 ? (
-                                <div className="text-center py-12 text-slate-400">
-                                    <p className="text-5xl mb-3">📭</p>
-                                    <p className="font-medium">No work logs yet</p>
-                                    <p className="text-xs mt-1">Tap "Log Work" above to submit your first report</p>
-                                </div>
-                            ) : workLogs.map(log => (
-                                <div key={log.id} className="flex gap-4 p-4 rounded-xl bg-slate-50 border border-slate-100 hover:border-blue-200 hover:bg-blue-50/30 transition-all">
-                                    <div className="w-11 h-11 rounded-xl bg-white border border-slate-200 flex flex-col items-center justify-center text-xs font-bold flex-shrink-0 shadow-sm">
-                                        <span className="text-slate-400 text-[10px] font-normal">{new Date(log.date).getMonth() + 1}/{new Date(log.date).getFullYear()}</span>
-                                        <span className="text-slate-800 text-sm leading-none">{new Date(log.date).getDate()}</span>
-                                    </div>
-                                    <div className="flex-1 min-w-0">
-                                        <div className="flex justify-between items-start gap-2">
-                                            <h4 className="font-bold text-slate-800 truncate text-sm">{log.clientName || log.projectName || 'Work Log'}</h4>
-                                            {log.hours && <span className="text-xs font-bold bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full flex-shrink-0">{log.hours}h</span>}
-                                        </div>
-                                        <p className="text-slate-500 text-xs mt-0.5 truncate">{log.process || log.tasks || log.cre_callBreakdown || 'Detailed Report'}</p>
-                                        <div className="flex gap-1.5 mt-1.5 flex-wrap">
-                                            {log.imageCount && <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full">📸 {log.imageCount} imgs</span>}
-                                            {log.cre_totalCalls && <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">📞 {log.cre_totalCalls} calls</span>}
-                                        </div>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Leaves Tab */}
-                    {activeTab === 'leaves' && (
-                        <div className="space-y-2">
-                            {!requests?.leaves || requests.leaves.length === 0 ? (
-                                <p className="text-center text-slate-400 italic py-10">No leave requests found.</p>
-                            ) : requests.leaves.map(req => (
-                                <div key={req.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-orange-100 flex items-center justify-center text-lg">🏖️</div>
-                                        <div>
-                                            <p className="font-bold text-slate-800 text-sm">{formatDate(req.startDate)} — {formatDate(req.endDate)}</p>
-                                            <p className="text-xs text-slate-400">{req.type} · "{req.reason}"</p>
-                                        </div>
-                                    </div>
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0 ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{req.status}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-
-                    {/* Permissions Tab */}
-                    {activeTab === 'permissions' && (
-                        <div className="space-y-2">
-                            {!requests?.permissions || requests.permissions.length === 0 ? (
-                                <p className="text-center text-slate-400 italic py-10">No permission requests found.</p>
-                            ) : requests.permissions.map(req => (
-                                <div key={req.id} className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:bg-slate-50 transition-colors">
-                                    <div className="flex items-center gap-3">
-                                        <div className="w-9 h-9 rounded-xl bg-violet-100 flex items-center justify-center text-lg">🕑</div>
-                                        <div>
-                                            <p className="font-bold text-slate-800 text-sm">{formatDate(req.date)} · {req.startTime} – {req.endTime}</p>
-                                            <p className="text-xs text-slate-400">"{req.reason}"</p>
-                                        </div>
-                                    </div>
-                                    <span className={`px-2.5 py-1 rounded-full text-xs font-black flex-shrink-0 ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' : req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-amber-100 text-amber-700'}`}>{req.status}</span>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </motion.div>
         </div>
     );
 };
+
+function dataURLtoBlob(dataurl) {
+    if (!dataurl || typeof dataurl !== 'string' || !dataurl.includes(',')) return null;
+    try {
+        const arr = dataurl.split(',');
+        const match = arr[0].match(/:(.*?);/);
+        if (!match) return null;
+        const mime = match[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch (e) {
+        console.error("Error converting dataURL to blob:", e);
+        return null;
+    }
+}
 
 export default Overview;
