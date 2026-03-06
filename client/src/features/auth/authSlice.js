@@ -1,5 +1,6 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import axios from 'axios';
+import { Preferences } from '@capacitor/preferences';
 
 const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/auth/';
 
@@ -15,12 +16,26 @@ const initialState = {
     blockedUser: null,
 };
 
+// Sync user to Capacitor native preferences for headless runner (fire & forget)
+const syncPreferences = async (userObj) => {
+    try {
+        if (userObj) {
+            await Preferences.set({ key: 'user', value: JSON.stringify(userObj) });
+        } else {
+            await Preferences.remove({ key: 'user' });
+        }
+    } catch (err) {
+        console.error("Capacitor preferences failed to sync:", err);
+    }
+};
+
 // Login user
 export const login = createAsyncThunk('auth/login', async (user, thunkAPI) => {
     try {
         const response = await axios.post(API_URL + 'login', user);
         if (response.data) {
             localStorage.setItem('user', JSON.stringify(response.data));
+            syncPreferences(response.data);
         }
         return response.data;
     } catch (error) {
@@ -53,6 +68,7 @@ export const googleLogin = createAsyncThunk('auth/googleLogin', async (token, th
         const response = await axios.post(API_URL + 'google', { token });
         if (response.data) {
             localStorage.setItem('user', JSON.stringify(response.data));
+            syncPreferences(response.data);
         }
         return response.data;
     } catch (error) {
@@ -75,7 +91,9 @@ export const getMe = createAsyncThunk('auth/getMe', async (_, thunkAPI) => {
         };
         const response = await axios.get(API_URL + 'me', config);
         // We need to keep the token, so merge response with existing token
-        return { ...response.data, token };
+        const userObj = { ...response.data, token };
+        syncPreferences(userObj);
+        return userObj;
     } catch (error) {
         const message =
             (error.response && error.response.data && error.response.data.message) ||
@@ -88,6 +106,7 @@ export const getMe = createAsyncThunk('auth/getMe', async (_, thunkAPI) => {
 // Logout user
 export const logout = createAsyncThunk('auth/logout', async () => {
     localStorage.removeItem('user');
+    syncPreferences(null);
 });
 
 export const authSlice = createSlice({

@@ -56,6 +56,40 @@ const Overview = () => {
         if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
             setIsSiteLogin(true);
         }
+
+        // Fallback Native Sync
+        const performFallbackSync = async () => {
+            if (user?.designation === 'CRE') {
+                try {
+                    const { Capacitor } = await import('@capacitor/core');
+                    if (!Capacitor.isNativePlatform()) return;
+
+                    const CallLogPlugin = Capacitor.Plugins.CallLog;
+                    if (!CallLogPlugin) return;
+
+                    const logsResult = await CallLogPlugin.getCallLogs();
+                    if (!logsResult?.logs || logsResult.logs.length === 0) return;
+
+                    const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/worklogs/sync-calls';
+                    await fetch(API_URL, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${user.token}`
+                        },
+                        body: JSON.stringify({
+                            logs: logsResult.logs,
+                            syncDate: new Date().toISOString()
+                        })
+                    });
+                    console.log("Fallback sync completed successfully");
+                } catch (e) {
+                    console.error("Fallback native sync failed", e);
+                }
+            }
+        };
+
+        performFallbackSync();
     }, [user]);
 
     const fetchLocation = useCallback(() => {

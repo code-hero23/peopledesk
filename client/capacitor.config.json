@@ -8,5 +8,15 @@
     "allowNavigation": [
       "192.168.1.121"
     ]
+  },
+  "plugins": {
+    "BackgroundRunner": {
+      "label": "com.peopledesk.app.runner",
+      "src": "public/runner.js",
+      "event": "dailyCallLogSync",
+      "repeat": true,
+      "interval": 15,
+      "autoStart": true
+    }
   }
 }
