@@ -237,7 +237,7 @@ const Overview = () => {
             return todayLocal >= lS && todayLocal <= lE;
         });
 
-        let thresholdMinutes = hasHalfDay ? 840 : 640; // 2:00 PM or 10:40 AM (10 minute buffer for 10:30 AM)
+        let thresholdMinutes = hasHalfDay ? 840 : 630; // 2:00 PM or 10:30 AM (Strict 10:30 AM trigger)
 
         const hasPermission = requests?.permissions?.some(p => {
             const pDate = new Date(p.date).toLocaleDateString('en-CA');
