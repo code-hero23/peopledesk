@@ -245,17 +245,24 @@ const getRequestHistory = async (req, res) => {
             visitWhere = { AND: [visitWhere, bhVisitsFilter] };
 
         } else if (userRole === 'HR' || userRole === 'ADMIN') {
-            const statusFilter = { status: { in: ['APPROVED', 'REJECTED'] } };
+            const statusFilter = (date || (startDate && endDate)) 
+                ? { status: { in: ['APPROVED', 'REJECTED', 'PENDING'] } }
+                : { status: { in: ['APPROVED', 'REJECTED'] } };
 
             leaveWhere = { AND: [leaveWhere, statusFilter] };
             permissionWhere = { AND: [permissionWhere, statusFilter] };
             visitWhere = { AND: [visitWhere, statusFilter] };
 
         } else if (userRole === 'AE_MANAGER') {
-            const aeFilter = {
-                status: { in: ['APPROVED', 'REJECTED'] },
-                user: { designation: 'AE' }
-            };
+            const aeFilter = (date || (startDate && endDate))
+                ? {
+                    status: { in: ['APPROVED', 'REJECTED', 'PENDING'] },
+                    user: { designation: 'AE' }
+                }
+                : {
+                    status: { in: ['APPROVED', 'REJECTED'] },
+                    user: { designation: 'AE' }
+                };
 
             leaveWhere = { AND: [leaveWhere, aeFilter] };
             permissionWhere = { AND: [permissionWhere, aeFilter] };

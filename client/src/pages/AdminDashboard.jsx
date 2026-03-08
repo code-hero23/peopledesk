@@ -29,8 +29,8 @@ const AdminDashboard = () => {
                 const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/requests/history?date=${today}`, {
                     headers: { Authorization: `Bearer ${user.token}` }
                 });
-                setSiteVisits((response.data.siteVisits || []).filter(v => v.status === 'APPROVED'));
-                setShowroomHistory((response.data.showroomVisits || []).filter(v => v.status === 'APPROVED'));
+                setSiteVisits((response.data.siteVisits || []).filter(v => ['APPROVED', 'PENDING'].includes(v.status)));
+                setShowroomHistory((response.data.showroomVisits || []).filter(v => ['APPROVED', 'PENDING'].includes(v.status)));
             } catch (error) {
                 console.error("Dashboard list fetch failed:", error);
             } finally {
@@ -229,7 +229,6 @@ const AdminDashboard = () => {
                                         icon="✅"
                                         color="teal"
                                         onClick={() => navigate('/admin/attendance')}
-                                        progress={actualEmployeeCount > 0 ? (todayPresentCount / actualEmployeeCount) * 100 : 0}
                                     />
                                     <StatCard
                                         title="Today Absent"
@@ -237,7 +236,6 @@ const AdminDashboard = () => {
                                         icon="🚫"
                                         color="orange"
                                         onClick={() => navigate('/admin/attendance')}
-                                        progress={actualEmployeeCount > 0 ? (todayAbsentCount / actualEmployeeCount) * 100 : 0}
                                     />
                                 </>
                             )}
@@ -284,6 +282,40 @@ const AdminDashboard = () => {
                             <Link to="/admin/attendance" className="text-xs font-bold text-blue-500 hover:underline">Full Report →</Link>
                         </div>
                         <div className="p-5 space-y-6">
+                            {/* Attendance Progress Bar */}
+                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
+                                <div className="flex justify-between items-end mb-2">
+                                    <div>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Reach</p>
+                                        <p className="text-2xl font-black text-slate-800">
+                                            {todayPresentCount}<span className="text-slate-300 text-sm font-bold mx-1">/</span>{actualEmployeeCount}
+                                        </p>
+                                    </div>
+                                    <div className="text-right">
+                                        <span className="text-lg font-black text-teal-600">
+                                            {actualEmployeeCount > 0 ? Math.round((todayPresentCount / actualEmployeeCount) * 100) : 0}%
+                                        </span>
+                                    </div>
+                                </div>
+                                <div className="h-3 bg-slate-200 rounded-full overflow-hidden p-[2px]">
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${actualEmployeeCount > 0 ? (todayPresentCount / actualEmployeeCount) * 100 : 0}%` }}
+                                        transition={{ duration: 1.5, ease: "easeOut" }}
+                                        className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full relative overflow-hidden"
+                                    >
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
+                                            animate={{ x: ['-100%', '200%'] }}
+                                            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                                        />
+                                    </motion.div>
+                                </div>
+                                <div className="flex justify-between mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                    <span>Target: {actualEmployeeCount}</span>
+                                    <span className="text-teal-500">Active: {todayPresentCount}</span>
+                                </div>
+                            </div>
                             {/* Absent list - This is the "absent showing as list" the user mentioned keeping as a reference style */}
                             {todayAbsentCount > 0 ? (
                                 <div>
