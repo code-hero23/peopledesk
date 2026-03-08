@@ -313,7 +313,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                             <p className="text-xs text-slate-500 font-bold uppercase">End of day submission</p>
                                         </div>
                                     </div>
-                                    <MetricsForm data={closingData} setData={setClosingData} onSubmit={handleClosingSubmit} type="closing" />
+                                    <MetricsForm data={closingData} setData={setClosingData} onSubmit={handleClosingSubmit} type="closing" isSubmitting={isSubmitting} isLoading={isLoading} />
                                     <div className="mt-6 bg-blue-50/50 p-6 rounded-[1.5rem] border border-blue-100 space-y-3">
                                         <div className="flex items-center gap-2 text-blue-600 mb-2">
                                             <MessageCircle size={18} />
@@ -341,7 +341,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                             <p className="text-xs text-slate-500 font-bold uppercase">Plan your day ahead</p>
                                         </div>
                                     </div>
-                                    <MetricsForm data={openingData} setData={setOpeningData} onSubmit={handleOpeningSubmit} type="opening" />
+                                    <MetricsForm data={openingData} setData={setOpeningData} onSubmit={handleOpeningSubmit} type="opening" isSubmitting={isSubmitting} isLoading={isLoading} />
                                 </div>
                             </div>
                         )}
@@ -646,7 +646,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
 };
 
 // Sub-component for the Metrics Grid
-const MetricsForm = ({ data, setData, onSubmit, type }) => {
+const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading }) => {
     const update = (key, field, val) => {
         setData(prev => ({ ...prev, [key]: { ...prev[key], [field]: val } }));
     };

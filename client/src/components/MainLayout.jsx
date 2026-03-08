@@ -8,6 +8,7 @@ import InstallApp from './InstallApp';
 import SupportButton from './common/SupportButton';
 import NoticeBoard from './common/NoticeBoard';
 import Sidebar from './Sidebar';
+import HourlyAlarm from './common/HourlyAlarm';
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -81,6 +82,7 @@ const Layout = () => {
             <InspirationalPopup />
             <InstallApp />
             <SupportButton />
+            <HourlyAlarm />
         </div>
     );
 };
