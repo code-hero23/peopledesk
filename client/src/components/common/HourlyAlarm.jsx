@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { toast } from 'react-toastify';
-import { Bell, BellOff } from 'lucide-react';
+import { Bell, BellOff, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const HourlyAlarm = () => {
