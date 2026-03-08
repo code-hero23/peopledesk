@@ -171,6 +171,19 @@ const WFHRequestForm = () => {
             return;
         }
 
+        const textFieldsWithMinLength = [
+            'realReason', 'necessityReason', 'impactIfRejected',
+            'primaryProject', 'deliverables', 'deadline',
+            'workingHours', 'communicationPlan',
+            'environmentSetup', 'risksManagement', 'failurePlan'
+        ];
+
+        const shortField = textFieldsWithMinLength.find(field => formData[field].trim().length < 50);
+        if (shortField) {
+            toast.error(`Please provide at least 50 characters for ${shortField}.`);
+            return;
+        }
+
         // Final Validations
         if (!formData.officeVisitCommitment) {
             toast.error('You must commit to attend urgent office visits.');
@@ -319,7 +332,7 @@ const WFHRequestForm = () => {
                                     >
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Primary project you will handle? *</label>
-                                            <input name="primaryProject" required value={formData.primaryProject} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" />
+                                            <input name="primaryProject" minLength={50} required value={formData.primaryProject} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" />
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Daily Measurable Deliverables *</label>
@@ -327,7 +340,7 @@ const WFHRequestForm = () => {
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Deadline Commitment *</label>
-                                            <input name="deadline" required value={formData.deadline} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" />
+                                            <input name="deadline" minLength={50} required value={formData.deadline} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" />
                                         </div>
                                     </motion.div>
                                 )}
@@ -342,7 +355,7 @@ const WFHRequestForm = () => {
                                     >
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Exact working hours you will follow? *</label>
-                                            <input name="workingHours" required value={formData.workingHours} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" placeholder="e.g. 9:30 AM to 6:30 PM" />
+                                            <input name="workingHours" minLength={50} required value={formData.workingHours} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" placeholder="e.g. 9:30 AM to 6:30 PM" />
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Communication Plan *</label>
