@@ -25,29 +25,38 @@ const HourlyAlarm = () => {
             }
 
             const now = ctx.currentTime;
+            const ALARM_DURATION = 25; // 25 seconds total
             
-            // Create a pleasant "ding-dong" chime using oscillators
-            const playNote = (freq, startTime, duration) => {
-                const osc = ctx.createOscillator();
-                const gain = ctx.createGain();
+            // Pleasant "ding-dong" chime
+            const playDingDong = (startTime) => {
+                const playNote = (freq, start, duration) => {
+                    const osc = ctx.createOscillator();
+                    const gain = ctx.createGain();
 
-                osc.type = 'sine';
-                osc.frequency.setValueAtTime(freq, startTime);
-                
-                gain.gain.setValueAtTime(0, startTime);
-                gain.gain.linearRampToValueAtTime(0.3, startTime + 0.05);
-                gain.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, start);
+                    
+                    gain.gain.setValueAtTime(0, start);
+                    gain.gain.linearRampToValueAtTime(0.3, start + 0.05);
+                    gain.gain.exponentialRampToValueAtTime(0.01, start + duration);
 
-                osc.connect(gain);
-                gain.connect(ctx.destination);
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
 
-                osc.start(startTime);
-                osc.stop(startTime + duration);
+                    osc.start(start);
+                    osc.stop(start + duration);
+                };
+
+                // Ding
+                playNote(880, startTime, 1.2); 
+                // Dong
+                playNote(659.25, startTime + 0.3, 1.0);
             };
 
-            // Two-tone chime
-            playNote(880, now, 1.5); // A5
-            playNote(659.25, now + 0.3, 1.2); // E5
+            // Loop the chime every 2 seconds for the duration
+            for (let offset = 0; offset < ALARM_DURATION; offset += 2) {
+                playDingDong(now + offset);
+            }
 
             toast.info("⏰ Hourly Update! Time to record your project status.", {
                 position: "bottom-right",
