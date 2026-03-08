@@ -283,26 +283,29 @@ const AdminDashboard = () => {
                         </div>
                         <div className="p-5 space-y-6">
                             {/* Attendance Progress Bar */}
-                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-4">
-                                <div className="flex justify-between items-end mb-2">
+                            <div className="bg-slate-50 border border-slate-100 rounded-2xl p-5">
+                                <div className="flex justify-between items-end mb-3">
                                     <div>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Reach</p>
-                                        <p className="text-2xl font-black text-slate-800">
-                                            {todayPresentCount}<span className="text-slate-300 text-sm font-bold mx-1">/</span>{actualEmployeeCount}
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Attendance Status</p>
+                                        <p className="text-3xl font-black text-slate-800">
+                                            {todayPresentCount}<span className="text-slate-300 text-lg font-bold mx-1">/</span>{actualEmployeeCount}
                                         </p>
                                     </div>
                                     <div className="text-right">
-                                        <span className="text-lg font-black text-teal-600">
+                                        <span className="text-sm font-black text-slate-400 uppercase tracking-tighter block mb-1">Success Rate</span>
+                                        <span className="text-2xl font-black text-emerald-500">
                                             {actualEmployeeCount > 0 ? Math.round((todayPresentCount / actualEmployeeCount) * 100) : 0}%
                                         </span>
                                     </div>
                                 </div>
-                                <div className="h-3 bg-slate-200 rounded-full overflow-hidden p-[2px]">
+                                
+                                <div className="h-4 bg-slate-200 rounded-full overflow-hidden p-[2px] flex gap-[2px]">
+                                    {/* Present Segment */}
                                     <motion.div
                                         initial={{ width: 0 }}
                                         animate={{ width: `${actualEmployeeCount > 0 ? (todayPresentCount / actualEmployeeCount) * 100 : 0}%` }}
                                         transition={{ duration: 1.5, ease: "easeOut" }}
-                                        className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full relative overflow-hidden"
+                                        className="h-full bg-gradient-to-r from-emerald-500 to-green-600 rounded-l-full relative overflow-hidden"
                                     >
                                         <motion.div
                                             className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent"
@@ -310,10 +313,31 @@ const AdminDashboard = () => {
                                             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                                         />
                                     </motion.div>
+                                    
+                                    {/* Absent Segment */}
+                                    <motion.div
+                                        initial={{ width: 0 }}
+                                        animate={{ width: `${actualEmployeeCount > 0 ? (todayAbsentCount / actualEmployeeCount) * 100 : 0}%` }}
+                                        transition={{ duration: 1.5, ease: "easeOut", delay: 0.3 }}
+                                        className="h-full bg-gradient-to-r from-red-500 to-rose-600 rounded-r-full relative overflow-hidden"
+                                    >
+                                        <motion.div
+                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                                            animate={{ x: ['-100%', '200%'] }}
+                                            transition={{ duration: 2.5, repeat: Infinity, ease: "linear" }}
+                                        />
+                                    </motion.div>
                                 </div>
-                                <div className="flex justify-between mt-2 text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
-                                    <span>Target: {actualEmployeeCount}</span>
-                                    <span className="text-teal-500">Active: {todayPresentCount}</span>
+
+                                <div className="grid grid-cols-2 gap-4 mt-4">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Present: {todayPresentCount}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-2.5 h-2.5 rounded-full bg-red-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]" />
+                                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-tight">Absent: {todayAbsentCount}</span>
+                                    </div>
                                 </div>
                             </div>
                             {/* Absent list - This is the "absent showing as list" the user mentioned keeping as a reference style */}
