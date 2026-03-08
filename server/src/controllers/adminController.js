@@ -204,10 +204,11 @@ const getRequestHistory = async (req, res) => {
             generalDateFilter = {
                 date: { gte: start, lte: end }
             };
-        } else if (date) {
-            const startOfDay = new Date(date);
+        } else if (date || startDate) {
+            const filterDate = date || startDate;
+            const startOfDay = new Date(filterDate);
             startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(date);
+            const endOfDay = new Date(filterDate);
             endOfDay.setHours(23, 59, 59, 999);
 
             leaveDateFilter = {

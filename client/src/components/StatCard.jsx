@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion';
 
-const StatCard = ({ title, value, icon, color, onClick }) => {
+const StatCard = ({ title, value, icon, color, onClick, progress }) => {
     const colorMap = {
         blue: {
             gradient: 'from-indigo-500 via-blue-500 to-cyan-500',
@@ -158,6 +158,32 @@ const StatCard = ({ title, value, icon, color, onClick }) => {
                     {icon}
                 </motion.div>
             </div>
+
+            {/* Progress Bar */}
+            {progress !== undefined && (
+                <div className="mt-5 relative">
+                    <div className="flex justify-between items-center mb-1.5">
+                        <span className="text-[10px] font-black text-white/60 uppercase tracking-tighter">Reach</span>
+                        <span className="text-[10px] font-black text-white px-1.5 py-0.5 bg-black/20 rounded-md backdrop-blur-sm">
+                            {Math.round(progress)}%
+                        </span>
+                    </div>
+                    <div className="h-2 bg-black/10 rounded-full overflow-hidden border border-white/5 backdrop-blur-sm p-[1px]">
+                        <motion.div
+                            initial={{ width: 0 }}
+                            animate={{ width: `${progress}%` }}
+                            transition={{ duration: 1.2, ease: [0.34, 1.56, 0.64, 1], delay: 0.5 }}
+                            className="h-full bg-white rounded-full shadow-[0_0_10px_rgba(255,255,255,0.5)] relative overflow-hidden"
+                        >
+                            <motion.div
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent"
+                                animate={{ x: ['-100%', '200%'] }}
+                                transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
+                            />
+                        </motion.div>
+                    </div>
+                </div>
+            )}
         </motion.div>
     );
 };

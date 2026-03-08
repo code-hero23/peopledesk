@@ -26,16 +26,11 @@ const AdminDashboard = () => {
             setIsReportsLoading(true);
             try {
                 const today = new Date().toISOString().split('T')[0];
-                const [siteRes, showroomRes] = await Promise.all([
-                    axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/requests/history?type=SITE_VISIT&startDate=${today}`, {
-                        headers: { Authorization: `Bearer ${user.token}` }
-                    }),
-                    axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/requests/history?type=SHOWROOM_VISIT&startDate=${today}`, {
-                        headers: { Authorization: `Bearer ${user.token}` }
-                    })
-                ]);
-                setSiteVisits((siteRes.data.siteVisits || []).filter(v => v.status === 'APPROVED'));
-                setShowroomHistory((showroomRes.data.showroomVisits || []).filter(v => v.status === 'APPROVED'));
+                const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/admin/requests/history?date=${today}`, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                setSiteVisits((response.data.siteVisits || []).filter(v => v.status === 'APPROVED'));
+                setShowroomHistory((response.data.showroomVisits || []).filter(v => v.status === 'APPROVED'));
             } catch (error) {
                 console.error("Dashboard list fetch failed:", error);
             } finally {
@@ -234,6 +229,7 @@ const AdminDashboard = () => {
                                         icon="✅"
                                         color="teal"
                                         onClick={() => navigate('/admin/attendance')}
+                                        progress={actualEmployeeCount > 0 ? (todayPresentCount / actualEmployeeCount) * 100 : 0}
                                     />
                                     <StatCard
                                         title="Today Absent"
@@ -241,6 +237,7 @@ const AdminDashboard = () => {
                                         icon="🚫"
                                         color="orange"
                                         onClick={() => navigate('/admin/attendance')}
+                                        progress={actualEmployeeCount > 0 ? (todayAbsentCount / actualEmployeeCount) * 100 : 0}
                                     />
                                 </>
                             )}
