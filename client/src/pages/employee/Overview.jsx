@@ -653,7 +653,7 @@ const Overview = () => {
                             <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Sparkles className="text-indigo-400" size={24} /> Quick Actions</h3>
                             <div className="space-y-4">
                                 {[
-                                    { icon: Calendar, label: 'Leave Request', sub: 'Casual / Sick', type: 'leave', color: 'rose' },
+                                    { icon: Calendar, label: 'Leave Request', sub: 'Casual / Weekoff', type: 'leave', color: 'rose' },
                                     { icon: Clock, label: 'Two-hours Permit', sub: 'Early / Late', type: 'permission', color: 'amber' },
                                     { icon: MapPin, label: 'Site Visit', sub: 'Project Reporting', type: 'site-visit', color: 'emerald' },
                                     { icon: Building2, label: 'Showroom Visit', sub: 'Inter-Branch', type: 'showroom-visit', color: 'indigo' }
