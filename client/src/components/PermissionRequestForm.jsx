@@ -58,6 +58,7 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const { businessHeads, requests } = useSelector((state) => state.employee);
     const { user } = useSelector((state) => state.auth);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Calculate combined request count for the current month
     const currentMonth = new Date().getMonth();
@@ -85,6 +86,7 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
 
     const onSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
 
         const startMinutes = parseTimeToMinutes(formData.startTime);
         const endMinutes = parseTimeToMinutes(formData.endTime);
@@ -100,11 +102,13 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
             return;
         }
 
+        setIsSubmitting(true);
         try {
             await dispatch(createPermissionRequest(formData)).unwrap();
             setShowSuccess(true);
         } catch (error) {
             alert(error || "Failed to submit permission request");
+            setIsSubmitting(false);
         }
     };
 
@@ -184,9 +188,10 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                 )}
                 <button
                     type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
+                    disabled={isSubmitting}
+                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95`}
                 >
-                    Submit
+                    {isSubmitting ? 'Submitting...' : 'Submit'}
                 </button>
             </div>
 

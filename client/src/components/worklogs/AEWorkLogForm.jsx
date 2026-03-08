@@ -18,6 +18,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
     const { attendance, isLoading, todayLog } = useSelector((state) => state.employee);
     const { projects } = useSelector((state) => state.projects);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
     const [confirmationConfig, setConfirmationConfig] = useState({
@@ -115,11 +116,15 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Start Your Day',
             message: 'Are you sure you want to check-in and start your day?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     logStatus: 'OPEN',
                     process: 'AE Opening Report',
@@ -135,6 +140,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Day Started! Opening Report Submitted.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -189,11 +195,15 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleProjectReportSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Add Project Report',
             message: 'Are you sure you want to add this project report to your log?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const formData = new FormData();
                 const metrics = { ...projectReport, ae_photos: undefined };
                 formData.append('projectReport', JSON.stringify(metrics));
@@ -220,6 +230,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         });
                         setImagePreviews([]);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -228,11 +239,15 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
             message: 'Are you sure you want to complete your day and submit all site details?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     logStatus: 'CLOSED',
                     remarks: closingData.remarks || '',
@@ -244,6 +259,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Day Ended! All Reports Submitted.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -331,8 +347,8 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                     />
                                 </div>
                             </Card>
-                            <button type="submit" disabled={isLoading} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-5 rounded-2xl shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
-                                {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Complete Day & Check-Out</>}
+                            <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-5 rounded-2xl shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                                {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Complete Day & Check-Out</>}
                             </button>
                         </motion.form>
                     ) : (
@@ -520,8 +536,12 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                         </Card>
                                     </div>
 
-                                    <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[2rem] shadow-xl hover:shadow-blue-200 transition-all flex justify-center items-center gap-3">
-                                        <Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Site Entry</span>
+                                    <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-5 rounded-[2rem] shadow-xl hover:shadow-blue-200 transition-all flex justify-center items-center gap-3">
+                                        {isSubmitting || isLoading ? (
+                                            <span className="animate-pulse">Adding Entry...</span>
+                                        ) : (
+                                            <><Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Site Entry</span></>
+                                        )}
                                     </button>
                                 </form>
                             </div>
@@ -625,8 +645,8 @@ const AEWorkLogForm = ({ onSuccess }) => {
                 <textarea name="ae_plannedWork" value={openingData.ae_plannedWork} onChange={handleOpeningChange} rows="3" className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 font-medium text-sm outline-none resize-none" placeholder="What are your goals for today?" required></textarea>
             </Card>
 
-            <button type="submit" disabled={isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
-                {isLoading ? 'Starting...' : <><CheckCircle size={20} /> Check In & Start Day</>}
+            <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                {isSubmitting || isLoading ? 'Starting...' : <><CheckCircle size={20} /> Check In & Start Day</>}
             </button>
 
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); }} message={modalMessage} />

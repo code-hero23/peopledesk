@@ -7,6 +7,7 @@ const WorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [formData, setFormData] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -39,6 +40,9 @@ const WorkLogForm = ({ onSuccess }) => {
 
     const onSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+
         const payload = {
             ...formData,
             imageCount: Number(formData.imageCount),
@@ -62,6 +66,9 @@ const WorkLogForm = ({ onSuccess }) => {
                 notes: ''
             });
             setShowSuccess(true);
+            setIsSubmitting(false);
+        }).catch(() => {
+            setIsSubmitting(false);
         });
     };
 
@@ -127,8 +134,8 @@ const WorkLogForm = ({ onSuccess }) => {
                 <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors">
                     Cancel
                 </button>
-                <button type="submit" disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
-                    {isLoading ? 'Submitting...' : 'Submit Log'}
+                <button type="submit" disabled={isSubmitting || isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95">
+                    {isSubmitting || isLoading ? 'Submitting...' : 'Submit Log'}
                 </button>
             </div>
             <SuccessModal

@@ -62,6 +62,7 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { user } = useSelector((state) => state.auth);
     const [formData, setFormData] = useState({
@@ -78,10 +79,18 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
         dispatch(getBusinessHeads());
     }, [dispatch]);
 
-    const onSubmit = (e) => {
+    const onSubmit = async (e) => {
         e.preventDefault();
-        dispatch(createShowroomVisitRequest(formData));
-        setShowSuccess(true);
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            await dispatch(createShowroomVisitRequest(formData)).unwrap();
+            setShowSuccess(true);
+        } catch (error) {
+            console.error("Failed to create showroom visit request:", error);
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -168,9 +177,10 @@ const ShowroomVisitRequestForm = ({ onSuccess }) => {
                 </button>
                 <button
                     type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
+                    disabled={isSubmitting}
+                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95`}
                 >
-                    Submit Showroom Visit
+                    {isSubmitting ? 'Submitting...' : 'Submit Showroom Visit'}
                 </button>
             </div>
 

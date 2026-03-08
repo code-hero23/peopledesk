@@ -17,6 +17,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const { projects } = useSelector((state) => state.projects);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
     const [confirmationConfig, setConfirmationConfig] = useState({
@@ -120,11 +121,15 @@ const FAWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Opening Report',
             message: 'Are you sure you want to start your day with these targets?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     logStatus: 'OPEN',
                     fa_opening_metrics: openingData
@@ -134,6 +139,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Opening Report Submitted! Day started.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -142,11 +148,15 @@ const FAWorkLogForm = ({ onSuccess }) => {
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
             message: 'Are you sure you want to submit your final achievements for today?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     fa_closing_metrics: closingData,
                     notes: dailyNotes
@@ -156,6 +166,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Closing Report Submitted! Day ended.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -164,11 +175,15 @@ const FAWorkLogForm = ({ onSuccess }) => {
 
     const handleProjectReportSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Add Project Wise Report',
             message: 'Confirm adding this report to your daily log?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 let totalHours = 0;
                 if (projectReport.startTime && projectReport.endTime) {
                     const start = new Date(`1970-01-01T${projectReport.startTime}`);
@@ -196,6 +211,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
                             onlineMeetings: [], showroomMeetings: [], measurements: [], requirements: [], colours: []
                         });
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -313,8 +329,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
                                             placeholder="Share daily summary, insights, or updates for Admin and HR..."
                                         ></textarea>
                                     </div>
-                                    <button onClick={handleClosingSubmit} className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
-                                        <CheckSquare size={20} /> Submit Closing Report
+                                    <button onClick={handleClosingSubmit} disabled={isSubmitting || isLoading} className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
+                                        {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={20} /> Submit Closing Report</>}
                                     </button>
                                 </MetricsFormLayout>
                             </div>
@@ -322,8 +338,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
                             <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-xl shadow-slate-200/20 relative overflow-hidden">
                                 <MetricsFormLayout title="Opening Report" subtitle="Plan your day ahead" icon={Layout} color="slate">
                                     <FAMetricsForm data={openingData} handleChange={handleOpeningChange} />
-                                    <button onClick={handleOpeningSubmit} className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
-                                        <Clock size={20} /> Submit Opening Report
+                                    <button onClick={handleOpeningSubmit} disabled={isSubmitting || isLoading} className="w-full mt-6 bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
+                                        {isSubmitting || isLoading ? 'Submitting...' : <><Clock size={20} /> Submit Opening Report</>}
                                     </button>
                                 </MetricsFormLayout>
                             </div>
@@ -564,8 +580,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
                                                 </div>
                                             </div>
 
-                                            <button type="submit" className="w-full bg-black hover:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3 active:scale-[0.98]">
-                                                <Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Report Entry</span>
+                                            <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-black hover:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3 active:scale-[0.98]">
+                                                {isSubmitting || isLoading ? 'Adding...' : <><Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Report Entry</span></>}
                                             </button>
                                         </form>
                                     </div>

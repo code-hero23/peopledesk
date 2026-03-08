@@ -7,6 +7,7 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const dispatch = useDispatch();
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const { user } = useSelector((state) => state.auth);
     const [formData, setFormData] = useState({
@@ -32,10 +33,20 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
         dispatch(getBusinessHeads());
     }, [dispatch]);
 
-    const onSubmit = (e) => {
+    const onSubmit = async (e) => {
         e.preventDefault();
-        dispatch(createSiteVisitRequest(formData));
-        setShowSuccess(true);
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
+        try {
+            await dispatch(createSiteVisitRequest(formData)).unwrap();
+            setShowSuccess(true);
+        } catch (error) {
+            console.error("Failed to create site visit request:", error);
+            // Error toast is likely handled in the slice or via a global handler, 
+            // but we reset isSubmitting so they can try again if it was a transient error.
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -128,9 +139,10 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                 )}
                 <button
                     type="submit"
-                    className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95"
+                    disabled={isSubmitting}
+                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95`}
                 >
-                    {isMandatory ? 'Submit Mandatory Report' : 'Update Site Visit'}
+                    {isSubmitting ? 'Submitting...' : (isMandatory ? 'Submit Mandatory Report' : 'Update Site Visit')}
                 </button>
             </div>
 

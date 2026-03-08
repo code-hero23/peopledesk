@@ -16,6 +16,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
     const navigate = useNavigate();
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
@@ -116,11 +117,15 @@ const CREWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Opening Report',
             message: 'Are you sure you want to start your day with these metrics?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     logStatus: 'OPEN',
                     cre_opening_metrics: openingData.cre_opening_metrics,
@@ -131,6 +136,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Opening Report Submitted! Day started.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -139,11 +145,15 @@ const CREWorkLogForm = ({ onSuccess }) => {
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
             message: 'Are you sure you want to submit your final metrics for today?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     cre_closing_metrics: closingData.cre_closing_metrics,
                     notes: closingData.notes
@@ -153,6 +163,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Closing Report Submitted! Day ended.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -257,8 +268,8 @@ const CREWorkLogForm = ({ onSuccess }) => {
                     </div>
                 </div>
 
-                <button type="submit" className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <CheckSquare size={20} /> Submit Closing Report
+                <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                    {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={20} /> Submit Closing Report</>}
                 </button>
                 <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
                 <ConfirmationModal
@@ -322,8 +333,8 @@ const CREWorkLogForm = ({ onSuccess }) => {
                 </MetricCard>
             </div>
 
-            <button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
-                <CheckSquare size={20} /> Submit Opening Report
+            <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-lg hover:shadow-xl transition-all active:scale-95 flex items-center justify-center gap-2">
+                {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={20} /> Submit Opening Report</>}
             </button>
             <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
             <ConfirmationModal

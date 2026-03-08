@@ -16,6 +16,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const { projects } = useSelector((state) => state.projects);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
     const [confirmationConfig, setConfirmationConfig] = useState({
@@ -106,17 +107,22 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Opening Report',
             message: 'Are you sure you want to start your day with these metrics?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = { logStatus: 'OPEN', la_opening_metrics: openingData };
                 dispatch(createWorkLog(payload)).then((res) => {
                     if (!res.error) {
                         setModalMessage("Opening Report Submitted! Day started.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -125,11 +131,15 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const handleClosingSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
             message: 'Are you sure you want to end your day and submit these closing metrics?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 const payload = {
                     la_closing_metrics: closingData,
                     notes: dailyNotes
@@ -139,6 +149,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                         setModalMessage("Closing Report Submitted! Day ended.");
                         setShowSuccess(true);
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -147,11 +158,15 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const handleProjectReportSubmit = (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Add Project Wise Report',
             message: 'Confirm adding this report to your daily log?',
             onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
                 let totalHours = 0;
                 if (projectReport.startTime && projectReport.endTime) {
                     const start = new Date(`1970-01-01T${projectReport.startTime}`);
@@ -179,6 +194,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                             onlineMeetings: [], showroomMeetings: [], measurements: [], requirements: [], colours: []
                         });
                     }
+                    setIsSubmitting(false);
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -573,8 +589,8 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                                     </div>
                                                 </div>
 
-                                                <button type="submit" className="w-full bg-black hover:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3 active:scale-[0.98]">
-                                                    <Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Report Entry</span>
+                                                <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-black hover:bg-slate-900 text-white font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3 active:scale-[0.98]">
+                                                    {isSubmitting || isLoading ? 'Adding...' : <><Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Report Entry</span></>}
                                                 </button>
                                             </form>
                                         </div>
@@ -703,8 +719,8 @@ const MetricsForm = ({ data, setData, onSubmit, type }) => {
                 </table>
             </div>
 
-            <button type="submit" className={`w-full ${btnColor} hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2`}>
-                <CheckSquare size={20} /> {isOpening ? 'Submit Opening Report' : 'Submit Closing Report'}
+            <button type="submit" disabled={isSubmitting || isLoading} className={`w-full ${btnColor} hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2`}>
+                {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={20} /> {isOpening ? 'Submit Opening Report' : 'Submit Closing Report'}</>}
             </button>
         </form>
     );

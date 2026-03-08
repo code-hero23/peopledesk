@@ -107,6 +107,21 @@ const createLeaveRequest = async (req, res) => {
             }
         }
 
+        // Check if a leave request already exists for this user and overlapping dates
+        const overlappingLeave = await prisma.leaveRequest.findFirst({
+            where: {
+                userId,
+                OR: [
+                    { startDate: { lte: parseRobustDate(endDate) }, endDate: { gte: parseRobustDate(startDate) } }
+                ],
+                status: { not: 'REJECTED' }
+            }
+        });
+
+        if (overlappingLeave) {
+            return res.status(400).json({ message: 'You already have an active leave request overlapping these dates.' });
+        }
+
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
                 userId,
@@ -196,6 +211,21 @@ const createSiteVisitRequest = async (req, res) => {
     try {
         const userId = req.user.id;
 
+        // Check for duplicate site visit request
+        const existingSiteVisit = await prisma.siteVisitRequest.findFirst({
+            where: {
+                userId,
+                projectName,
+                date: parseRobustDate(date),
+                startTime,
+                endTime
+            }
+        });
+
+        if (existingSiteVisit) {
+            return res.status(400).json({ message: 'A site visit request with these details already exists.' });
+        }
+
         const siteVisitRequest = await prisma.siteVisitRequest.create({
             data: {
                 userId,
@@ -229,6 +259,22 @@ const createShowroomVisitRequest = async (req, res) => {
 
     try {
         const userId = req.user.id;
+
+        // Check for duplicate showroom visit request
+        const existingShowroomVisit = await prisma.showroomVisitRequest.findFirst({
+            where: {
+                userId,
+                date: parseRobustDate(date),
+                startTime,
+                endTime,
+                sourceShowroom,
+                destinationShowroom
+            }
+        });
+
+        if (existingShowroomVisit) {
+            return res.status(400).json({ message: 'A showroom visit request with these details already exists.' });
+        }
 
         const showroomVisitRequest = await prisma.showroomVisitRequest.create({
             data: {
