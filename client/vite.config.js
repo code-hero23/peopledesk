@@ -7,39 +7,23 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'public',
+      filename: 'sw.js',
       registerType: 'autoUpdate',
-      workbox: {
-        cleanupOutdatedCaches: true,
-        skipWaiting: true,
-        clientsClaim: true,
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,jpg}'], // Cache all essential assets
-        runtimeCaching: [
-          {
-            urlPattern: ({ url }) => url.pathname.startsWith('/api'), // Cache API calls for offline viewing
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'peopledesk-api-v1',
-              expiration: {
-                maxEntries: 50,
-                maxAgeSeconds: 60 * 60 * 24 // 24 hours
-              },
-              cacheableResponse: {
-                statuses: [200] // Only cache successful responses
-              }
-            },
-            method: 'GET'
-          }
-        ]
+      injectManifest: {
+        injectionPoint: undefined // We'll handle caching manually or via sw.js imports if needed
       },
       devOptions: {
-        enabled: true
+        enabled: true,
+        type: 'module'
       },
-      includeAssets: ['orbix-logo.png'], // removed missing favicon.ico and apple-touch-icon.png
+      includeAssets: ['orbix-logo.png'],
       manifest: {
         name: 'PeopleDesk',
         short_name: 'PeopleDesk',
         description: 'PeopleDesk Employee Dashboard & Worklog',
-        theme_color: '#1e293b', // Slate-800 for a more premium look
+        theme_color: '#1e293b',
         background_color: '#ffffff',
         display: 'standalone',
         start_url: '/',

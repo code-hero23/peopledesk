@@ -13,6 +13,63 @@ const HourlyAlarm = () => {
     // Only for AE
     const isAE = user?.designation === 'AE';
 
+    const VAPID_PUBLIC_KEY = "BOP1fHGa34CnDiQuA8NSVd4DvmSLPrvphs-qMgJF2l75J0yOwiSHdYwTfESjPYGTy_Kkk8jTAjoxG4uXMvOsu4Y";
+
+    const urlBase64ToUint8Array = (base64String) => {
+        const padding = '='.repeat((4 - base64String.length % 4) % 4);
+        const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+    };
+
+    const subscribeToPush = async () => {
+        if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
+            console.warn('Push notifications not supported');
+            return;
+        }
+
+        try {
+            const registration = await navigator.serviceWorker.ready;
+            
+            // Check for existing subscription
+            let subscription = await registration.pushManager.getSubscription();
+            
+            if (!subscription) {
+                // Request permission
+                const permission = await Notification.requestPermission();
+                if (permission !== 'granted') {
+                    console.log('Notification permission denied');
+                    return;
+                }
+
+                subscription = await registration.pushManager.subscribe({
+                    userVisibleOnly: true,
+                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                });
+            }
+
+            // Send subscription to backend
+            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/notifications/subscribe`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('token')}` // Adjust based on your auth storage
+                },
+                body: JSON.stringify({ subscription })
+            });
+
+            if (response.ok) {
+                console.log('Successfully subscribed to push notifications');
+            }
+        } catch (error) {
+            console.error('Error subscribing to push:', error);
+        }
+    };
+
     const playChime = () => {
         try {
             if (!audioContextRef.current) {
@@ -71,6 +128,9 @@ const HourlyAlarm = () => {
     useEffect(() => {
         if (!isAE || !isEnabled) return;
 
+        // Subscribe to push when AE enables alarm
+        subscribeToPush();
+
         const checkTime = () => {
             const now = new Date();
             const hours = now.getHours();
@@ -109,7 +169,10 @@ const HourlyAlarm = () => {
                         exit={{ opacity: 0, x: 20 }}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        onClick={playChime}
+                        onClick={() => {
+                            playChime();
+                            subscribeToPush(); // Ensure subscribed on test
+                        }}
                         className="px-4 py-2 bg-white text-indigo-600 rounded-2xl shadow-lg border border-indigo-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
                     >
                         <Sparkles size={14} /> Test Sound
@@ -124,8 +187,11 @@ const HourlyAlarm = () => {
                     if (!audioContextRef.current) {
                         playChime(); // Initialize audio on first click
                     }
+                    if (!isEnabled) {
+                        subscribeToPush(); // Request permission when enabling
+                    }
                     setIsEnabled(!isEnabled);
-                    toast.success(isEnabled ? "Hourly Alarm Muted" : "Hourly Alarm Enabled", { autoClose: 1000 });
+                    toast.success(isEnabled ? "Hourly Alarm Muted" : "Hourly Alarm Enabled & Notifications Active", { autoClose: 2000 });
                 }}
                 className={`p-4 rounded-full shadow-xl flex items-center gap-3 transition-all ${
                     isEnabled 

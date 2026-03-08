@@ -6,6 +6,7 @@ const rateLimit = require('express-rate-limit');
 const path = require('path');
 const initAttendanceCron = require('./cron/attendanceCron');
 const initCheckoutReminderCron = require('./cron/checkoutReminderCron');
+const initNotificationCron = require('./cron/notificationCron');
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
@@ -19,6 +20,7 @@ const app = express();
 // Initialize Cron Jobs
 initAttendanceCron();
 initCheckoutReminderCron();
+initNotificationCron();
 
 // Security Middlewares
 app.use(helmet({
@@ -79,6 +81,7 @@ app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/payroll', require('./routes/payrollRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/wfh', require('./routes/wfhRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 app.get('/api', (req, res) => {
     res.json({ message: 'Welcome to PeopleDesk API', status: 'Running' });
