@@ -1,10 +1,20 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Helper to check for COO designation if role is BUSINESS_HEAD
+const isCOO = (user) => {
+    if (user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') return true;
+    if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) return true;
+    return false;
+};
+
 // @desc    Get Financial Summary
 // @route   GET /api/finance/summary
 // @access  Private (AM, COO, Admin)
 const getFinanceSummary = async (req, res) => {
+    if (!isCOO(req.user)) {
+        return res.status(403).json({ message: 'Not authorized as COO' });
+    }
     try {
         let finance = await prisma.finance.findFirst();
         
@@ -40,6 +50,9 @@ const getFinanceSummary = async (req, res) => {
 // @route   POST /api/finance/add-cash
 // @access  Private (Admin, AM)
 const addCash = async (req, res) => {
+    if (!isCOO(req.user)) {
+        return res.status(403).json({ message: 'Not authorized as COO' });
+    }
     try {
         const { amount, source, reason } = req.body;
         const addedById = req.user.id;
@@ -78,6 +91,9 @@ const addCash = async (req, res) => {
 // @route   GET /api/finance/deposits
 // @access  Private (AM, COO, Admin)
 const getDepositHistory = async (req, res) => {
+    if (!isCOO(req.user)) {
+        return res.status(403).json({ message: 'Not authorized as COO' });
+    }
     try {
         const deposits = await prisma.deposit.findMany({
             include: {
@@ -96,9 +112,12 @@ const getDepositHistory = async (req, res) => {
 // @route   GET /api/finance/history
 // @access  Private (AM, COO, Admin)
 const getSpentHistory = async (req, res) => {
+    if (!isCOO(req.user)) {
+        return res.status(403).json({ message: 'Not authorized as COO' });
+    }
     try {
         const history = await prisma.voucher.findMany({
-            where: { status: { in: ['COMPLETED', 'WAITING'] } },
+            where: {}, // Show all vouchers for history tracking
             include: {
                 user: { select: { name: true, designation: true } }
             },
@@ -112,6 +131,9 @@ const getSpentHistory = async (req, res) => {
 };
 
 const exportFinanceData = async (req, res) => {
+    if (!isCOO(req.user)) {
+        return res.status(403).json({ message: 'Not authorized as COO' });
+    }
     try {
         const ExcelJS = require('exceljs');
         const workbook = new ExcelJS.Workbook();

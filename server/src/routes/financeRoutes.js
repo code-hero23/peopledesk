@@ -14,7 +14,7 @@ router.get('/summary', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS
 router.get('/history', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), getSpentHistory);
 router.get('/deposits', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), getDepositHistory);
 router.get('/export', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), exportFinanceData);
-router.post('/add-cash', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER'), addCash);
+router.post('/add-cash', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), addCash);
 router.post('/wipe', protect, authorize('ADMIN'), wipeFinanceData);
 
 module.exports = router;

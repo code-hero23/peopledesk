@@ -74,12 +74,22 @@ const VoucherManagement = () => {
     const [isExporting, setIsExporting] = useState(false);
     const [isWiping, setIsWiping] = useState(false);
 
+    // Helper to check for COO designation if role is BUSINESS_HEAD
+    const isCOO = (user) => {
+        if (!user) return false;
+        if (user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') return true;
+        if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) return true;
+        return false;
+    };
+
     useEffect(() => {
-        dispatch(getManageableVouchers());
-        dispatch(getFinanceSummary());
-        dispatch(getSpentHistory());
-        dispatch(getDepositHistory());
-    }, [dispatch]);
+        if (isCOO(user)) {
+            dispatch(getManageableVouchers());
+            dispatch(getFinanceSummary());
+            dispatch(getSpentHistory());
+            dispatch(getDepositHistory());
+        }
+    }, [dispatch, user]);
 
     useEffect(() => {
         if (isError) toast.error(message);
@@ -91,7 +101,7 @@ const VoucherManagement = () => {
         try {
             if (user.role === 'ACCOUNTS_MANAGER') {
                 await dispatch(approveVoucherAM(payload)).unwrap();
-            } else if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) {
+            } else if (user.role === 'BUSINESS_HEAD' && isCOO(user)) {
                 await dispatch(approveVoucherCOO(payload)).unwrap();
             }
             
@@ -314,7 +324,7 @@ const VoucherManagement = () => {
                         <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
                             <Wallet size={24} />
                         </div>
-                        {(user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') && (
+                        {isCOO(user) && (
                             <button 
                                 onClick={() => setShowAddCash(true)}
                                 className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-all"
@@ -470,6 +480,9 @@ const VoucherManagement = () => {
                                                 <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
                                                     item.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
                                                     item.status === 'WAITING' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                                                    item.status === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                    item.status === 'PENDING' ? 'bg-blue-50 text-blue-600 border-blue-100' :
+                                                    item.status === 'APPROVED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
                                                     'bg-slate-50 text-slate-600 border-slate-100'
                                                 }`}>
                                                     {item.status === 'WAITING' ? 'Advance Issued' : item.status}
@@ -708,18 +721,22 @@ const VoucherManagement = () => {
                                                 </button>
                                             ) : (
                                                 <>
-                                                    <button
-                                                        onClick={() => handleAction('REJECTED')}
-                                                        className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAction('APPROVED')}
-                                                        className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                                    >
-                                                        Approve & Advance <ArrowUpRight size={18} />
-                                                    </button>
+                                                    {((user.role === 'ACCOUNTS_MANAGER' && selectedVoucher.amStatus === 'PENDING') || (user.role === 'BUSINESS_HEAD' && isCOO(user) && selectedVoucher.amStatus === 'APPROVED' && selectedVoucher.cooStatus === 'PENDING')) && (
+                                                        <>
+                                                            <button
+                                                                onClick={() => handleAction('REJECTED')}
+                                                                className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
+                                                            >
+                                                                Reject
+                                                            </button>
+                                                            <button
+                                                                onClick={() => handleAction('APPROVED')}
+                                                                className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                            >
+                                                                Approve & Advance <ArrowUpRight size={18} />
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </>
                                             )}
                                         </div>

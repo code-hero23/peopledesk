@@ -193,7 +193,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
                         )}
 
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'ACCOUNTS_MANAGER'].includes(user?.role) && (
+                        {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || 
+                          (user?.role === 'BUSINESS_HEAD' && (user?.designation === 'COO' || user?.designation === 'Chief Operational Officer'))) && (
                             <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" />
                         )}
 
