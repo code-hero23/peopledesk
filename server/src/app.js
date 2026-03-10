@@ -7,6 +7,8 @@ const path = require('path');
 const initAttendanceCron = require('./cron/attendanceCron');
 const initCheckoutReminderCron = require('./cron/checkoutReminderCron');
 const initNotificationCron = require('./cron/notificationCron');
+const initFinanceCron = require('./cron/financeCron');
+
 
 // Route Imports
 const authRoutes = require('./routes/authRoutes');
@@ -21,6 +23,8 @@ const app = express();
 initAttendanceCron();
 initCheckoutReminderCron();
 initNotificationCron();
+initFinanceCron();
+
 
 // Security Middlewares
 app.use(helmet({

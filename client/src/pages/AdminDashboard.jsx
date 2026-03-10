@@ -426,7 +426,7 @@ const AdminDashboard = () => {
 
                                     return (
                                         <>
-                                            <div className="h-[460px] w-full relative">
+                                            <div className="h-[460px] min-h-[460px] w-full relative">
                                                 <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none mt-2 flex flex-col items-center justify-center w-[190px] h-[190px] bg-white rounded-full shadow-[inset_0_4px_15px_rgba(0,0,0,0.06)] border border-slate-50 z-0 transition-all duration-300">
                                                     <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none mb-3 transition-all">{displayTitle}</p>
                                                     <p className="text-4xl font-black text-slate-800 tracking-tighter transition-all">₹{displayValue.toLocaleString()}</p>

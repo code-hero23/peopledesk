@@ -28,7 +28,10 @@ import {
     PieChart,
     Clock,
     PlusCircle,
-    Camera
+    Camera,
+    Download,
+    RefreshCcw,
+    ShieldAlert
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -64,6 +67,12 @@ const VoucherManagement = () => {
         date: new Date().toISOString().split('T')[0],
         proofFile: null
     });
+
+    // Reset Cycle Modal
+    const [showWipeModal, setShowWipeModal] = useState(false);
+    const [wipeConfirmText, setWipeConfirmText] = useState('');
+    const [isExporting, setIsExporting] = useState(false);
+    const [isWiping, setIsWiping] = useState(false);
 
     useEffect(() => {
         dispatch(getManageableVouchers());
@@ -168,6 +177,70 @@ const VoucherManagement = () => {
         }
     };
 
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const token = user.token;
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await fetch(`${baseUrl}/finance/export`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            
+            if (!response.ok) throw new Error('Export failed');
+            
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const filename = `Expense_Hub_Report_${new Date().toISOString().split('T')[0]}.xlsx`;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            toast.success('Report exported successfully');
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
+    const handleWipe = async () => {
+        if (wipeConfirmText !== 'RESET') {
+            return toast.error("Please type 'RESET' to confirm");
+        }
+        
+        try {
+            setIsWiping(true);
+            const token = user.token;
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await fetch(`${baseUrl}/finance/wipe`, {
+                method: 'POST',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Wipe failed');
+            
+            toast.success('Accounting cycle reset successfully');
+            setShowWipeModal(false);
+            setWipeConfirmText('');
+            dispatch(getFinanceSummary());
+            dispatch(getSpentHistory());
+            dispatch(getDepositHistory());
+            dispatch(getManageableVouchers());
+        } catch (err) {
+            toast.error(err.message);
+        } finally {
+            setIsWiping(false);
+        }
+    };
+
+
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
             {/* Header Area */}
@@ -177,17 +250,39 @@ const VoucherManagement = () => {
                         <h1 className="text-4xl font-black text-slate-800 tracking-tight">Financial Oversight</h1>
                         <p className="text-slate-500 font-medium">Manage budgets and approve operational expenses</p>
                     </div>
-                    {user.role === 'ACCOUNTS_MANAGER' && (
+                    
+                    <div className="flex items-center gap-4">
                         <button 
-                            onClick={() => {
-                                dispatch(reset());
-                                setShowRaiseModal(true);
-                            }}
-                            className="bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-200 border border-slate-900 flex items-center gap-3 animate-pulse-subtle"
+                            onClick={handleExport}
+                            disabled={isExporting}
+                            className="bg-white hover:bg-slate-50 text-slate-700 px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg border border-slate-200 flex items-center gap-3 disabled:opacity-50"
                         >
-                            <PlusCircle size={20} /> Raise Request
+                            <Download size={20} className={isExporting ? 'animate-bounce' : ''} /> 
+                            <span className="hidden lg:inline">{isExporting ? 'Exporting...' : 'Export CSV'}</span>
                         </button>
-                    )}
+
+                        {user.role === 'ADMIN' && (
+                            <button 
+                                onClick={() => setShowWipeModal(true)}
+                                className="bg-rose-50 hover:bg-rose-100 text-rose-600 px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg border border-rose-100 flex items-center gap-3"
+                            >
+                                <RefreshCcw size={20} />
+                                <span className="hidden lg:inline">Reset Cycle</span>
+                            </button>
+                        )}
+
+                        {user.role === 'ACCOUNTS_MANAGER' && (
+                            <button 
+                                onClick={() => {
+                                    dispatch(reset());
+                                    setShowRaiseModal(true);
+                                }}
+                                className="bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-200 border border-slate-900 flex items-center gap-3 animate-pulse-subtle"
+                            >
+                                <PlusCircle size={20} /> <span className="hidden lg:inline">Raise Request</span>
+                            </button>
+                        )}
+                    </div>
                 </div>
                 
                 <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 ml-auto">
@@ -711,6 +806,50 @@ const VoucherManagement = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {showWipeModal && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowWipeModal(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <div className="p-10 space-y-8 text-center">
+                            <div className="w-20 h-20 bg-rose-50 text-rose-500 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                                <ShieldAlert size={40} />
+                            </div>
+                            <div>
+                                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Danger Zone</h3>
+                                <p className="text-slate-500 font-medium mt-2">This will permanently delete all Vouchers and Deposits, and reset the current balance to zero. This action cannot be undone.</p>
+                            </div>
+
+                            <div className="space-y-4">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest text-left ml-2">Type "RESET" to confirm</p>
+                                <input 
+                                    type="text" 
+                                    placeholder="RESET"
+                                    className="w-full px-8 py-5 bg-slate-50 border-2 border-slate-100 rounded-2xl focus:border-rose-300 focus:bg-white outline-none font-black text-center text-rose-600 transition-all"
+                                    value={wipeConfirmText}
+                                    onChange={(e) => setWipeConfirmText(e.target.value.toUpperCase())}
+                                />
+                            </div>
+
+                            <div className="flex gap-4 pt-4">
+                                <button 
+                                    onClick={() => setShowWipeModal(false)}
+                                    className="flex-1 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs text-slate-400 hover:bg-slate-50 transition-all"
+                                >
+                                    Cancel
+                                </button>
+                                <button 
+                                    onClick={handleWipe}
+                                    disabled={wipeConfirmText !== 'RESET' || isWiping}
+                                    className={`flex-1 px-6 py-4 rounded-2xl font-black uppercase tracking-widest text-xs text-white shadow-xl transition-all active:scale-95 ${wipeConfirmText === 'RESET' ? 'bg-rose-600 hover:bg-rose-700' : 'bg-slate-200 cursor-not-allowed text-slate-400 opacity-50'}`}
+                                >
+                                    {isWiping ? 'Resetting...' : 'Reset Now'}
+                                </button>
+                            </div>
+                        </div>
+                    </motion.div>
+                </div>
+            )}
 
             {showRaiseModal && (
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
