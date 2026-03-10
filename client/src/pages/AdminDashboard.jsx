@@ -245,14 +245,14 @@ const AdminDashboard = () => {
                                         value={todayPresentCount}
                                         icon="✅"
                                         color="teal"
-                                        onClick={() => navigate('/admin/attendance')}
+                                        onClick={() => navigate('/admin/attendance', { state: { filter: 'PRESENT' } })}
                                     />
                                     <StatCard
                                         title="Today Absent"
                                         value={todayAbsentCount}
                                         icon="🚫"
                                         color="orange"
-                                        onClick={() => navigate('/admin/attendance')}
+                                        onClick={() => navigate('/admin/attendance', { state: { filter: 'ABSENT' } })}
                                     />
                                 </>
                             )}

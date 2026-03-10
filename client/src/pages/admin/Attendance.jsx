@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
+import { useLocation } from 'react-router-dom';
 import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
 import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils } from 'lucide-react';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
@@ -11,6 +12,10 @@ const Attendance = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const { dailyAttendance, isLoading, isError, message } = useSelector((state) => state.admin);
+    const location = useLocation();
+    
+    // Status Filter from Dashboard
+    const [statusFilter, setStatusFilter] = useState(location.state?.filter || null);
 
     // Live Status State
     const [activeStatuses, setActiveStatuses] = useState([]);
@@ -64,13 +69,17 @@ const Attendance = () => {
         setCycleRange(range);
     };
 
-    // Filter attendance records based on search
+    // Filter attendance records based on search and high-level status filter
     const filteredAttendance = dailyAttendance.filter((record) => {
         const term = searchTerm.toLowerCase();
-        return (
+        const matchesSearch = (
             record.user.name.toLowerCase().includes(term) ||
             record.user.email.toLowerCase().includes(term)
         );
+        
+        const matchesStatus = statusFilter ? record.status === statusFilter : true;
+        
+        return matchesSearch && matchesStatus;
     });
 
     useEffect(() => {
@@ -226,6 +235,19 @@ const Attendance = () => {
                 <div>
                     <h2 className="text-3xl font-bold text-slate-800">Daily Attendance</h2>
                     <p className="text-slate-500">Monitor employee check-ins and absences.</p>
+                    {statusFilter && (
+                        <div className="mt-2 flex items-center gap-2">
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${statusFilter === 'PRESENT' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                                Showing: {statusFilter.toLowerCase()}
+                            </span>
+                            <button 
+                                onClick={() => setStatusFilter(null)}
+                                className="text-[10px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full transition-all"
+                            >
+                                <Zap size={28} /> Clear Filter
+                            </button>
+                        </div>
+                    )}
                 </div>
                 <div className="flex flex-col sm:flex-row items-center gap-4">
                     {/* Search Bar */}
