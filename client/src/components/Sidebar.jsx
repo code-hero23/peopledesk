@@ -18,6 +18,7 @@ import {
     ChevronRight,
     RefreshCw,
     DollarSign,
+    Receipt,
     Home,
     Phone,
     Sparkles,
@@ -119,7 +120,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         );
     };
 
-    const isAdmin = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role);
+    const isAdmin = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(user?.role);
 
     return (
         <aside
@@ -182,6 +183,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
                         )}
 
+                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'ACCOUNTS_MANAGER'].includes(user?.role) && (
+                            <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" />
+                        )}
+
                         {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
                         )}
@@ -209,6 +214,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         {isSalaryEnabled && (
                             <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
                         )}
+                        <NavItem to="/dashboard/expenses" icon={Receipt} label="Vouchers" />
                         {user?.wfhViewEnabled && (
                             <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
                         )}

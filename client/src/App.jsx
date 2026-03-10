@@ -21,6 +21,8 @@ import AnnouncementManagement from './pages/admin/AnnouncementManagement';
 import SalarySettings from './pages/admin/SalarySettings';
 import WFHRequestForm from './pages/employee/WFHRequestForm';
 import WFHManagement from './pages/admin/WFHManagement';
+import ExpenseHub from './pages/employee/ExpenseHub';
+import VoucherManagement from './pages/admin/VoucherManagement';
 import CRECallReports from './pages/employee/CRECallReports';
 import AdminCallReports from './pages/admin/AdminCallReports';
 import OSCDirectory from './pages/OSCDirectory';
@@ -52,12 +54,14 @@ function App() {
                 <Route path="/dashboard/attendance" element={<MyAttendance />} />
                 <Route path="/dashboard/salary" element={<MySalary />} />
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
+                <Route path="/dashboard/expenses" element={<ExpenseHub />} />
                 <Route path="/dashboard/call-reports" element={<CRECallReports />} />
               </Route>
 
               {/* Admin Routes */}
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/admin/approvals" element={<Approvals />} />
+              <Route path="/admin/vouchers" element={<VoucherManagement />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />
               <Route path="/admin/employees" element={<ManageEmployees />} />
               <Route path="/admin/worklogs" element={<WorkLogs />} />

@@ -81,6 +81,8 @@ app.use('/api/announcements', require('./routes/announcementRoutes'));
 app.use('/api/payroll', require('./routes/payrollRoutes'));
 app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/wfh', require('./routes/wfhRoutes'));
+app.use('/api/vouchers', require('./routes/voucherRoutes'));
+app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 app.get('/api', (req, res) => {

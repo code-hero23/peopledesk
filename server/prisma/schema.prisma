@@ -40,6 +40,8 @@ model User {
   wfhRequests                  WfhRequest[]
   workLogs                     WorkLog[]
   callLogs                     CallLog[]
+  vouchers                     Voucher[]
+  deposits                     Deposit[]
   pushSubscriptions            PushSubscription[]
 }
 
@@ -435,6 +437,70 @@ enum Role {
   BUSINESS_HEAD
   ADMIN
   AE_MANAGER
+  ACCOUNTS_MANAGER
+}
+
+model Voucher {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  type          VoucherType   @default(POSTPAID)
+  amount        Float
+  purpose       String
+  date          DateTime      @default(now())
+  status        VoucherStatus @default(PENDING)
+  
+  // Level 1: Accounts Manager
+  amId          Int?
+  amStatus      VoucherStatus @default(PENDING)
+  amRemarks     String?
+  amApprovedAt  DateTime?
+  
+  // Level 2: COO
+  cooId         Int?
+  cooStatus     VoucherStatus @default(PENDING)
+  cooRemarks    String?
+  cooApprovedAt DateTime?
+  
+  // Admin Notes
+  adminId       Int?
+  adminRemarks  String?
+
+  proofUrl      String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  user          User          @relation(fields: [userId], references: [id])
+}
+
+model Finance {
+  id          Int      @id @default(1)
+  currentCash Float    @default(0)
+  totalSpent  Float    @default(0)
+  updatedAt   DateTime @updatedAt
+}
+
+model Deposit {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  source    String
+  addedById Int
+  reason    String?
+  addedAt   DateTime @default(now())
+
+  addedBy   User     @relation(fields: [addedById], references: [id])
+}
+
+enum VoucherType {
+  PREPAID
+  POSTPAID
+}
+
+enum VoucherStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  COMPLETED
+  WAITING
 }
 
 enum Status {

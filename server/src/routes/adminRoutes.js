@@ -20,20 +20,20 @@ const {
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
 
-router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllEmployees);
+router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllEmployees);
 router.post('/employees', protect, authorize('ADMIN', 'AE_MANAGER'), createEmployee);
 router.post('/employees/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importEmployees);
 
 // Work Logs & Attendance - Accessible by Admin, BH, HR
-router.get('/worklogs', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllWorkLogs);
-router.get('/worklogs/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getDailyWorkLogs);
-router.get('/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllAttendance);
-router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getDailyAttendance);
-router.get('/active-statuses', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getActiveStatuses);
+router.get('/worklogs', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllWorkLogs);
+router.get('/worklogs/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getDailyWorkLogs);
+router.get('/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllAttendance);
+router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getDailyAttendance);
+router.get('/active-statuses', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getActiveStatuses);
 
 // Requests - Accessible by Admin, BH, HR
-router.get('/requests/pending', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getAllPendingRequests);
-router.get('/requests/history', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'), getRequestHistory);
+router.get('/requests/pending', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllPendingRequests);
+router.get('/requests/history', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getRequestHistory);
 router.put('/requests/:type/:id', protect, authorize('BUSINESS_HEAD', 'HR', 'AE_MANAGER'), updateRequestStatus);
 router.delete('/requests/:type/:id', protect, authorize('ADMIN', 'HR'), deleteRequest);
 

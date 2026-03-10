@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
@@ -30,6 +31,7 @@ import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
 
 const Overview = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
     const { attendance, requests, loading, isRequestsFetched, activeBreak } = useSelector((state) => state.employee);
 
@@ -53,7 +55,14 @@ const Overview = () => {
     const [cameraState, setCameraState] = useState({ active: false, error: null });
 
     useEffect(() => {
-        if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
+        if (user?.wfhViewEnabled) {
+            navigate('/dashboard/wfh');
+        }
+    }, [user, navigate]);
+
+    useEffect(() => {
+        const deviceType = getDeviceType();
+        if (deviceType === 'mobile' || user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
             setIsSiteLogin(true);
         }
 
@@ -521,7 +530,7 @@ const Overview = () => {
                             <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-12">
                                 <div className="space-y-8">
                                     <div className="space-y-4">
-                                        {user?.designation !== 'AE' && user?.designation !== 'AE MANAGER' && getDeviceType() === 'mobile' && (
+                                        {getDeviceType() === 'desktop' && (
                                             <div className="inline-flex py-1 px-1 bg-slate-100 rounded-2xl">
                                                 <button
                                                     onClick={() => setIsSiteLogin(false)}

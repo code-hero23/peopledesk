@@ -1,0 +1,785 @@
+import { useEffect, useState } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { 
+    getManageableVouchers, 
+    approveVoucherAM, 
+    approveVoucherCOO, 
+    getFinanceSummary, 
+    getSpentHistory,
+    getDepositHistory,
+    addCash,
+    addAdminNote,
+    createVoucher,
+    reset 
+} from '../../features/voucher/voucherSlice';
+import { 
+    CheckCircle2, 
+    XCircle, 
+    MessageSquare, 
+    DollarSign, 
+    ArrowUpRight,
+    User,
+    Receipt,
+    History,
+    Plus,
+    BarChart3,
+    Wallet,
+    TrendingUp,
+    PieChart,
+    Clock,
+    PlusCircle,
+    Camera
+} from 'lucide-react';
+import { toast } from 'react-toastify';
+import { motion, AnimatePresence } from 'framer-motion';
+
+const VoucherManagement = () => {
+    const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth);
+    const { 
+        manageableVouchers, 
+        financeSummary, 
+        spentHistory, 
+        depositHistory,
+        isLoading, 
+        isError, 
+        message 
+    } = useSelector((state) => state.voucher);
+
+    const [selectedVoucher, setSelectedVoucher] = useState(null);
+    const [remarks, setRemarks] = useState('');
+    const [view, setView] = useState('pending'); // 'pending', 'history', or 'deposits'
+    const [showAddCash, setShowAddCash] = useState(false);
+    const [cashAmount, setCashAmount] = useState('');
+    const [cashSource, setCashSource] = useState('');
+    const [cashReason, setCashReason] = useState('');
+    
+    // Raise Voucher for AM
+    const [showRaiseModal, setShowRaiseModal] = useState(false);
+    const [raiseData, setRaiseData] = useState({
+        type: 'POSTPAID',
+        amount: '',
+        purpose: '',
+        date: new Date().toISOString().split('T')[0],
+        proofFile: null
+    });
+
+    useEffect(() => {
+        dispatch(getManageableVouchers());
+        dispatch(getFinanceSummary());
+        dispatch(getSpentHistory());
+        dispatch(getDepositHistory());
+        return () => dispatch(reset());
+    }, [dispatch]);
+
+    useEffect(() => {
+        if (isError) toast.error(message);
+    }, [isError, message]);
+
+    const handleAction = async (status) => {
+        const payload = { id: selectedVoucher.id, status, remarks };
+        
+        try {
+            if (user.role === 'ACCOUNTS_MANAGER') {
+                await dispatch(approveVoucherAM(payload)).unwrap();
+            } else if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) {
+                await dispatch(approveVoucherCOO(payload)).unwrap();
+            }
+            
+            toast.success(`Voucher ${status.toLowerCase()} successfully`);
+            setSelectedVoucher(null);
+            setRemarks('');
+            dispatch(getFinanceSummary());
+            dispatch(getSpentHistory());
+        } catch (err) {
+            toast.error(err);
+        }
+    };
+
+    const getFullProofUrl = (url) => {
+        if (!url) return '';
+        if (url.startsWith('http')) return url;
+        const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api').replace(/\/api$/, '');
+        return `${baseUrl}${url}`;
+    };
+
+    const handleAddCash = async (e) => {
+        e.preventDefault();
+        if (!cashAmount || !cashSource || !cashReason) {
+            return toast.error('Amount, Source and Reason are required');
+        }
+        try {
+            await dispatch(addCash({ amount: cashAmount, source: cashSource, reason: cashReason })).unwrap();
+            toast.success('Funds added successfully');
+            setShowAddCash(false);
+            setCashAmount('');
+            setCashSource('');
+            setCashReason('');
+            dispatch(getFinanceSummary());
+            dispatch(getDepositHistory());
+        } catch (err) {
+            toast.error(err);
+        }
+    };
+
+    const handleAdminNote = async () => {
+        try {
+            await dispatch(addAdminNote({ id: selectedVoucher.id, remarks })).unwrap();
+            toast.success('Admin note added successfully');
+            setSelectedVoucher(null);
+            setRemarks('');
+            dispatch(getManageableVouchers());
+        } catch (err) {
+            toast.error(err);
+        }
+    };
+
+    const handleRaiseVoucher = async (e) => {
+        e.preventDefault();
+        if (raiseData.type === 'POSTPAID' && !raiseData.proofFile) {
+            return toast.error('Bill/Proof is mandatory for Postpaid vouchers');
+        }
+        try {
+            const data = new FormData();
+            data.append('type', raiseData.type);
+            data.append('amount', raiseData.amount);
+            data.append('purpose', raiseData.purpose);
+            data.append('date', raiseData.date);
+            if (raiseData.proofFile) {
+                data.append('proof', raiseData.proofFile);
+            }
+
+            await dispatch(createVoucher(data)).unwrap();
+            toast.success('Voucher raised successfully!');
+            setShowRaiseModal(false);
+            setRaiseData({
+                type: 'POSTPAID',
+                amount: '',
+                purpose: '',
+                date: new Date().toISOString().split('T')[0],
+                proofFile: null
+            });
+            dispatch(getManageableVouchers());
+        } catch (err) {
+            toast.error(err);
+        }
+    };
+
+    return (
+        <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
+            {/* Header Area */}
+            <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
+                <div className="flex items-end justify-between w-full">
+                    <div>
+                        <h1 className="text-4xl font-black text-slate-800 tracking-tight">Financial Oversight</h1>
+                        <p className="text-slate-500 font-medium">Manage budgets and approve operational expenses</p>
+                    </div>
+                    {user.role === 'ACCOUNTS_MANAGER' && (
+                        <button 
+                            onClick={() => setShowRaiseModal(true)}
+                            className="bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-200 border border-slate-900 flex items-center gap-3 animate-pulse-subtle"
+                        >
+                            <PlusCircle size={20} /> Raise Request
+                        </button>
+                    )}
+                </div>
+                
+                <div className="flex bg-slate-100 p-1.5 rounded-2xl border border-slate-200 ml-auto">
+                    <button 
+                        onClick={() => setView('pending')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${view === 'pending' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Pending Approvals
+                    </button>
+                    <button 
+                        onClick={() => setView('history')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${view === 'history' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Spent History
+                    </button>
+                    <button 
+                        onClick={() => setView('deposits')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${view === 'deposits' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Deposits
+                    </button>
+                </div>
+            </div>
+
+            {/* Financial Summary Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                            <Wallet size={24} />
+                        </div>
+                        {(user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') && (
+                            <button 
+                                onClick={() => setShowAddCash(true)}
+                                className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-all"
+                                title="Add Funds"
+                            >
+                                <Plus size={20} />
+                            </button>
+                        )}
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Cash / Budget</p>
+                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.currentCash?.toLocaleString() || '0'}</p>
+                </motion.div>
+
+                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
+                    <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 mb-4 transition-colors group-hover:bg-rose-600 group-hover:text-white">
+                        <TrendingUp size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Spent</p>
+                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.spent?.toLocaleString() || '0'}</p>
+                </motion.div>
+
+                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
+                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+                        <PieChart size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Balance</p>
+                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.balance?.toLocaleString() || '0'}</p>
+                </motion.div>
+
+                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
+                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-4 transition-colors group-hover:bg-amber-600 group-hover:text-white">
+                        <Clock size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Pipeline</p>
+                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.pending?.toLocaleString() || '0'}</p>
+                </motion.div>
+            </div>
+
+            <AnimatePresence mode="wait">
+                {view === 'pending' ? (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        key="pending"
+                        className="space-y-4"
+                    >
+                        <div className="flex items-center gap-2 mb-2">
+                            <BarChart3 size={20} className="text-blue-500" />
+                            <h2 className="text-xl font-black text-slate-800">Pending Requests</h2>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4">
+                            {manageableVouchers.map((voucher) => (
+                                <div 
+                                    key={voucher.id}
+                                    className="bg-white rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:scale-[1.01] transition-all p-8 flex flex-col lg:flex-row items-center justify-between gap-8 group"
+                                >
+                                    <div className="flex items-center gap-6 w-full lg:w-1/4">
+                                        <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-blue-600 group-hover:text-white transition-all">
+                                            <User size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="font-black text-slate-800 text-lg">{voucher.user.name}</h3>
+                                            <div className="flex items-center gap-2">
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{voucher.user.designation}</p>
+                                                <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{voucher.type}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex-1 w-full text-center lg:text-left border-y lg:border-y-0 lg:border-x border-slate-100 py-6 lg:py-0 lg:px-12">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Purpose of Expense</p>
+                                        <p className="text-slate-600 font-bold leading-relaxed">{voucher.purpose}</p>
+                                    </div>
+
+                                    <div className="flex items-center justify-between lg:justify-end gap-12 w-full lg:w-1/4">
+                                        <div className="text-right">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount</p>
+                                            <p className="text-xl font-black text-slate-800 tracking-tight">₹{voucher.amount.toLocaleString()}</p>
+                                        </div>
+                                        <button 
+                                            onClick={() => setSelectedVoucher(voucher)}
+                                            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 shadow-lg shadow-slate-200 hover:shadow-blue-200 transition-all active:scale-95"
+                                        >
+                                            Review
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+
+                            {manageableVouchers.length === 0 && (
+                                <div className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[3rem] p-20 text-center flex flex-col items-center gap-4">
+                                    <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center text-slate-200 shadow-sm mb-2">
+                                        <CheckCircle2 size={40} />
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-800 font-black text-2xl tracking-tight">Queue Empty</p>
+                                        <p className="text-slate-400 font-medium max-w-xs mx-auto">You've cleared all pending vouchers for your level.</p>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </motion.div>
+                ) : view === 'history' ? (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        key="history"
+                        className="space-y-4"
+                    >
+                        <div className="flex items-center gap-2 mb-2">
+                            <History size={20} className="text-emerald-500" />
+                            <h2 className="text-xl font-black text-slate-800">Spent History</h2>
+                        </div>
+                        
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                        <th className="px-8 py-6">Date</th>
+                                        <th className="px-8 py-6">Employee</th>
+                                        <th className="px-8 py-6">Type / Purpose</th>
+                                        <th className="px-8 py-6">Status</th>
+                                        <th className="px-8 py-6 text-right">Amount / Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {spentHistory.map((item) => (
+                                        <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
+                                            <td className="px-8 py-5 text-xs font-bold text-slate-400">
+                                                {new Date(item.updatedAt).toLocaleDateString()}
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
+                                                        {item.user.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-slate-800">{item.user.name}</p>
+                                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.user.designation}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-1">{item.type}</p>
+                                                    <p className="text-sm text-slate-600 font-medium line-clamp-1">{item.purpose}</p>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
+                                                    item.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                                    item.status === 'WAITING' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
+                                                    'bg-slate-50 text-slate-600 border-slate-100'
+                                                }`}>
+                                                    {item.status === 'WAITING' ? 'Advance Issued' : item.status}
+                                                </span>
+                                            </td>
+                                            <td className="px-8 py-5 text-right flex flex-col items-end gap-2">
+                                                <p className="text-sm font-black text-slate-800 group-hover:text-rose-500 transition-colors">
+                                                    -₹{item.amount.toLocaleString()}
+                                                </p>
+                                                <button
+                                                    onClick={() => setSelectedVoucher(item)}
+                                                    className="bg-white hover:bg-slate-900 text-slate-600 hover:text-white border border-slate-200 hover:border-slate-900 px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm w-fit"
+                                                >
+                                                    View Details
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {spentHistory.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">
+                                                No spending history recorded yet
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        key="deposits"
+                        className="space-y-4"
+                    >
+                        <div className="flex items-center gap-2 mb-2">
+                            <Wallet size={20} className="text-blue-500" />
+                            <h2 className="text-xl font-black text-slate-800">Deposit History</h2>
+                        </div>
+                        
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
+                            <table className="w-full text-left">
+                                <thead>
+                                    <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                        <th className="px-8 py-6">Date</th>
+                                        <th className="px-8 py-6">Reason / Source</th>
+                                        <th className="px-8 py-6">Added By</th>
+                                        <th className="px-8 py-6 text-right">Amount</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {depositHistory.map((item) => (
+                                        <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
+                                            <td className="px-8 py-5 text-xs font-bold text-slate-400">
+                                                {new Date(item.addedAt).toLocaleDateString()} {new Date(item.addedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <p className="text-sm font-black text-slate-800">{item.reason || 'No reason provided'}</p>
+                                                    <div className="flex items-center gap-1.5 mt-1">
+                                                        <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">{item.source}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-8 h-8 bg-blue-50 rounded-lg flex items-center justify-center text-blue-600 font-bold text-xs uppercase">
+                                                        {item.addedBy.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-black text-slate-800">{item.addedBy.name}</p>
+                                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.addedBy.designation}</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td className="px-8 py-5 text-right">
+                                                <p className="text-sm font-black text-emerald-500">
+                                                    +₹{item.amount.toLocaleString()}
+                                                </p>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {depositHistory.length === 0 && (
+                                        <tr>
+                                            <td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">
+                                                No deposit history recorded yet
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Modals: Review and Add Cash */}
+            <AnimatePresence>
+                {selectedVoucher && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setSelectedVoucher(null)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl relative overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="p-10 space-y-8">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl shadow-blue-200">
+                                            <Receipt size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">Review Request</h3>
+                                            <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Voucher #V-{selectedVoucher.id}</p>
+                                        </div>
+                                    </div>
+                                    <button onClick={() => setSelectedVoucher(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                        <XCircle size={28} className="text-slate-300" />
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-100 relative overflow-hidden">
+                                     <DollarSign size={80} className="absolute -right-4 -bottom-4 text-slate-100 -rotate-12" />
+                                     <div className="relative z-10 space-y-6">
+                                        <div className="grid grid-cols-2 gap-8">
+                                            <div className="space-y-1">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Requested By</p>
+                                                <p className="font-black text-slate-800">{selectedVoucher.user.name}</p>
+                                            </div>
+                                            <div className="space-y-1 text-right">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Proposed Amount</p>
+                                                <p className="text-2xl font-black text-blue-600">₹{selectedVoucher.amount.toLocaleString()}</p>
+                                            </div>
+                                        </div>
+                                         <div className="space-y-1">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purpose of Expense</p>
+                                            <p className="text-sm text-slate-600 font-bold leading-relaxed">{selectedVoucher.purpose}</p>
+                                        </div>
+
+                                        {selectedVoucher.proofUrl && (
+                                            <div className="space-y-2 pt-2">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Attachment / Proof</p>
+                                                <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white">
+                                                    {selectedVoucher.proofUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
+                                                        <a href={getFullProofUrl(selectedVoucher.proofUrl)} target="_blank" rel="noopener noreferrer" className="block group relative">
+                                                            <img 
+                                                                src={getFullProofUrl(selectedVoucher.proofUrl)} 
+                                                                alt="Proof" 
+                                                                className="w-full h-32 object-cover transition-all group-hover:scale-105" 
+                                                            />
+                                                            <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                                                <span className="bg-white/90 text-slate-900 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">View Full Image</span>
+                                                            </div>
+                                                        </a>
+                                                    ) : (
+                                                        <a 
+                                                            href={getFullProofUrl(selectedVoucher.proofUrl)} 
+                                                            target="_blank" 
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-3 p-4 hover:bg-slate-50 transition-all group"
+                                                        >
+                                                            <div className="w-10 h-10 bg-rose-50 rounded-lg flex items-center justify-center text-rose-500 group-hover:bg-rose-500 group-hover:text-white transition-all">
+                                                                <PlusCircle size={20} />
+                                                            </div>
+                                                            <div className="flex-1">
+                                                                <p className="text-xs font-black text-slate-800">Document Proof (PDF/Other)</p>
+                                                                <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Click to open in new tab</p>
+                                                            </div>
+                                                            <ArrowUpRight size={16} className="text-slate-300" />
+                                                        </a>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {(selectedVoucher.amRemarks || selectedVoucher.cooRemarks || selectedVoucher.adminRemarks) && (
+                                            <div className="pt-4 mt-4 border-t border-slate-200/50 space-y-3">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Workflow Comments</p>
+                                                {selectedVoucher.amRemarks && (
+                                                    <div className="flex gap-2">
+                                                        <span className="text-[10px] font-black text-blue-600 bg-blue-50 px-2 py-0.5 rounded">AM</span>
+                                                        <p className="text-xs text-slate-500 italic">"{selectedVoucher.amRemarks}"</p>
+                                                    </div>
+                                                )}
+                                                {selectedVoucher.cooRemarks && (
+                                                    <div className="flex gap-2">
+                                                        <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">COO</span>
+                                                        <p className="text-xs text-slate-500 italic">"{selectedVoucher.cooRemarks}"</p>
+                                                    </div>
+                                                )}
+                                                {selectedVoucher.adminRemarks && (
+                                                    <div className="flex gap-2">
+                                                        <span className="text-[10px] font-black text-slate-600 bg-slate-100 px-2 py-0.5 rounded">Admin</span>
+                                                        <p className="text-xs text-slate-500 italic">"{selectedVoucher.adminRemarks}"</p>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+                                     </div>
+                                </div>
+
+                                {view === 'pending' ? (
+                                    <>
+                                        <div className="space-y-3">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                                <MessageSquare size={12} /> Approval Remarks
+                                            </label>
+                                            <textarea
+                                                rows="3"
+                                                placeholder="Add context for your decision..."
+                                                className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm transition-all focus:bg-white focus:border-blue-200"
+                                                value={remarks}
+                                                onChange={(e) => setRemarks(e.target.value)}
+                                            />
+                                        </div>
+
+                                        <div className="flex gap-4">
+                                            {user.role === 'ADMIN' ? (
+                                                <button
+                                                    onClick={handleAdminNote}
+                                                    className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                >
+                                                    Save Admin Note <ArrowUpRight size={18} />
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleAction('REJECTED')}
+                                                        className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction('APPROVED')}
+                                                        className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                    >
+                                                        Approve & Advance <ArrowUpRight size={18} />
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
+                                    </>
+                                ) : (
+                                    <button
+                                        onClick={() => setSelectedVoucher(null)}
+                                        className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                                    >
+                                        Close Details
+                                    </button>
+                                )}
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+
+                {showAddCash && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowAddCash(false)}
+                            className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-sm relative overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <form onSubmit={handleAddCash} className="p-8 space-y-6 text-center">
+                                <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 mx-auto shadow-inner">
+                                    <Wallet size={28} />
+                                </div>
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800">Add Cash</h3>
+                                    <p className="text-slate-400 text-xs font-bold uppercase tracking-widest mt-1">Top up operational budget</p>
+                                </div>
+                                 <div className="space-y-2 text-left">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest inline-block ml-1">Funding Amount</label>
+                                    <input
+                                        type="number"
+                                        required
+                                        autoFocus
+                                        placeholder="₹ 0.00"
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-black text-2xl tracking-tighter"
+                                        value={cashAmount}
+                                        onChange={(e) => setCashAmount(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2 text-left">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest inline-block ml-1">Source of Funds</label>
+                                    <input
+                                        type="text"
+                                        required
+                                        placeholder="e.g. Bank Transfer, Cash"
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm transition-all focus:bg-white"
+                                        value={cashSource}
+                                        onChange={(e) => setCashSource(e.target.value)}
+                                    />
+                                </div>
+                                <div className="space-y-2 text-left">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest inline-block ml-1">Reason for Deposit</label>
+                                    <textarea 
+                                        required 
+                                        rows="3"
+                                        placeholder="Why are these funds being added?" 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm transition-all focus:bg-white" 
+                                        value={cashReason} 
+                                        onChange={(e) => setCashReason(e.target.value)} 
+                                    />
+                                </div>
+                                <button
+                                    type="submit"
+                                    className="w-full bg-slate-900 hover:bg-black text-white py-4 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95 mt-4"
+                                >
+                                    Confirm Deposit
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {showRaiseModal && (
+                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRaiseModal(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
+                    <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        <form onSubmit={handleRaiseVoucher} className="p-10 space-y-8">
+                            <div className="flex justify-between items-start">
+                                <div className="flex items-center gap-5">
+                                    <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                                        <Receipt size={32} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-2xl font-black text-slate-800 tracking-tight">Raise New Request</h3>
+                                        <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Submit for COO Review</p>
+                                    </div>
+                                </div>
+                                <button type="button" onClick={() => setShowRaiseModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                    <XCircle size={28} className="text-slate-300" />
+                                </button>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-6">
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expense Type</label>
+                                    <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
+                                        <option value="POSTPAID">Postpaid (Settlement)</option>
+                                        <option value="PREPAID">Prepaid (Advance)</option>
+                                    </select>
+                                </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount</label>
+                                    <input type="number" required placeholder="₹ 0.00" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-black text-sm" value={raiseData.amount} onChange={(e) => setRaiseData({ ...raiseData, amount: e.target.value })} />
+                                </div>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Purpose / Reason</label>
+                                <textarea required rows="3" placeholder="Explain the business need..." className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" value={raiseData.purpose} onChange={(e) => setRaiseData({ ...raiseData, purpose: e.target.value })} />
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
+                                    <span>Proof / Bill Attachment</span>
+                                    {raiseData.type === 'POSTPAID' && <span className="text-rose-500 font-black">MANDATORY</span>}
+                                </label>
+                                <div className="relative group">
+                                    <input 
+                                        type="file" 
+                                        required={raiseData.type === 'POSTPAID'} 
+                                        accept="image/*,.pdf"
+                                        className="hidden"
+                                        id="am-voucher-proof"
+                                        onChange={(e) => setRaiseData({ ...raiseData, proofFile: e.target.files[0] })}
+                                    />
+                                    <label 
+                                        htmlFor="am-voucher-proof"
+                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border-2 border-dashed border-slate-200 rounded-2xl focus-within:ring-8 focus-within:ring-blue-50 outline-none font-bold text-xs flex items-center cursor-pointer hover:border-blue-400 hover:bg-white transition-all overflow-hidden"
+                                    >
+                                        <Camera className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300 group-hover:text-blue-500 transition-colors" size={18} />
+                                        <span className="truncate text-slate-500">
+                                            {raiseData.proofFile ? raiseData.proofFile.name : 'Select Proof (Image or PDF)...'}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+
+                            <button type="submit" className="w-full bg-slate-900 hover:bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95">
+                                Submit for Approval
+                            </button>
+                        </form>
+                    </motion.div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+export default VoucherManagement;
