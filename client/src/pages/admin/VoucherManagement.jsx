@@ -56,6 +56,7 @@ const VoucherManagement = () => {
     
     // Raise Voucher for AM
     const [showRaiseModal, setShowRaiseModal] = useState(false);
+    const [showSuccessTick, setShowSuccessTick] = useState(false);
     const [raiseData, setRaiseData] = useState({
         type: 'POSTPAID',
         amount: '',
@@ -69,7 +70,6 @@ const VoucherManagement = () => {
         dispatch(getFinanceSummary());
         dispatch(getSpentHistory());
         dispatch(getDepositHistory());
-        return () => dispatch(reset());
     }, [dispatch]);
 
     useEffect(() => {
@@ -150,16 +150,19 @@ const VoucherManagement = () => {
             }
 
             await dispatch(createVoucher(data)).unwrap();
-            toast.success('Voucher raised successfully!');
-            setShowRaiseModal(false);
-            setRaiseData({
-                type: 'POSTPAID',
-                amount: '',
-                purpose: '',
-                date: new Date().toISOString().split('T')[0],
-                proofFile: null
-            });
-            dispatch(getManageableVouchers());
+            setShowSuccessTick(true);
+            setTimeout(() => {
+                setShowSuccessTick(false);
+                setShowRaiseModal(false);
+                setRaiseData({
+                    type: 'POSTPAID',
+                    amount: '',
+                    purpose: '',
+                    date: new Date().toISOString().split('T')[0],
+                    proofFile: null
+                });
+                dispatch(getManageableVouchers());
+            }, 2000);
         } catch (err) {
             toast.error(err);
         }
@@ -176,7 +179,10 @@ const VoucherManagement = () => {
                     </div>
                     {user.role === 'ACCOUNTS_MANAGER' && (
                         <button 
-                            onClick={() => setShowRaiseModal(true)}
+                            onClick={() => {
+                                dispatch(reset());
+                                setShowRaiseModal(true);
+                            }}
                             className="bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl shadow-slate-200 border border-slate-900 flex items-center gap-3 animate-pulse-subtle"
                         >
                             <PlusCircle size={20} /> Raise Request
@@ -710,6 +716,20 @@ const VoucherManagement = () => {
                 <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                     <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setShowRaiseModal(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
                     <motion.div initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }} className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
+                        {showSuccessTick ? (
+                            <div className="p-16 flex flex-col items-center justify-center text-center space-y-6 min-h-[500px]">
+                                <motion.div
+                                    initial={{ scale: 0, rotate: -45 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                    className="w-32 h-32 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-2xl shadow-emerald-200"
+                                >
+                                    <CheckCircle2 size={80} strokeWidth={3} />
+                                </motion.div>
+                                <h3 className="text-3xl font-black text-slate-800 tracking-tight">Request Submitted!</h3>
+                                <p className="text-slate-500 font-bold">Your financial request has been successfully routed for approval.</p>
+                            </div>
+                        ) : (
                         <form onSubmit={handleRaiseVoucher} className="p-10 space-y-8">
                             <div className="flex justify-between items-start">
                                 <div className="flex items-center gap-5">
@@ -728,10 +748,10 @@ const VoucherManagement = () => {
 
                             <div className="grid grid-cols-2 gap-6">
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Expense Type</label>
-                                    <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
-                                        <option value="POSTPAID">Postpaid (Settlement)</option>
-                                        <option value="PREPAID">Prepaid (Advance)</option>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Request Type</label>
+                                    <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm cursor-pointer" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
+                                        <option value="PREPAID">Voucher (Company Pays First)</option>
+                                        <option value="POSTPAID">Bill (Company Pays After)</option>
                                     </select>
                                 </div>
                                 <div className="space-y-3">
@@ -775,6 +795,7 @@ const VoucherManagement = () => {
                                 Submit for Approval
                             </button>
                         </form>
+                        )}
                     </motion.div>
                 </div>
             )}

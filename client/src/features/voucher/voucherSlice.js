@@ -214,7 +214,6 @@ export const voucherSlice = createSlice({
             .addCase(getMyVouchers.pending, (state) => { state.isLoading = true; })
             .addCase(getMyVouchers.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.isSuccess = true;
                 state.vouchers = action.payload;
             })
             .addCase(getManageableVouchers.fulfilled, (state, action) => {

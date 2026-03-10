@@ -30,6 +30,7 @@ const ExpenseHub = () => {
     const [selectedVoucher, setSelectedVoucher] = useState(null);
     const [proofFile, setProofFile] = useState(null);
     const [isViewOpen, setIsViewOpen] = useState(false);
+    const [showSuccessTick, setShowSuccessTick] = useState(false);
 
     const [formData, setFormData] = useState({
         type: 'POSTPAID',
@@ -41,21 +42,26 @@ const ExpenseHub = () => {
 
     useEffect(() => {
         dispatch(getMyVouchers());
-        return () => dispatch(reset());
     }, [dispatch]);
 
     useEffect(() => {
         if (isError) toast.error(message);
         if (isSuccess && isFormOpen) {
-            toast.success('Voucher raised successfully!');
-            setIsFormOpen(false);
-            setFormData({ 
-                type: 'POSTPAID', 
-                amount: '', 
-                purpose: '', 
-                date: new Date().toISOString().split('T')[0],
-                proofFile: null
-            });
+            setShowSuccessTick(true);
+            // Wait 2 seconds before closing
+            setTimeout(() => {
+                setShowSuccessTick(false);
+                setIsFormOpen(false);
+                setFormData({ 
+                    type: 'POSTPAID', 
+                    amount: '', 
+                    purpose: '', 
+                    date: new Date().toISOString().split('T')[0],
+                    proofFile: null
+                });
+                dispatch(getMyVouchers());
+                dispatch(reset());
+            }, 2000);
         }
         if (isSuccess && isProofOpen) {
             toast.success('Proof uploaded and voucher completed!');
@@ -127,7 +133,10 @@ const ExpenseHub = () => {
                     <p className="text-slate-500 font-bold text-lg">Manage your business expenditures with ease.</p>
                 </div>
                 <button
-                    onClick={() => setIsFormOpen(true)}
+                    onClick={() => {
+                        dispatch(reset());
+                        setIsFormOpen(true);
+                    }}
                     className="flex items-center justify-center gap-3 bg-slate-900 border-b-4 border-slate-700 hover:bg-black hover:border-slate-800 text-white px-8 py-5 rounded-[2rem] font-black text-lg shadow-2xl transition-all active:scale-95 active:border-b-0 active:translate-y-1 group"
                 >
                     <Plus size={24} className="group-hover:rotate-90 transition-transform" /> Raise New Voucher
@@ -278,7 +287,22 @@ const ExpenseHub = () => {
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
                         <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsFormOpen(false)} className="absolute inset-0 bg-slate-900/40 backdrop-blur-sm" />
                         <motion.div initial={{ scale: 0.95, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 20 }} className="bg-white rounded-[3rem] shadow-2xl w-full max-w-xl relative overflow-hidden" onClick={(e) => e.stopPropagation()}>
-                            <div className="bg-slate-900 px-10 py-8 flex justify-between items-center text-white relative">
+                            {showSuccessTick ? (
+                                <div className="p-16 flex flex-col items-center justify-center text-center space-y-6 min-h-[500px]">
+                                    <motion.div
+                                        initial={{ scale: 0, rotate: -45 }}
+                                        animate={{ scale: 1, rotate: 0 }}
+                                        transition={{ type: "spring", stiffness: 200, damping: 20 }}
+                                        className="w-32 h-32 bg-emerald-100 text-emerald-500 rounded-full flex items-center justify-center mb-4 shadow-2xl shadow-emerald-200"
+                                    >
+                                        <CheckCircle2 size={80} strokeWidth={3} />
+                                    </motion.div>
+                                    <h3 className="text-3xl font-black text-slate-800 tracking-tight">Request Submitted!</h3>
+                                    <p className="text-slate-500 font-bold">Your financial request has been successfully routed for approval.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="bg-slate-900 px-10 py-8 flex justify-between items-center text-white relative">
                                 <Receipt className="absolute -left-4 -bottom-4 text-white/10 w-24 h-24 rotate-12" />
                                 <div className="relative z-10">
                                     <h3 className="text-2xl font-black tracking-tight">Financial Request</h3>
@@ -292,11 +316,16 @@ const ExpenseHub = () => {
                             <form onSubmit={onSubmit} className="p-10 space-y-8">
                                 <div className="grid grid-cols-2 gap-6">
                                     <div className="space-y-3">
-                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Voucher Policy</label>
-                                        <div className="flex bg-slate-100 p-2 rounded-[1.25rem]">
-                                            <button type="button" onClick={() => setFormData({ ...formData, type: 'POSTPAID' })} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${formData.type === 'POSTPAID' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>POSTPAID</button>
-                                            <button type="button" onClick={() => setFormData({ ...formData, type: 'PREPAID' })} className={`flex-1 py-3 text-[10px] font-black rounded-xl transition-all ${formData.type === 'PREPAID' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500'}`}>PREPAID</button>
-                                        </div>
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Request Type</label>
+                                        <select
+                                            className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-[1.25rem] focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm transition-all focus:bg-white focus:border-blue-200 cursor-pointer"
+                                            value={formData.type}
+                                            onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                                            required
+                                        >
+                                            <option value="PREPAID">Voucher (Company Pays First)</option>
+                                            <option value="POSTPAID">Bill (Company Pays After)</option>
+                                        </select>
                                     </div>
                                     <div className="space-y-3">
                                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 text-slate-400">Spending Date</label>
@@ -354,6 +383,8 @@ const ExpenseHub = () => {
                                     {isLoading ? 'Processing Request...' : 'Initialize Approval Chain'}
                                 </button>
                             </form>
+                            </>
+                            )}
                         </motion.div>
                     </div>
                 )}

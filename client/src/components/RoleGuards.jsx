@@ -5,7 +5,7 @@ import { useSelector } from 'react-redux';
 export const EmployeeGuard = () => {
     const { user } = useSelector((state) => state.auth);
 
-    if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
+    if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(user.role)) {
         return <Navigate to="/admin-dashboard" replace />;
     }
 
@@ -18,6 +18,8 @@ export const RootRedirect = () => {
 
     if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
         return <Navigate to="/admin-dashboard" replace />;
+    } else if (user && user.role === 'ACCOUNTS_MANAGER') {
+        return <Navigate to="/admin/vouchers" replace />;
     }
 
     // Default to employee dashboard

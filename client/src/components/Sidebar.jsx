@@ -160,14 +160,20 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             <nav className="flex-1 p-3 space-y-2 mt-2 overflow-y-auto scrollbar-hide">
                 {isAdmin ? (
                     <>
-                        <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
+                        {user?.role !== 'ACCOUNTS_MANAGER' && (
+                            <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
+                        )}
 
                         {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
                         )}
 
-                        <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" />
-                        <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
+                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                            <>
+                                <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" />
+                                <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
+                            </>
+                        )}
 
                         {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
@@ -177,8 +183,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" />
                         )}
 
-                        <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
-                        <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
+                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                            <>
+                                <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
+                                <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
+                            </>
+                        )}
                         {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                             <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
                         )}
@@ -202,8 +212,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         {['ADMIN', 'HR'].includes(user?.role) && (
                             <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" />
                         )}
-                        <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
-                        <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
+                        {user?.role !== 'ACCOUNTS_MANAGER' && (
+                            <>
+                                <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
+                                <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
+                            </>
+                        )}
                     </>
                 ) : (
                     <>
@@ -214,15 +228,19 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         {isSalaryEnabled && (
                             <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
                         )}
-                        <NavItem to="/dashboard/expenses" icon={Receipt} label="Vouchers" />
+                        <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
                         {user?.wfhViewEnabled && (
                             <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
                         )}
                         {user?.designation === 'CRE' && (
                             <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                         )}
-                        <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
-                        <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
+                        {user?.role !== 'ACCOUNTS_MANAGER' && (
+                            <>
+                                <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
+                                <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
+                            </>
+                        )}
                     </>
                 )}
             </nav>
