@@ -225,7 +225,7 @@ const uploadProof = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
-        if (voucher.status !== 'WAITING' && voucher.type === 'PREPAID') {
+        if (voucher.status !== 'WAITING' && (voucher.type === 'PREPAID' || voucher.type === 'ADVANCE')) {
             return res.status(400).json({ message: 'Voucher must be in WAITING state before uploading settlement proof' });
         }
 

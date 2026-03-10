@@ -493,6 +493,7 @@ model Deposit {
 enum VoucherType {
   PREPAID
   POSTPAID
+  ADVANCE
 }
 
 enum VoucherStatus {

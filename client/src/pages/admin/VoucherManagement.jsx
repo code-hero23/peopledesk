@@ -752,6 +752,7 @@ const VoucherManagement = () => {
                                     <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm cursor-pointer" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
                                         <option value="PREPAID">Voucher (Company Pays First)</option>
                                         <option value="POSTPAID">Bill (Company Pays After)</option>
+                                        <option value="ADVANCE">Advance (Cash)</option>
                                     </select>
                                 </div>
                                 <div className="space-y-3">
