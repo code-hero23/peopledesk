@@ -4,7 +4,8 @@ import { getAllEmployees, getPendingRequests, getDailyAttendance, getDailyWorkLo
 import StatCard from '../components/StatCard';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Users, ClipboardList, BarChart2, Calendar, Building2, FileText, CheckCircle, UserX, Clock, Home, Phone, MapPin } from 'lucide-react';
+import { Users, ClipboardList, BarChart2, Calendar, Building2, FileText, CheckCircle, UserX, Clock, Home, Phone, MapPin, IndianRupee } from 'lucide-react';
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
 import { formatDate } from '../utils/dateUtils';
 
@@ -18,7 +19,9 @@ const AdminDashboard = () => {
     const [siteVisits, setSiteVisits] = useState([]);
     const [showroomHistory, setShowroomHistory] = useState([]);
     const [isReportsLoading, setIsReportsLoading] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); // Added selectedDate state
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]); 
+    const [financeSummary, setFinanceSummary] = useState({ currentCash: 0, spent: 0, balance: 0, pending: 0 });
+    const [activeSlice, setActiveSlice] = useState(null);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -37,8 +40,22 @@ const AdminDashboard = () => {
                 setIsReportsLoading(false);
             }
         };
+
+        const fetchFinanceData = async () => {
+             if (!user?.token || !['ADMIN', 'BUSINESS_HEAD', 'ACCOUNTS_MANAGER'].includes(user?.role)) return;
+             try {
+                const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/finance/summary`, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                setFinanceSummary(response.data);
+             } catch (error) {
+                 console.error("Finance fetch failed:", error);
+             }
+        }
+        
         fetchDashboardData();
-    }, [user?.token]); // Removed dispatch from dependencies as it's not used here
+        fetchFinanceData();
+    }, [user?.token, user?.role]); // Removed dispatch from dependencies as it's not used here
 
     useEffect(() => {
         dispatch(getAllEmployees());
@@ -367,6 +384,120 @@ const AdminDashboard = () => {
                                 <div className="p-10 text-center">
                                     <p className="text-[10px] text-teal-500 font-black uppercase tracking-[0.2em]">Full Attendance Reached</p>
                                 </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Expense Hub Pie Chart */}
+                    <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-3xl border border-slate-200/60 shadow-lg shadow-slate-200/20 overflow-hidden flex flex-col h-full relative">
+                        <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
+                        
+                        <div className="px-6 py-5 border-b border-slate-100/80 flex justify-between items-center bg-white/50 backdrop-blur-sm z-10">
+                            <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-2.5">
+                                <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+                                    <IndianRupee size={16} strokeWidth={2.5} />
+                                </div>
+                                Financial Overview
+                            </h3>
+                            <Link to="/admin/vouchers" className="text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 px-3 py-1.5 rounded-full transition-all flex items-center gap-1">Manage →</Link>
+                        </div>
+                        <div className="p-6 flex-grow flex flex-col items-center justify-center relative z-10 w-full">
+                            {financeSummary.currentCash === 0 && financeSummary.spent === 0 && financeSummary.pending === 0 ? (
+                                <div className="text-center text-slate-400">
+                                    <IndianRupee size={40} className="mx-auto mb-3 opacity-20" />
+                                    <p className="text-xs font-bold uppercase tracking-widest">No Financial Data</p>
+                                </div>
+                            ) : (
+                                (() => {
+                                    // Corrected math: since currentCash in DB is already subtracted from when COO approves (spent),
+                                    // we only need to deduct "Pending" from "currentCash" to find the "Available" for NEW vouchers.
+                                    const availableCash = Math.max(0, (financeSummary?.currentCash || 0) - (financeSummary?.pending || 0));
+                                    const totalSpent = financeSummary?.spent || 0;
+                                    const inPipeline = financeSummary?.pending || 0;
+                                    
+                                    const pieData = [
+                                        { name: 'Available Balance', value: availableCash, fill: 'url(#gradientCash)' },
+                                        { name: 'In Pipeline', value: inPipeline, fill: 'url(#gradientPending)' },
+                                        { name: 'Total Spent', value: totalSpent, fill: 'url(#gradientSpent)' }
+                                    ].filter(item => item.value > 0);
+
+                                    const displayTitle = activeSlice !== null ? pieData[activeSlice].name : 'Available Balance';
+                                    const displayValue = activeSlice !== null ? pieData[activeSlice].value : availableCash;
+
+                                    return (
+                                        <>
+                                            <div className="h-[460px] w-full relative">
+                                                <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none mt-2 flex flex-col items-center justify-center w-[190px] h-[190px] bg-white rounded-full shadow-[inset_0_4px_15px_rgba(0,0,0,0.06)] border border-slate-50 z-0 transition-all duration-300">
+                                                    <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none mb-3 transition-all">{displayTitle}</p>
+                                                    <p className="text-4xl font-black text-slate-800 tracking-tighter transition-all">₹{displayValue.toLocaleString()}</p>
+                                                </div>
+                                                
+                                                <ResponsiveContainer width="100%" height="100%">
+                                                    <PieChart>
+                                                        <defs>
+                                                            <linearGradient id="gradientCash" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#34d399" stopOpacity={1}/>
+                                                                <stop offset="100%" stopColor="#059669" stopOpacity={1}/>
+                                                            </linearGradient>
+                                                            <linearGradient id="gradientSpent" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#fb7185" stopOpacity={1}/>
+                                                                <stop offset="100%" stopColor="#e11d48" stopOpacity={1}/>
+                                                            </linearGradient>
+                                                            <linearGradient id="gradientPending" x1="0" y1="0" x2="0" y2="1">
+                                                                <stop offset="0%" stopColor="#fcd34d" stopOpacity={1}/>
+                                                                <stop offset="100%" stopColor="#f59e0b" stopOpacity={1}/>
+                                                            </linearGradient>
+                                                            <filter id="dropShadow" x="-20%" y="-20%" width="140%" height="140%">
+                                                                <feDropShadow dx="0" dy="4" stdDeviation="4" floodOpacity="0.15" />
+                                                            </filter>
+                                                        </defs>
+                                                        <Pie
+                                                            data={pieData}
+                                                            cx="50%"
+                                                            cy="45%"
+                                                            innerRadius={110}
+                                                            outerRadius={145}
+                                                            cornerRadius={12}
+                                                            paddingAngle={6}
+                                                            dataKey="value"
+                                                            stroke="none"
+                                                            style={{ filter: 'url(#dropShadow)' }}
+                                                            animationBegin={200}
+                                                            animationDuration={1200}
+                                                            onMouseEnter={(_, index) => setActiveSlice(index)}
+                                                            onMouseLeave={() => setActiveSlice(null)}
+                                                        >
+                                                            {pieData.map((entry, index) => (
+                                                                <Cell 
+                                                                    key={`cell-${index}`} 
+                                                                    fill={entry.fill} 
+                                                                    className="transition-all duration-300 outline-none"
+                                                                    style={{ 
+                                                                        opacity: activeSlice !== null && activeSlice !== index ? 0.4 : 1,
+                                                                        transform: activeSlice === index ? 'scale(1.05)' : 'scale(1)',
+                                                                        transformOrigin: 'center center'
+                                                                    }}
+                                                                />
+                                                            ))}
+                                                        </Pie>
+                                                        <Tooltip 
+                                                            formatter={(value) => [`₹${value.toLocaleString()}`, '']}
+                                                            contentStyle={{ borderRadius: '16px', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', padding: '12px 18px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)' }}
+                                                            itemStyle={{ color: '#0f172a', fontWeight: '900', fontSize: '14px', paddingTop: '4px' }}
+                                                            labelStyle={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '800' }}
+                                                        />
+                                                        <Legend 
+                                                            verticalAlign="bottom" 
+                                                            height={36} 
+                                                            iconType="circle" 
+                                                            wrapperStyle={{ fontSize: '11px', fontWeight: '800', color: '#475569', paddingTop: '20px' }}
+                                                        />
+                                                    </PieChart>
+                                                </ResponsiveContainer>
+                                            </div>
+                                        </>
+                                    );
+                                })()
                             )}
                         </div>
                     </div>
