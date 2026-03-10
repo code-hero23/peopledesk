@@ -32,7 +32,11 @@ import {
     Download,
     RefreshCcw,
     ShieldAlert,
-    Hammer
+    Hammer,
+    Search,
+    Filter,
+    Calendar,
+    X
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -74,6 +78,12 @@ const VoucherManagement = () => {
     const [wipeConfirmText, setWipeConfirmText] = useState('');
     const [isExporting, setIsExporting] = useState(false);
     const [isWiping, setIsWiping] = useState(false);
+    
+    // History Filters State
+    const [historySearch, setHistorySearch] = useState('');
+    const [historyStatus, setHistoryStatus] = useState('ALL');
+    const [historyStartDate, setHistoryStartDate] = useState('');
+    const [historyEndDate, setHistoryEndDate] = useState('');
 
     // Helper to check for COO designation if role is BUSINESS_HEAD
     const isCOO = (user) => {
@@ -99,6 +109,23 @@ const VoucherManagement = () => {
     const handleCarpenterHubClick = () => {
         toast.info("We are working on it, update soon!");
     };
+
+    // Derived filtered history
+    const filteredHistory = spentHistory.filter(item => {
+        const matchesSearch = 
+            item.user.name.toLowerCase().includes(historySearch.toLowerCase()) ||
+            item.purpose.toLowerCase().includes(historySearch.toLowerCase()) ||
+            item.type.toLowerCase().includes(historySearch.toLowerCase()) ||
+            item.amount.toString().includes(historySearch);
+            
+        const matchesStatus = historyStatus === 'ALL' || item.status === historyStatus;
+        
+        const itemDate = new Date(item.updatedAt);
+        const matchesStartDate = !historyStartDate || itemDate >= new Date(historyStartDate);
+        const matchesEndDate = !historyEndDate || itemDate <= new Date(historyEndDate + 'T23:59:59');
+
+        return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
+    });
 
     const handleAction = async (status) => {
         const payload = { id: selectedVoucher.id, status, remarks };
@@ -454,9 +481,76 @@ const VoucherManagement = () => {
                         key="history"
                         className="space-y-4"
                     >
-                        <div className="flex items-center gap-2 mb-2">
-                            <History size={20} className="text-emerald-500" />
-                            <h2 className="text-xl font-black text-slate-800">Spent History</h2>
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <div className="flex items-center gap-2">
+                                <History size={20} className="text-emerald-500" />
+                                <h2 className="text-xl font-black text-slate-800">Spent History</h2>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                                {/* Search */}
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search repairs, names, amounts..."
+                                        className="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-50 outline-none w-64 transition-all"
+                                        value={historySearch}
+                                        onChange={(e) => setHistorySearch(e.target.value)}
+                                    />
+                                    {historySearch && (
+                                        <button 
+                                            onClick={() => setHistorySearch('')}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+
+                                {/* Status Filter */}
+                                <div className="relative">
+                                    <Filter className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                    <select 
+                                        className="pl-11 pr-8 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-4 focus:ring-blue-50 outline-none appearance-none cursor-pointer min-w-[140px]"
+                                        value={historyStatus}
+                                        onChange={(e) => setHistoryStatus(e.target.value)}
+                                    >
+                                        <option value="ALL">All Status</option>
+                                        <option value="PENDING">Pending</option>
+                                        <option value="APPROVED">Approved</option>
+                                        <option value="WAITING">Waiting</option>
+                                        <option value="COMPLETED">Completed</option>
+                                        <option value="REJECTED">Rejected</option>
+                                    </select>
+                                </div>
+
+                                {/* Date Range */}
+                                <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-2xl px-4 py-1.5">
+                                    <Calendar size={14} className="text-slate-400" />
+                                    <input 
+                                        type="date" 
+                                        className="text-[10px] font-bold outline-none bg-transparent"
+                                        value={historyStartDate}
+                                        onChange={(e) => setHistoryStartDate(e.target.value)}
+                                    />
+                                    <span className="text-slate-300 text-[10px] font-black">TO</span>
+                                    <input 
+                                        type="date" 
+                                        className="text-[10px] font-bold outline-none bg-transparent"
+                                        value={historyEndDate}
+                                        onChange={(e) => setHistoryEndDate(e.target.value)}
+                                    />
+                                    {(historyStartDate || historyEndDate) && (
+                                        <button 
+                                            onClick={() => { setHistoryStartDate(''); setHistoryEndDate(''); }}
+                                            className="ml-1 text-slate-300 hover:text-rose-500"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
                         </div>
                         
                         <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
@@ -471,7 +565,7 @@ const VoucherManagement = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {spentHistory.map((item) => (
+                                    {filteredHistory.map((item) => (
                                         <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
                                             <td className="px-8 py-5 text-xs font-bold text-slate-400">
                                                 {new Date(item.updatedAt).toLocaleDateString()}
@@ -518,10 +612,10 @@ const VoucherManagement = () => {
                                             </td>
                                         </tr>
                                     ))}
-                                    {spentHistory.length === 0 && (
+                                    {filteredHistory.length === 0 && (
                                         <tr>
-                                            <td colSpan="4" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">
-                                                No spending history recorded yet
+                                            <td colSpan="5" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">
+                                                {spentHistory.length === 0 ? 'No spending history recorded yet' : 'No matching records found for active filters'}
                                             </td>
                                         </tr>
                                     )}
