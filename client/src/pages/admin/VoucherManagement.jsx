@@ -31,7 +31,8 @@ import {
     Camera,
     Download,
     RefreshCcw,
-    ShieldAlert
+    ShieldAlert,
+    Hammer
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -94,6 +95,10 @@ const VoucherManagement = () => {
     useEffect(() => {
         if (isError) toast.error(message);
     }, [isError, message]);
+
+    const handleCarpenterHubClick = () => {
+        toast.info("We are working on it, update soon!");
+    };
 
     const handleAction = async (status) => {
         const payload = { id: selectedVoucher.id, status, remarks };
@@ -360,6 +365,18 @@ const VoucherManagement = () => {
                     </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Pipeline</p>
                     <p className="text-2xl font-black text-slate-800">₹{financeSummary?.pending?.toLocaleString() || '0'}</p>
+                </motion.div>
+
+                <motion.div 
+                    whileHover={{ y: -5 }} 
+                    onClick={handleCarpenterHubClick}
+                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-blue-200 transition-all"
+                >
+                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-600 mb-4 transition-colors group-hover:bg-blue-600 group-hover:text-white">
+                        <Hammer size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carpenter Hub</p>
+                    <p className="text-sm font-black text-blue-600 mt-1 italic group-hover:text-blue-700 transition-colors">Coming Soon...</p>
                 </motion.div>
             </div>
 

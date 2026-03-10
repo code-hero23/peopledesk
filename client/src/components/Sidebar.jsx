@@ -175,6 +175,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             </>
                         )}
 
+                        {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || 
+                          (user?.role === 'BUSINESS_HEAD' && (user?.designation === 'COO' || user?.designation === 'Chief Operational Officer'))) && (
+                            <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" />
+                        )}
+
                         {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
                         )}
@@ -193,10 +198,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
                         )}
 
-                        {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || 
-                          (user?.role === 'BUSINESS_HEAD' && (user?.designation === 'COO' || user?.designation === 'Chief Operational Officer'))) && (
-                            <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" />
-                        )}
+
 
                         {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
