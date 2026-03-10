@@ -130,8 +130,8 @@ function Login() {
                                 {/* Mobile Logo */}
                                 <img src="/orbix-logo.png" alt="Logo" className="h-16 mx-auto lg:hidden mb-8 bg-white rounded-xl p-3 shadow-xl" />
 
-                                <h2 className="text-4xl font-extrabold text-white tracking-tight mb-2">Welcome</h2>
-                                <p className="text-slate-500 font-medium tracking-tight">Please sign in to continue.</p>
+                                <h2 className="text-5xl font-black text-white tracking-tighter mb-2 bg-gradient-to-br from-white via-white to-white/20 bg-clip-text text-transparent">Sign In</h2>
+                                <p className="text-red-500 font-black uppercase tracking-[0.2em] text-[10px] mb-8">Access your workspace</p>
                             </div>
 
                             <form onSubmit={onSubmit} className="space-y-6">
@@ -197,10 +197,13 @@ PeopleDesk User`)}`}
                                     whileTap={{ scale: 0.98 }}
                                     type="submit"
                                     disabled={isLoading}
-                                    className={`w-full py-4.5 rounded-xl font-bold uppercase tracking-widest text-white shadow-xl transition-all duration-300 ${isLoading ? 'bg-red-400 cursor-not-allowed' : 'bg-[#d00000] hover:bg-[#ff0000] shadow-red-600/20'
-                                        }`}
+                                    className={`w-full py-5 rounded-2xl font-black uppercase tracking-[0.2em] text-sm text-white shadow-2xl transition-all duration-300 ${
+                                        isLoading 
+                                        ? 'bg-slate-800 cursor-not-allowed opacity-50' 
+                                        : 'bg-gradient-to-r from-[#d00000] to-[#ff3d3d] hover:from-[#ff0000] hover:to-[#ff5c5c] shadow-red-600/40'
+                                    }`}
                                 >
-                                    {isLoading ? 'Logging In...' : 'Login'}
+                                    {isLoading ? 'Logging In...' : 'Sign In Now'}
                                 </motion.button>
 
                                 <div className="relative flex py-4 items-center">
