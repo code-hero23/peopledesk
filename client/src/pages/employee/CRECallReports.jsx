@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
-import { getCallLogPlugin, getPreferencesPlugin } from '../../utils/capacitorPlugins';
+import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
 import {
     Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
@@ -16,7 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CallLog = getCallLogPlugin();
-const Preferences = getPreferencesPlugin();
+const Preferences = Capacitor.Plugins.Preferences;
 
 const CRECallReports = () => {
     const dispatch = useDispatch();
@@ -364,33 +364,35 @@ const CRECallReports = () => {
                     <div className="absolute top-0 right-0 w-64 h-64 bg-slate-50/50 rounded-full blur-3xl -mr-20 -mt-20"></div>
                     <h3 className="text-slate-800 font-black uppercase text-xs tracking-widest self-start mb-4">Volume Distribution</h3>
 
-                    {pieData.length > 0 ? (
-                        <ResponsiveContainer width="100%" height={250}>
-                            <PieChart>
-                                <Pie
-                                    data={pieData}
-                                    cx="50%" cy="50%"
-                                    innerRadius={70} outerRadius={100}
-                                    paddingAngle={5} dataKey="value"
-                                    stroke="none"
-                                >
-                                    {pieData.map((entry, index) => (
-                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                    ))}
-                                </Pie>
-                                <RechartsTooltip
-                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                    itemStyle={{ fontWeight: 'black' }}
-                                />
-                                <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.1em' }} />
-                            </PieChart>
-                        </ResponsiveContainer>
-                    ) : (
-                        <div className="flex flex-col items-center justify-center opacity-50 space-y-4">
-                            <PieChart className="text-slate-300" size={48} />
-                            <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest">No Intelligence Gathered</p>
-                        </div>
-                    )}
+                    <div className="flex-1 w-full min-h-[220px]">
+                        {pieData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <PieChart>
+                                    <Pie
+                                        data={pieData}
+                                        cx="50%" cy="50%"
+                                        innerRadius={70} outerRadius={100}
+                                        paddingAngle={5} dataKey="value"
+                                        stroke="none"
+                                    >
+                                        {pieData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                        ))}
+                                    </Pie>
+                                    <RechartsTooltip
+                                        contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                        itemStyle={{ fontWeight: 'black' }}
+                                    />
+                                    <Legend iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900', letterSpacing: '0.1em' }} />
+                                </PieChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full py-10">
+                                <PieChart className="text-slate-300" size={48} />
+                                <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Intelligence Gathered</p>
+                            </div>
+                        )}
+                    </div>
                 </motion.div>
 
                 {/* Live Metrics Grid */}

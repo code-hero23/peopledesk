@@ -17,16 +17,3 @@ export const getCallLogPlugin = () => {
     }
     return CallLogPluginInstance;
 };
-
-let PreferencesPluginInstance = null;
-
-export const getPreferencesPlugin = () => {
-    if (!PreferencesPluginInstance) {
-        try {
-            PreferencesPluginInstance = registerPlugin('Preferences');
-        } catch (error) {
-            console.warn("Preferences plugin already registered or failed to register:", error);
-        }
-    }
-    return PreferencesPluginInstance;
-};

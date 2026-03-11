@@ -6,7 +6,7 @@ import {
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, ChevronRight, Activity, Smartphone,
     PieChart as PieChartIcon, BarChart3, TrendingUp, Users,
-    ArrowLeft, Download, Settings, Save, X as CloseIcon
+    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -316,10 +316,11 @@ const AdminCallReports = () => {
                         </div>
 
                         {/* Visual Chart Card */}
-                        <div className="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl relative overflow-hidden flex flex-col items-center justify-center">
-                            <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-2">Global Distribution</h3>
-                            {globalPieData.length > 0 ? (
-                                <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                        <div className="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl relative overflow-hidden flex flex-col min-h-[350px]">
+                            <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-4">Global Distribution</h3>
+                            <div className="flex-1 w-full min-h-[220px]">
+                                {globalPieData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={globalPieData}
@@ -340,21 +341,22 @@ const AdminCallReports = () => {
                                     </PieChart>
                                 </ResponsiveContainer>
                             ) : (
-                                <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full">
+                                <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full py-10">
                                     <PieChartIcon className="text-slate-300" size={48} />
                                     <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Signals Detected</p>
                                 </div>
                             )}
+                            </div>
                         </div>
 
                         {/* Top Performers Chart */}
-                        <div className="lg:col-span-4 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col">
+                        <div className="lg:col-span-4 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col min-h-[350px]">
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
                                     <BarChart3 className="text-blue-500" size={14} /> Top Performers
                                 </h3>
                             </div>
-                            <div className="h-[200px] w-full items-end pb-4">
+                            <div className="flex-1 w-full pb-4 min-h-[250px]">
                                 <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
