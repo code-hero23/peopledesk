@@ -15,6 +15,12 @@ const AdminDashboard = () => {
     const { employees, pendingRequests, dailyAttendance, isLoading } = useSelector((state) => state.admin);
     const { user } = useSelector((state) => state.auth);
 
+    useEffect(() => {
+        if (user && user.role === 'ANALYZER') {
+            navigate('/admin/call-reports', { replace: true });
+        }
+    }, [user, navigate]);
+
     const [searchTerm, setSearchTerm] = useState('');
     const [siteVisits, setSiteVisits] = useState([]);
     const [showroomHistory, setShowroomHistory] = useState([]);

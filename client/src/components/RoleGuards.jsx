@@ -5,6 +5,10 @@ import { useSelector } from 'react-redux';
 export const EmployeeGuard = () => {
     const { user } = useSelector((state) => state.auth);
 
+    if (user && user.role === 'ANALYZER') {
+        return <Navigate to="/admin/call-reports" replace />;
+    }
+
     if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(user.role)) {
         return <Navigate to="/admin-dashboard" replace />;
     }
