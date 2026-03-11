@@ -49,9 +49,10 @@ const CRECallReports = () => {
         try {
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
+                const allLogs = result.logs;
+                
                 // Client-side Filter: Only send logs matching the selected official SIM
-                // IMPROVED: If a log has NO simId, we include it as a fallback (on single-SIM devices)
-                const filteredLogs = result.logs.filter(log => {
+                let filteredLogs = allLogs.filter(log => {
                     const logSlot = String(log.simSlot || log.simId || "");
                     const targetSlot = String(officialSim);
                     
@@ -62,8 +63,26 @@ const CRECallReports = () => {
                     return logSlot === targetSlot || logSlot.includes(targetSlot);
                 });
 
+                // FALLBACK: If specific SIM filtering fails but device HAS logs
+                if (filteredLogs.length === 0 && allLogs.length > 0) {
+                    const uniqueSims = [...new Set(allLogs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null" && s !== "undefined");
+                    
+                    // If there's only one unique SIM reporting logs, we assume it's the target one
+                    if (uniqueSims.length === 1) {
+                        filteredLogs = allLogs;
+                        console.log("Single SIM detected, bypassing filter:", uniqueSims[0]);
+                    }
+                }
+
                 if (filteredLogs.length === 0) {
-                    toast.warning(`No logs found specifically for SIM ${officialSim}. Please verify your SIM slot selection.`);
+                    const detected = [...new Set(allLogs.map(l => l.simSlot || l.simId))].filter(Boolean).join(", ");
+                    toast.warning(
+                        <div className="p-1">
+                            <p className="font-bold">No logs found for SIM {officialSim}</p>
+                            <p className="text-[10px] opacity-70 mt-1">Found logs for: {detected || "Unknown"}. Try changing SIM slot selection above.</p>
+                        </div>,
+                        { autoClose: 5000 }
+                    );
                     return;
                 }
 
