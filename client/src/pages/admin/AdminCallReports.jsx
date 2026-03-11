@@ -6,7 +6,7 @@ import {
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, ChevronRight, Activity, Smartphone,
     PieChart as PieChartIcon, BarChart3, TrendingUp, Users,
-    ArrowLeft, Download
+    ArrowLeft, Download, Settings, Save, X as CloseIcon
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -26,6 +26,9 @@ const AdminCallReports = () => {
         endDate: new Date().toLocaleDateString('en-CA')
     });
     const [simFilter, setSimFilter] = useState('ALL');
+    const [showExcludedSettings, setShowExcludedSettings] = useState(false);
+    const [tempExcludedNumbers, setTempExcludedNumbers] = useState('');
+    const [isSavingSettings, setIsSavingSettings] = useState(false);
 
     useEffect(() => {
         dispatch(getCallStats({ ...dateRange, simFilter }));
@@ -46,6 +49,36 @@ const AdminCallReports = () => {
             }
         }
     }, [callStats]);
+
+    useEffect(() => {
+        if (excludedNumbers) {
+            setTempExcludedNumbers(excludedNumbers.join(', '));
+        }
+    }, [excludedNumbers]);
+
+    const handleSaveSettings = async () => {
+        try {
+            setIsSavingSettings(true);
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+            
+            await axios.post(`${baseUrl}/settings`, {
+                key: 'EXCLUDED_EMPLOYEE_NUMBERS',
+                value: tempExcludedNumbers
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success('Exclusion list updated successfully');
+            setShowExcludedSettings(false);
+            handleRefresh();
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            toast.error('Failed to update exclusion list');
+        } finally {
+            setIsSavingSettings(false);
+        }
+    };
 
     // Data Processing
     const employeeMetrics = callStats.reduce((acc, log) => {
@@ -193,11 +226,77 @@ const AdminCallReports = () => {
                             <option value="2" className="text-slate-900">SIM 2 ONLY</option>
                         </select>
                     </div>
-                    <button onClick={handleRefresh} className="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-xl active:scale-90">
+                    <button onClick={handleRefresh} className="p-4 bg-slate-800 text-slate-400 hover:text-white rounded-2xl transition-all border border-slate-700 active:scale-90">
                         <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+                    </button>
+                    <button 
+                        onClick={() => setShowExcludedSettings(true)}
+                        className="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2"
+                        title="Manage Excluded Numbers"
+                    >
+                        <Settings size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Exclusion List</span>
                     </button>
                 </div>
             </header>
+
+            {/* Settings Modal */}
+            <AnimatePresence>
+                {showExcludedSettings && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
+                            className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl"
+                        >
+                            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg">
+                                        <Settings size={20} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Exclusion Ledger</h3>
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Internal Contact Filtering</p>
+                                    </div>
+                                </div>
+                                <button onClick={() => setShowExcludedSettings(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                                    <CloseIcon size={20} className="text-slate-400" />
+                                </button>
+                            </div>
+
+                            <div className="p-8 space-y-6">
+                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-4">
+                                    <div className="mt-0.5 text-amber-600"><Info size={18} /></div>
+                                    <p className="text-xs font-bold text-amber-800 leading-relaxed">
+                                        Enter phone numbers separated by commas. These numbers will be <strong>excluded</strong> from "Unique Leads" calculations across all reports.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Employee Numbers</label>
+                                    <textarea
+                                        value={tempExcludedNumbers}
+                                        onChange={(e) => setTempExcludedNumbers(e.target.value)}
+                                        placeholder="+919876543210, +919988776655..."
+                                        className="w-full h-40 bg-slate-50 border border-slate-100 rounded-2xl p-6 outline-none focus:ring-4 ring-blue-50 transition-all font-bold text-sm text-slate-700 resize-none shadow-inner"
+                                    />
+                                </div>
+
+                                <button
+                                    onClick={handleSaveSettings}
+                                    disabled={isSavingSettings}
+                                    className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                                >
+                                    {isSavingSettings ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
+                                    {isSavingSettings ? "COMMITTING CHANGES..." : "SYNC EXCLUSION LIST"}
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {!selectedEmployee ? (
                 <>
