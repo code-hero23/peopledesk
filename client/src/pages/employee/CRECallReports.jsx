@@ -135,6 +135,11 @@ const CRECallReports = () => {
                 workLogDate: log.date,
             }));
         })
+        .filter(call => {
+            if (!call.date) return false;
+            const callDateStr = new Date(call.date).toISOString().split('T')[0];
+            return callDateStr === selectedDate;
+        })
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Intelligence
