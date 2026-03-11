@@ -511,7 +511,7 @@ const AdminCallReports = () => {
                                         <Activity className="text-blue-500" size={16} /> Raw Log Transmission
                                     </h3>
                                     <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        Total Records: {selectedEmployee.logs.filter(c => simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter)).length}
+                                        Total Records: {selectedEmployee.logs.length}
                                     </div>
                                 </div>
                                 <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
@@ -526,7 +526,6 @@ const AdminCallReports = () => {
                                         </thead>
                                         <tbody className="divide-y divide-slate-50">
                                             {selectedEmployee.logs
-                                                .filter(c => simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter))
                                                 .sort((a, b) => b.date - a.date)
                                                 .map((call, idx) => (
                                                     <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
