@@ -174,7 +174,7 @@ const WFHRequestForm = () => {
         const textFieldsWithMinLength = [
             'realReason', 'necessityReason', 'impactIfRejected',
             'primaryProject', 'deliverables', 'deadline',
-            'workingHours', 'communicationPlan',
+            'communicationPlan',
             'environmentSetup', 'risksManagement', 'failurePlan'
         ];
 
@@ -355,7 +355,7 @@ const WFHRequestForm = () => {
                                     >
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Exact working hours you will follow? *</label>
-                                            <input name="workingHours" minLength={50} required value={formData.workingHours} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" placeholder="e.g. 9:30 AM to 6:30 PM" />
+                                            <input name="workingHours" required value={formData.workingHours} onChange={onChange} className="w-full p-3 border rounded-lg mt-1 focus:ring-2 focus:ring-blue-500" placeholder="e.g. 9:30 AM to 6:30 PM" />
                                         </div>
                                         <div>
                                             <label className="text-sm font-semibold text-gray-700">Communication Plan *</label>
