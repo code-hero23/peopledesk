@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
-import { getCallLogPlugin } from '../../utils/capacitorPlugins';
+import { getCallLogPlugin, getPreferencesPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
 import {
     Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
@@ -16,6 +16,7 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CallLog = getCallLogPlugin();
+const Preferences = getPreferencesPlugin();
 
 const CRECallReports = () => {
     const dispatch = useDispatch();
@@ -34,16 +35,35 @@ const CRECallReports = () => {
     );
 
     useEffect(() => {
+        const loadSimPref = async () => {
+            if (Capacitor.isNativePlatform()) {
+                const { value } = await Preferences.get({ key: 'cre_official_sim' });
+                if (value) setOfficialSim(parseInt(value));
+            } else {
+                const val = localStorage.getItem('cre_official_sim');
+                if (val) setOfficialSim(parseInt(val));
+            }
+        };
+        loadSimPref();
+    }, []);
+
+    useEffect(() => {
         dispatch(getMyCallLogs({ 
             startDate: selectedDate, 
             endDate: selectedDate 
         }));
     }, [dispatch, selectedDate]);
 
-    const handleSimChange = (slot) => {
+    const handleSimChange = async (slot) => {
         const parsed = parseInt(slot);
         setOfficialSim(parsed);
         localStorage.setItem('cre_official_sim', String(parsed));
+        if (Capacitor.isNativePlatform()) {
+            await Preferences.set({
+                key: 'cre_official_sim',
+                value: String(parsed)
+            });
+        }
     };
 
     const syncDeviceLogs = async () => {

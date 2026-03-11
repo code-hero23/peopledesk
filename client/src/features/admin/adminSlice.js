@@ -15,6 +15,7 @@ const initialState = {
     isSuccess: false,
     message: '',
     callStats: [],
+    excludedNumbers: [],
 };
 
 // Create Employee
@@ -635,7 +636,8 @@ export const adminSlice = createSlice({
             })
             .addCase(getCallStats.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.callStats = action.payload;
+                state.callStats = action.payload.stats || [];
+                state.excludedNumbers = action.payload.excludedNumbers || [];
             })
             .addCase(getCallStats.rejected, (state, action) => {
                 state.isLoading = false;

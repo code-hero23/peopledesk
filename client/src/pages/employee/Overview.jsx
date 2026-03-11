@@ -74,10 +74,24 @@ const Overview = () => {
                     if (!Capacitor.isNativePlatform()) return;
 
                     const CallLogPlugin = Capacitor.Plugins.CallLog;
-                    if (!CallLogPlugin) return;
+                    const Preferences = Capacitor.Plugins.Preferences;
+                    if (!CallLogPlugin || !Preferences) return;
+
+                    // Retrieve Work SIM Preference
+                    const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
+                    const targetSlot = officialSim || "2"; // Default to 2
 
                     const logsResult = await CallLogPlugin.getCallLogs();
                     if (!logsResult?.logs || logsResult.logs.length === 0) return;
+
+                    // Filter logs client-side
+                    const filteredLogs = logsResult.logs.filter(log => {
+                        const logSlot = String(log.simSlot || log.simId || "");
+                        if (!logSlot || logSlot === "null" || logSlot === "undefined") return true;
+                        return logSlot === targetSlot || logSlot.includes(targetSlot);
+                    });
+
+                    if (filteredLogs.length === 0) return;
 
                     const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/worklogs/sync-calls';
                     await fetch(API_URL, {
@@ -87,11 +101,12 @@ const Overview = () => {
                             'Authorization': `Bearer ${user.token}`
                         },
                         body: JSON.stringify({
-                            logs: logsResult.logs,
-                            syncDate: new Date().toISOString()
+                            logs: filteredLogs,
+                            syncDate: new Date().toISOString(),
+                            simFilter: targetSlot
                         })
                     });
-                    console.log("Fallback sync completed successfully");
+                    console.log(`Fallback sync (${filteredLogs.length} logs) completed for SIM ${targetSlot}`);
                 } catch (e) {
                     console.error("Fallback native sync failed", e);
                 }

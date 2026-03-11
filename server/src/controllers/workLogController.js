@@ -577,7 +577,13 @@ const getAllCallStats = async (req, res) => {
             };
         }).filter(log => log.calls.length > 0); // Only return if there are matching calls
 
-        res.json(stats);
+        // 3. Fetch Excluded Numbers
+        const excludedSetting = await prisma.globalSetting.findUnique({
+            where: { key: 'EXCLUDED_EMPLOYEE_NUMBERS' }
+        });
+        const excludedNumbers = excludedSetting ? excludedSetting.value.split(',').map(n => n.trim()) : [];
+
+        res.json({ stats, excludedNumbers });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

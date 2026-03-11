@@ -18,7 +18,7 @@ import { toast } from 'react-toastify';
 
 const AdminCallReports = () => {
     const dispatch = useDispatch();
-    const { callStats, isLoading } = useSelector((state) => state.admin);
+    const { callStats, excludedNumbers, isLoading } = useSelector((state) => state.admin);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
     const [dateRange, setDateRange] = useState({
@@ -110,7 +110,9 @@ const AdminCallReports = () => {
             if (c.type === 'MISSED') globalStats.missed++;
             if (c.type === 'REJECTED') globalStats.rejected++;
             globalStats.duration += (c.duration || 0);
-            if (c.number) globalStats.uniqueNumbers.add(c.number);
+            if (c.number && !excludedNumbers.includes(c.number)) {
+                globalStats.uniqueNumbers.add(c.number);
+            }
         });
     });
 
@@ -410,7 +412,7 @@ const AdminCallReports = () => {
                                 <MetricBox label="Incoming" value={selectedEmployee.incoming} color="emerald" icon={PhoneIncoming} />
                                 <MetricBox label="Outgoing" value={selectedEmployee.outgoing} color="sky" icon={PhoneOutgoing} />
                                 <MetricBox label="Missed" value={selectedEmployee.missed} color="rose" icon={PhoneMissed} />
-                                <MetricBox label="Unique Leads" value={new Set(selectedEmployee.logs.map(l => l.number)).size} color="indigo" icon={User} />
+                                <MetricBox label="Unique Leads" value={new Set(selectedEmployee.logs.map(l => l.number).filter(n => !excludedNumbers.includes(n))).size} color="indigo" icon={User} />
                                 <MetricBox label="Session Time" value={formatDuration(selectedEmployee.duration)} color="fuchsia" icon={Clock} />
                             </div>
 
