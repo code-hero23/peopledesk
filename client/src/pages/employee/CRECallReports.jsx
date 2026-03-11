@@ -24,6 +24,9 @@ const CRECallReports = () => {
     const [filterType, setFilterType] = useState('ALL');
     const [simFilter, setSimFilter] = useState('ALL');
     const [isUniqueOnly, setIsUniqueOnly] = useState(false);
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [isFetchingLocal, setIsFetchingLocal] = useState(false);
+    const [lastSyncTime, setLastSyncTime] = useState(null);
 
     // Persisted SIM slot preference — default SIM 2
     const [officialSim, setOfficialSim] = useState(() =>
@@ -31,8 +34,11 @@ const CRECallReports = () => {
     );
 
     useEffect(() => {
-        dispatch(getMyCallLogs());
-    }, [dispatch]);
+        dispatch(getMyCallLogs({ 
+            startDate: selectedDate, 
+            endDate: selectedDate 
+        }));
+    }, [dispatch, selectedDate]);
 
     const handleSimChange = (slot) => {
         const parsed = parseInt(slot);
@@ -90,7 +96,10 @@ const CRECallReports = () => {
                 if (!res.error) {
                     toast.success(`${filteredLogs.length} logs synced from SIM ${officialSim}`);
                     setLastSyncTime(new Date());
-                    dispatch(getMyCallLogs());
+                    dispatch(getMyCallLogs({ 
+                        startDate: selectedDate, 
+                        endDate: selectedDate 
+                    }));
                 }
             } else {
                 toast.info("No new logs found on device.");
@@ -240,6 +249,19 @@ const CRECallReports = () => {
                             >
                                 2
                             </button>
+                        </div>
+
+                        {/* Date Selector */}
+                        <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
+                            <span className="text-[9px] font-black text-slate-400 uppercase px-2 flex items-center gap-1">
+                                <Calendar size={12} /> DATE
+                            </span>
+                            <input
+                                type="date"
+                                value={selectedDate}
+                                onChange={(e) => setSelectedDate(e.target.value)}
+                                className="bg-transparent text-[9px] font-black uppercase outline-none border-none p-1.5 text-slate-700 cursor-pointer"
+                            />
                         </div>
 
                         <div className="flex bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
