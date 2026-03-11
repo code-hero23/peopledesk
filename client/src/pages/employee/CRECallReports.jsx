@@ -42,25 +42,41 @@ const CRECallReports = () => {
 
     useEffect(() => {
         dispatch(getMyCallLogs());
-
-        if (Capacitor.isNativePlatform()) {
-            handleAutomatedSync();
-        }
     }, [dispatch]);
 
-    const handleAutomatedSync = async () => {
+    const syncDeviceLogs = async () => {
         setIsFetchingLocal(true);
         try {
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
-                const res = await dispatch(syncCallLogs({ logs: result.logs, simFilter: officialSim }));
+                // Client-side Filter: Only send logs matching the selected official SIM
+                const filteredLogs = result.logs.filter(log => {
+                    const logSlot = String(log.simSlot || log.simId || "");
+                    const targetSlot = String(officialSim);
+                    return logSlot === targetSlot || logSlot.includes(targetSlot);
+                });
+
+                if (filteredLogs.length === 0) {
+                    toast.warning(`No logs found for SIM Slot ${officialSim}`);
+                    return;
+                }
+
+                const res = await dispatch(syncCallLogs({ 
+                    logs: filteredLogs, 
+                    simFilter: officialSim 
+                }));
+
                 if (!res.error) {
+                    toast.success(`${filteredLogs.length} logs synced from SIM ${officialSim}`);
                     setLastSyncTime(new Date());
                     dispatch(getMyCallLogs());
                 }
+            } else {
+                toast.info("No new logs found on device.");
             }
         } catch (error) {
-            console.error("Auto Sync Error:", error);
+            console.error("Sync Error:", error);
+            toast.error("Failed to fetch logs from device.");
         } finally {
             setIsFetchingLocal(false);
         }
@@ -211,11 +227,11 @@ const CRECallReports = () => {
                             </button>
                         </div>
                         <button
-                            disabled={isFetchingLocal} onClick={handleAutomatedSync}
+                            disabled={isFetchingLocal} onClick={syncDeviceLogs}
                             className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 group"
                         >
                             <RefreshCw size={16} className={isFetchingLocal ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'} />
-                            {isFetchingLocal ? "UPDATING LEDGER..." : "REFRESH STREAM"}
+                            {isFetchingLocal ? "UPDATING LEDGER..." : "SYNC OFFICIAL LOGS"}
                         </button>
                     </div>
                 </div>
