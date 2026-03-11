@@ -107,7 +107,8 @@ const ManageEmployees = () => {
     const filteredEmployees = employees.filter(emp =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.designation.toLowerCase().includes(searchTerm.toLowerCase())
+        emp.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.role.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     return (
@@ -220,6 +221,10 @@ const ManageEmployees = () => {
                                         ) : emp.role === 'AE_MANAGER' ? (
                                             <span className="inline-block px-2 py-1 bg-teal-100 text-teal-700 text-xs font-bold rounded">
                                                 AE MANAGER
+                                            </span>
+                                        ) : emp.role === 'ANALYZER' ? (
+                                            <span className="inline-block px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded">
+                                                CALL ANALYZER
                                             </span>
                                         ) : (
                                             <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded">

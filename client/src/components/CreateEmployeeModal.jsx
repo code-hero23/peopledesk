@@ -360,6 +360,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                         <option value="HR">HR Manager</option>
                                         <option value="ACCOUNTS_MANAGER">Accounts Manager</option>
                                         <option value="AE_MANAGER">AE Manager</option>
+                                        <option value="ANALYZER">Call Analyzer</option>
                                         <option value="ADMIN">Administrator</option>
                                     </>
                                 )}
@@ -368,7 +369,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
 
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Designation</label>
-                            {formData.role === 'BUSINESS_HEAD' || formData.role === 'ADMIN' || formData.role === 'HR' ? (
+                            {['BUSINESS_HEAD', 'ADMIN', 'HR', 'ANALYZER'].includes(formData.role) ? (
                                 <input
                                     type="text"
                                     placeholder="e.g. Chief Operational Officer"
