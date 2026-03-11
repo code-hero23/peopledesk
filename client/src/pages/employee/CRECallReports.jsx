@@ -50,14 +50,20 @@ const CRECallReports = () => {
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
                 // Client-side Filter: Only send logs matching the selected official SIM
+                // IMPROVED: If a log has NO simId, we include it as a fallback (on single-SIM devices)
                 const filteredLogs = result.logs.filter(log => {
                     const logSlot = String(log.simSlot || log.simId || "");
                     const targetSlot = String(officialSim);
+                    
+                    // If device doesn't report SIM ID, we allow it (safety for single SIM)
+                    if (!logSlot || logSlot === "null" || logSlot === "undefined") return true;
+                    
+                    // Exact match or contains (e.g., "slot 1" contains "1")
                     return logSlot === targetSlot || logSlot.includes(targetSlot);
                 });
 
                 if (filteredLogs.length === 0) {
-                    toast.warning(`No logs found for SIM Slot ${officialSim}`);
+                    toast.warning(`No logs found specifically for SIM ${officialSim}. Please verify your SIM slot selection.`);
                     return;
                 }
 

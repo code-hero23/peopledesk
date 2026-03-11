@@ -438,6 +438,7 @@ enum Role {
   ADMIN
   AE_MANAGER
   ACCOUNTS_MANAGER
+  ANALYZER
 }
 
 model Voucher {

@@ -18,7 +18,7 @@ router.put('/close', protect, upload.array('ae_photos', 5), closeWorkLog);
 router.put('/project-report', protect, upload.array('ae_photos', 5), addProjectReport);
 router.put('/sync-calls', protect, syncCallLogs);
 router.get('/my-calls', protect, getMyCallLogs);
-router.get('/call-stats', protect, authorize(['ADMIN', 'HR', 'BUSINESS_HEAD']), getAllCallStats); // Admin/HR/BH endpoint
+router.get('/call-stats', protect, authorize(['ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER']), getAllCallStats); // Admin/HR/BH/Analyzer endpoint
 router.get('/', protect, getMyWorkLogs);
 
 module.exports = router;

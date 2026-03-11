@@ -120,7 +120,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         );
     };
 
-    const isAdmin = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(user?.role);
+    const isAdmin = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ANALYZER'].includes(user?.role);
+    const isAnalyzer = user?.role === 'ANALYZER';
 
     return (
         <aside
@@ -159,69 +160,71 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             {/* Navigation */}
             <nav className="flex-1 p-3 space-y-2 mt-2 overflow-y-auto scrollbar-hide">
                 {isAdmin ? (
-                    <>
-                        {user?.role !== 'ACCOUNTS_MANAGER' && (
-                            <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
-                        )}
+                    isAnalyzer ? (
+                        <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
+                    ) : (
+                        <>
+                            {user?.role !== 'ACCOUNTS_MANAGER' && (
+                                <NavItem to="/admin-dashboard" icon={LayoutDashboard} label="Dashboard" exact />
+                            )}
 
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                            <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
-                        )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <NavItem to="/admin/approvals" icon={FileCheck} label="Approvals" />
+                            )}
 
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                            <>
-                                <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" />
-                                <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
-                            </>
-                        )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <>
+                                    <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" />
+                                    <NavItem to="/admin/attendance" icon={CalendarClock} label="Attendance" />
+                                </>
+                            )}
 
-                        {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || 
-                          (user?.role === 'BUSINESS_HEAD' && (user?.designation === 'COO' || user?.designation === 'Chief Operational Officer'))) && (
-                            <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" />
-                        )}
+                            {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || 
+                            (user?.role === 'BUSINESS_HEAD' && (user?.designation === 'COO' || user?.designation === 'Chief Operational Officer'))) && (
+                                <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" />
+                            )}
 
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                            <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
-                        )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" />
+                            )}
 
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
-                            <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" />
-                        )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                                <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" />
+                            )}
 
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                            <>
-                                <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
-                                <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
-                            </>
-                        )}
-                        {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
-                            <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
-                        )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                                <>
+                                    <NavItem to="/admin/attendance-verification" icon={Camera} label="Verification" />
+                                    <NavItem to="/admin/analytics" icon={BarChart3} label="Analytics" />
+                                </>
+                            )}
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                                <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" />
+                            )}
 
+                            {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
+                                <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
+                            )}
 
+                            {user?.role === 'ADMIN' && (
+                                <NavItem to="/admin/salary-settings" icon={DollarSign} label="Salary Settings" />
+                            )}
 
-                        {['ADMIN', 'AE_MANAGER'].includes(user?.role) && (
-                            <NavItem to="/admin/employees" icon={Users} label="Manage Employees" />
-                        )}
+                            {user?.role === 'ADMIN' && (
+                                <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
+                            )}
 
-                        {user?.role === 'ADMIN' && (
-                            <NavItem to="/admin/salary-settings" icon={DollarSign} label="Salary Settings" />
-                        )}
-
-                        {user?.role === 'ADMIN' && (
-                            <NavItem to="/admin/popup-management" icon={Camera} label="Popup Config" />
-                        )}
-
-                        {['ADMIN', 'HR'].includes(user?.role) && (
-                            <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" />
-                        )}
-                        {user?.role !== 'ACCOUNTS_MANAGER' && (
-                            <>
-                                <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
-                                <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
-                            </>
-                        )}
-                    </>
+                            {['ADMIN', 'HR'].includes(user?.role) && (
+                                <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" />
+                            )}
+                            {user?.role !== 'ACCOUNTS_MANAGER' && (
+                                <>
+                                    <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" />
+                                    <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" />
+                                </>
+                            )}
+                        </>
+                    )
                 ) : (
                     <>
                         <NavItem to="/dashboard" icon={LayoutDashboard} label="Dashboard" exact />

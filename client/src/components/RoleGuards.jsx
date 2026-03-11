@@ -20,6 +20,8 @@ export const RootRedirect = () => {
         return <Navigate to="/admin-dashboard" replace />;
     } else if (user && user.role === 'ACCOUNTS_MANAGER') {
         return <Navigate to="/admin/vouchers" replace />;
+    } else if (user && user.role === 'ANALYZER') {
+        return <Navigate to="/admin/call-reports" replace />;
     }
 
     // Default to employee dashboard
