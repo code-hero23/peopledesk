@@ -30,19 +30,15 @@ const CRECallReports = () => {
         parseInt(localStorage.getItem('cre_official_sim') || '2')
     );
 
+    useEffect(() => {
+        dispatch(getMyCallLogs());
+    }, [dispatch]);
+
     const handleSimChange = (slot) => {
         const parsed = parseInt(slot);
         setOfficialSim(parsed);
         localStorage.setItem('cre_official_sim', String(parsed));
     };
-
-    // Automation States
-    const [isFetchingLocal, setIsFetchingLocal] = useState(false);
-    const [lastSyncTime, setLastSyncTime] = useState(null);
-
-    useEffect(() => {
-        dispatch(getMyCallLogs());
-    }, [dispatch]);
 
     const syncDeviceLogs = async () => {
         setIsFetchingLocal(true);
