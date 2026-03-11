@@ -25,17 +25,16 @@ const AdminCallReports = () => {
         startDate: new Date().toLocaleDateString('en-CA'),
         endDate: new Date().toLocaleDateString('en-CA')
     });
-    const [simFilter, setSimFilter] = useState('ALL');
     const [showExcludedSettings, setShowExcludedSettings] = useState(false);
     const [tempExcludedNumbers, setTempExcludedNumbers] = useState('');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
 
     useEffect(() => {
-        dispatch(getCallStats({ ...dateRange, simFilter }));
-    }, [dispatch, dateRange, simFilter]);
+        dispatch(getCallStats({ ...dateRange }));
+    }, [dispatch, dateRange]);
 
     const handleRefresh = () => {
-        dispatch(getCallStats({ ...dateRange, simFilter }));
+        dispatch(getCallStats({ ...dateRange }));
     };
 
     // Auto-sync drill-down data when stats update
@@ -96,9 +95,7 @@ const AdminCallReports = () => {
             };
         }
 
-        const calls = (log.calls || []).filter(c =>
-            simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter)
-        );
+        const calls = log.calls || [];
         acc[key].totalCalls += calls.length;
         acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date })));
 
@@ -133,9 +130,7 @@ const AdminCallReports = () => {
     };
 
     callStats.forEach(log => {
-        const calls = (log.calls || []).filter(c =>
-            simFilter === 'ALL' || String(c.simSlot || c.simId) === String(simFilter)
-        );
+        const calls = log.calls || [];
         globalStats.total += calls.length;
         calls.forEach(c => {
             if (c.type === 'INCOMING') globalStats.incoming++;
@@ -215,16 +210,8 @@ const AdminCallReports = () => {
                     </div>
 
                     <div className="flex items-center gap-3 bg-slate-800 p-2 px-4 rounded-2xl border border-slate-700">
-                        <Smartphone size={16} className="text-blue-400" />
-                        <select
-                            value={simFilter}
-                            onChange={(e) => setSimFilter(e.target.value)}
-                            className="bg-transparent text-xs font-bold text-white outline-none cursor-pointer"
-                        >
-                            <option value="ALL" className="text-slate-900">ALL SIMS</option>
-                            <option value="1" className="text-slate-900">SIM 1 ONLY</option>
-                            <option value="2" className="text-slate-900">SIM 2 ONLY</option>
-                        </select>
+                        <Activity size={16} className="text-blue-400" />
+                        <span className="text-xs font-black text-white uppercase tracking-widest">Uploaded Logs</span>
                     </div>
                     <button onClick={handleRefresh} className="p-4 bg-slate-800 text-slate-400 hover:text-white rounded-2xl transition-all border border-slate-700 active:scale-90">
                         <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
