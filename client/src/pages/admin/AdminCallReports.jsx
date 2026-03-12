@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCallStats } from '../../features/admin/adminSlice';
 import {
@@ -307,7 +308,7 @@ const AdminCallReports = () => {
                             <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-4">Global Distribution</h3>
                             <div className="flex-1 w-full min-h-[220px]">
                                 {globalPieData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                                     <PieChart>
                                         <Pie
                                             data={globalPieData}
@@ -344,7 +345,7 @@ const AdminCallReports = () => {
                                 </h3>
                             </div>
                             <div className="flex-1 w-full pb-4 min-h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
@@ -469,7 +470,7 @@ const AdminCallReports = () => {
 
                             <div className="w-full space-y-4">
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                                         <PieChart>
                                             <Pie
                                                 data={getPieData(selectedEmployee)}
