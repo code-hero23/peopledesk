@@ -25,15 +25,21 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
     const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
 
-    // Simplified: Always show all tables for a single report
-    const activeTables = config.tables || [...(config.openingTables || []), ...(config.closingTables || [])];
+    // Determine which tables to show based on phase
+    const activeTables = isTodayOpen 
+        ? (config.closingTables || config.tables || [])
+        : (config.openingTables || []);
 
     const [tableData, setTableData] = useState({});
     const [notes, setNotes] = useState('');
+    const [simpleData, setSimpleData] = useState({
+        startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
+        endTime: '',
+        date: new Date().toISOString().split('T')[0]
+    });
 
-    // Reset table data whenever the role changes
+    // Reset table data whenever role or phase changes
     useEffect(() => {
-        if (!activeTables.length) return;
         const initial = {};
         activeTables.forEach((table, index) => {
             initial[index] = table.predefinedRows
@@ -41,7 +47,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 : [{ _id: crypto.randomUUID() }];
         });
         setTableData(initial);
-    }, [role]);
+    }, [role, isTodayOpen]);
 
     if (!config) {
         return <div className="p-4 text-red-500 font-bold bg-red-50 rounded-xl">Configuration not found for role: {role}</div>;
@@ -87,19 +93,41 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             customFields[table.label] = tableData[index];
         });
 
-        // Always Submit as CLOSED for simplified roles
-        dispatch(createWorkLog({ customFields, notes, logStatus: 'CLOSED' })).then(() => {
-            setModalMessage("Daily Report Submitted! Successfully recorded.");
-            setShowSuccess(true);
-        });
+        if (isTodayOpen) {
+            // CLOSING PHASE
+            const payload = {
+                customFields,
+                notes,
+                endTime: simpleData.endTime,
+                logStatus: 'CLOSED'
+            };
+            dispatch(closeWorkLog(payload)).then(() => {
+                setModalMessage("Closing Report Submitted! Successfully recorded.");
+                setShowSuccess(true);
+            });
+        } else {
+            // OPENING PHASE
+            const payload = {
+                customFields,
+                date: simpleData.date,
+                startTime: simpleData.startTime,
+                logStatus: 'OPEN'
+            };
+            dispatch(createWorkLog(payload)).then(() => {
+                setModalMessage("Opening Report Submitted! Work session started.");
+                setShowSuccess(true);
+            });
+        }
     };
 
     const onSubmit = (e) => {
         e.preventDefault();
         setConfirmationConfig({
             isOpen: true,
-            title: "Submit Daily Report",
-            message: "Are you sure you want to submit your daily work log and finalize the report?",
+            title: isTodayOpen ? "Submit Closing Report" : "Submit Opening Report",
+            message: isTodayOpen 
+                ? "Are you sure you want to finalize your daily work log and close the session?"
+                : "Are you sure you want to start your daily work session?",
             onConfirm: handleConfirmSubmit
         });
     };
@@ -109,18 +137,59 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2"
         >
-            <div className={`bg-gradient-to-r from-indigo-500 to-violet-500 p-6 rounded-2xl text-white shadow-lg sticky top-0 z-10`}>
+            <div className={`bg-gradient-to-r ${isTodayOpen ? 'from-emerald-500 to-teal-500' : 'from-indigo-500 to-violet-500'} p-6 rounded-2xl text-white shadow-lg sticky top-0 z-10`}>
                 <div className="flex items-center gap-4">
                     <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                        <TrendingUp size={24} />
+                        {isTodayOpen ? <CheckSquare size={24} /> : <Clock size={24} />}
                     </div>
                     <div>
                         <h3 className="font-black text-2xl tracking-tight">{config.title}</h3>
-                        <p className="text-white/80 text-sm font-medium opacity-90">
-                            Daily Activity & Achievements
+                        <p className="text-white/80 text-sm font-medium opacity-90 uppercase tracking-wider">
+                            {isTodayOpen ? 'Closing Phase' : 'Opening Phase'}
                         </p>
                     </div>
                 </div>
+            </div>
+
+            {/* Time/Date Selection */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
+                {!isTodayOpen ? (
+                    <>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Session Date</label>
+                            <input 
+                                type="date" required value={simpleData.date} 
+                                onChange={(e) => setSimpleData({...simpleData, date: e.target.value})}
+                                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 font-bold"
+                            />
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Time</label>
+                            <input 
+                                type="time" required value={simpleData.startTime} 
+                                onChange={(e) => setSimpleData({...simpleData, startTime: e.target.value})}
+                                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 font-bold"
+                            />
+                        </div>
+                    </>
+                ) : (
+                    <>
+                        <div>
+                            <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Session Started At</label>
+                            <div className="px-3 py-2 bg-emerald-50 rounded-lg text-emerald-700 font-bold border border-emerald-100 text-sm">
+                                {todayLog.startTime || 'Not recorded'}
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Time</label>
+                            <input 
+                                type="time" required value={simpleData.endTime} 
+                                onChange={(e) => setSimpleData({...simpleData, endTime: e.target.value})}
+                                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none focus:ring-2 focus:ring-emerald-100 font-bold border-emerald-200"
+                            />
+                        </div>
+                    </>
+                )}
             </div>
 
             {activeTables.map((table, tableIndex) => (
@@ -207,18 +276,20 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 </div>
             ))}
 
-            <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-3">
-                <div className="flex items-center gap-2 text-blue-600 mb-2">
-                    <Clock size={18} />
-                    <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
+            {isTodayOpen && (
+                <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-3">
+                    <div className="flex items-center gap-2 text-blue-600 mb-2">
+                        <Clock size={18} />
+                        <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
+                    </div>
+                    <textarea
+                        value={notes}
+                        onChange={(e) => setNotes(e.target.value)}
+                        className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                        placeholder="Share daily summary, insights, or site updates for Admin and HR..."
+                    ></textarea>
                 </div>
-                <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
-                    placeholder="Share daily summary, insights, or site updates for Admin and HR..."
-                ></textarea>
-            </div>
+            )}
 
             <div className="flex gap-3 pt-4 border-t border-slate-100 bg-white sticky bottom-0">
                 <button
@@ -231,9 +302,9 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 <button
                     type="submit"
                     disabled={isLoading}
-                    className={`flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider`}
+                    className={`flex-1 ${isTodayOpen ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider`}
                 >
-                    {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Submit Report</>}
+                    {isLoading ? 'Submitting...' : <>{isTodayOpen ? <CheckSquare size={18} /> : <TrendingUp size={18} />} {isTodayOpen ? 'Finish Day' : 'Start Day'}</>}
                 </button>
             </div>
 
