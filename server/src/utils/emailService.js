@@ -18,11 +18,12 @@ const transporter = nodemailer.createTransport({
 const sendEmail = async (options) => {
     try {
         const mailOptions = {
-            from: process.env.EMAIL_FROM || '"PeopleDesk HR" <noreply@peopledesk.com>',
+            from: process.env.EMAIL_FROM || '"PeopleDesk" <noreply@peopledesk.com>',
             to: options.to,
             subject: options.subject,
             html: options.html,
             text: options.text,
+            attachments: options.attachments || [],
         };
 
         // Only send if credentials exist to avoid crashing locally if omitted

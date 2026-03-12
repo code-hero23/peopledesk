@@ -7,7 +7,7 @@ import {
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, ChevronRight, Activity, Smartphone,
     PieChart as PieChartIcon, BarChart3, TrendingUp, Users,
-    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon
+    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon, Mail
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -30,6 +30,9 @@ const AdminCallReports = () => {
     const [tempExcludedNumbers, setTempExcludedNumbers] = useState('');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
+    const [showEmailModal, setShowEmailModal] = useState(false);
+    const [emailAddress, setEmailAddress] = useState('');
+    const [isEmailing, setIsEmailing] = useState(false);
 
     useEffect(() => {
         dispatch(getCallStats({ ...dateRange }));
@@ -109,6 +112,35 @@ const AdminCallReports = () => {
             toast.error('Failed to export analytics');
         } finally {
             setIsExporting(false);
+        }
+    };
+
+    const handleEmailReport = async () => {
+        if (!emailAddress) {
+            toast.error('Please enter an email address');
+            return;
+        }
+
+        try {
+            setIsEmailing(true);
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+            
+            const response = await axios.post(`${baseUrl}/export/call-stats/email`, {
+                ...dateRange,
+                email: emailAddress
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success(response.data.message || 'Report sent successfully');
+            setShowEmailModal(false);
+            setEmailAddress('');
+        } catch (error) {
+            console.error('Email failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to send report');
+        } finally {
+            setIsEmailing(false);
         }
     };
 
@@ -258,6 +290,15 @@ const AdminCallReports = () => {
                     >
                         <Download size={18} className={isExporting ? 'animate-bounce' : ''} />
                         <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{isExporting ? 'Exporting...' : 'Export Analytics'}</span>
+                    </button>
+
+                    <button 
+                        onClick={() => setShowEmailModal(true)}
+                        className="p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2"
+                        title="Email Report"
+                    >
+                        <Mail size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Send to Email</span>
                     </button>
 
                     <button 
@@ -486,6 +527,62 @@ const AdminCallReports = () => {
                             </table>
                         </div>
                     </div>
+
+                    {/* Email Modal */}
+                    <AnimatePresence>
+                        {showEmailModal && (
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    animate={{ opacity: 1, scale: 1, y: 0 }}
+                                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl border border-slate-100 relative overflow-hidden"
+                                >
+                                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
+                                    <button 
+                                        onClick={() => setShowEmailModal(false)}
+                                        className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-800 transition-colors"
+                                    >
+                                        <CloseIcon size={24} />
+                                    </button>
+
+                                    <div className="flex flex-col items-center text-center space-y-6">
+                                        <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center text-indigo-600 shadow-inner">
+                                            <Mail size={40} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Transmission Station</h2>
+                                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Email Call Performance Report</p>
+                                        </div>
+
+                                        <div className="w-full space-y-4">
+                                            <div className="relative">
+                                                <input 
+                                                    type="email"
+                                                    value={emailAddress}
+                                                    onChange={(e) => setEmailAddress(e.target.value)}
+                                                    placeholder="Enter destination email..."
+                                                    className="w-full pl-6 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
+                                                />
+                                            </div>
+                                            <button 
+                                                onClick={handleEmailReport}
+                                                disabled={isEmailing}
+                                                className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                                            >
+                                                {isEmailing ? (
+                                                    <><RefreshCw className="animate-spin" size={16} /> Transmitting...</>
+                                                ) : (
+                                                    <><Activity size={16} /> Broadcast Report</>
+                                                )}
+                                            </button>
+                                        </div>
+                                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Encrypted Data Stream • Secure Protocol</p>
+                                    </div>
+                                </motion.div>
+                            </div>
+                        )}
+                    </AnimatePresence>
                 </>
             ) : (
                 <motion.div

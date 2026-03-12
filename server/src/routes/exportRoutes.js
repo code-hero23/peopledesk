@@ -10,5 +10,6 @@ router.get('/analytics', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exp
 router.get('/incentives', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportIncentiveScorecard);
 router.get('/employees', protect, authorize('ADMIN'), exportEmployees);
 router.get('/call-stats', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'), exportCallLogs);
+router.post('/call-stats/email', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'), emailCallLogs);
 
 module.exports = router;
