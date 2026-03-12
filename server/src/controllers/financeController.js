@@ -34,11 +34,25 @@ const getFinanceSummary = async (req, res) => {
             where: { status: { in: ['PENDING', 'APPROVED'] } }
         });
 
+        // Calculate Carpenter Impact if enabled
+        let carpenterImpact = 0;
+        if (finance.carpenterImpactEnabled) {
+            const carpenterSummary = await prisma.carpenterRecord.aggregate({
+                _sum: { advance: true }
+            });
+            carpenterImpact = carpenterSummary._sum.advance || 0;
+        }
+
+        const spent = (completedAndWaitingVouchers._sum.amount || 0) + (finance.carpenterImpactEnabled ? carpenterImpact : 0);
+        const balance = finance.currentCash - spent;
+
         res.json({
             currentCash: finance.currentCash,
-            spent: completedAndWaitingVouchers._sum.amount || 0,
-            balance: finance.currentCash - (completedAndWaitingVouchers._sum.amount || 0),
-            pending: pendingVouchers._sum.amount || 0
+            spent: spent,
+            balance: balance,
+            pending: pendingVouchers._sum.amount || 0,
+            carpenterImpactEnabled: finance.carpenterImpactEnabled,
+            carpenterImpact: carpenterImpact
         });
     } catch (error) {
         console.error(error);
@@ -365,12 +379,44 @@ const wipeFinanceData = async (req, res) => {
     }
 };
 
+// @desc    Toggle Carpenter Impact on Balance
+// @route   PATCH /api/finance/toggle-carpenter
+// @access  Private (Admin, AM, COO)
+const toggleCarpenterImpact = async (req, res) => {
+    if (!isCOO(req.user)) {
+        return res.status(403).json({ message: 'Not authorized as COO' });
+    }
+    try {
+        let finance = await prisma.finance.findFirst();
+        
+        if (!finance) {
+            finance = await prisma.finance.create({
+                data: { currentCash: 0, totalSpent: 0, carpenterImpactEnabled: true }
+            });
+        } else {
+            finance = await prisma.finance.update({
+                where: { id: finance.id },
+                data: { carpenterImpactEnabled: !finance.carpenterImpactEnabled }
+            });
+        }
+
+        res.json({ 
+            message: `Carpenter impact ${finance.carpenterImpactEnabled ? 'enabled' : 'disabled'}`,
+            carpenterImpactEnabled: finance.carpenterImpactEnabled 
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Toggle failed', error: error.message });
+    }
+};
+
 module.exports = {
     getFinanceSummary,
     addCash,
     getSpentHistory,
     getDepositHistory,
     exportFinanceData,
-    wipeFinanceData
+    wipeFinanceData,
+    toggleCarpenterImpact
 };
 

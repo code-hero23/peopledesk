@@ -10,8 +10,16 @@ import {
     addCash,
     addAdminNote,
     createVoucher,
+    toggleCarpenterImpact,
     reset 
 } from '../../features/voucher/voucherSlice';
+import {
+    getCarpenterRecords,
+    createCarpenterRecord,
+    updateCarpenterRecord,
+    deleteCarpenterRecord,
+    reset as resetCarpenter
+} from '../../features/carpenter/carpenterSlice';
 import { 
     CheckCircle2, 
     XCircle, 
@@ -53,10 +61,15 @@ const VoucherManagement = () => {
         isError, 
         message 
     } = useSelector((state) => state.voucher);
+    const {
+        records: carpenterRecords,
+        loading: carpenterLoading,
+        error: carpenterError
+    } = useSelector((state) => state.carpenter);
 
     const [selectedVoucher, setSelectedVoucher] = useState(null);
     const [remarks, setRemarks] = useState('');
-    const [view, setView] = useState('pending'); // 'pending', 'history', or 'deposits'
+    const [view, setView] = useState('pending'); // 'pending', 'history', 'deposits', or 'carpenter'
     const [showAddCash, setShowAddCash] = useState(false);
     const [cashAmount, setCashAmount] = useState('');
     const [cashSource, setCashSource] = useState('');
@@ -85,6 +98,22 @@ const VoucherManagement = () => {
     const [historyStartDate, setHistoryStartDate] = useState('');
     const [historyEndDate, setHistoryEndDate] = useState('');
 
+    // Carpenter Hub State
+    const [showCarpenterModal, setShowCarpenterModal] = useState(false);
+    const [editingCarpenterRecord, setEditingCarpenterRecord] = useState(null);
+    const [carpenterSearch, setCarpenterSearch] = useState('');
+    const [carpenterData, setCarpenterData] = useState({
+        aeName: '',
+        clientName: '',
+        siteName: '',
+        carpenterName: '',
+        workOrderValue: '',
+        cookscapeRate: '',
+        advance: '',
+        remarks: '',
+        status: 'On process-90%'
+    });
+
     // Helper to check for COO designation if role is BUSINESS_HEAD
     const isCOO = (user) => {
         if (!user) return false;
@@ -99,6 +128,7 @@ const VoucherManagement = () => {
             dispatch(getFinanceSummary());
             dispatch(getSpentHistory());
             dispatch(getDepositHistory());
+            dispatch(getCarpenterRecords());
         }
     }, [dispatch, user]);
 
@@ -107,7 +137,62 @@ const VoucherManagement = () => {
     }, [isError, message]);
 
     const handleCarpenterHubClick = () => {
-        toast.info("We are working on it, update soon!");
+        setView('carpenter');
+    };
+
+    const handleCarpenterSubmit = async (e) => {
+        e.preventDefault();
+        try {
+            if (editingCarpenterRecord) {
+                await dispatch(updateCarpenterRecord({ id: editingCarpenterRecord.id, data: carpenterData })).unwrap();
+                toast.success('Record updated successfully');
+            } else {
+                await dispatch(createCarpenterRecord(carpenterData)).unwrap();
+                toast.success('Record added successfully');
+            }
+            setShowCarpenterModal(false);
+            setEditingCarpenterRecord(null);
+            setCarpenterData({
+                aeName: '',
+                clientName: '',
+                siteName: '',
+                carpenterName: '',
+                workOrderValue: '',
+                cookscapeRate: '',
+                advance: '',
+                remarks: '',
+                status: 'On process-90%'
+            });
+        } catch (err) {
+            toast.error(err);
+        }
+    };
+
+    const handleDeleteCarpenter = async (id) => {
+        if (window.confirm('Are you sure you want to delete this record?')) {
+            try {
+                await dispatch(deleteCarpenterRecord(id)).unwrap();
+                toast.success('Record deleted successfully');
+            } catch (err) {
+                toast.error(err);
+            }
+        }
+    };
+
+    const handleEditCarpenter = (record) => {
+        setEditingCarpenterRecord(record);
+        setCarpenterData({
+            aeName: record.aeName,
+            clientName: record.clientName,
+            siteName: record.siteName,
+            carpenterName: record.carpenterName,
+            workOrderValue: record.workOrderValue,
+            cookscapeRate: record.cookscapeRate,
+            advance: record.advance,
+            remarks: record.remarks || '',
+            status: record.status || 'On process-90%'
+        });
+        setShowCarpenterModal(true);
     };
 
     // Derived filtered history
@@ -283,6 +368,28 @@ const VoucherManagement = () => {
     };
 
 
+    const handleExportCarpenter = async () => {
+        try {
+            const token = user.token;
+            const config = { 
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob'
+            };
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/carpenter/export`, config);
+            
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', 'CarpenterRecords.xlsx');
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Export failed:', error);
+            toast.error('Failed to export records');
+        }
+    };
+
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">
             {/* Header Area */}
@@ -346,6 +453,12 @@ const VoucherManagement = () => {
                     >
                         Deposits
                     </button>
+                    <button 
+                        onClick={() => setView('carpenter')}
+                        className={`px-6 py-2.5 rounded-xl text-sm font-black transition-all ${view === 'carpenter' ? 'bg-white text-blue-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                    >
+                        Carpenter Hub
+                    </button>
                 </div>
             </div>
 
@@ -370,7 +483,11 @@ const VoucherManagement = () => {
                     <p className="text-2xl font-black text-slate-800">₹{financeSummary?.currentCash?.toLocaleString() || '0'}</p>
                 </motion.div>
 
-                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
+                <motion.div 
+                    whileHover={{ y: -5 }} 
+                    onClick={() => setView('history')}
+                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-rose-200 transition-all"
+                >
                     <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 mb-4 transition-colors group-hover:bg-rose-600 group-hover:text-white">
                         <TrendingUp size={24} />
                     </div>
@@ -379,11 +496,32 @@ const VoucherManagement = () => {
                 </motion.div>
 
                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
-                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                        <PieChart size={24} />
+                    <div className="flex justify-between items-start mb-4">
+                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+                            <PieChart size={24} />
+                        </div>
+                        {isCOO(user) && (
+                            <div className="flex items-center gap-2">
+                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Carpenter Hub Impact</span>
+                                <button 
+                                    onClick={() => dispatch(toggleCarpenterImpact())}
+                                    className={`w-10 h-5 rounded-full transition-all relative ${financeSummary?.carpenterImpactEnabled ? 'bg-blue-600' : 'bg-slate-200'}`}
+                                    title={financeSummary?.carpenterImpactEnabled ? 'Click to disable carpenter payments impact' : 'Click to enable carpenter payments impact'}
+                                >
+                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${financeSummary?.carpenterImpactEnabled ? 'left-6' : 'left-1'}`} />
+                                </button>
+                            </div>
+                        )}
                     </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Balance</p>
-                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.balance?.toLocaleString() || '0'}</p>
+                    <div className="flex items-baseline gap-2">
+                        <p className="text-2xl font-black text-slate-800">₹{financeSummary?.balance?.toLocaleString() || '0'}</p>
+                        {financeSummary?.carpenterImpactEnabled && (
+                            <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full animate-pulse">
+                                Adjusted
+                            </span>
+                        )}
+                    </div>
                 </motion.div>
 
                 <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
@@ -623,7 +761,7 @@ const VoucherManagement = () => {
                             </table>
                         </div>
                     </motion.div>
-                ) : (
+                ) : view === 'deposits' ? (
                     <motion.div 
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -690,10 +828,153 @@ const VoucherManagement = () => {
                             </table>
                         </div>
                     </motion.div>
-                )}
+                ) : view === 'carpenter' ? (
+                    <motion.div 
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        exit={{ opacity: 0, y: -20 }}
+                        key="carpenter"
+                        className="space-y-4"
+                    >
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                            <div className="flex items-center gap-2">
+                                <Hammer size={20} className="text-blue-500" />
+                                <h2 className="text-xl font-black text-slate-800">Carpenter Hub</h2>
+                            </div>
+
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="relative">
+                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search AE, Client, Site..."
+                                        className="pl-11 pr-4 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-bold focus:ring-4 focus:ring-blue-50 outline-none w-64 transition-all"
+                                        value={carpenterSearch}
+                                        onChange={(e) => setCarpenterSearch(e.target.value)}
+                                    />
+                                </div>
+                                <button 
+                                    onClick={handleExportCarpenter}
+                                    className="bg-slate-100 hover:bg-slate-200 text-slate-600 px-4 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2"
+                                >
+                                    <Download size={16} /> Export
+                                </button>
+                                <button 
+                                    onClick={() => {
+                                        setEditingCarpenterRecord(null);
+                                        setCarpenterData({
+                                            aeName: '',
+                                            clientName: '',
+                                            siteName: '',
+                                            carpenterName: '',
+                                            workOrderValue: '',
+                                            cookscapeRate: '',
+                                            advance: '',
+                                            remarks: '',
+                                            status: 'On process-90%'
+                                        });
+                                        setShowCarpenterModal(true);
+                                    }}
+                                    className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2.5 rounded-2xl font-black text-xs uppercase tracking-widest transition-all shadow-lg flex items-center gap-2"
+                                >
+                                    <Plus size={16} /> Add Record
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-x-auto">
+                            <table className="w-full text-left min-w-[1000px]">
+                                <thead>
+                                    <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
+                                        <th className="px-6 py-6">AE Name</th>
+                                        <th className="px-6 py-6">Client / Site</th>
+                                        <th className="px-6 py-6">Carpenter</th>
+                                        <th className="px-6 py-6">WO Value</th>
+                                        <th className="px-6 py-6">Leo Sir (10%)</th>
+                                        <th className="px-6 py-6">CS Rate</th>
+                                        <th className="px-6 py-6">Advance</th>
+                                        <th className="px-6 py-6">Balance</th>
+                                        <th className="px-6 py-6">Status</th>
+                                        <th className="px-6 py-6 text-right">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-50">
+                                    {(carpenterRecords || [])
+                                        .filter(r => 
+                                            r.aeName?.toLowerCase().includes(carpenterSearch.toLowerCase()) ||
+                                            r.clientName?.toLowerCase().includes(carpenterSearch.toLowerCase()) ||
+                                            r.siteName?.toLowerCase().includes(carpenterSearch.toLowerCase()) ||
+                                            r.carpenterName?.toLowerCase().includes(carpenterSearch.toLowerCase())
+                                        )
+                                        .map((item) => (
+                                        <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
+                                            <td className="px-6 py-5">
+                                                <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider ${
+                                                    item.aeName?.toLowerCase() === 'balaji' ? 'bg-orange-100 text-orange-600' :
+                                                    item.aeName?.toLowerCase() === 'rajesh' ? 'bg-purple-100 text-purple-600' :
+                                                    item.aeName?.toLowerCase() === 'vijay' ? 'bg-cyan-100 text-cyan-600' :
+                                                    'bg-blue-100 text-blue-600'
+                                                }`}>
+                                                    {item.aeName}
+                                                </span>
+                                            </td>
+                                            <td className="px-6 py-5">
+                                                <p className="text-xs font-black text-slate-800">{item.clientName}</p>
+                                                <p className="text-[10px] text-slate-400 font-bold">{item.siteName}</p>
+                                            </td>
+                                            <td className="px-6 py-5 text-xs font-bold text-slate-600">
+                                                {item.carpenterName}
+                                            </td>
+                                            <td className="px-6 py-5 text-xs font-black text-slate-800">
+                                                ₹{item.workOrderValue.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-5 text-xs font-black text-rose-500">
+                                                ₹{item.leoSirRate.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-5 text-xs font-black text-slate-800">
+                                                ₹{item.cookscapeRate.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-5 text-xs font-black text-blue-600">
+                                                ₹{item.advance.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-5 text-xs font-black text-emerald-600">
+                                                ₹{item.balance.toLocaleString()}
+                                            </td>
+                                            <td className="px-6 py-5 text-[10px] font-black uppercase text-slate-400">
+                                                {item.status}
+                                            </td>
+                                            <td className="px-6 py-5 text-right">
+                                                <div className="flex items-center justify-end gap-2">
+                                                    <button 
+                                                        onClick={() => handleEditCarpenter(item)}
+                                                        className="p-2 hover:bg-blue-50 text-slate-400 hover:text-blue-600 rounded-lg transition-all"
+                                                    >
+                                                        <PlusCircle size={14} />
+                                                    </button>
+                                                    <button 
+                                                        onClick={() => handleDeleteCarpenter(item.id)}
+                                                        className="p-2 hover:bg-rose-50 text-slate-400 hover:text-rose-600 rounded-lg transition-all"
+                                                    >
+                                                        <X size={14} />
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    {(carpenterRecords || []).length === 0 && (
+                                        <tr>
+                                            <td colSpan="10" className="px-6 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">
+                                                No carpenter records found
+                                            </td>
+                                        </tr>
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
+                    </motion.div>
+                ) : null}
             </AnimatePresence>
 
-            {/* Modals: Review and Add Cash */}
             <AnimatePresence>
                 {selectedVoucher && (
                     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -728,8 +1009,8 @@ const VoucherManagement = () => {
                                 </div>
 
                                 <div className="space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-100 relative overflow-hidden">
-                                     <DollarSign size={80} className="absolute -right-4 -bottom-4 text-slate-100 -rotate-12" />
-                                     <div className="relative z-10 space-y-6">
+                                    <DollarSign size={80} className="absolute -right-4 -bottom-4 text-slate-100 -rotate-12" />
+                                    <div className="relative z-10 space-y-6">
                                         <div className="grid grid-cols-2 gap-8">
                                             <div className="space-y-1">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Requested By</p>
@@ -740,7 +1021,7 @@ const VoucherManagement = () => {
                                                 <p className="text-2xl font-black text-blue-600">₹{selectedVoucher.amount.toLocaleString()}</p>
                                             </div>
                                         </div>
-                                         <div className="space-y-1">
+                                        <div className="space-y-1">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purpose of Expense</p>
                                             <p className="text-sm text-slate-600 font-bold leading-relaxed">{selectedVoucher.purpose}</p>
                                         </div>
@@ -804,7 +1085,7 @@ const VoucherManagement = () => {
                                                 )}
                                             </div>
                                         )}
-                                     </div>
+                                    </div>
                                 </div>
 
                                 {view === 'pending' ? (
@@ -1067,6 +1348,152 @@ const VoucherManagement = () => {
                     </motion.div>
                 </div>
             )}
+            {/* Carpenter Hub Modal */}
+            <AnimatePresence>
+                {showCarpenterModal && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowCarpenterModal(false)}
+                            className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 20 }}
+                            className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl relative overflow-hidden"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <form onSubmit={handleCarpenterSubmit} className="p-10 space-y-6">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex items-center gap-5">
+                                        <div className="w-16 h-16 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-xl">
+                                            <Hammer size={32} />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-2xl font-black text-slate-800 tracking-tight">
+                                                {editingCarpenterRecord ? 'Edit Carpenter Record' : 'Add Carpenter Record'}
+                                            </h3>
+                                            <p className="text-slate-400 text-xs font-black uppercase tracking-widest">Project & Payment Details</p>
+                                        </div>
+                                    </div>
+                                    <button type="button" onClick={() => setShowCarpenterModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
+                                        <XCircle size={28} className="text-slate-300" />
+                                    </button>
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-6">
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">AE Name</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            placeholder="e.g. Balaji, Rajesh" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.aeName} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, aeName: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Client Name</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            placeholder="e.g. Senthil Nathan" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.clientName} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, clientName: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Site Name</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            placeholder="e.g. Dindigul, Apt - Besent Nagar" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.siteName} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, siteName: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Carpenter Name</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            placeholder="e.g. Vikaas kumar + pandiyan" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.carpenterName} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, carpenterName: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Work Order Value</label>
+                                        <input 
+                                            type="number" 
+                                            required 
+                                            placeholder="₹ 0.00" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.workOrderValue} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, workOrderValue: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Cookscape Rate</label>
+                                        <input 
+                                            type="number" 
+                                            required 
+                                            placeholder="₹ 0.00" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.cookscapeRate} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, cookscapeRate: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Advance Amount</label>
+                                        <input 
+                                            type="number" 
+                                            required 
+                                            placeholder="₹ 0.00" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.advance} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, advance: e.target.value })} 
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Status</label>
+                                        <input 
+                                            type="text" 
+                                            required 
+                                            placeholder="e.g. On process-90%, Completed" 
+                                            className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                            value={carpenterData.status} 
+                                            onChange={(e) => setCarpenterData({ ...carpenterData, status: e.target.value })} 
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="space-y-2">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Remarks</label>
+                                    <textarea 
+                                        rows="2" 
+                                        placeholder="Add any additional notes here..." 
+                                        className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm" 
+                                        value={carpenterData.remarks} 
+                                        onChange={(e) => setCarpenterData({ ...carpenterData, remarks: e.target.value })} 
+                                    />
+                                </div>
+
+                                <button type="submit" className="w-full bg-slate-900 hover:bg-black text-white py-5 rounded-2xl font-black uppercase tracking-widest text-xs shadow-xl transition-all active:scale-95">
+                                    {editingCarpenterRecord ? 'Update Record' : 'Create Record'}
+                                </button>
+                            </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

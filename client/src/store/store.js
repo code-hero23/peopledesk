@@ -5,6 +5,7 @@ import adminReducer from '../features/admin/adminSlice';
 import projectReducer from '../features/projects/projectSlice';
 import analyticsReducer from '../features/analytics/analyticsSlice';
 import voucherReducer from '../features/voucher/voucherSlice';
+import carpenterReducer from '../features/carpenter/carpenterSlice';
 
 export const store = configureStore({
     reducer: {
@@ -14,5 +15,6 @@ export const store = configureStore({
         projects: projectReducer,
         analytics: analyticsReducer,
         voucher: voucherReducer,
+        carpenter: carpenterReducer,
     },
 });

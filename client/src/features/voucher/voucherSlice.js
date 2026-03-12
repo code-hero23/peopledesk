@@ -187,6 +187,22 @@ export const addAdminNote = createAsyncThunk(
     }
 );
 
+// Toggle Carpenter Impact
+export const toggleCarpenterImpact = createAsyncThunk(
+    'voucher/toggleCarpenterImpact',
+    async (_, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const response = await axios.patch(`${FINANCE_URL}/toggle-carpenter`, {}, config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 export const voucherSlice = createSlice({
     name: 'voucher',
     initialState,
@@ -258,6 +274,11 @@ export const voucherSlice = createSlice({
                         ...state.manageableVouchers[index], 
                         ...action.payload 
                     };
+                }
+            })
+            .addCase(toggleCarpenterImpact.fulfilled, (state, action) => {
+                if (state.financeSummary) {
+                    state.financeSummary.carpenterImpactEnabled = action.payload.carpenterImpactEnabled;
                 }
             });
     },

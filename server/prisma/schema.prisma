@@ -474,10 +474,11 @@ model Voucher {
 }
 
 model Finance {
-  id          Int      @id @default(1)
-  currentCash Float    @default(0)
-  totalSpent  Float    @default(0)
-  updatedAt   DateTime @updatedAt
+  id                     Int      @id @default(1)
+  currentCash            Float    @default(0)
+  totalSpent             Float    @default(0)
+  carpenterImpactEnabled Boolean  @default(false)
+  updatedAt              DateTime @updatedAt
 }
 
 model Deposit {
@@ -534,4 +535,21 @@ enum BreakType {
   LUNCH
   CLIENT_MEETING
   BH_MEETING
+}
+
+model CarpenterRecord {
+  id              Int      @id @default(autoincrement())
+  aeName          String
+  clientName      String
+  siteName        String
+  carpenterName   String
+  workOrderValue  Float
+  leoSirRate      Float
+  cookscapeRate   Float
+  advance         Float
+  balance         Float
+  remarks         String?
+  status          String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 }

@@ -87,6 +87,7 @@ app.use('/api/settings', require('./routes/settingsRoutes'));
 app.use('/api/wfh', require('./routes/wfhRoutes'));
 app.use('/api/vouchers', require('./routes/voucherRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
+app.use('/api/carpenter', require('./routes/carpenterRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 
 app.get('/api', (req, res) => {

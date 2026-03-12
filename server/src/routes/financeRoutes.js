@@ -15,6 +15,7 @@ router.get('/history', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS
 router.get('/deposits', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), getDepositHistory);
 router.get('/export', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), exportFinanceData);
 router.post('/add-cash', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), addCash);
+router.patch('/toggle-carpenter', protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), toggleCarpenterImpact);
 router.post('/wipe', protect, authorize('ADMIN'), wipeFinanceData);
 
 module.exports = router;
