@@ -1021,11 +1021,184 @@ const exportIncentiveScorecard = async (req, res) => {
     }
 };
 
+// @desc    Export Call Stats for Admin
+// @route   GET /api/export/call-stats
+// @access  Private (Admin/HR/BH/Analyzer)
+const exportCallLogs = async (req, res) => {
+    try {
+        const { startDate, endDate, simFilter } = req.query;
+        
+        // 1. Setup Date Range
+        const defaultStart = getCycleStartDateIST();
+        const defaultEnd = getCycleEndDateIST();
+        const start = startDate ? getStartOfDayIST(startDate) : defaultStart;
+        const end = endDate ? getEndOfDayIST(endDate) : defaultEnd;
+
+        // 2. Fetch Call Logs
+        const callLogs = await prisma.callLog.findMany({
+            where: {
+                date: { gte: start, lte: end }
+            },
+            include: {
+                user: {
+                    select: { name: true, id: true, designation: true }
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        // 3. Fetch Excluded Numbers
+        const excludedSetting = await prisma.globalSetting.findUnique({
+            where: { key: 'EXCLUDED_EMPLOYEE_NUMBERS' }
+        });
+        const excludedNumbers = excludedSetting ? excludedSetting.value.split(',').map(n => n.trim()) : [];
+
+        // 4. Process Data
+        const summary = [];
+        const detailed = [];
+        
+        // Group by User
+        const userGroups = {};
+
+        const fmtSecs = (seconds) => {
+            if (!seconds) return '0s';
+            const hrs = Math.floor(seconds / 3600);
+            const mins = Math.floor((seconds % 3600) / 60);
+            const secs = seconds % 60;
+            if (hrs > 0) return `${hrs}h ${mins}m`;
+            return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+        };
+
+        callLogs.forEach(log => {
+            let filteredCalls = log.calls || [];
+
+            // Filter inner calls by specific date and SIM slot
+            if (startDate && endDate) {
+                const sTime = getStartOfDayIST(startDate).getTime();
+                const eTime = getEndOfDayIST(endDate).getTime();
+                filteredCalls = filteredCalls.filter(c => {
+                    const cDate = new Date(c.date).getTime();
+                    return cDate >= sTime && cDate <= eTime;
+                });
+            }
+
+            if (simFilter && simFilter !== 'ALL') {
+                const slot = String(simFilter);
+                filteredCalls = filteredCalls.filter(c => {
+                    const cSlot = String(c.simSlot || c.simId || "");
+                    return cSlot === slot || cSlot.includes(slot);
+                });
+            }
+
+            if (filteredCalls.length === 0) return;
+
+            const userName = log.user.name;
+            if (!userGroups[userName]) {
+                userGroups[userName] = {
+                    Employee: userName,
+                    Designation: log.user.designation || 'N/A',
+                    Total: 0,
+                    Incoming: 0,
+                    Outgoing: 0,
+                    Missed: 0,
+                    Rejected: 0,
+                    Duration: 0,
+                    UniqueContacts: new Set()
+                };
+            }
+
+            filteredCalls.forEach(c => {
+                userGroups[userName].Total++;
+                if (c.type === 'INCOMING') userGroups[userName].Incoming++;
+                if (c.type === 'OUTGOING') userGroups[userName].Outgoing++;
+                if (c.type === 'MISSED') userGroups[userName].Missed++;
+                if (c.type === 'REJECTED') userGroups[userName].Rejected++;
+                userGroups[userName].Duration += (c.duration || 0);
+                if (c.number && !excludedNumbers.includes(c.number)) {
+                    userGroups[userName].UniqueContacts.add(c.number);
+                }
+
+                detailed.push({
+                    Employee: userName,
+                    Date: new Date(c.date).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+                    Number: c.number,
+                    Type: c.type,
+                    Duration: fmtSecs(c.duration || 0),
+                    'Duration (sec)': c.duration || 0,
+                    'SIM Slot': c.simSlot || c.simId || 'N/A'
+                });
+            });
+        });
+
+        // Format Summary
+        Object.values(userGroups).forEach(u => {
+            summary.push({
+                Employee: u.Employee,
+                Designation: u.Designation,
+                'Total Calls': u.Total,
+                'Total Duration': fmtSecs(u.Duration),
+                'Avg Duration': fmtSecs(u.Total > 0 ? Math.round(u.Duration / u.Total) : 0),
+                'Unique Contacts': u.UniqueContacts.size,
+                Incoming: u.Incoming,
+                Outgoing: u.Outgoing,
+                Missed: u.Missed,
+                Rejected: u.Rejected
+            });
+        });
+
+        // 5. Build Dashboard Summary (Visual Representation)
+        const dashboard = [
+            ["COMMAND ANALYTICS - CALL PERFORMANCE DASHBOARD"],
+            ["Date Range:", `${start.toLocaleDateString()} to ${end.toLocaleDateString()}`],
+            ["Generated At:", new Date().toLocaleString()],
+            [],
+            ["TOP PERFORMERS (By Total Calls)"],
+            ["Rank", "Employee", "Total Calls", "Total Duration"]
+        ];
+
+        const topByCalls = [...summary].sort((a, b) => b['Total Calls'] - a['Total Calls']).slice(0, 5);
+        topByCalls.forEach((p, i) => dashboard.push([i+1, p.Employee, p['Total Calls'], p['Total Duration']]));
+
+        dashboard.push([]);
+        dashboard.push(["TOP PERFORMERS (By Duration)"]);
+        dashboard.push(["Rank", "Employee", "Total Duration", "Unique Contacts"]);
+        
+        // Need numeric duration for sorting
+        const summaryWithRawDuration = Object.values(userGroups).sort((a, b) => b.Duration - a.Duration).slice(0, 5);
+        summaryWithRawDuration.forEach((p, i) => dashboard.push([i+1, p.Employee, fmtSecs(p.Duration), p.UniqueContacts.size]));
+
+        // 6. Generate Workbook
+        const wb = XLSX.utils.book_new();
+        
+        const wsDashboard = XLSX.utils.aoa_to_sheet(dashboard);
+        wsDashboard['!cols'] = [{ wch: 30 }, { wch: 30 }, { wch: 15 }, { wch: 20 }];
+        XLSX.utils.book_append_sheet(wb, wsDashboard, "Dashboard_Overview");
+
+        const wsSummary = XLSX.utils.json_to_sheet(summary);
+        wsSummary['!cols'] = setAutoWidth(summary);
+        XLSX.utils.book_append_sheet(wb, wsSummary, "Performance_Summary");
+
+        const wsDetailed = XLSX.utils.json_to_sheet(detailed);
+        wsDetailed['!cols'] = setAutoWidth(detailed);
+        XLSX.utils.book_append_sheet(wb, wsDetailed, "Detailed_Logs");
+
+        const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment(`call_analytics_${start.toISOString().split('T')[0]}_to_${end.toISOString().split('T')[0]}.xlsx`);
+        res.send(buf);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     exportWorkLogs,
     exportAttendance,
     exportRequests,
     exportPerformanceAnalytics,
     exportEmployees,
-    exportIncentiveScorecard
+    exportIncentiveScorecard,
+    exportCallLogs
 };

@@ -29,6 +29,7 @@ const AdminCallReports = () => {
     const [showExcludedSettings, setShowExcludedSettings] = useState(false);
     const [tempExcludedNumbers, setTempExcludedNumbers] = useState('');
     const [isSavingSettings, setIsSavingSettings] = useState(false);
+    const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
         dispatch(getCallStats({ ...dateRange }));
@@ -77,6 +78,37 @@ const AdminCallReports = () => {
             toast.error('Failed to update exclusion list');
         } finally {
             setIsSavingSettings(false);
+        }
+    };
+
+    const handleExport = async () => {
+        try {
+            setIsExporting(true);
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+            
+            const response = await fetch(`${baseUrl}/export/call-stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Export failed');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Call_Analytics_${dateRange.startDate}_to_${dateRange.endDate}.xlsx`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+            
+            toast.success('Analytics exported successfully');
+        } catch (error) {
+            console.error('Export failed:', error);
+            toast.error('Failed to export analytics');
+        } finally {
+            setIsExporting(false);
         }
     };
 
@@ -217,6 +249,17 @@ const AdminCallReports = () => {
                     <button onClick={handleRefresh} className="p-4 bg-slate-800 text-slate-400 hover:text-white rounded-2xl transition-all border border-slate-700 active:scale-90">
                         <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
                     </button>
+                    
+                    <button 
+                        onClick={handleExport}
+                        disabled={isExporting}
+                        className="p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2 disabled:opacity-50"
+                        title="Export Analytics"
+                    >
+                        <Download size={18} className={isExporting ? 'animate-bounce' : ''} />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{isExporting ? 'Exporting...' : 'Export Analytics'}</span>
+                    </button>
+
                     <button 
                         onClick={() => setShowExcludedSettings(true)}
                         className="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2"
