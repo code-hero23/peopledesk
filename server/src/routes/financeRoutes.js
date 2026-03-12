@@ -6,7 +6,8 @@ const {
     getSpentHistory, 
     getDepositHistory, 
     exportFinanceData, 
-    wipeFinanceData 
+    wipeFinanceData,
+    toggleCarpenterImpact
 } = require('../controllers/financeController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
