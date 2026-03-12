@@ -7,7 +7,8 @@ const {
     approveVoucherAM,
     approveVoucherCOO,
     uploadProof,
-    addAdminNote
+    addAdminNote,
+    deleteVoucher
 } = require('../controllers/voucherController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/uploadMiddleware');
