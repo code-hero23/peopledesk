@@ -541,7 +541,7 @@ const VoucherManagement = () => {
                         <Hammer size={24} />
                     </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carpenter Hub</p>
-                    <p className="text-sm font-black text-blue-600 mt-1 italic group-hover:text-blue-700 transition-colors">Coming Soon...</p>
+                    <p className="text-sm font-black text-blue-600 mt-1 italic group-hover:text-blue-700 transition-colors">Manage Records</p>
                 </motion.div>
             </div>
 
