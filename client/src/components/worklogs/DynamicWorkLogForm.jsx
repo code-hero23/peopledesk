@@ -97,8 +97,8 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             // CLOSING PHASE
             const payload = {
                 customFields,
-                notes,
-                endTime: simpleData.endTime,
+                notes: notes,
+                endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                 logStatus: 'CLOSED'
             };
             dispatch(closeWorkLog(payload)).then(() => {
@@ -109,8 +109,8 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             // OPENING PHASE
             const payload = {
                 customFields,
-                date: simpleData.date,
-                startTime: simpleData.startTime,
+                date: new Date().toISOString().split('T')[0],
+                startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                 logStatus: 'OPEN'
             };
             dispatch(createWorkLog(payload)).then(() => {
@@ -153,43 +153,18 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
 
             {/* Time/Date Selection */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                {!isTodayOpen ? (
-                    <>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Session Date</label>
-                            <input 
-                                type="date" required value={simpleData.date} 
-                                onChange={(e) => setSimpleData({...simpleData, date: e.target.value})}
-                                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 font-bold"
-                            />
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Time</label>
-                            <input 
-                                type="time" required value={simpleData.startTime} 
-                                onChange={(e) => setSimpleData({...simpleData, startTime: e.target.value})}
-                                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none focus:ring-2 focus:ring-indigo-100 font-bold"
-                            />
-                        </div>
-                    </>
-                ) : (
-                    <>
-                        <div>
-                            <label className="block text-xs font-bold text-emerald-500 uppercase mb-1">Session Started At</label>
-                            <div className="px-3 py-2 bg-emerald-50 rounded-lg text-emerald-700 font-bold border border-emerald-100 text-sm">
-                                {todayLog.startTime || 'Not recorded'}
-                            </div>
-                        </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Time</label>
-                            <input 
-                                type="time" required value={simpleData.endTime} 
-                                onChange={(e) => setSimpleData({...simpleData, endTime: e.target.value})}
-                                className="w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none focus:ring-2 focus:ring-emerald-100 font-bold border-emerald-200"
-                            />
-                        </div>
-                    </>
-                )}
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{isTodayOpen ? "Session Started At" : "Current Date"}</label>
+                    <div className={`px-3 py-2 rounded-lg font-bold border text-sm ${isTodayOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-700 border-slate-100'}`}>
+                        {isTodayOpen ? (todayLog.startTime || 'Not recorded') : new Date().toLocaleDateString('en-GB')}
+                    </div>
+                </div>
+                <div>
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Session Time</label>
+                    <div className="px-3 py-2 bg-slate-50 rounded-lg text-slate-700 font-bold border border-slate-100 text-sm">
+                        {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
             </div>
 
             {activeTables.map((table, tableIndex) => (

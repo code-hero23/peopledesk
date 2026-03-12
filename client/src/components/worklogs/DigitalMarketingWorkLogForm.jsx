@@ -1,21 +1,30 @@
 import { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createWorkLog } from '../../features/employee/employeeSlice';
+import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import { Megaphone, Briefcase, User, Clock, Link, FileText, CheckSquare, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { useEffect } from 'react';
 
 const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
-    const { isLoading } = useSelector((state) => state.employee);
+    const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+
+    useEffect(() => {
+        dispatch(getTodayLogStatus());
+    }, [dispatch]);
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         title: '',
         message: '',
         onConfirm: () => { }
     });
+
+    const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
+    const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [formData, setFormData] = useState({
         work: '',
@@ -31,35 +40,20 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const onSubmit = (e) => {
-        e.preventDefault();
-
+    const handleOpeningSubmit = () => {
         setConfirmationConfig({
             isOpen: true,
-            title: 'Submit Marketing Log',
-            message: 'Are you sure you want to submit this digital marketing task log?',
+            title: 'Start Marketing Session',
+            message: 'Are you sure you want to start your work session?',
             onConfirm: () => {
                 const payload = {
-                    logStatus: 'CLOSED',
-                    process: `DM Task: ${formData.work} (${formData.status})`, // Summary
-                    hours: parseFloat(formData.hoursSpent) || 0, // Utilize the standard hours field
-                    customFields: {
-                        "Work Description": formData.work,
-                        "Work Given By": formData.workGivenBy,
-                        "Hours Spent": formData.hoursSpent,
-                        "Status": formData.status,
-                        "File Link": formData.fileLink
-                    },
-                    remarks: formData.remarks,
-                    notes: formData.notes
+                    logStatus: 'OPEN',
+                    process: 'Marketing Session Started',
+                    startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
-
                 dispatch(createWorkLog(payload)).then((res) => {
                     if (!res.error) {
-                        setFormData({
-                            work: '', workGivenBy: '', hoursSpent: '',
-                            status: 'In Progress', fileLink: '', remarks: '', notes: ''
-                        });
+                        setModalMessage("Session Started!");
                         setShowSuccess(true);
                     }
                 });
@@ -68,10 +62,96 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
         });
     };
 
+    const handleClosingSubmit = (e) => {
+        e.preventDefault();
+
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Submit Closing Log',
+            message: 'Are you sure you want to submit this log and close your day?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'CLOSED',
+                    process: `DM Task: ${formData.work} (${formData.status})`,
+                    hours: parseFloat(formData.hoursSpent) || 0,
+                    customFields: {
+                        "Work Description": formData.work,
+                        "Work Given By": formData.workGivenBy,
+                        "Hours Spent": formData.hoursSpent,
+                        "Status": formData.status,
+                        "File Link": formData.fileLink
+                    },
+                    remarks: formData.remarks,
+                    notes: formData.notes,
+                    endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                };
+
+                dispatch(closeWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Work Log Submitted!");
+                        setShowSuccess(true);
+                        setFormData({
+                            work: '', workGivenBy: '', hoursSpent: '',
+                            status: 'In Progress', fileLink: '', remarks: '', notes: ''
+                        });
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    if (isTodayClosed) {
+        return (
+            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
+                <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
+                <h3 className="text-2xl font-black text-emerald-800 mb-2">Work Completed!</h3>
+                <p className="text-emerald-600 font-bold">Marketing log submitted successfully.</p>
+                <div className="mt-4 text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
+                    Session: {todayLog?.startTime} - {todayLog?.endTime}
+                </div>
+                <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 underline">Okay, close</button>
+            </div>
+        );
+    }
+
+    if (!isTodayOpen) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-purple-500 to-fuchsia-600 p-6 rounded-2xl text-white shadow-lg">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-3 rounded-xl">
+                            <Clock size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-2xl tracking-tight">Marketing Opening</h3>
+                            <p className="text-purple-100 text-sm font-medium">Start your work session</p>
+                        </div>
+                    </div>
+                </div>
+                <button 
+                    onClick={handleOpeningSubmit}
+                    className="w-full py-6 bg-purple-600 hover:bg-purple-700 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                    <Megaphone size={24} />
+                    START WORK SESSION
+                </button>
+                <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+                <ConfirmationModal
+                    isOpen={confirmationConfig.isOpen}
+                    onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmationConfig.onConfirm}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                />
+            </div>
+        );
+    }
+
     return (
         <motion.form
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            onSubmit={onSubmit} className="space-y-6"
+            onSubmit={handleClosingSubmit} className="space-y-6"
         >
             <div className="bg-gradient-to-r from-purple-500 to-fuchsia-600 p-6 rounded-2xl text-white shadow-lg shadow-purple-200">
                 <div className="flex items-center gap-4">
@@ -205,8 +285,8 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
                 <button type="button" onClick={onSuccess} className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider">
                     Cancel
                 </button>
-                <button type="submit" disabled={isLoading} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider">
-                    {isLoading ? 'Submitting...' : <><Save size={18} /> Submit Log</>}
+                <button type="submit" disabled={isLoading} className="flex-1 bg-purple-600 hover:bg-purple-700 text-white font-black py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider">
+                    {isLoading ? 'Submitting...' : <><Save size={18} /> Complete & Submit Log</>}
                 </button>
             </div>
 
@@ -216,7 +296,7 @@ const DigitalMarketingWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Work Log Submitted"
+                message={modalMessage || "Work Log Submitted"}
                 subMessage="Digital Marketing entry recorded successfully."
             />
             <ConfirmationModal

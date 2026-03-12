@@ -70,6 +70,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
         startTime: '',
         endTime: '',
     });
+    const [projectStartTime, setProjectStartTime] = useState(null);
 
     // --- CLOSING FORM STATE (Final Summary/Remarks) ---
     const [closingData, setClosingData] = useState({
@@ -132,7 +133,8 @@ const AEWorkLogForm = ({ onSuccess }) => {
                     ae_siteLocation: openingData.ae_siteLocation || '',
                     ae_gpsCoordinates: openingData.ae_gpsCoordinates || '',
                     ae_siteStatus: openingData.ae_siteStatus || '',
-                    ae_plannedWork: openingData.ae_plannedWork || ''
+                    ae_plannedWork: openingData.ae_plannedWork || '',
+                    startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
 
                 dispatch(createWorkLog(payload)).then((res) => {
@@ -167,6 +169,10 @@ const AEWorkLogForm = ({ onSuccess }) => {
             }));
         } else {
             setProjectReport(prev => ({ ...prev, projectId: pId }));
+        }
+        // Set start time when a project is selected if not already set
+        if (!projectStartTime) {
+            setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
         }
     };
 
@@ -204,8 +210,14 @@ const AEWorkLogForm = ({ onSuccess }) => {
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
+                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const formData = new FormData();
-                const metrics = { ...projectReport, ae_photos: undefined };
+                const metrics = { 
+                    ...projectReport, 
+                    startTime: projectStartTime || currentTime,
+                    endTime: currentTime,
+                    ae_photos: undefined 
+                };
                 formData.append('projectReport', JSON.stringify(metrics));
 
                 if (projectReport.ae_photos && projectReport.ae_photos.length > 0) {
@@ -229,6 +241,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                             startTime: '', endTime: '',
                         });
                         setImagePreviews([]);
+                        setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
                     }
                     setIsSubmitting(false);
                 });
@@ -251,7 +264,8 @@ const AEWorkLogForm = ({ onSuccess }) => {
                 const payload = {
                     logStatus: 'CLOSED',
                     remarks: closingData.remarks || '',
-                    notes: closingData.notes || ''
+                    notes: closingData.notes || '',
+                    endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
 
                 dispatch(closeWorkLog(payload)).then((res) => {
@@ -414,11 +428,15 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                             <div className="grid grid-cols-2 gap-4 mb-4">
                                                 <div>
                                                     <Label text="Start Time" />
-                                                    <input type="time" name="startTime" value={projectReport.startTime} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold" />
+                                                    <div className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold text-slate-700 border border-slate-100 italic">
+                                                        {projectStartTime || 'Selecting...'}
+                                                    </div>
                                                 </div>
                                                 <div>
-                                                    <Label text="End Time" />
-                                                    <input type="time" name="endTime" value={projectReport.endTime} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold" />
+                                                    <Label text="Log Time" />
+                                                    <div className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold text-slate-700 border border-slate-100 italic">
+                                                        {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 </div>
                                             </div>
                                             <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-100 transition-colors relative">

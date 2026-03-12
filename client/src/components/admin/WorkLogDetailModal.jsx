@@ -459,6 +459,37 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
+                    {/* LA Closing */}
+                    {laClosing && (
+                        <div className="mb-6">
+                            <h4 className="text-[11px] font-black text-emerald-600 mb-2 uppercase tracking-tighter">EXECUTION SUMMARY (CLOSING)</h4>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+                                {[
+                                    { label: 'Initial 2D', data: laClosing.initial2D },
+                                    { label: 'Production 2D', data: laClosing.production2D },
+                                    { label: 'Revised 2D', data: laClosing.revised2D },
+                                    { label: 'Fresh 3D', data: laClosing.fresh3D },
+                                    { label: 'Revised 3D', data: laClosing.revised3D },
+                                    { label: 'Estimation', data: laClosing.estimation },
+                                    { label: 'WOE', data: laClosing.woe },
+                                    { label: 'Online Discussion', data: laClosing.onlineDiscussion },
+                                    { label: 'Showroom Discussion', data: laClosing.showroomDiscussion },
+                                    { label: 'Sign Engineers', data: laClosing.signFromEngineer },
+                                    { label: 'Site Visit', data: laClosing.siteVisit },
+                                    { label: 'Infurnia', data: laClosing.infurnia },
+                                ].filter(x => x && (x.data?.count > 0 || x.data?.details)).map((item, i) => (
+                                    <div key={i} className="bg-emerald-50/30 p-2 rounded border border-emerald-100">
+                                        <div className="flex justify-between items-center mb-1">
+                                            <span className="text-[9px] font-black text-emerald-600/50 uppercase">{item.label}</span>
+                                            <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
+                                        </div>
+                                        {item.data.details && <p className="text-[10px] text-emerald-700 font-bold break-words whitespace-pre-wrap">{item.data.details}</p>}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* LA & FA Project Reports Grid (NEW ADDITION) */}
                     {((laReports && Array.isArray(laReports) && laReports.length > 0) || (faReports && Array.isArray(faReports) && faReports.length > 0)) && (
                         <div className="mb-8 print-no-break">

@@ -73,6 +73,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
         requirements: [],
         colours: []
     });
+    const [projectStartTime, setProjectStartTime] = useState(null);
 
     // Helper to update deeply nested state (for Daily Report)
     const updateState = (setter, path, value) => {
@@ -132,7 +133,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
                 setIsSubmitting(true);
                 const payload = {
                     logStatus: 'OPEN',
-                    fa_opening_metrics: openingData
+                    fa_opening_metrics: openingData,
+                    startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
                 dispatch(createWorkLog(payload)).then((res) => {
                     if (!res.error) {
@@ -159,7 +161,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
                 setIsSubmitting(true);
                 const payload = {
                     fa_closing_metrics: closingData,
-                    notes: dailyNotes
+                    notes: dailyNotes,
+                    endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {
@@ -184,17 +187,13 @@ const FAWorkLogForm = ({ onSuccess }) => {
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
-                let totalHours = 0;
-                if (projectReport.startTime && projectReport.endTime) {
-                    const start = new Date(`1970-01-01T${projectReport.startTime}`);
-                    const end = new Date(`1970-01-01T${projectReport.endTime}`);
-                    totalHours = (end - start) / 1000 / 60 / 60;
-                }
-
+                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const payload = {
                     projectReport: {
                         ...projectReport,
-                        totalHours: totalHours > 0 ? totalHours.toFixed(2) : 0
+                        startTime: projectStartTime || currentTime,
+                        endTime: currentTime,
+                        totalHours: 0
                     }
                 };
 
@@ -210,6 +209,7 @@ const FAWorkLogForm = ({ onSuccess }) => {
                             completedImages: '', pendingImages: '', remarks: '',
                             onlineMeetings: [], showroomMeetings: [], measurements: [], requirements: [], colours: []
                         });
+                        setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
                     }
                     setIsSubmitting(false);
                 });
@@ -227,6 +227,10 @@ const FAWorkLogForm = ({ onSuccess }) => {
             }));
         } else {
             setProjectReport(prev => ({ ...prev, projectId: pId }));
+        }
+
+        if (!projectStartTime) {
+            setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
         }
     };
 
@@ -389,25 +393,18 @@ const FAWorkLogForm = ({ onSuccess }) => {
                                                 </div>
                                             </div>
 
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 hover:bg-white transition-colors">
-                                                    <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Process / Task</label>
-                                                    <input type="text" value={projectReport.process} onChange={(e) => setProjectReport({ ...projectReport, process: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 outline-none" placeholder="e.g. Site Measurement" />
-                                                </div>
-                                                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 hover:bg-white transition-colors">
-                                                    <label className="block text-[9px] font-black text-slate-400 uppercase mb-2">Image Reference (#)</label>
-                                                    <input type="number" value={projectReport.imageCount} onChange={(e) => setProjectReport({ ...projectReport, imageCount: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 outline-none" placeholder="0" />
-                                                </div>
-                                            </div>
-
                                             <div className="grid grid-cols-2 gap-6">
-                                                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 hover:bg-white transition-colors">
+                                                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
                                                     <label className="block text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> Start Time</label>
-                                                    <input type="time" value={projectReport.startTime} onChange={(e) => setProjectReport({ ...projectReport, startTime: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 outline-none" />
+                                                    <div className="text-sm font-bold text-slate-700 italic">
+                                                        {projectStartTime || 'Selecting...'}
+                                                    </div>
                                                 </div>
-                                                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 hover:bg-white transition-colors">
-                                                    <label className="block text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> End Time</label>
-                                                    <input type="time" value={projectReport.endTime} onChange={(e) => setProjectReport({ ...projectReport, endTime: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 outline-none" />
+                                                <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200">
+                                                    <label className="block text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> Log Time</label>
+                                                    <div className="text-sm font-bold text-slate-700 italic">
+                                                        {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                    </div>
                                                 </div>
                                             </div>
 

@@ -10,6 +10,11 @@ const AccountWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
+
+    useEffect(() => {
+        dispatch(getTodayLogStatus());
+    }, [dispatch]);
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         title: '',
@@ -17,7 +22,8 @@ const AccountWorkLogForm = ({ onSuccess }) => {
         onConfirm: () => { }
     });
 
-    const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
+    const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
+    const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [rows, setRows] = useState([
         { description: '', status: '' },
@@ -43,24 +49,50 @@ const AccountWorkLogForm = ({ onSuccess }) => {
         setRows(newRows);
     };
 
-    const handleSubmit = (e) => {
+    const handleOpeningSubmit = () => {
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Start Your Day',
+            message: 'Are you sure you want to start your work session?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'OPEN',
+                    process: 'Account Session Started',
+                    startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Session Started!");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const handleClosingSubmit = (e) => {
         e.preventDefault();
         const validRows = rows.filter(r => r.description.trim() !== '');
 
         setConfirmationConfig({
             isOpen: true,
-            title: 'Submit Daily Report',
-            message: `Are you sure you want to submit this daily work report?`,
+            title: 'Submit Closing Report',
+            message: `Are you sure you want to finalize your daily work?`,
             onConfirm: () => {
                 const payload = {
                     logStatus: 'CLOSED',
-                    process: 'Account Daily Report Submitted',
+                    process: 'Account Daily Tasks Logged',
                     customFields: { tasks: validRows },
                     remarks: remarks,
-                    notes: notes
+                    notes: notes,
+                    endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
-                dispatch(createWorkLog(payload)).then((res) => {
-                    if (!res.error) setShowSuccess(true);
+                dispatch(closeWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Work Log Submitted!");
+                        setShowSuccess(true);
+                    }
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -69,13 +101,49 @@ const AccountWorkLogForm = ({ onSuccess }) => {
 
     if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
 
-    if (isCompleted) {
+    if (isTodayClosed) {
         return (
             <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
                 <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
                 <h3 className="text-2xl font-black text-emerald-800 mb-2">Books Closed!</h3>
                 <p className="text-emerald-600 font-bold">Daily reports submitted successfully.</p>
+                <div className="mt-4 text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
+                    Session: {todayLog?.startTime} - {todayLog?.endTime}
+                </div>
                 <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 underline">Okay, close</button>
+            </div>
+        );
+    }
+
+    if (!isTodayOpen) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 rounded-2xl text-white shadow-lg">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-3 rounded-xl">
+                            <Clock size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-2xl tracking-tight">Account Opening</h3>
+                            <p className="text-blue-100 text-sm font-medium">Start your work session</p>
+                        </div>
+                    </div>
+                </div>
+                <button 
+                    onClick={handleOpeningSubmit}
+                    className="w-full py-6 bg-blue-600 hover:bg-blue-700 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                    <TrendingUp size={24} />
+                    START WORK SESSION
+                </button>
+                <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+                <ConfirmationModal
+                    isOpen={confirmationConfig.isOpen}
+                    onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmationConfig.onConfirm}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                />
             </div>
         );
     }
@@ -88,7 +156,7 @@ const AccountWorkLogForm = ({ onSuccess }) => {
     return (
         <motion.form
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-1"
+            onSubmit={handleClosingSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-1"
         >
             {/* Header */}
             <div className={`bg-gradient-to-r from-${themeColor}-500 to-${themeColor}-600 p-6 rounded-2xl text-white shadow-lg shadow-${themeColor}-200`}>
@@ -197,7 +265,7 @@ const AccountWorkLogForm = ({ onSuccess }) => {
                     Cancel
                 </button>
                 <button type="submit" disabled={isLoading} className={`flex-1 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2 uppercase text-xs tracking-wider bg-slate-900 hover:bg-black`}>
-                    {isLoading ? 'Submitting...' : 'Submit Report'}
+                    {isLoading ? 'Submitting...' : 'Complete Day & Close Books'}
                 </button>
             </div>
 
@@ -207,7 +275,7 @@ const AccountWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Report Submitted"
+                message={modalMessage || "Report Submitted"}
                 subMessage="Account entry recorded successfully."
             />
             <ConfirmationModal

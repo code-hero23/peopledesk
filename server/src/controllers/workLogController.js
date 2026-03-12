@@ -180,6 +180,7 @@ const createWorkLog = async (req, res) => {
 
                 date: new Date(),
                 logStatus: req.body.logStatus || 'CLOSED', // Default to CLOSED if not specified
+                startTime: startTime || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
             },
         });
 
@@ -263,7 +264,8 @@ const closeWorkLog = async (req, res) => {
                 process: process || undefined,
                 remarks: remarks || undefined,
                 cre_synced_calls: typeof req.body.cre_synced_calls === 'string' ? JSON.parse(req.body.cre_synced_calls) : req.body.cre_synced_calls,
-                notes: notes || undefined
+                notes: notes || undefined,
+                endTime: req.body.endTime || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
             }
         });
 

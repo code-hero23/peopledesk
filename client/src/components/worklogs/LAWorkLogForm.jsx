@@ -74,6 +74,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
         requirements: [],
         colours: []
     });
+    const [projectStartTime, setProjectStartTime] = useState(null);
 
     // Helper for adding rows to dynamic tables
     const addRow = (field, structure) => {
@@ -116,7 +117,12 @@ const LAWorkLogForm = ({ onSuccess }) => {
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
-                const payload = { logStatus: 'OPEN', la_opening_metrics: openingData };
+                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const payload = { 
+                    logStatus: 'OPEN', 
+                    la_opening_metrics: openingData,
+                    startTime: currentTime
+                };
                 dispatch(createWorkLog(payload)).then((res) => {
                     if (!res.error) {
                         setModalMessage("Opening Report Submitted! Day started.");
@@ -140,9 +146,11 @@ const LAWorkLogForm = ({ onSuccess }) => {
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
+                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const payload = {
                     la_closing_metrics: closingData,
-                    notes: dailyNotes
+                    notes: dailyNotes,
+                    endTime: currentTime
                 };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {
@@ -167,17 +175,13 @@ const LAWorkLogForm = ({ onSuccess }) => {
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
-                let totalHours = 0;
-                if (projectReport.startTime && projectReport.endTime) {
-                    const start = new Date(`1970-01-01T${projectReport.startTime}`);
-                    const end = new Date(`1970-01-01T${projectReport.endTime}`);
-                    totalHours = (end - start) / 1000 / 60 / 60;
-                }
-
+                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const payload = {
                     projectReport: {
                         ...projectReport,
-                        totalHours: totalHours > 0 ? totalHours.toFixed(2) : 0
+                        startTime: projectStartTime || currentTime,
+                        endTime: currentTime,
+                        totalHours: 0 // We'll let the backend or details handle this if needed, but manual input is removed
                     }
                 };
 
@@ -193,6 +197,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                             completedImages: '', pendingImages: '', remarks: '',
                             onlineMeetings: [], showroomMeetings: [], measurements: [], requirements: [], colours: []
                         });
+                        setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
                     }
                     setIsSubmitting(false);
                 });
@@ -210,6 +215,10 @@ const LAWorkLogForm = ({ onSuccess }) => {
             }));
         } else {
             setProjectReport(prev => ({ ...prev, projectId: pId }));
+        }
+
+        if (!projectStartTime) {
+            setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
         }
     };
 
@@ -412,11 +421,15 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                                 <div className="grid grid-cols-2 gap-6">
                                                     <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 hover:bg-white transition-colors">
                                                         <label className="block text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> Start Time</label>
-                                                        <input type="time" value={projectReport.startTime} onChange={(e) => setProjectReport({ ...projectReport, startTime: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 outline-none" />
+                                                        <div className="w-full bg-transparent font-bold text-slate-700 outline-none text-sm italic">
+                                                            {projectStartTime || 'Selecting...'}
+                                                        </div>
                                                     </div>
                                                     <div className="bg-slate-50/80 p-4 rounded-2xl border border-slate-200 hover:bg-white transition-colors">
-                                                        <label className="block text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> End Time</label>
-                                                        <input type="time" value={projectReport.endTime} onChange={(e) => setProjectReport({ ...projectReport, endTime: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 outline-none" />
+                                                        <label className="block text-[9px] font-black text-slate-400 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> Current Time</label>
+                                                        <div className="w-full bg-transparent font-bold text-slate-700 outline-none text-sm italic">
+                                                            {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                                                        </div>
                                                     </div>
                                                 </div>
 

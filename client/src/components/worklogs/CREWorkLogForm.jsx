@@ -129,6 +129,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
                 const payload = {
                     logStatus: 'OPEN',
                     cre_opening_metrics: openingData.cre_opening_metrics,
+                    startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
 
                 dispatch(createWorkLog(payload)).then((res) => {
@@ -156,7 +157,8 @@ const CREWorkLogForm = ({ onSuccess }) => {
                 setIsSubmitting(true);
                 const payload = {
                     cre_closing_metrics: closingData.cre_closing_metrics,
-                    notes: closingData.notes
+                    notes: closingData.notes,
+                    endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {

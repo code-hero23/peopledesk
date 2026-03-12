@@ -34,9 +34,11 @@ const WorkLogForm = ({ onSuccess }) => {
     };
 
     const calculateTotalTime = () => {
-        if (formData.startTime && formData.endTime) {
-            const start = new Date(`1970-01-01T${formData.startTime}`);
-            const end = new Date(`1970-01-01T${formData.endTime}`);
+        const startTime = todayLog?.startTime;
+        const endTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        if (startTime && endTime) {
+            const start = new Date(`1970-01-01T${startTime}`);
+            const end = new Date(`1970-01-01T${endTime}`);
             const diff = (end - start) / 1000 / 60 / 60; // hours
             return diff > 0 ? diff.toFixed(2) : '0.00';
         }
@@ -57,7 +59,7 @@ const WorkLogForm = ({ onSuccess }) => {
             site: formData.site,
             process: formData.process,
             imageCount: Number(formData.imageCount),
-            startTime: formData.startTime,
+            startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
             logStatus: 'OPEN'
         };
 
@@ -74,7 +76,7 @@ const WorkLogForm = ({ onSuccess }) => {
         setIsSubmitting(true);
 
         const payload = {
-            endTime: formData.endTime,
+            endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
             completedImages: Number(formData.completedImages),
             pendingImages: Number(formData.pendingImages),
             remarks: formData.remarks,
@@ -115,12 +117,14 @@ const WorkLogForm = ({ onSuccess }) => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="grid grid-cols-2 gap-2">
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Time</label>
-                            <input type="time" name="endTime" required value={formData.endTime} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
+                            <label className="block text-xs font-bold text-emerald-600 uppercase mb-1">Session Start</label>
+                            <div className="px-3 py-2 bg-emerald-50 rounded-lg text-emerald-700 font-bold border border-emerald-100">
+                                {todayLog.startTime}
+                            </div>
                         </div>
                         <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Total Time (Hrs)</label>
-                            <div className="px-3 py-2 bg-slate-100 rounded-lg text-slate-700 font-mono font-bold border border-slate-200">
+                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration (Hrs)</label>
+                            <div className="px-3 py-2 bg-slate-50 rounded-lg text-slate-700 font-mono font-bold border border-slate-100">
                                 {calculateTotalTime()}
                             </div>
                         </div>
@@ -174,10 +178,6 @@ const WorkLogForm = ({ onSuccess }) => {
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
                     <input type="date" name="date" required value={formData.date} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
-                </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Time</label>
-                    <input type="time" name="startTime" required value={formData.startTime} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
                 </div>
                 <div>
                     <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Client Name</label>

@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createWorkLog, closeWorkLog } from '../../features/employee/employeeSlice';
+import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import { Plus, Trash2, Settings, Clock, TrendingUp, Activity, CheckSquare } from 'lucide-react';
@@ -10,6 +10,7 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { todayLog, isLoading } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
+    const [modalMessage, setModalMessage] = useState('');
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         title: '',
@@ -17,7 +18,8 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
         onConfirm: () => { }
     });
 
-    const isCompleted = todayLog && todayLog.logStatus === 'CLOSED';
+    const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
+    const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
 
     const [rows, setRows] = useState([
         { task: '', status: '' },
@@ -27,6 +29,10 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
 
     const [remarks, setRemarks] = useState('');
     const [notes, setNotes] = useState('');
+
+    useEffect(() => {
+        dispatch(getTodayLogStatus());
+    }, [dispatch]);
 
     const handleRowChange = (index, field, value) => {
         const newRows = [...rows];
@@ -43,15 +49,37 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
         setRows(newRows);
     };
 
-    const handleSubmit = (e) => {
+    const handleOpeningSubmit = () => {
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Start Operations Session',
+            message: 'Are you sure you want to start your work session?',
+            onConfirm: () => {
+                const payload = {
+                    logStatus: 'OPEN',
+                    process: 'Lead Operation Session Started',
+                    startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                };
+                dispatch(createWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Session Started!");
+                        setShowSuccess(true);
+                    }
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    const handleClosingSubmit = (e) => {
         e.preventDefault();
         const validRows = rows.filter(r => r.task.trim() !== '');
         const standardizedRows = validRows.map(r => ({ description: r.task, status: r.status }));
 
         setConfirmationConfig({
             isOpen: true,
-            title: 'Submit Daily Report',
-            message: `Are you sure you want to submit this daily report?`,
+            title: 'Submit Closing Report',
+            message: `Are you sure you want to finalize your daily operations?`,
             onConfirm: () => {
                 const payload = {
                     logStatus: 'CLOSED',
@@ -60,10 +88,14 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
                         tasks: standardizedRows
                     },
                     remarks: remarks,
-                    notes: notes
+                    notes: notes,
+                    endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
                 };
-                dispatch(createWorkLog(payload)).then((res) => {
-                    if (!res.error) setShowSuccess(true);
+                dispatch(closeWorkLog(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Report Submitted!");
+                        setShowSuccess(true);
+                    }
                 });
                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
             }
@@ -72,13 +104,49 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
 
     if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
 
-    if (isCompleted) {
+    if (isTodayClosed) {
         return (
             <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
                 <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
                 <h3 className="text-2xl font-black text-emerald-800 mb-2">Operations Logged!</h3>
                 <p className="text-emerald-600 font-bold">Your daily report has been submitted.</p>
+                <div className="mt-4 text-[10px] text-emerald-400 font-bold uppercase tracking-widest">
+                    Session: {todayLog?.startTime} - {todayLog?.endTime}
+                </div>
                 <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 underline">Okay, close</button>
+            </div>
+        );
+    }
+
+    if (!isTodayOpen) {
+        return (
+            <div className="space-y-6">
+                <div className="bg-gradient-to-r from-cyan-500 to-cyan-600 p-6 rounded-2xl text-white shadow-lg">
+                    <div className="flex items-center gap-4">
+                        <div className="bg-white/20 p-3 rounded-xl">
+                            <Clock size={24} className="text-white" />
+                        </div>
+                        <div>
+                            <h3 className="font-black text-2xl tracking-tight">Operations Opening</h3>
+                            <p className="text-cyan-100 text-sm font-medium">Start your work session</p>
+                        </div>
+                    </div>
+                </div>
+                <button 
+                    onClick={handleOpeningSubmit}
+                    className="w-full py-6 bg-cyan-600 hover:bg-cyan-700 text-white font-black rounded-2xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3"
+                >
+                    <TrendingUp size={24} />
+                    START WORK SESSION
+                </button>
+                <SuccessModal isOpen={showSuccess} onClose={() => { setShowSuccess(false); if (onSuccess) onSuccess(); }} message={modalMessage} />
+                <ConfirmationModal
+                    isOpen={confirmationConfig.isOpen}
+                    onClose={() => setConfirmationConfig(prev => ({ ...prev, isOpen: false }))}
+                    onConfirm={confirmationConfig.onConfirm}
+                    title={confirmationConfig.title}
+                    message={confirmationConfig.message}
+                />
             </div>
         );
     }
@@ -91,7 +159,7 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
     return (
         <motion.form
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            onSubmit={handleSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-1"
+            onSubmit={handleClosingSubmit} className="space-y-6 max-h-[80vh] overflow-y-auto px-1"
         >
             {/* Header */}
             <div className={`bg-gradient-to-r from-${themeColor}-500 to-${themeColor}-600 p-6 rounded-2xl text-white shadow-lg shadow-${themeColor}-200`}>
@@ -210,7 +278,7 @@ const LeadOperationWorkLogForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Report Submitted"
+                message={modalMessage || "Report Submitted"}
                 subMessage="Lead Operation entry recorded successfully."
             />
             <ConfirmationModal
