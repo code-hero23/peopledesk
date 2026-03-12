@@ -203,6 +203,24 @@ export const toggleCarpenterImpact = createAsyncThunk(
     }
 );
 
+// Delete Voucher
+export const deleteVoucher = createAsyncThunk(
+    'voucher/delete',
+    async (id, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const response = await axios.delete(`${API_URL}/${id}`, config);
+            // Refresh summary since cash might have been reversed
+            thunkAPI.dispatch(getFinanceSummary());
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 export const voucherSlice = createSlice({
     name: 'voucher',
     initialState,
@@ -280,6 +298,14 @@ export const voucherSlice = createSlice({
                 if (state.financeSummary) {
                     state.financeSummary.carpenterImpactEnabled = action.payload.carpenterImpactEnabled;
                 }
+            })
+            .addCase(deleteVoucher.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                const id = action.payload.id;
+                state.vouchers = state.vouchers.filter(v => v.id !== id);
+                state.manageableVouchers = state.manageableVouchers.filter(v => v.id !== id);
+                state.spentHistory = state.spentHistory.filter(v => v.id !== id);
             });
     },
 });

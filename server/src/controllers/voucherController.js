@@ -278,6 +278,52 @@ const addAdminNote = async (req, res) => {
     }
 };
 
+// @desc    Delete Voucher (Admin only)
+// @route   DELETE /api/vouchers/:id
+// @access  Private (ADMIN)
+const deleteVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        // Double check it's an ADMIN
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Only superadmins can delete vouchers' });
+        }
+
+        const voucher = await prisma.voucher.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!voucher) {
+            return res.status(404).json({ message: 'Voucher not found' });
+        }
+
+        // Financial reversal if money was already deducted
+        // Status COMPLETED or WAITING means COO approved and cash was deducted
+        if (voucher.status === 'COMPLETED' || voucher.status === 'WAITING') {
+            const finance = await prisma.finance.findFirst();
+            if (finance) {
+                await prisma.finance.update({
+                    where: { id: finance.id },
+                    data: {
+                        currentCash: finance.currentCash + voucher.amount,
+                        totalSpent: Math.max(0, finance.totalSpent - voucher.amount)
+                    }
+                });
+            }
+        }
+
+        await prisma.voucher.delete({
+            where: { id: parseInt(id) }
+        });
+
+        res.json({ message: 'Voucher deleted successfully', id: parseInt(id) });
+    } catch (error) {
+        console.error('ERROR in deleteVoucher:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     createVoucher,
     getMyVouchers,
@@ -285,5 +331,6 @@ module.exports = {
     approveVoucherAM,
     approveVoucherCOO,
     uploadProof,
-    addAdminNote
+    addAdminNote,
+    deleteVoucher
 };

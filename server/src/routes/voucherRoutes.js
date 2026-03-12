@@ -33,4 +33,7 @@ router.route('/:id/proof')
 router.route('/:id/admin-note')
     .put(protect, authorize('ADMIN'), addAdminNote);
 
+router.route('/:id')
+    .delete(protect, authorize('ADMIN'), deleteVoucher);
+
 module.exports = router;

@@ -11,6 +11,7 @@ import {
     addAdminNote,
     createVoucher,
     toggleCarpenterImpact,
+    deleteVoucher,
     reset 
 } from '../../features/voucher/voucherSlice';
 import {
@@ -44,7 +45,8 @@ import {
     Search,
     Filter,
     Calendar,
-    X
+    X,
+    Trash2
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -138,6 +140,14 @@ const VoucherManagement = () => {
 
     const handleCarpenterHubClick = () => {
         setView('carpenter');
+    };
+
+    const handleDeleteVoucher = (id) => {
+        if (window.confirm('Are you certain you want to permanently delete this voucher? If it was already approved, the funds will be automatically restored to the budget.')) {
+            dispatch(deleteVoucher(id));
+            if (selectedVoucher?.id === id) setSelectedVoucher(null);
+            toast.success('Voucher deleted and finances adjusted');
+        }
     };
 
     const handleCarpenterSubmit = async (e) => {
@@ -588,12 +598,26 @@ const VoucherManagement = () => {
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Amount</p>
                                             <p className="text-xl font-black text-slate-800 tracking-tight">₹{voucher.amount.toLocaleString()}</p>
                                         </div>
-                                        <button 
-                                            onClick={() => setSelectedVoucher(voucher)}
-                                            className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 shadow-lg shadow-slate-200 hover:shadow-blue-200 transition-all active:scale-95"
-                                        >
-                                            Review
-                                        </button>
+                                        <div className="flex items-center gap-3">
+                                            {user.role === 'ADMIN' && (
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDeleteVoucher(voucher.id);
+                                                    }}
+                                                    className="p-3 bg-rose-50 text-rose-500 rounded-2xl hover:bg-rose-100 transition-all"
+                                                    title="Delete Request"
+                                                >
+                                                    <Trash2 size={18} />
+                                                </button>
+                                            )}
+                                            <button 
+                                                onClick={() => setSelectedVoucher(voucher)}
+                                                className="px-8 py-4 bg-slate-900 text-white rounded-2xl font-black uppercase tracking-widest text-xs hover:bg-blue-600 shadow-lg shadow-slate-200 hover:shadow-blue-200 transition-all active:scale-95"
+                                            >
+                                                Review
+                                            </button>
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -741,12 +765,26 @@ const VoucherManagement = () => {
                                                 <p className="text-sm font-black text-slate-800 group-hover:text-rose-500 transition-colors">
                                                     -₹{item.amount.toLocaleString()}
                                                 </p>
-                                                <button
-                                                    onClick={() => setSelectedVoucher(item)}
-                                                    className="bg-white hover:bg-slate-900 text-slate-600 hover:text-white border border-slate-200 hover:border-slate-900 px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm w-fit"
-                                                >
-                                                    View Details
-                                                </button>
+                                                <div className="flex items-center gap-2">
+                                                    {user.role === 'ADMIN' && (
+                                                        <button
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                handleDeleteVoucher(item.id);
+                                                            }}
+                                                            className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-lg transition-all"
+                                                            title="Delete Voucher"
+                                                        >
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    )}
+                                                    <button
+                                                        onClick={() => setSelectedVoucher(item)}
+                                                        className="bg-white hover:bg-slate-900 text-slate-600 hover:text-white border border-slate-200 hover:border-slate-900 px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm w-fit"
+                                                    >
+                                                        View Details
+                                                    </button>
+                                                </div>
                                             </td>
                                         </tr>
                                     ))}
@@ -1134,12 +1172,23 @@ const VoucherManagement = () => {
                                         </div>
                                     </>
                                 ) : (
-                                    <button
-                                        onClick={() => setSelectedVoucher(null)}
-                                        className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
-                                    >
-                                        Close Details
-                                    </button>
+                                    <div className="flex items-center gap-4">
+                                        {user.role === 'ADMIN' && (
+                                            <button
+                                                onClick={() => handleDeleteVoucher(selectedVoucher.id)}
+                                                className="p-5 border-2 border-rose-100 text-rose-500 hover:bg-rose-50 rounded-[1.5rem] transition-all"
+                                                title="Delete Voucher"
+                                            >
+                                                <Trash2 size={20} />
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => setSelectedVoucher(null)}
+                                            className="grow py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                                        >
+                                            Close Details
+                                        </button>
+                                    </div>
                                 )}
                             </div>
                         </motion.div>
