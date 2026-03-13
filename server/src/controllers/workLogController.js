@@ -419,11 +419,6 @@ const syncCallLogs = async (req, res) => {
 
     try {
         const userId = req.user.id;
-
-        // Use provided syncDate or default to current day
-        const targetDate = syncDate ? new Date(syncDate) : new Date();
-        targetDate.setHours(0, 0, 0, 0);
-
         let newLogs = typeof logs === 'string' ? JSON.parse(logs) : logs;
 
         // Filter by SIM slot if requested
@@ -435,53 +430,65 @@ const syncCallLogs = async (req, res) => {
             });
         }
 
-        // Use upsert into the dedicated CallLog table
-        const existingCallLog = await prisma.callLog.findUnique({
-            where: {
-                userId_date: {
-                    userId,
-                    date: targetDate
-                }
-            }
-        });
-
-        let consolidatedLogs = [];
-        if (existingCallLog) {
-            consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
-            // Robust deduplication key: combine date and number, ensure both are strings
-            const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}`));
-
-            newLogs.forEach(log => {
-                const key = `${String(log.date)}-${String(log.number)}`;
-                if (!existingKeys.has(key)) {
-                    consolidatedLogs.push(log);
-                    existingKeys.add(key);
-                }
-            });
-        } else {
-            consolidatedLogs = newLogs;
+        if (!newLogs || newLogs.length === 0) {
+            return res.json({ message: 'No logs to sync' });
         }
 
-        const callLog = await prisma.callLog.upsert({
-            where: {
-                userId_date: {
-                    userId,
-                    date: targetDate
-                }
-            },
-            update: {
-                calls: consolidatedLogs,
-                totalCalls: consolidatedLogs.length
-            },
-            create: {
-                userId,
-                date: targetDate,
-                calls: consolidatedLogs,
-                totalCalls: consolidatedLogs.length
-            }
-        });
+        // Group logs by Date (YYYY-MM-DD)
+        const groupedLogs = newLogs.reduce((acc, log) => {
+            const date = new Date(log.date || syncDate || new Date());
+            date.setHours(0, 0, 0, 0);
+            const dateStr = date.toISOString().split('T')[0];
+            if (!acc[dateStr]) acc[dateStr] = [];
+            acc[dateStr].push(log);
+            return acc;
+        }, {});
 
-        res.json(callLog);
+        const results = [];
+
+        // Process each day group
+        for (const [dateStr, dayLogs] of Object.entries(groupedLogs)) {
+            const targetDate = new Date(dateStr);
+            targetDate.setHours(0, 0, 0, 0);
+
+            const existingCallLog = await prisma.callLog.findUnique({
+                where: { userId_date: { userId, date: targetDate } }
+            });
+
+            let consolidatedLogs = [];
+            if (existingCallLog) {
+                consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
+                const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}`));
+
+                dayLogs.forEach(log => {
+                    const key = `${String(log.date)}-${String(log.number)}`;
+                    if (!existingKeys.has(key)) {
+                        consolidatedLogs.push(log);
+                        existingKeys.add(key);
+                    }
+                });
+            } else {
+                consolidatedLogs = dayLogs;
+            }
+
+            const updatedLog = await prisma.callLog.upsert({
+                where: { userId_date: { userId, date: targetDate } },
+                update: {
+                    calls: consolidatedLogs,
+                    totalCalls: consolidatedLogs.length
+                },
+                create: {
+                    userId,
+                    date: targetDate,
+                    calls: consolidatedLogs,
+                    totalCalls: consolidatedLogs.length
+                }
+            });
+            results.push(updatedLog);
+        }
+
+        // Return the latest record or summary
+        res.json(results[results.length - 1]);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
