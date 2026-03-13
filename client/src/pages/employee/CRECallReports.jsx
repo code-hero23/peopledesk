@@ -142,7 +142,7 @@ const CRECallReports = () => {
         try {
             toast.info("Dispatching test event to Background Engine...");
             const result = await BackgroundRunner.dispatchEvent({
-                label: 'dailyCallLogSync',
+                event: 'dailyCallLogSync',
                 details: {}
             });
             console.log("Background Hub Result:", result);
