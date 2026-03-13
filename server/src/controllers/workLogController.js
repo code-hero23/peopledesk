@@ -560,9 +560,12 @@ const getAllCallStats = async (req, res) => {
             let filteredCalls = log.calls || [];
 
             // 1. Filter by DATE (to remove вчерашние logs synced today)
+            // 1. Filter by DATE (to remove昨日 logs synced today) - IST Aware
             if (startDate && endDate) {
-                const s = new Date(startDate + 'T00:00:00').getTime();
-                const e = new Date(endDate + 'T23:59:59.999').getTime();
+                // IST starts 5.5 hours BEFORE UTC day
+                const s = new Date(startDate + 'T00:00:00').getTime() - (5.5 * 60 * 60 * 1000);
+                const e = new Date(endDate + 'T23:59:59.999').getTime() - (5.5 * 60 * 60 * 1000);
+                
                 filteredCalls = filteredCalls.filter(c => {
                     const cDate = new Date(c.date).getTime();
                     return cDate >= s && cDate <= e;

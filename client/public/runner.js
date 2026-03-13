@@ -1,7 +1,7 @@
 // runner.js - Optimized for 5-Phase Automated Sync
 // This headless script runs purely without DOM access.
 
-addEventListener('dailyCallLogSync', async (resolve, reject) => {
+addEventListener('dailyCallLogSync', async (event) => {
     try {
         console.log("Background Task Triggered: dailyCallLogSync");
 
@@ -11,7 +11,7 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         
         if (!CallLogPlugin || !Preferences) {
             console.error("Required plugins (CallLog or Preferences) are missing.");
-            return resolve({ status: 'error', message: 'Plugins missing' });
+            return event.resolve({ status: 'error', message: 'Plugins missing' });
         }
 
         // 2. IST Time Calculation (UTC + 5.5)
@@ -62,7 +62,7 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
 
         if (activePhaseIndex === -1) {
             console.log(`Not in a sync window or already synced today. (IST: ${istHours}:${istMinutes})`);
-            return resolve();
+            return event.resolve({ status: 'skipping', reason: 'out_of_window' });
         }
 
         console.log(`Triggering Sync: ${PHASES[activePhaseIndex].label}`);
@@ -86,7 +86,7 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
 
         if (!logs || logs.length === 0) {
             console.log("No call logs found on device.");
-            return resolve();
+            return event.resolve({ status: 'success', message: 'no_logs' });
         }
 
         let filteredLogs = logs.filter(log => {
@@ -95,9 +95,8 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
             return logSlot === officialSim || logSlot.includes(officialSim);
         });
 
-        // 8. Network Transmission
-        // 8. Network Transmission - Updated to use correct server IP
-        const API_URL = 'http://103.14.123.189:5001/api/worklogs/sync-calls';
+        // 8. Network Transmission - Corrected Port to 5000
+        const API_URL = 'http://103.14.123.189:5000/api/worklogs/sync-calls';
         const response = await fetch(API_URL, {
             method: 'PUT',
             headers: {
@@ -125,10 +124,10 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         });
 
         console.log(`Sync Successful: ${PHASES[activePhaseIndex].label}. IST: ${istNow.toLocaleTimeString()}`);
-        resolve();
+        event.resolve({ status: 'success', phase: activePhaseIndex });
 
     } catch (error) {
         console.error("Background Runner Failure: ", error.message);
-        reject(error);
+        event.reject({ error: error.message });
     }
 });
