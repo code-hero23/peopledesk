@@ -73,7 +73,7 @@ const AdminCallReports = () => {
         try {
             setIsSavingSettings(true);
             const token = JSON.parse(localStorage.getItem('user')).token;
-            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://103.14.123.189:5000/api');
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api');
             
             await axios.post(`${baseUrl}/settings`, {
                 key: 'EXCLUDED_EMPLOYEE_NUMBERS',
@@ -97,7 +97,7 @@ const AdminCallReports = () => {
         try {
             setIsExporting(true);
             const token = JSON.parse(localStorage.getItem('user')).token;
-            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://103.14.123.189:5000/api');
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api');
             
             const response = await fetch(`${baseUrl}/export/call-stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -133,7 +133,7 @@ const AdminCallReports = () => {
         try {
             setIsEmailing(true);
             const token = JSON.parse(localStorage.getItem('user')).token;
-            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://103.14.123.189:5000/api');
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api');
             
             const response = await axios.post(`${baseUrl}/export/call-stats/email`, {
                 ...dateRange,

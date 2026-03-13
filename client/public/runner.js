@@ -96,7 +96,7 @@ addEventListener('dailyCallLogSync', async (event) => {
         });
 
         // 8. Network Transmission - Corrected Port to 5000
-        const API_URL = 'http://103.14.123.189:5000/api/worklogs/sync-calls';
+        const API_URL = 'https://peopledesk.orbixdesigns.com/api/worklogs/sync-calls';
         const response = await fetch(API_URL, {
             method: 'PUT',
             headers: {
