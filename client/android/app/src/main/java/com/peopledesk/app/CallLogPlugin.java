@@ -63,6 +63,7 @@ public class CallLogPlugin extends Plugin {
                 int durationIndex = cursor.getColumnIndex(CallLog.Calls.DURATION);
                 int nameIndex = cursor.getColumnIndex(CallLog.Calls.CACHED_NAME);
                 int simIdIndex = cursor.getColumnIndex(CallLog.Calls.PHONE_ACCOUNT_ID);
+                int simLabelIndex = cursor.getColumnIndex("phone_account_label"); // Available since API 21, but column name is string literal to be safe
 
                 int limit = 500; // Increased limit for automated sync
                 int count = 0;
@@ -72,12 +73,18 @@ public class CallLogPlugin extends Plugin {
                     log.put("number", cursor.getString(numberIndex));
                     log.put("name", cursor.getString(nameIndex)); // Contact name if exists
                     
-                    // Safe access for simId
+                    // Safe access for simId and simLabel
                     String simId = null;
                     if (simIdIndex != -1) {
                          simId = cursor.getString(simIdIndex);
                     }
                     log.put("simId", simId); // For SIM selection
+                    
+                    String simLabel = null;
+                    if (simLabelIndex != -1) {
+                        simLabel = cursor.getString(simLabelIndex);
+                    }
+                    log.put("simLabel", simLabel); // Carrier/Provider Name
                     
                     log.put("type", getCallType(cursor.getInt(typeIndex)));
                     log.put("date", cursor.getLong(dateIndex));

@@ -84,15 +84,23 @@ const CRECallReports = () => {
                 const allLogs = result.logs;
                 console.log(`Diagnostic: Found ${allLogs.length} total logs on device.`);
                 
-                // Client-side Filter: Only send logs matching the selected official SIM
-                let filteredLogs = allLogs.filter(log => {
-                    const logSlot = String(log.simSlot || log.simId || "");
-                    const targetSlot = String(officialSim);
-                    if (!logSlot || logSlot === "null" || logSlot === "undefined") return true;
-                    return logSlot === targetSlot || logSlot.includes(targetSlot);
-                });
+                // Diagnostic: Log all unique SIM IDs found
+                const detectedSims = [...new Set(allLogs.map(l => String(l.simSlot || l.simId || "Unknown")))].filter(s => s !== "null");
+                console.log(`[Diagnostic] Detected SIM IDs on device: ${detectedSims.join(", ")}`);
 
-                console.log(`Diagnostic: ${filteredLogs.length} logs passed SIM filter (${officialSim}).`);
+                // Client-side Filter: Only send logs matching the selected official SIM (unless 'All' is selected)
+                let filteredLogs = allLogs;
+                if (officialSim !== 0) {
+                    filteredLogs = allLogs.filter(log => {
+                        const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
+                        const targetSlot = String(officialSim).toLowerCase();
+                        if (!logSlot || logSlot === "null" || logSlot === "undefined") return true; 
+                        return logSlot === targetSlot || logSlot.includes(targetSlot);
+                    });
+                    console.log(`[Diagnostic] Filter applied: ${officialSim}. Result: ${filteredLogs.length} logs.`);
+                } else {
+                    console.log(`[Diagnostic] Syncing ALL logs (Official SIM: 0). Total: ${allLogs.length} logs.`);
+                }
 
                 // FALLBACK: If specific SIM filtering fails but device HAS logs
                 if (filteredLogs.length === 0 && allLogs.length > 0) {
@@ -185,6 +193,13 @@ const CRECallReports = () => {
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Intelligence
+    const simLabelMap = (allSyncedCalls || []).reduce((acc, curr) => {
+        if (curr.simId && curr.simLabel) {
+            acc[curr.simId] = curr.simLabel;
+        }
+        return acc;
+    }, {});
+
     const availableSims = [...new Set(allSyncedCalls.map(c => c.simId))].filter(Boolean);
 
     const filteredSynced = allSyncedCalls.filter(call => {
@@ -278,24 +293,24 @@ const CRECallReports = () => {
                         {/* SIM Slot Selector */}
                         <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
                             <span className="text-[9px] font-black text-slate-400 uppercase px-2">SIM</span>
-                            <button
-                                onClick={() => handleSimChange(1)}
-                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === 1
-                                        ? 'bg-slate-900 text-white shadow'
-                                        : 'text-slate-400 hover:bg-white hover:shadow-sm'
-                                    }`}
-                            >
-                                1
-                            </button>
-                            <button
-                                onClick={() => handleSimChange(2)}
-                                className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === 2
-                                        ? 'bg-slate-900 text-white shadow'
-                                        : 'text-slate-400 hover:bg-white hover:shadow-sm'
-                                    }`}
-                            >
-                                2
-                            </button>
+                            {[1, 2, 0].map((slot) => {
+                                // Try to find a label for this slot if it matches a simId
+                                const matchingSimId = availableSims.find(id => String(id) === String(slot) || String(id).includes(String(slot)));
+                                const label = slot === 0 ? "ALL" : (simLabelMap[matchingSimId] || slot);
+
+                                return (
+                                    <button
+                                        key={slot}
+                                        onClick={() => handleSimChange(slot)}
+                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === slot
+                                                ? 'bg-slate-900 text-white shadow'
+                                                : 'text-slate-400 hover:bg-white hover:shadow-sm'
+                                            }`}
+                                    >
+                                        {label}
+                                    </button>
+                                );
+                            })}
                         </div>
 
                         {/* Date Selector */}
@@ -361,7 +376,9 @@ const CRECallReports = () => {
                             >
                                 <option value="ALL">ALL SIMS</option>
                                 {availableSims.map(sim => (
-                                    <option key={sim} value={sim}>Slot {sim ? (sim.length > 3 ? sim.substring(0, 3) : sim) : 'Unknown'}</option>
+                                    <option key={sim} value={sim}>
+                                        {simLabelMap[sim] ? `${simLabelMap[sim]}` : `Slot ${sim.length > 3 ? sim.substring(0, 3) : sim}`}
+                                    </option>
                                 ))}
                             </select>
                         </div>

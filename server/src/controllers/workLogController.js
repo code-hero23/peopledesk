@@ -598,12 +598,14 @@ const getAllCallStats = async (req, res) => {
                 const e = startOfIstDay(endDate) + (24 * 60 * 60 * 1000) - 1; // End of IST day
 
                 filteredCalls = filteredCalls.filter(c => {
-                    const cDate = new Date(parseInt(c.date)).getTime();
-                    return cDate >= s && cDate <= e;
+                    if (!c.date) return false;
+                    // Robust parsing: handles both numeric timestamps and ISO strings
+                    const timestamp = !isNaN(c.date) ? parseInt(c.date) : new Date(c.date).getTime();
+                    return timestamp >= s && timestamp <= e;
                 });
                 
-                if (log.userId === 1 || log.userId === 2) { 
-                    console.log(`[Debug] Filtered calls for User ${log.userId}: ${filteredCalls.length} / ${log.calls.length}`);
+                if (log.userId === 1 || log.userId === 2 || filteredCalls.length > 0) { 
+                    console.log(`[Debug] User ${log.userId}: Found ${filteredCalls.length}/${log.calls.length} calls in range.`);
                 }
             }
 
