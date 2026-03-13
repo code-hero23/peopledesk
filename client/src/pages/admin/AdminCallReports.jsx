@@ -178,7 +178,7 @@ const AdminCallReports = () => {
 
     // Chart Data
     const barData = metricsArray.slice(0, 10).map(m => ({
-        name: m.name.split(' ')[0],
+        name: (m.name || 'Unknown').split(' ')[0],
         Calls: m.totalCalls,
         TalkTime: Math.round(m.duration / 60)
     }));
@@ -392,7 +392,7 @@ const AdminCallReports = () => {
                             <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-4">Global Distribution</h3>
                             <div className="flex-1 w-full min-h-[220px]">
                                 {globalPieData.length > 0 ? (
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={globalPieData}
@@ -429,7 +429,7 @@ const AdminCallReports = () => {
                                 </h3>
                             </div>
                             <div className="flex-1 w-full pb-4 min-h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
@@ -483,7 +483,7 @@ const AdminCallReports = () => {
                                                 <td className="px-10 py-6">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                            {metrics.name.charAt(0)}
+                                                            {(metrics.name || "U").charAt(0)}
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-sm font-black text-slate-800">{metrics.name}</span>
@@ -603,14 +603,14 @@ const AdminCallReports = () => {
                         {/* Profile & Pie Chart */}
                         <div className="lg:col-span-4 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-2xl flex flex-col items-center">
                             <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black mb-4 shadow-xl shadow-blue-200">
-                                {selectedEmployee.name.charAt(0)}
+                                {(selectedEmployee.name || "U").charAt(0)}
                             </div>
                             <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
                             <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
 
                             <div className="w-full space-y-4">
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <PieChart>
                                             <Pie
                                                 data={getPieData(selectedEmployee)}
