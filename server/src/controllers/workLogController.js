@@ -434,11 +434,25 @@ const syncCallLogs = async (req, res) => {
             return res.json({ message: 'No logs to sync' });
         }
 
+        console.log(`[Sync] Received ${newLogs.length} logs for User ${userId}. SIM Filter: ${simFilter}`);
+
         // Group logs by Date (YYYY-MM-DD) - IST Aware (UTC+5:30)
         const groupedLogs = newLogs.reduce((acc, log) => {
-            const timestamp = log.date || syncDate || Date.now();
+            let timestamp = log.date || syncDate || Date.now();
+            
+            // Handle some plugins returning seconds instead of ms
+            if (typeof timestamp === 'number' && timestamp < 10000000000) {
+                timestamp = timestamp * 1000;
+            }
+
+            const d = new Date(timestamp);
+            if (isNaN(d.getTime())) {
+                console.warn("[Sync] Invalid date encountered:", timestamp);
+                return acc;
+            }
+
             // Convert to IST (UTC+5:30) for grouping
-            const istDate = new Date(new Date(timestamp).getTime() + (5.5 * 60 * 60 * 1000));
+            const istDate = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
             const dateStr = istDate.toISOString().split('T')[0];
             
             if (!acc[dateStr]) acc[dateStr] = [];

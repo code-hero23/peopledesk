@@ -26,7 +26,12 @@ const CRECallReports = () => {
     const [filterType, setFilterType] = useState('ALL');
     const [simFilter, setSimFilter] = useState('ALL');
     const [isUniqueOnly, setIsUniqueOnly] = useState(false);
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const getIstToday = () => {
+        const d = new Date();
+        const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
+        return new Date(utc + (3600000 * 5.5)).toISOString().split('T')[0];
+    };
+    const [selectedDate, setSelectedDate] = useState(getIstToday());
     const [isFetchingLocal, setIsFetchingLocal] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
 
@@ -73,61 +78,56 @@ const CRECallReports = () => {
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
                 const allLogs = result.logs;
+                console.log(`Diagnostic: Found ${allLogs.length} total logs on device.`);
                 
                 // Client-side Filter: Only send logs matching the selected official SIM
                 let filteredLogs = allLogs.filter(log => {
                     const logSlot = String(log.simSlot || log.simId || "");
                     const targetSlot = String(officialSim);
-                    
-                    // If device doesn't report SIM ID, we allow it (safety for single SIM)
                     if (!logSlot || logSlot === "null" || logSlot === "undefined") return true;
-                    
-                    // Exact match or contains (e.g., "slot 1" contains "1")
                     return logSlot === targetSlot || logSlot.includes(targetSlot);
                 });
+
+                console.log(`Diagnostic: ${filteredLogs.length} logs passed SIM filter (${officialSim}).`);
 
                 // FALLBACK: If specific SIM filtering fails but device HAS logs
                 if (filteredLogs.length === 0 && allLogs.length > 0) {
                     const uniqueSims = [...new Set(allLogs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null" && s !== "undefined");
-                    
-                    // If there's only one unique SIM reporting logs, we assume it's the target one
                     if (uniqueSims.length === 1) {
                         filteredLogs = allLogs;
-                        console.log("Single SIM detected, bypassing filter:", uniqueSims[0]);
+                        console.log("Diagnostic: Single SIM auto-fallback applied.");
                     }
                 }
 
                 if (filteredLogs.length === 0) {
-                    const detected = [...new Set(allLogs.map(l => l.simSlot || l.simId))].filter(Boolean).join(", ");
-                    toast.warning(
-                        <div className="p-1">
-                            <p className="font-bold">No logs found for SIM {officialSim}</p>
-                            <p className="text-[10px] opacity-70 mt-1">Found logs for: {detected || "Unknown"}. Try changing SIM slot selection above.</p>
-                        </div>,
-                        { autoClose: 5000 }
-                    );
+                    toast.warning(`No logs found for SIM ${officialSim}. Detected SIM IDs: ${[...new Set(allLogs.map(l => l.simSlot || l.simId))].filter(Boolean).join(", ")}`);
                     return;
                 }
 
                 const res = await dispatch(syncCallLogs({ 
                     logs: filteredLogs, 
-                    simFilter: officialSim 
+                    simFilter: officialSim,
+                    syncDate: new Date().toISOString()
                 }));
 
                 if (!res.error) {
-                    toast.success(`${filteredLogs.length} logs synced from SIM ${officialSim}`);
+                    toast.success(`${filteredLogs.length} logs successfully moved to VPS.`);
                     setLastSyncTime(new Date());
                     dispatch(getMyCallLogs({ 
                         startDate: selectedDate, 
                         endDate: selectedDate 
                     }));
+                } else {
+                    const errorDetails = res.payload || res.error?.message || "Unknown Network Error";
+                    console.error("Manual Sync Backend Error:", errorDetails);
+                    toast.error(`VPS Sync Failed: ${errorDetails}`);
                 }
             } else {
-                toast.info("No new logs found on device.");
+                toast.info("No call logs detected in device history.");
             }
         } catch (error) {
-            console.error("Sync Error:", error);
-            toast.error("Failed to fetch logs from device.");
+            console.error("Native Plugin Error:", error);
+            toast.error(`Native Bridge Error: ${error.message}`);
         } finally {
             setIsFetchingLocal(false);
         }
@@ -142,6 +142,7 @@ const CRECallReports = () => {
         try {
             toast.info("Dispatching test event to Background Engine...");
             const result = await BackgroundRunner.dispatchEvent({
+                label: 'com.peopledesk.app.runner',
                 event: 'dailyCallLogSync',
                 details: {}
             });

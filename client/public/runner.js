@@ -1,16 +1,27 @@
-// runner.js - Optimized for 5-Phase Automated Sync
-// This headless script runs purely without DOM access.
-
-addEventListener('dailyCallLogSync', async (event) => {
+const safeLog = (msg) => {
     try {
-        console.log("Background Task Triggered: dailyCallLogSync");
+        if (typeof BackgroundRunner !== 'undefined' && BackgroundRunner.log) {
+            BackgroundRunner.log({ message: String(msg) });
+        }
+        console.log(msg);
+    } catch (e) {}
+};
 
-        // 1. Core Services Setup
-        const CallLogPlugin = Capacitor.Plugins.CallLog;
-        const Preferences = Capacitor.Plugins.Preferences;
+BackgroundRunner.on('dailyCallLogSync', async (event) => {
+    try {
+        safeLog("Background Task Triggered: dailyCallLogSync");
+
+        // 1. Core Services Setup - v3 Standard
+        let CallLogPlugin = BackgroundRunner.plugins.CallLog;
+        let Preferences = BackgroundRunner.plugins.Preferences;
         
+        // Fallback for older Capacitor environments or different registration names
+        if (!CallLogPlugin) CallLogPlugin = (typeof Capacitor !== 'undefined') ? Capacitor.Plugins.CallLog : null;
+        if (!Preferences) Preferences = (typeof Capacitor !== 'undefined') ? Capacitor.Plugins.Preferences : null;
+
+        safeLog("Checking plugins...");
         if (!CallLogPlugin || !Preferences) {
-            console.error("Required plugins (CallLog or Preferences) are missing.");
+            safeLog("Required plugins (CallLog or Preferences) are missing.");
             return event.resolve({ status: 'error', message: 'Plugins missing' });
         }
 
@@ -39,7 +50,6 @@ addEventListener('dailyCallLogSync', async (event) => {
         const { value: lastSyncData } = await Preferences.get({ key: 'last_synced_report' });
         let syncStatus = lastSyncData ? JSON.parse(lastSyncData) : { date: "", phases: [] };
 
-        // Reset if it's a new day
         if (syncStatus.date !== todayStr) {
             syncStatus = { date: todayStr, phases: [] };
         }
@@ -51,7 +61,6 @@ addEventListener('dailyCallLogSync', async (event) => {
             const targetTotalMinutes = (phase.h * 60) + phase.m;
             const currentTotalMinutes = (istHours * 60) + istMinutes;
             
-            // Check if we are within the window (15 mins) and haven't synced this phase today
             if (currentTotalMinutes >= targetTotalMinutes && 
                 currentTotalMinutes < targetTotalMinutes + 15 && 
                 !syncStatus.phases.includes(i)) {
@@ -61,11 +70,11 @@ addEventListener('dailyCallLogSync', async (event) => {
         }
 
         if (activePhaseIndex === -1) {
-            console.log(`Not in a sync window or already synced today. (IST: ${istHours}:${istMinutes})`);
+            safeLog(`Not in a sync window. (IST: ${istHours}:${istMinutes})`);
             return event.resolve({ status: 'skipping', reason: 'out_of_window' });
         }
 
-        console.log(`Triggering Sync: ${PHASES[activePhaseIndex].label}`);
+        safeLog(`Triggering Sync: ${PHASES[activePhaseIndex].label}`);
 
         // 6. Fetch User & Official SIM Prefs
         const [userPrefs, simPrefs] = await Promise.all([
@@ -74,7 +83,7 @@ addEventListener('dailyCallLogSync', async (event) => {
         ]);
 
         if (!userPrefs.value) {
-            throw new Error("User credentials not found. Ensure user is logged in.");
+            throw new Error("User credentials not found.");
         }
         
         const user = JSON.parse(userPrefs.value);
@@ -85,7 +94,7 @@ addEventListener('dailyCallLogSync', async (event) => {
         const logs = logsResult.logs;
 
         if (!logs || logs.length === 0) {
-            console.log("No call logs found on device.");
+            safeLog("No call logs found on device.");
             return event.resolve({ status: 'success', message: 'no_logs' });
         }
 
@@ -95,7 +104,7 @@ addEventListener('dailyCallLogSync', async (event) => {
             return logSlot === officialSim || logSlot.includes(officialSim);
         });
 
-        // 8. Network Transmission - Corrected Port to 5000
+        // 8. Network Transmission
         const API_URL = 'https://peopledesk.orbixdesigns.com/api/worklogs/sync-calls';
         const response = await fetch(API_URL, {
             method: 'PUT',
@@ -123,11 +132,11 @@ addEventListener('dailyCallLogSync', async (event) => {
             value: JSON.stringify(syncStatus)
         });
 
-        console.log(`Sync Successful: ${PHASES[activePhaseIndex].label}. IST: ${istNow.toLocaleTimeString()}`);
+        safeLog(`Sync Successful: ${PHASES[activePhaseIndex].label}`);
         event.resolve({ status: 'success', phase: activePhaseIndex });
 
     } catch (error) {
-        console.error("Background Runner Failure: ", error.message);
+        safeLog("Background Runner Failure: " + error.message);
         event.reject({ error: error.message });
     }
 });

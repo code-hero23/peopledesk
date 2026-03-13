@@ -243,6 +243,15 @@ const AdminCallReports = () => {
         return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
 
+    useEffect(() => {
+        if (callStats && callStats.length > 0) {
+            console.log(`[Admin Debug] Received ${callStats.length} call log sets.`);
+            console.log("[Admin Debug] First entry sample:", callStats[0]);
+        } else if (!isLoading) {
+            console.log("[Admin Debug] No call stats available for the selected range.");
+        }
+    }, [callStats, isLoading]);
+
     if (isLoading && callStats.length === 0) {
         return (
             <div className="flex flex-col items-center justify-center min-h-[500px] space-y-4">
