@@ -444,10 +444,13 @@ const syncCallLogs = async (req, res) => {
         const groupedLogs = newLogs.reduce((acc, log) => {
             let timestamp = log.date || syncDate || Date.now();
             
-            // Handle some plugins returning seconds instead of ms
+            // Handle some plugins returning seconds instead of ms (10-digit)
             if (typeof timestamp === 'number' && timestamp < 10000000000) {
                 timestamp = timestamp * 1000;
             }
+
+            // Normalization: Ensure the object itself has the ms timestamp
+            log.date = timestamp;
 
             const d = new Date(timestamp);
             if (isNaN(d.getTime())) {

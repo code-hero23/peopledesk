@@ -7,22 +7,21 @@ const safeLog = (msg) => {
     } catch (e) {}
 };
 
-BackgroundRunner.on('dailyCallLogSync', async (event) => {
+addEventListener('dailyCallLogSync', async (event) => {
     try {
         safeLog("Background Task Triggered: dailyCallLogSync");
 
-        // 1. Core Services Setup - v3 Standard
-        let CallLogPlugin = BackgroundRunner.plugins.CallLog;
-        let Preferences = BackgroundRunner.plugins.Preferences;
+        // 1. Core Services Setup - v3 Standard with legacy fallbacks
+        let CallLogPlugin = (typeof BackgroundRunner !== 'undefined' && BackgroundRunner.plugins) ? BackgroundRunner.plugins.CallLog : null;
+        let Preferences = (typeof BackgroundRunner !== 'undefined' && BackgroundRunner.plugins) ? BackgroundRunner.plugins.Preferences : null;
         
-        // Fallback for older Capacitor environments or different registration names
         if (!CallLogPlugin) CallLogPlugin = (typeof Capacitor !== 'undefined') ? Capacitor.Plugins.CallLog : null;
         if (!Preferences) Preferences = (typeof Capacitor !== 'undefined') ? Capacitor.Plugins.Preferences : null;
 
         safeLog("Checking plugins...");
         if (!CallLogPlugin || !Preferences) {
             safeLog("Required plugins (CallLog or Preferences) are missing.");
-            return event.resolve({ status: 'error', message: 'Plugins missing' });
+            return;
         }
 
         // 2. IST Time Calculation (UTC + 5.5)
@@ -37,7 +36,7 @@ BackgroundRunner.on('dailyCallLogSync', async (event) => {
         const istMinutes = istNow.getMinutes();
         const todayStr = istNow.toISOString().split('T')[0];
 
-        // 3. Phase Definitions (H, M, Label)
+        // 3. Phase Definitions
         const PHASES = [
             { h: 11, m: 0, label: "Phase 1 (11:00 AM)" },
             { h: 12, m: 0, label: "Phase 2 (12:00 PM)" },
@@ -46,7 +45,7 @@ BackgroundRunner.on('dailyCallLogSync', async (event) => {
             { h: 18, m: 50, label: "Phase 5 (06:50 PM)" }
         ];
 
-        // 4. Persistence Check: Avoid Duplicate Syncs per Phase
+        // 4. Persistence Check
         const { value: lastSyncData } = await Preferences.get({ key: 'last_synced_report' });
         let syncStatus = lastSyncData ? JSON.parse(lastSyncData) : { date: "", phases: [] };
 
@@ -54,7 +53,7 @@ BackgroundRunner.on('dailyCallLogSync', async (event) => {
             syncStatus = { date: todayStr, phases: [] };
         }
 
-        // 5. Window Logic (Target Time to Target Time + 15 mins)
+        // 5. Window Logic
         let activePhaseIndex = -1;
         for (let i = 0; i < PHASES.length; i++) {
             const phase = PHASES[i];
@@ -71,7 +70,7 @@ BackgroundRunner.on('dailyCallLogSync', async (event) => {
 
         if (activePhaseIndex === -1) {
             safeLog(`Not in a sync window. (IST: ${istHours}:${istMinutes})`);
-            return event.resolve({ status: 'skipping', reason: 'out_of_window' });
+            return;
         }
 
         safeLog(`Triggering Sync: ${PHASES[activePhaseIndex].label}`);
@@ -95,7 +94,7 @@ BackgroundRunner.on('dailyCallLogSync', async (event) => {
 
         if (!logs || logs.length === 0) {
             safeLog("No call logs found on device.");
-            return event.resolve({ status: 'success', message: 'no_logs' });
+            return;
         }
 
         let filteredLogs = logs.filter(log => {
@@ -133,10 +132,8 @@ BackgroundRunner.on('dailyCallLogSync', async (event) => {
         });
 
         safeLog(`Sync Successful: ${PHASES[activePhaseIndex].label}`);
-        event.resolve({ status: 'success', phase: activePhaseIndex });
 
     } catch (error) {
         safeLog("Background Runner Failure: " + error.message);
-        event.reject({ error: error.message });
     }
 });

@@ -159,9 +159,11 @@ const CRECallReports = () => {
         }
 
         try {
-            const { BackgroundRunner } = getPlugins();
+            const plugins = getPlugins();
+            const BackgroundRunner = plugins.BackgroundRunner;
+            
             if (!BackgroundRunner) {
-                toast.error("Background Runner plugin not found on this device.");
+                toast.error("Background Runner plugin is not registered on this device.");
                 return;
             }
             toast.info("Dispatching test event to Background Engine...");
@@ -173,7 +175,7 @@ const CRECallReports = () => {
             console.log("Background Hub Result:", result);
             toast.success("Event dispatched! Check your server data in a few moments.");
         } catch (error) {
-            console.error("Test Event Error:", error);
+            console.error("Native Dispatch Error:", error);
             const errMsg = error.message || String(error);
             toast.error(`Sync Trigger Error: ${errMsg}`, { autoClose: 5000 });
         }
