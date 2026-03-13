@@ -9,8 +9,10 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         const CallLogPlugin = Capacitor.Plugins.CallLog;
         const Preferences = Capacitor.Plugins.Preferences;
         
-        if (!CallLogPlugin) throw new Error("CallLogPlugin is unavailable.");
-        if (!Preferences) throw new Error("Preferences is unavailable.");
+        if (!CallLogPlugin || !Preferences) {
+            console.error("Required plugins (CallLog or Preferences) are missing.");
+            return resolve({ status: 'error', message: 'Plugins missing' });
+        }
 
         // 2. IST Time Calculation (UTC + 5.5)
         const getIST = () => {

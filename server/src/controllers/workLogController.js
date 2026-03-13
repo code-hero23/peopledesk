@@ -434,11 +434,13 @@ const syncCallLogs = async (req, res) => {
             return res.json({ message: 'No logs to sync' });
         }
 
-        // Group logs by Date (YYYY-MM-DD)
+        // Group logs by Date (YYYY-MM-DD) - IST Aware (UTC+5:30)
         const groupedLogs = newLogs.reduce((acc, log) => {
-            const date = new Date(log.date || syncDate || new Date());
-            date.setHours(0, 0, 0, 0);
-            const dateStr = date.toISOString().split('T')[0];
+            const timestamp = log.date || syncDate || Date.now();
+            // Convert to IST (UTC+5:30) for grouping
+            const istDate = new Date(new Date(timestamp).getTime() + (5.5 * 60 * 60 * 1000));
+            const dateStr = istDate.toISOString().split('T')[0];
+            
             if (!acc[dateStr]) acc[dateStr] = [];
             acc[dateStr].push(log);
             return acc;

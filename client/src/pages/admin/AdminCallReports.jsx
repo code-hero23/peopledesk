@@ -43,6 +43,10 @@ const AdminCallReports = () => {
         dispatch(getCallStats({ ...dateRange }));
     }, [dispatch, dateRange]);
 
+    useEffect(() => {
+        console.log("Admin Call Stats Data:", callStats);
+    }, [callStats]);
+
     const handleRefresh = () => {
         dispatch(getCallStats({ ...dateRange }));
     };
