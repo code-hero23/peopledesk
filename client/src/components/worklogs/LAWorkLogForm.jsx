@@ -54,6 +54,17 @@ const LAWorkLogForm = ({ onSuccess }) => {
     const [closingData, setClosingData] = useState({ ...initialMetrics, notes: '' });
     const [dailyNotes, setDailyNotes] = useState(''); // Separate state for easier management
 
+    // Persistence: Preload data from todayLog (Opening Metrics) into Closing Form
+    useEffect(() => {
+        if (isTodayOpen && todayLog?.la_opening_metrics) {
+            setClosingData(prev => ({
+                ...prev,
+                ...todayLog.la_opening_metrics,
+                notes: prev.notes // Keep notes separate if needed
+            }));
+        }
+    }, [isTodayOpen, todayLog]);
+
     // Project Report State
     const [projectReport, setProjectReport] = useState({
         date: new Date().toISOString().split('T')[0],
@@ -342,12 +353,38 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                 <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-10 -mt-10"></div>
                                 <div className="relative z-10">
                                     <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-50">
-                                        <div className="p-3 bg-slate-100 text-slate-600 rounded-xl">
-                                            <Layout size={24} />
-                                        </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-slate-800">Opening Report</h3>
-                                            <p className="text-xs text-slate-500 font-bold uppercase">Plan your day ahead</p>
+                                            <h3 className="text-xl font-black text-slate-800">Opening Report</h3>
+                                            <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Plan your day ahead</p>
+                                        </div>
+                                    </div>
+
+                                    {/* --- NEW START DAY CARD --- */}
+                                    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden mb-8">
+                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
+                                        
+                                        <div className="relative z-10">
+                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                                                <div>
+                                                    <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                                                        <Clock size={12} /> Live Session
+                                                    </div>
+                                                    <h2 className="text-3xl font-black mb-1">Start Your Day</h2>
+                                                    <p className="text-blue-100 font-bold text-sm">Review your tasks and begin tracking</p>
+                                                </div>
+                                                
+                                                <div className="flex items-center gap-4">
+                                                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
+                                                        <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Current Date</p>
+                                                        <p className="text-lg font-black">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                                                    </div>
+                                                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
+                                                        <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Session Time</p>
+                                                        <p className="text-lg font-black">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
                                         </div>
                                     </div>
                                     <MetricsForm data={openingData} setData={setOpeningData} onSubmit={handleOpeningSubmit} type="opening" isSubmitting={isSubmitting} isLoading={isLoading} />

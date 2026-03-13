@@ -26,28 +26,38 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
 
     // Determine which tables to show based on phase
+    // If openingTables is explicitly defined, use it, otherwise use main tables for both phases
     const activeTables = isTodayOpen 
         ? (config.closingTables || config.tables || [])
-        : (config.openingTables || []);
+        : (config.openingTables || config.tables || []);
 
     const [tableData, setTableData] = useState({});
     const [notes, setNotes] = useState('');
-    const [simpleData, setSimpleData] = useState({
-        startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
-        endTime: '',
-        date: new Date().toISOString().split('T')[0]
-    });
 
-    // Reset table data whenever role or phase changes
+    // Reset/Initialize table data whenever role or phase changes
     useEffect(() => {
         const initial = {};
+        
+        // Try to load existing data from todayLog (Persistence)
+        const existingData = todayLog?.customFields || {};
+
         activeTables.forEach((table, index) => {
-            initial[index] = table.predefinedRows
-                ? table.predefinedRows.map(row => ({ ...row, _id: crypto.randomUUID() }))
-                : [{ _id: crypto.randomUUID() }];
+            if (existingData[table.label]) {
+                // If we have existing data for this table, use it
+                initial[index] = existingData[table.label].map(row => ({ ...row, _id: row._id || crypto.randomUUID() }));
+            } else {
+                // Otherwise initialize empty rows
+                initial[index] = table.predefinedRows
+                    ? table.predefinedRows.map(row => ({ ...row, _id: crypto.randomUUID() }))
+                    : [{ _id: crypto.randomUUID() }];
+            }
         });
         setTableData(initial);
-    }, [role, isTodayOpen]);
+        
+        if (todayLog?.notes) {
+            setNotes(todayLog.notes);
+        }
+    }, [role, isTodayOpen, todayLog]);
 
     if (!config) {
         return <div className="p-4 text-red-500 font-bold bg-red-50 rounded-xl">Configuration not found for role: {role}</div>;
@@ -59,6 +69,10 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
                 <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
                 <p className="text-emerald-600 font-bold">Daily reports submitted successfully.</p>
+                <div className="mt-4 text-[10px] text-emerald-400 font-bold uppercase tracking-widest text-emerald-300">
+                    Session: {todayLog?.startTime} - {todayLog?.endTime}
+                </div>
+                <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 underline">Okay, close</button>
             </div>
         );
     }
@@ -135,33 +149,33 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     return (
         <motion.form
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-            onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2"
+            onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2 scrollbar-hide"
         >
-            <div className={`bg-gradient-to-r ${isTodayOpen ? 'from-emerald-500 to-teal-500' : 'from-indigo-500 to-violet-500'} p-6 rounded-2xl text-white shadow-lg sticky top-0 z-10`}>
+            <div className={`bg-gradient-to-r ${isTodayOpen ? 'from-emerald-500 to-teal-500' : 'from-indigo-600 to-violet-600'} p-6 rounded-3xl text-white shadow-lg sticky top-0 z-10`}>
                 <div className="flex items-center gap-4">
-                    <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
+                    <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
                         {isTodayOpen ? <CheckSquare size={24} /> : <Clock size={24} />}
                     </div>
                     <div>
-                        <h3 className="font-black text-2xl tracking-tight">{config.title}</h3>
-                        <p className="text-white/80 text-sm font-medium opacity-90 uppercase tracking-wider">
-                            {isTodayOpen ? 'Closing Phase' : 'Opening Phase'}
+                        <h3 className="font-black text-2xl tracking-tight">{config.title || (role.replace(/-/g, ' ') + ' Report')}</h3>
+                        <p className="text-white/80 text-xs font-bold uppercase tracking-widest opacity-75">
+                            {isTodayOpen ? 'End of Day Report' : 'Current Date Reporting'}
                         </p>
                     </div>
                 </div>
             </div>
 
-            {/* Time/Date Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{isTodayOpen ? "Session Started At" : "Current Date"}</label>
-                    <div className={`px-3 py-2 rounded-lg font-bold border text-sm ${isTodayOpen ? 'bg-emerald-50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-700 border-slate-100'}`}>
+            {/* Time/Date Selection - NEW UI MATCHING USER IMAGE */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{isTodayOpen ? "Session Started At" : "Current Date"}</label>
+                    <div className={`px-5 py-4 rounded-2xl font-black text-lg border transition-all ${isTodayOpen ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
                         {isTodayOpen ? (todayLog.startTime || 'Not recorded') : new Date().toLocaleDateString('en-GB')}
                     </div>
                 </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Session Time</label>
-                    <div className="px-3 py-2 bg-slate-50 rounded-lg text-slate-700 font-bold border border-slate-100 text-sm">
+                <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Session Time</label>
+                    <div className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-lg border border-slate-100">
                         {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                 </div>

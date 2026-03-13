@@ -176,12 +176,13 @@ export const getTodayLogStatus = createAsyncThunk(
             // BETTER: Add a specific check so we know if it's OPEN or CLOSED.
             const response = await axios.get(API_URL + 'worklogs', config);
             const logs = response.data;
-            // Prioritize finding the latest OPEN log (allows for cross-midnight shifts)
-            const openLog = logs.find(log => log.logStatus === 'OPEN');
-            if (openLog) return openLog;
-            
-            // Fallback to today's log if no open log exists
             const today = new Date().toISOString().split('T')[0];
+            
+            // Prioritize finding an OPEN log from TODAY
+            const openLogToday = logs.find(log => log.logStatus === 'OPEN' && log.date.startsWith(today));
+            if (openLogToday) return openLogToday;
+            
+            // Otherwise find any log from TODAY (could be CLOSED)
             return logs.find(log => log.date.startsWith(today)) || null;
         } catch (error) {
             const message = (error.response?.data?.message) || error.message || error.toString();
@@ -610,12 +611,12 @@ export const employeeSlice = createSlice({
                 state.isLoading = false;
                 state.workLogs = action.payload;
                 
-                // Prioritize finding the latest OPEN log
-                const openLog = action.payload.find(log => log.logStatus === 'OPEN');
-                if (openLog) {
-                    state.todayLog = openLog;
+                const today = new Date().toISOString().split('T')[0];
+                // Prioritize finding an OPEN log from TODAY
+                const openLogToday = action.payload.find(log => log.logStatus === 'OPEN' && log.date.startsWith(today));
+                if (openLogToday) {
+                    state.todayLog = openLogToday;
                 } else {
-                    const today = new Date().toISOString().split('T')[0];
                     state.todayLog = action.payload.find(log => log.date.startsWith(today)) || null;
                 }
             })

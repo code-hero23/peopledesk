@@ -163,37 +163,54 @@ const WorkLogForm = ({ onSuccess }) => {
 
     // Opening Form
     return (
-        <form onSubmit={handleOpeningSubmit} className="space-y-4">
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
-                    <Clock size={24} />
-                </div>
-                <div>
-                    <h3 className="text-lg font-black text-slate-800">Opening Report</h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase">Start your work session</p>
+        <form onSubmit={handleOpeningSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 scrollbar-hide">
+            <div className="bg-gradient-to-r from-indigo-600 to-violet-600 p-6 rounded-3xl text-white shadow-lg sticky top-0 z-10">
+                <div className="flex items-center gap-4">
+                    <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
+                        <Clock size={24} />
+                    </div>
+                    <div>
+                        <h3 className="text-xl font-black tracking-tight">Opening Report</h3>
+                        <p className="text-white/80 text-xs font-bold uppercase tracking-widest opacity-75">Current Date Reporting</p>
+                    </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
-                    <input type="date" name="date" required value={formData.date} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-bold" />
+            {/* NEW UI MATCHING USER IMAGE */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+                <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Current Date</label>
+                    <div className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-lg border border-slate-100">
+                        {new Date().toLocaleDateString('en-GB')}
+                    </div>
+                </div>
+                <div className="space-y-3">
+                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Session Time</label>
+                    <div className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-lg border border-slate-100">
+                        {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
+                    </div>
+                </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
+                <div className="md:col-span-2 mb-2 pb-2 border-b border-slate-50">
+                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Deployment Details</h4>
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Client Name</label>
-                    <input type="text" name="clientName" required value={formData.clientName} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Acme Corp" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Client Name</label>
+                    <input type="text" name="clientName" required value={formData.clientName} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="e.g. Acme Corp" />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Site</label>
-                    <input type="text" name="site" required value={formData.site} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Head Office" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Site</label>
+                    <input type="text" name="site" required value={formData.site} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="e.g. Head Office" />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Process</label>
-                    <input type="text" name="process" required value={formData.process} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="e.g. Design / Review" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Process</label>
+                    <input type="text" name="process" required value={formData.process} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="e.g. Design / Review" />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Planned Target (Count)</label>
-                    <input type="number" name="imageCount" value={formData.imageCount} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Optional" />
+                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Planned Target</label>
+                    <input type="number" name="imageCount" value={formData.imageCount} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="Optional count" />
                 </div>
             </div>
             <div className="flex gap-3">

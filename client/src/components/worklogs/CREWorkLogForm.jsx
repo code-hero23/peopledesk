@@ -15,6 +15,9 @@ const CREWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { isLoading, todayLog } = useSelector((state) => state.employee);
+    const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
+    const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
+    
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
@@ -68,6 +71,34 @@ const CREWorkLogForm = ({ onSuccess }) => {
         },
         notes: ''
     });
+
+    // Persistence: Preload data from todayLog (Opening Metrics) into Closing Form
+    useEffect(() => {
+        if (isTodayOpen && todayLog?.cre_opening_metrics) {
+            const om = todayLog.cre_opening_metrics;
+            setClosingData(prev => ({
+                ...prev,
+                cre_closing_metrics: {
+                    ...prev.cre_closing_metrics,
+                    // Map opening fields to closing fields where they overlap
+                    showroomVisit: om.showroomVisit || prev.cre_closing_metrics.showroomVisit,
+                    onlineDiscussion: om.onlineDiscussion || prev.cre_closing_metrics.onlineDiscussion,
+                    siteMsmtDisc: om.siteMsmtDiscFixed || prev.cre_closing_metrics.siteMsmtDisc,
+                    floorPlanReceived: om.fpReceived || prev.cre_closing_metrics.floorPlanReceived,
+                    firstQuotationSent: om.fqSent || prev.cre_closing_metrics.firstQuotationSent,
+                    orderCount: om.noOfOrder || prev.cre_closing_metrics.orderCount,
+                    proposalCount: om.noOfProposalIQ || prev.cre_closing_metrics.proposalCount,
+                    // Star calls
+                    sevenStar: om.uptoTodayCalls1?.sevenStar || prev.cre_closing_metrics.sevenStar,
+                    sixStar: om.uptoTodayCalls1?.sixStar || prev.cre_closing_metrics.sixStar,
+                    fiveStar: om.uptoTodayCalls1?.fiveStar || prev.cre_closing_metrics.fiveStar,
+                    fourStar: om.uptoTodayCalls2?.fourStar || prev.cre_closing_metrics.fourStar,
+                    threeStar: om.uptoTodayCalls2?.threeStar || prev.cre_closing_metrics.threeStar,
+                    twoStar: om.uptoTodayCalls2?.twoStar || prev.cre_closing_metrics.twoStar,
+                }
+            }));
+        }
+    }, [isTodayOpen, todayLog]);
 
 
 
@@ -173,9 +204,6 @@ const CREWorkLogForm = ({ onSuccess }) => {
     };
 
     if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
-
-    const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
-    const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
 
     if (isTodayClosed) {
         return (
@@ -292,12 +320,38 @@ const CREWorkLogForm = ({ onSuccess }) => {
             onSubmit={handleOpeningSubmit} className="space-y-6"
         >
             <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                <div className="p-3 bg-blue-100 text-blue-600 rounded-xl">
-                    <Clock size={24} />
-                </div>
                 <div>
-                    <h3 className="text-lg font-black text-slate-800">Opening Report</h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase">Plan your day & targets</p>
+                    <h3 className="text-xl font-black text-slate-800">Opening Report</h3>
+                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Plan your day & targets</p>
+                </div>
+            </div>
+
+            {/* --- NEW START DAY CARD --- */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden mb-8">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
+                
+                <div className="relative z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                                <Clock size={12} /> Live Session
+                            </div>
+                            <h2 className="text-3xl font-black mb-1">Start Your Day</h2>
+                            <p className="text-blue-100 font-bold text-sm">Review your targets and begin tracking</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
+                                <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Current Date</p>
+                                <p className="text-lg font-black">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
+                                <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Session Time</p>
+                                <p className="text-lg font-black">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
 

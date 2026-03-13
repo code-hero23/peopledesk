@@ -78,6 +78,16 @@ const AEWorkLogForm = ({ onSuccess }) => {
         notes: ''
     });
 
+    // Persistence: Preload opening data for consistency
+    useEffect(() => {
+        if (isTodayOpen && todayLog?.ae_opening_metrics) {
+            setOpeningData(prev => ({
+                ...prev,
+                ...todayLog.ae_opening_metrics
+            }));
+        }
+    }, [isTodayOpen, todayLog]);
+
     const [imagePreviews, setImagePreviews] = useState([]);
 
     // Options
@@ -627,14 +637,31 @@ const AEWorkLogForm = ({ onSuccess }) => {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             onSubmit={handleOpeningSubmit} className="space-y-6"
         >
-            <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 rounded-3xl text-white shadow-lg shadow-blue-200">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <h3 className="font-black text-2xl">Start Day</h3>
-                        <p className="text-blue-100 text-sm font-medium mt-1">Check-in at your first site location</p>
-                    </div>
-                    <div className="bg-white/20 p-2 rounded-xl backdrop-blur-sm">
-                        <MapPin size={24} className="text-white" />
+            {/* --- NEW START DAY CARD --- */}
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden mb-4">
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
+                <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
+                
+                <div className="relative z-10">
+                    <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+                        <div>
+                            <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
+                                <MapPin size={12} /> Field Session
+                            </div>
+                            <h2 className="text-3xl font-black mb-1">Start Your Day</h2>
+                            <p className="text-blue-100 font-bold text-sm">Check-in at your first site location</p>
+                        </div>
+                        
+                        <div className="flex items-center gap-4">
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
+                                <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Current Date</p>
+                                <p className="text-lg font-black">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
+                            </div>
+                            <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
+                                <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Session Time</p>
+                                <p className="text-lg font-black">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

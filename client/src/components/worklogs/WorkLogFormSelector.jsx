@@ -31,11 +31,14 @@ const WorkLogFormSelector = ({ designation, onSuccess }) => {
             return <LAWorkLogForm onSuccess={onSuccess} />;
         case 'ACCOUNT':
         case 'ACCOUNTANT':
-            return <AccountWorkLogForm onSuccess={onSuccess} />;
+            return <DynamicWorkLogForm onSuccess={onSuccess} role="ACCOUNT" />;
         case 'CLIENT CARE':
-            return <ClientCareWorkLogForm onSuccess={onSuccess} />;
+            return <DynamicWorkLogForm onSuccess={onSuccess} role="CLIENT-CARE" />;
         case 'DIGITAL MARKETING':
-            return <DigitalMarketingWorkLogForm onSuccess={onSuccess} />;
+            return <DynamicWorkLogForm onSuccess={onSuccess} role="DIGITAL-MARKETING" />;
+        case 'OFFICE ADMIN':
+        case 'ADMIN':
+            return <DynamicWorkLogForm onSuccess={onSuccess} role="OFFICE-ADMINISTRATION" />;
     }
 
     // 2. Check if there's a dynamic config for this designation.

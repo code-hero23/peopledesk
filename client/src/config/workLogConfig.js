@@ -3,10 +3,10 @@ export const WORK_LOG_CONFIG = {
         title: "Account Daily Report",
         tables: [
             {
-                label: "Work Log",
+                label: "Task Entries",
                 fields: [
-                    { name: "work", label: "Work", type: "text" },
-                    { name: "remark", label: "Remarks", type: "text" }
+                    { name: "description", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
                 ]
             }
         ]
@@ -15,11 +15,10 @@ export const WORK_LOG_CONFIG = {
         title: "Office Admin Daily Report",
         tables: [
             {
-                label: "Daily Activities",
+                label: "Task Entries",
                 fields: [
-                    { name: "description", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "select", options: ["Pending", "In Progress", "Completed"] },
-                    { name: "remarks", label: "Remarks", type: "text" }
+                    { name: "task", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
                 ]
             }
         ]
@@ -58,7 +57,8 @@ export const WORK_LOG_CONFIG = {
                     { name: "work", label: "Work", type: "text" },
                     { name: "work_given_by", label: "Work Given By", type: "text" },
                     { name: "hours_spent", label: "Hours Spent", type: "number" },
-                    { name: "status", label: "Status", type: "select", options: ["Pending", "In Progress", "Completed"] }
+                    { name: "status", label: "Status", type: "select", options: ["Pending", "In Progress", "Completed"] },
+                    { name: "file_link", label: "File Link", type: "text" }
                 ]
             }
         ]
