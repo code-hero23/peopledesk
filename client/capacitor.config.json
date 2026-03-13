@@ -15,7 +15,7 @@
       "src": "runner.js",
       "event": "dailyCallLogSync",
       "repeat": true,
-      "interval": 5,
+      "interval": 15,
       "autoStart": true
     }
   }

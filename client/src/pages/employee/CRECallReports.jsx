@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
-// Capacitor 6 plugins accessed safely within functions
-const getPlugins = () => Capacitor.Plugins;
+import { BackgroundRunner } from '@capacitor/background-runner';
+import { Preferences } from '@capacitor/preferences';
 import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
 import {
@@ -68,13 +68,10 @@ const CRECallReports = () => {
         setOfficialSim(parsed);
         localStorage.setItem('cre_official_sim', String(parsed));
         if (Capacitor.isNativePlatform()) {
-            const { Preferences } = getPlugins();
-            if (Preferences) {
-                await Preferences.set({
-                    key: 'cre_official_sim',
-                    value: String(parsed)
-                });
-            }
+            await Preferences.set({
+                key: 'cre_official_sim',
+                value: String(parsed)
+            });
         }
     };
 
@@ -122,15 +119,12 @@ const CRECallReports = () => {
                     setLastSyncTime(new Date());
                     
                     // Update last sync time in local storage/Preferences
-                    try {
-                        const { Preferences } = getPlugins();
-                        if (Preferences) {
-                            await Preferences.set({
-                                key: 'last_synced_report',
-                                value: JSON.stringify({ date: getIstToday(), timestamp: Date.now() })
-                            });
-                        }
-                    } catch (e) {}
+                    if (Capacitor.isNativePlatform()) {
+                        await Preferences.set({
+                            key: 'last_synced_report',
+                            value: JSON.stringify({ date: getIstToday(), timestamp: Date.now() })
+                        });
+                    }
 
                     dispatch(getMyCallLogs({ 
                         startDate: selectedDate, 
@@ -159,13 +153,6 @@ const CRECallReports = () => {
         }
 
         try {
-            const plugins = getPlugins();
-            const BackgroundRunner = plugins.BackgroundRunner;
-            
-            if (!BackgroundRunner) {
-                toast.error("Background Runner plugin is not registered on this device.");
-                return;
-            }
             toast.info("Dispatching test event to Background Engine...");
             const result = await BackgroundRunner.dispatchEvent({
                 label: 'com.peopledesk.app.runner',

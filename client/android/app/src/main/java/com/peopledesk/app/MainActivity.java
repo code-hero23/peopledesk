@@ -9,8 +9,6 @@ public class MainActivity extends BridgeActivity {
     @Override
     public void onCreate(Bundle savedInstanceState) {
         registerPlugin(CallLogPlugin.class);
-        registerPlugin(BackgroundRunnerPlugin.class);
-        registerPlugin(PreferencesPlugin.class);
         super.onCreate(savedInstanceState);
     }
 }
