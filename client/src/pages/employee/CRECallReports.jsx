@@ -8,7 +8,7 @@ import {
     Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, CheckCircle2, ChevronRight, Activity, Smartphone,
-    Zap, Layers, Share2
+     Zap, Layers, Share2, PlayCircle, Settings
 } from 'lucide-react';
 import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend
@@ -132,18 +132,25 @@ const CRECallReports = () => {
         }
     };
 
-    const checkBridge = () => {
-        const isNative = Capacitor.isNativePlatform();
-        const hasCallLog = Capacitor.isPluginAvailable('CallLog');
-        toast.info(
-            <div className="p-1">
-                <p className="font-black text-[10px] uppercase mb-1 tracking-widest text-blue-600">Sync Engine Status</p>
-                <div className="space-y-1 text-[10px] font-bold text-slate-600">
-                    <p>Native Bridge: {isNative ? "✅ ACTIVE" : "❌ WEB"}</p>
-                    <p>Plugin Link: {hasCallLog ? "✅ ESTABLISHED" : "❌ DISCONNECTED"}</p>
-                </div>
-            </div>
-        );
+    const testBackgroundSync = async () => {
+        const BackgroundRunner = Capacitor.Plugins.BackgroundRunner;
+        if (!BackgroundRunner) {
+            toast.error("BackgroundRunner plugin not available.");
+            return;
+        }
+
+        try {
+            toast.info("Dispatching test event to Background Engine...");
+            // The 'label' corresponds to the event name in runner.js
+            await BackgroundRunner.dispatchEvent({
+                label: 'dailyCallLogSync',
+                details: {}
+            });
+            toast.success("Event dispatched! Check your server data in a few moments.");
+        } catch (error) {
+            console.error("Test Event Error:", error);
+            toast.error("Failed to trigger background engine.");
+        }
     };
 
     // Extract & Merge from Decoupled State
@@ -290,8 +297,8 @@ const CRECallReports = () => {
                         </div>
 
                         <div className="flex bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
-                            <button onClick={checkBridge} className="p-3 bg-white text-slate-400 hover:text-blue-600 rounded-xl transition-all shadow-sm active:scale-90">
-                                <Smartphone size={18} />
+                            <button onClick={testBackgroundSync} className="p-3 bg-white text-emerald-600 hover:text-emerald-700 rounded-xl transition-all shadow-sm active:scale-90" title="Test Background Engine">
+                                <PlayCircle size={18} />
                             </button>
                         </div>
                         <button
@@ -490,23 +497,50 @@ const CRECallReports = () => {
     );
 };
 
-const MetricBox = ({ label, value, color, icon: Icon }) => (
-    <motion.div
-        whileHover={{ y: -5 }}
-        className="bg-white p-7 rounded-[2.5rem] border border-white shadow-xl flex flex-col gap-4 relative overflow-hidden group cursor-default"
-    >
-        <div className={`absolute top-0 right-0 w-24 h-24 bg-${color}-50/50 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-1000`}></div>
+const MetricBox = ({ label, value, color, icon: Icon, subtext }) => {
+    const colorMap = {
+        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100 ring-emerald-100/30',
+        blue: 'bg-blue-50 text-blue-600 border-blue-100 ring-blue-100/30',
+        amber: 'bg-amber-50 text-amber-600 border-amber-100 ring-amber-100/30',
+        purple: 'bg-purple-50 text-purple-600 border-purple-100 ring-purple-100/30',
+        rose: 'bg-rose-50 text-rose-600 border-rose-100 ring-rose-100/30',
+        sky: 'bg-sky-50 text-sky-600 border-sky-100 ring-sky-100/30',
+        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100 ring-indigo-100/30',
+        fuchsia: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100 ring-fuchsia-100/30',
+    };
 
-        <div className="flex items-center justify-between relative z-10">
-            <div className={`p-4 bg-${color}-50 text-${color}-600 rounded-3xl shadow-sm border border-${color}-100/50`}>
-                <Icon size={22} className="group-hover:rotate-12 transition-transform" />
+    const lightColorMap = {
+        emerald: 'bg-emerald-50/50',
+        blue: 'bg-blue-50/50',
+        amber: 'bg-amber-50/50',
+        purple: 'bg-purple-50/50',
+        rose: 'bg-rose-50/50',
+        sky: 'bg-sky-50/50',
+        indigo: 'bg-indigo-50/50',
+        fuchsia: 'bg-fuchsia-50/50',
+    };
+
+    return (
+        <motion.div
+            whileHover={{ y: -5 }}
+            className="bg-white p-7 rounded-[2.5rem] border border-white shadow-xl flex flex-col gap-4 relative overflow-hidden group cursor-default"
+        >
+            <div className={`absolute top-0 right-0 w-24 h-24 rounded-full blur-2xl -mr-10 -mt-10 group-hover:scale-150 transition-transform duration-1000 ${lightColorMap[color] || 'bg-slate-50'}`}></div>
+
+            <div className="flex items-center justify-between relative z-10">
+                <div className={`p-4 rounded-3xl shadow-sm border ${colorMap[color] || 'bg-slate-50 text-slate-600'}`}>
+                    <Icon size={22} className="group-hover:rotate-12 transition-transform" />
+                </div>
+                <div className="flex flex-col items-end">
+                    <span className={`text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>{label}</span>
+                    <span className="text-[8px] font-bold text-slate-300 uppercase tracking-widest">{subtext}</span>
+                </div>
             </div>
-            <span className={`text-[10px] font-black uppercase tracking-[0.2em] text-slate-400`}>{label}</span>
-        </div>
-        <div className="relative z-10">
-            <p className="text-3xl font-black text-slate-800 tracking-tighter">{value}</p>
-        </div>
-    </motion.div>
-);
+            <div className="relative z-10">
+                <p className="text-3xl font-black text-slate-800 tracking-tighter">{value}</p>
+            </div>
+        </motion.div>
+    );
+};
 
 export default CRECallReports;

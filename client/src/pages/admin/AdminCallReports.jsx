@@ -149,7 +149,7 @@ const AdminCallReports = () => {
         const key = log.empId;
         if (!acc[key]) {
             acc[key] = {
-                name: log.user,
+                name: log.name,
                 empId: log.empId,
                 totalCalls: 0,
                 incoming: 0,

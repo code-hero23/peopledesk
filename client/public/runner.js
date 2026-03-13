@@ -94,7 +94,8 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         });
 
         // 8. Network Transmission
-        const API_URL = 'https://cookscape-1087459196395.asia-south1.run.app/api/worklogs/sync-calls';
+        // 8. Network Transmission - Updated to use correct server IP
+        const API_URL = 'http://103.14.123.189:5001/api/worklogs/sync-calls';
         const response = await fetch(API_URL, {
             method: 'PUT',
             headers: {
