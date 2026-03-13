@@ -141,15 +141,16 @@ const CRECallReports = () => {
 
         try {
             toast.info("Dispatching test event to Background Engine...");
-            // The 'label' corresponds to the event name in runner.js
-            await BackgroundRunner.dispatchEvent({
+            const result = await BackgroundRunner.dispatchEvent({
                 label: 'dailyCallLogSync',
                 details: {}
             });
+            console.log("Background Hub Result:", result);
             toast.success("Event dispatched! Check your server data in a few moments.");
         } catch (error) {
             console.error("Test Event Error:", error);
-            toast.error("Failed to trigger background engine.");
+            const errMsg = error.message || String(error);
+            toast.error(`Sync Trigger Error: ${errMsg}`, { autoClose: 5000 });
         }
     };
 

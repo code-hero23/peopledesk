@@ -36,6 +36,16 @@
                 android:name="android.support.FILE_PROVIDER_PATHS"
                 android:resource="@xml/file_paths"></meta-data>
         </provider>
+
+        <!-- Background Runner Service & Receiver -->
+        <service android:name="com.capacitorjs.plugins.backgroundrunner.BackgroundRunnerService" android:exported="false" />
+        <receiver android:name="com.capacitorjs.plugins.backgroundrunner.BackgroundRunnerReceiver" android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+            </intent-filter>
+        </receiver>
+
     </application>
 
     <!-- Permissions -->
