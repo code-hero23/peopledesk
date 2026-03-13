@@ -33,6 +33,11 @@ const AdminCallReports = () => {
     const [showEmailModal, setShowEmailModal] = useState(false);
     const [emailAddress, setEmailAddress] = useState('');
     const [isEmailing, setIsEmailing] = useState(false);
+    const [isMounted, setIsMounted] = useState(false);
+
+    useEffect(() => {
+        setIsMounted(true);
+    }, []);
 
     useEffect(() => {
         dispatch(getCallStats({ ...dateRange }));
@@ -149,7 +154,7 @@ const AdminCallReports = () => {
         const key = log.empId;
         if (!acc[key]) {
             acc[key] = {
-                name: log.name,
+                name: log.name || "Unknown Personnel",
                 empId: log.empId,
                 totalCalls: 0,
                 incoming: 0,
@@ -391,7 +396,7 @@ const AdminCallReports = () => {
                         <div className="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl relative overflow-hidden flex flex-col min-h-[350px]">
                             <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-4">Global Distribution</h3>
                             <div className="flex-1 w-full min-h-[220px]">
-                                {globalPieData.length > 0 ? (
+                                {(isMounted && globalPieData.length > 0) ? (
                                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <PieChart>
                                         <Pie
@@ -429,7 +434,8 @@ const AdminCallReports = () => {
                                 </h3>
                             </div>
                             <div className="flex-1 w-full pb-4 min-h-[250px]">
-                                <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                {isMounted && (
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
@@ -441,7 +447,8 @@ const AdminCallReports = () => {
                                         <Bar dataKey="Calls" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
                                     </BarChart>
                                 </ResponsiveContainer>
-                            </div>
+                            )}
+                        </div>
                         </div>
                     </div>
 
@@ -477,7 +484,7 @@ const AdminCallReports = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {metricsArray
-                                        .filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                                        .filter(m => (m.name || "").toLowerCase().includes(searchTerm.toLowerCase()))
                                         .map((metrics) => (
                                             <tr key={metrics.empId} className="group hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-10 py-6">
@@ -610,7 +617,8 @@ const AdminCallReports = () => {
 
                             <div className="w-full space-y-4">
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    {(isMounted && selectedEmployee) && (
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <PieChart>
                                             <Pie
                                                 data={getPieData(selectedEmployee)}
@@ -630,7 +638,8 @@ const AdminCallReports = () => {
                                             <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900' }} />
                                         </PieChart>
                                     </ResponsiveContainer>
-                                </div>
+                                )}
+                            </div>
                             </div>
                         </div>
 
