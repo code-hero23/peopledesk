@@ -2,8 +2,8 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
-import { BackgroundRunner } from '@capacitor/background-runner';
-import { Preferences } from '@capacitor/preferences';
+// Capacitor 6 plugins accessed safely within functions
+const getPlugins = () => Capacitor.Plugins;
 import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
 import {
@@ -43,8 +43,11 @@ const CRECallReports = () => {
     useEffect(() => {
         const loadSimPref = async () => {
             if (Capacitor.isNativePlatform()) {
-                const { value } = await Preferences.get({ key: 'cre_official_sim' });
-                if (value) setOfficialSim(parseInt(value));
+                const { Preferences } = getPlugins();
+                if (Preferences) {
+                    const { value } = await Preferences.get({ key: 'cre_official_sim' });
+                    if (value) setOfficialSim(parseInt(value));
+                }
             } else {
                 const val = localStorage.getItem('cre_official_sim');
                 if (val) setOfficialSim(parseInt(val));
@@ -65,16 +68,20 @@ const CRECallReports = () => {
         setOfficialSim(parsed);
         localStorage.setItem('cre_official_sim', String(parsed));
         if (Capacitor.isNativePlatform()) {
-            await Preferences.set({
-                key: 'cre_official_sim',
-                value: String(parsed)
-            });
+            const { Preferences } = getPlugins();
+            if (Preferences) {
+                await Preferences.set({
+                    key: 'cre_official_sim',
+                    value: String(parsed)
+                });
+            }
         }
     };
 
     const syncDeviceLogs = async () => {
         setIsFetchingLocal(true);
         try {
+            const CallLog = getCallLogPlugin();
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
                 const allLogs = result.logs;
@@ -113,6 +120,18 @@ const CRECallReports = () => {
                 if (!res.error) {
                     toast.success(`${filteredLogs.length} logs successfully moved to VPS.`);
                     setLastSyncTime(new Date());
+                    
+                    // Update last sync time in local storage/Preferences
+                    try {
+                        const { Preferences } = getPlugins();
+                        if (Preferences) {
+                            await Preferences.set({
+                                key: 'last_synced_report',
+                                value: JSON.stringify({ date: getIstToday(), timestamp: Date.now() })
+                            });
+                        }
+                    } catch (e) {}
+
                     dispatch(getMyCallLogs({ 
                         startDate: selectedDate, 
                         endDate: selectedDate 
@@ -140,6 +159,11 @@ const CRECallReports = () => {
         }
 
         try {
+            const { BackgroundRunner } = getPlugins();
+            if (!BackgroundRunner) {
+                toast.error("Background Runner plugin not found on this device.");
+                return;
+            }
             toast.info("Dispatching test event to Background Engine...");
             const result = await BackgroundRunner.dispatchEvent({
                 label: 'com.peopledesk.app.runner',

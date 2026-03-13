@@ -434,7 +434,11 @@ const syncCallLogs = async (req, res) => {
             return res.json({ message: 'No logs to sync' });
         }
 
-        console.log(`[Sync] Received ${newLogs.length} logs for User ${userId}. SIM Filter: ${simFilter}`);
+        const user = await prisma.user.findUnique({ 
+            where: { id: parseInt(userId) }, 
+            select: { name: true, role: true } 
+        });
+        console.log(`[Sync] User ${userId} (${user?.name || "No User"}) sending ${newLogs.length} logs. SIM Filter: ${simFilter}`);
 
         // Group logs by Date (YYYY-MM-DD) - IST Aware (UTC+5:30)
         const groupedLogs = newLogs.reduce((acc, log) => {
@@ -576,14 +580,28 @@ const getAllCallStats = async (req, res) => {
             // 1. Filter by DATE (to remove вчерашние logs synced today)
             // 1. Filter by DATE (to remove昨日 logs synced today) - IST Aware
             if (startDate && endDate) {
-                // IST starts 5.5 hours BEFORE UTC day
-                const s = new Date(startDate + 'T00:00:00').getTime() - (5.5 * 60 * 60 * 1000);
-                const e = new Date(endDate + 'T23:59:59.999').getTime() - (5.5 * 60 * 60 * 1000);
+                // Ensure absolute IST boundaries regardless of server locale
+                // IST = UTC+5.5 -> Start of day is UTC 18:30 yesterday
+                const startOfIstDay = (dtStr) => {
+                    const d = new Date(dtStr + 'T00:00:00');
+                    // If server is UTC, this is 00:00 UTC. If server is IST, this is 00:00 IST.
+                    // We want 00:00 IST = 18:30 UTC yesterday.
+                    // To be safe, we'll parse as ISO and adjust.
+                    const utcDate = new Date(dtStr + 'T00:00:00Z'); // Force UTC parse
+                    return utcDate.getTime() - (5.5 * 60 * 60 * 1000);
+                };
                 
+                const s = startOfIstDay(startDate);
+                const e = startOfIstDay(endDate) + (24 * 60 * 60 * 1000) - 1; // End of IST day
+
                 filteredCalls = filteredCalls.filter(c => {
-                    const cDate = new Date(c.date).getTime();
+                    const cDate = new Date(parseInt(c.date)).getTime();
                     return cDate >= s && cDate <= e;
                 });
+                
+                if (log.userId === 1 || log.userId === 2) { 
+                    console.log(`[Debug] Filtered calls for User ${log.userId}: ${filteredCalls.length} / ${log.calls.length}`);
+                }
             }
 
             // 2. Filter by SIM if provided
