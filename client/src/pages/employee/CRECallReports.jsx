@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
+import { BackgroundRunner } from '@capacitor/background-runner';
+import { Preferences } from '@capacitor/preferences';
 import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
 import {
@@ -16,7 +18,6 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 
 const CallLog = getCallLogPlugin();
-const Preferences = Capacitor.Plugins.Preferences;
 
 const CRECallReports = () => {
     const dispatch = useDispatch();
@@ -133,9 +134,8 @@ const CRECallReports = () => {
     };
 
     const testBackgroundSync = async () => {
-        const BackgroundRunner = Capacitor.Plugins.BackgroundRunner;
-        if (!BackgroundRunner) {
-            toast.error("BackgroundRunner plugin not available.");
+        if (!Capacitor.isNativePlatform()) {
+            toast.error("Background Runner is only available on native Android/iOS.");
             return;
         }
 
