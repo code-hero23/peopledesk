@@ -39,21 +39,25 @@ const CRECallReports = () => {
     const [officialSim, setOfficialSim] = useState(() =>
         parseInt(localStorage.getItem('cre_official_sim') || '2')
     );
+    const [simLabels, setSimLabels] = useState({});
 
     useEffect(() => {
-        const loadSimPref = async () => {
+        const loadPrefs = async () => {
             if (Capacitor.isNativePlatform()) {
-                const { Preferences } = getPlugins();
-                if (Preferences) {
-                    const { value } = await Preferences.get({ key: 'cre_official_sim' });
-                    if (value) setOfficialSim(parseInt(value));
-                }
+                const { value: simPref } = await Preferences.get({ key: 'cre_official_sim' });
+                if (simPref) setOfficialSim(parseInt(simPref));
+
+                const { value: labelsPref } = await Preferences.get({ key: 'sim_labels' });
+                if (labelsPref) setSimLabels(JSON.parse(labelsPref));
             } else {
                 const val = localStorage.getItem('cre_official_sim');
                 if (val) setOfficialSim(parseInt(val));
+                
+                const labels = localStorage.getItem('sim_labels');
+                if (labels) setSimLabels(JSON.parse(labels));
             }
         };
-        loadSimPref();
+        loadPrefs();
     }, []);
 
     useEffect(() => {
@@ -87,6 +91,26 @@ const CRECallReports = () => {
                 // Diagnostic: Log all unique SIM IDs found
                 const detectedSims = [...new Set(allLogs.map(l => String(l.simSlot || l.simId || "Unknown")))].filter(s => s !== "null");
                 console.log(`[Diagnostic] Detected SIM IDs on device: ${detectedSims.join(", ")}`);
+
+                // DISCOVERY: Capture SIM labels and persist them
+                const newLabels = { ...simLabels };
+                let labelsChanged = false;
+                allLogs.forEach(log => {
+                    const id = String(log.simSlot || log.simId);
+                    const label = log.simLabel;
+                    if (id && label && newLabels[id] !== label) {
+                        newLabels[id] = label;
+                        labelsChanged = true;
+                    }
+                });
+                
+                if (labelsChanged) {
+                    setSimLabels(newLabels);
+                    localStorage.setItem('sim_labels', JSON.stringify(newLabels));
+                    if (Capacitor.isNativePlatform()) {
+                        Preferences.set({ key: 'sim_labels', value: JSON.stringify(newLabels) });
+                    }
+                }
 
                 // Client-side Filter: Only send logs matching the selected official SIM (unless 'All' is selected)
                 let filteredLogs = allLogs;
@@ -193,14 +217,13 @@ const CRECallReports = () => {
         .sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Intelligence
-    const simLabelMap = (allSyncedCalls || []).reduce((acc, curr) => {
-        if (curr.simId && curr.simLabel) {
-            acc[curr.simId] = curr.simLabel;
-        }
-        return acc;
-    }, {});
-
     const availableSims = [...new Set(allSyncedCalls.map(c => c.simId))].filter(Boolean);
+
+    // Merge persisted labels with any found in current call set
+    const activeSimLabels = (allSyncedCalls || []).reduce((acc, curr) => {
+        if (curr.simId && curr.simLabel) acc[curr.simId] = curr.simLabel;
+        return acc;
+    }, { ...simLabels });
 
     const filteredSynced = allSyncedCalls.filter(call => {
         const matchesSearch = call.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -296,7 +319,7 @@ const CRECallReports = () => {
                             {[1, 2, 0].map((slot) => {
                                 // Try to find a label for this slot if it matches a simId
                                 const matchingSimId = availableSims.find(id => String(id) === String(slot) || String(id).includes(String(slot)));
-                                const label = slot === 0 ? "ALL" : (simLabelMap[matchingSimId] || slot);
+                                const label = slot === 0 ? "ALL" : (activeSimLabels[matchingSimId] || slot);
 
                                 return (
                                     <button
@@ -377,7 +400,7 @@ const CRECallReports = () => {
                                 <option value="ALL">ALL SIMS</option>
                                 {availableSims.map(sim => (
                                     <option key={sim} value={sim}>
-                                        {simLabelMap[sim] ? `${simLabelMap[sim]}` : `Slot ${sim.length > 3 ? sim.substring(0, 3) : sim}`}
+                                        {activeSimLabels[sim] ? `${activeSimLabels[sim]}` : `Slot ${sim.length > 3 ? sim.substring(0, 3) : sim}`}
                                     </option>
                                 ))}
                             </select>
