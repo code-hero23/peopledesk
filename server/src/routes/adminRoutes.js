@@ -15,7 +15,8 @@ const {
     updateEmployee,
     deleteEmployee,
     importEmployees,
-    deleteRequest
+    deleteRequest,
+    testWhatsApp
 } = require('../controllers/adminController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
