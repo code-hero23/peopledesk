@@ -9,6 +9,7 @@ const initCheckoutReminderCron = require('./cron/checkoutReminderCron');
 const initNotificationCron = require('./cron/notificationCron');
 const initFinanceCron = require('./cron/financeCron');
 const initWorklogReminderCron = require('./cron/worklogReminderCron');
+const initBreakExceedanceCron = require('./cron/breakExceedanceCron');
 
 
 // Route Imports
@@ -26,6 +27,7 @@ initCheckoutReminderCron();
 initNotificationCron();
 initFinanceCron();
 initWorklogReminderCron();
+initBreakExceedanceCron();
 
 
 // Security Middlewares

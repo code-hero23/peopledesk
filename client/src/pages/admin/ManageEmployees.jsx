@@ -290,6 +290,7 @@ const ManageEmployees = () => {
                                                             <option value="missed_logout_alert">Logout Alert</option>
                                                             <option value="missed_worklog_alert">Worklog Alert</option>
                                                             <option value="late_login_alert">Late Alert</option>
+                                                            <option value="break_exceed_alert">Break Alert</option>
                                                         </select>
                                                     )}
                                                 </>

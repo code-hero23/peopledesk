@@ -115,8 +115,9 @@ model BreakLog {
   breakType    BreakType
   startTime    DateTime   @default(now())
   endTime      DateTime?
-  duration     Int?
-  attendance   Attendance @relation(fields: [attendanceId], references: [id])
+  duration             Int?
+  isExceededAlertSent  Boolean    @default(false)
+  attendance           Attendance @relation(fields: [attendanceId], references: [id])
 }
 
 model WorkLog {

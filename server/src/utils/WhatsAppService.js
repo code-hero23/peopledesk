@@ -88,6 +88,15 @@ class WhatsAppService {
         // Params: {{1}} = Name, {{2}} = Days
         return this.sendTemplateMessage(to, 'late_login_alert', [userName, consecutiveDays]);
     }
+
+    /**
+     * Send Break Exceedance Alert
+     */
+    async sendBreakExceedanceAlert(to, userName, breakType, limitMinutes) {
+        // Template: break_exceed_alert
+        // Params: {{1}} = Name, {{2}} = Break Type (Tea/Lunch), {{3}} = Limit Minutes
+        return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes]);
+    }
 }
 
 module.exports = new WhatsAppService();

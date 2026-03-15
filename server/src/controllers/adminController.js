@@ -1175,6 +1175,8 @@ const testWhatsApp = async (req, res) => {
             result = await whatsappService.sendMissedWorklogNotification(user.phone, user.name);
         } else if (template === 'late_login_alert') {
             result = await whatsappService.sendLateLoginAlert(user.phone, user.name, 3);
+        } else if (template === 'break_exceed_alert') {
+            result = await whatsappService.sendBreakExceedanceAlert(user.phone, user.name, 'Tea Break', 15);
         } else {
             return res.status(400).json({ message: 'Invalid template name' });
         }
