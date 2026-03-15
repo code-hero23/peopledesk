@@ -15,6 +15,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         name: '',
         email: '',
         password: '',
+        phone: '',
         role: 'EMPLOYEE',
         designation: isAeManager ? 'AE' : 'LA',
         reportingBhId: '',
@@ -50,6 +51,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
             setFormData({
                 name: selectedEmployee.name,
                 email: selectedEmployee.email,
+                phone: selectedEmployee.phone || '',
                 role: selectedEmployee.role || 'EMPLOYEE',
                 designation: selectedEmployee.designation || (isAeManager ? 'AE' : 'LA'),
                 password: '', // Don't pre-fill password
@@ -127,6 +129,16 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                             className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all disabled:bg-slate-50 disabled:text-slate-500"
                             value={formData.email}
                             onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                        />
+                    </div>
+                    <div>
+                        <label className="block text-sm font-medium text-slate-700 mb-1">WhatsApp/Phone Number</label>
+                        <input
+                            type="text"
+                            placeholder="e.g. 919876543210"
+                            className="w-full px-4 py-2 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
+                            value={formData.phone}
+                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                         />
                     </div>
                     <div>

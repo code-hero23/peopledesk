@@ -8,6 +8,7 @@ const initAttendanceCron = require('./cron/attendanceCron');
 const initCheckoutReminderCron = require('./cron/checkoutReminderCron');
 const initNotificationCron = require('./cron/notificationCron');
 const initFinanceCron = require('./cron/financeCron');
+const initWorklogReminderCron = require('./cron/worklogReminderCron');
 
 
 // Route Imports
@@ -24,6 +25,7 @@ initAttendanceCron();
 initCheckoutReminderCron();
 initNotificationCron();
 initFinanceCron();
+initWorklogReminderCron();
 
 
 // Security Middlewares

@@ -69,10 +69,14 @@ const initAttendanceCron = () => {
             // So looking for absence on: D-1, D-2, D-3.
 
             const checkDates = [];
-            for (let i = 1; i <= 3; i++) {
+            let daysBack = 1;
+            while (checkDates.length < 3 && daysBack < 10) { // Limit to 10 days search
                 const d = new Date(today);
-                d.setDate(today.getDate() - i);
-                checkDates.push(d);
+                d.setDate(today.getDate() - daysBack);
+                if (d.getDay() !== 0) { // If not Sunday
+                    checkDates.push(d);
+                }
+                daysBack++;
             }
 
             console.log(`Checking absences for: ${checkDates.map(d => d.toISOString().split('T')[0]).join(', ')}`);
@@ -151,16 +155,67 @@ const initAttendanceCron = () => {
                         data: { status: 'BLOCKED' }
                     });
 
-                    // Create Audit Log (Auto-generated?)
-                    // If no AuditLog service, we just skip or try to create if model exists
-                    // Model AuditLog exists.
+                    // Create Audit Log
                     await prisma.auditLog.create({
                         data: {
                             action: 'AUTO_BLOCK',
-                            userId: user.id, // Who was affected?
+                            userId: user.id,
                             details: 'Blocked due to 3 consecutive days of unexplained absence.'
                         }
                     });
+                }
+
+                // 2. CHECK FOR 3 CONSECUTIVE LATE LOGINS
+                let consecutiveLateLogins = 0;
+                const LATE_THRESHOLD_MINUTES = 10 * 60 + 30; // 10:30 AM
+
+                for (const dateToCheck of checkDates) {
+                    const startOfDay = new Date(dateToCheck);
+                    startOfDay.setHours(0, 0, 0, 0);
+                    const endOfDay = new Date(dateToCheck);
+                    endOfDay.setHours(23, 59, 59, 999);
+
+                    const attendance = await prisma.attendance.findFirst({
+                        where: {
+                            userId: user.id,
+                            date: { gte: startOfDay, lte: endOfDay }
+                        }
+                    });
+
+                    if (attendance) {
+                        // Check if it was a Sunday (already skipped in absence, but let's be careful here)
+                        if (dateToCheck.getDay() === 0) continue; 
+
+                        const checkInTime = new Date(attendance.date);
+                        const istOffset = 5.5 * 60 * 60 * 1000;
+                        const istCheckIn = new Date(checkInTime.getTime() + istOffset);
+                        const minutesSinceMidnight = istCheckIn.getUTCHours() * 60 + istCheckIn.getUTCMinutes();
+
+                        if (minutesSinceMidnight > LATE_THRESHOLD_MINUTES) {
+                            consecutiveLateLogins++;
+                        } else {
+                            // Break the cycle if they were on time even once in these 3 days
+                            break; 
+                        }
+                    } else {
+                        // If they didn't log in at all, it's NOT a "late login", it's an absence (handled above)
+                        // But for "consecutive late login", absence usually resets the counter or counts as "not on time".
+                        // Logic for "consecutive late login for 3 days" usually means 3 days of EXPLICITLY LATE check-ins.
+                        break; 
+                    }
+                }
+
+                if (consecutiveLateLogins === 3) {
+                    console.log(`LATE LOGIN ALERT: ${user.name} (${user.email}) - 3 consecutive late logins`);
+                    
+                    try {
+                        const whatsAppService = require('../utils/WhatsAppService');
+                        if (user.phone) {
+                            await whatsAppService.sendLateLoginAlert(user.phone, user.name, 3);
+                        }
+                    } catch (wsError) {
+                        console.error('Error triggering Late Login WhatsApp notification:', wsError);
+                    }
                 }
             }
 

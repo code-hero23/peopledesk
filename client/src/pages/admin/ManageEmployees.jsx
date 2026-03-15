@@ -187,6 +187,7 @@ const ManageEmployees = () => {
                                 <th className="px-6 py-4">Designation</th>
                                 <th className="px-6 py-4">Reporting To</th>
                                 <th className="px-6 py-4 text-center">Salary Access</th>
+                                <th className="px-6 py-4">WhatsApp</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
                             </tr>
@@ -248,6 +249,18 @@ const ManageEmployees = () => {
                                                 <span className="text-[10px] font-mono font-bold text-slate-500">
                                                     ₹{emp.allocatedSalary.toLocaleString()}
                                                 </span>
+                                            )}
+                                        </div>
+                                    </td>
+                                    <td className="px-6 py-4">
+                                        <div className="flex items-center gap-1.5">
+                                            {emp.phone ? (
+                                                <>
+                                                    <span className="text-emerald-500">📱</span>
+                                                    <span className="text-sm font-mono text-slate-600">{emp.phone}</span>
+                                                </>
+                                            ) : (
+                                                <span className="text-xs text-slate-300 italic">Not Added</span>
                                             )}
                                         </div>
                                     </td>

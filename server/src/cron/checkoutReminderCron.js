@@ -59,8 +59,16 @@ const initCheckoutReminderCron = () => {
 
                     if (emailSent) {
                         console.log(`CRON: Email sent successfully to ${user.email} (${user.name})`);
-                    } else {
-                        console.error(`CRON: Failed to send email to ${user.email} - sendEmail returned false.`);
+                    }
+
+                    // Trigger WhatsApp Notification
+                    try {
+                        const whatsAppService = require('../utils/WhatsAppService');
+                        if (user.phone) {
+                            await whatsAppService.sendMissedLogoutNotification(user.phone, user.name);
+                        }
+                    } catch (wsError) {
+                        console.error('CRON: Error sending WhatsApp logout alert:', wsError);
                     }
                 } catch (emailError) {
                     console.error(`CRON: SMTP Error for ${user.email}:`, emailError.message);

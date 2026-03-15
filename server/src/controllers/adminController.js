@@ -23,6 +23,7 @@ const getAllEmployees = async (req, res) => {
                 id: true,
                 name: true,
                 email: true,
+                phone: true,
                 role: true,
                 status: true,
                 designation: true,
@@ -439,7 +440,7 @@ const updateUserStatus = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: { status },
-            select: { id: true, name: true, email: true, status: true, designation: true }
+            select: { id: true, name: true, email: true, phone: true, status: true, designation: true }
         });
         res.json(user);
     } catch (error) {
@@ -452,7 +453,7 @@ const updateUserStatus = async (req, res) => {
 // @route   POST /api/admin/employees
 // @access  Private (Admin)
 const createEmployee = async (req, res) => {
-    const { name, email, password, designation } = req.body;
+    const { name, email, password, designation, phone } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please add all fields' });
@@ -488,6 +489,7 @@ const createEmployee = async (req, res) => {
             data: {
                 name,
                 email,
+                phone,
                 password: hashedPassword,
                 role: newRole,
                 designation: newDesignation,
@@ -500,7 +502,7 @@ const createEmployee = async (req, res) => {
                 salaryDeductionBreakdown: req.body.salaryDeductionBreakdown || []
             },
             select: {
-                id: true, name: true, email: true, role: true, status: true, designation: true, lastWorkLogDate: true,
+                id: true, name: true, email: true, phone: true, role: true, status: true, designation: true, lastWorkLogDate: true,
                 reportingBhId: true,
                 isGlobalAccess: true,
                 allocatedSalary: true,
@@ -849,7 +851,7 @@ const getActiveStatuses = async (req, res) => {
 // @access  Private (Admin)
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
-    const { name, email, designation, role, password } = req.body;
+    const { name, email, designation, role, password, phone } = req.body;
     const requesterRole = req.user.role;
     const requesterId = req.user.id;
 
@@ -883,6 +885,7 @@ const updateEmployee = async (req, res) => {
             updateData = {
                 name,
                 email,
+                phone,
                 designation,
                 role: role || undefined,
                 reportingBhId: req.body.reportingBhId !== undefined ? (req.body.reportingBhId ? parseInt(req.body.reportingBhId) : null) : undefined,
@@ -905,7 +908,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
+            select: { id: true, name: true, email: true, phone: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
         });
         res.json(user);
     } catch (error) {
@@ -1008,6 +1011,7 @@ const importEmployees = async (req, res) => {
             const email = row['Email'] || row['email'];
             const role = (row['Role'] || row['role'] || 'EMPLOYEE').toUpperCase();
             const designation = (row['Designation'] || row['designation'] || 'LA').toUpperCase();
+            const phone = row['Phone'] || row['phone'] || row['WhatsApp'] || row['whatsapp'] || '';
             const ctc = parseFloat(row['CTC'] || row['Salary'] || row['salary'] || 0);
 
             // Check for Time Shortage Deduction flag (YES/NO)
@@ -1043,6 +1047,7 @@ const importEmployees = async (req, res) => {
                     name,
                     role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER'].includes(role) ? role : 'EMPLOYEE',
                     designation,
+                    phone: phone ? phone.toString().replace(/\D/g, '') : undefined, // Sanitize to numbers only
                     allocatedSalary: ctc > 0 ? ctc : undefined,
                     salaryDeductionBreakdown: deductionBreakdown.length > 0 ? deductionBreakdown : undefined,
                     salaryViewEnabled: true,
@@ -1123,6 +1128,7 @@ const importEmployees = async (req, res) => {
                 }
 
             } catch (err) {
+                console.error(`Import Error at row ${index + 2}:`, err);
                 results.failed++;
                 results.errors.push(`Row ${index + 2}: ${err.message}`);
             }
