@@ -41,5 +41,6 @@ router.delete('/requests/:type/:id', protect, authorize('ADMIN', 'HR'), deleteRe
 router.put('/users/:id/status', protect, authorize('ADMIN'), updateUserStatus);
 router.put('/users/:id', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER'), updateEmployee);
 router.delete('/users/:id', protect, authorize('ADMIN'), deleteEmployee);
+router.post('/employees/:id/test-whatsapp', protect, authorize('ADMIN'), testWhatsApp);
 
 module.exports = router;

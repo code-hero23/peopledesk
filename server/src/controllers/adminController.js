@@ -1148,6 +1148,48 @@ const importEmployees = async (req, res) => {
 // @desc    Delete a request (Admin/HR only)
 // @route   DELETE /api/admin/requests/:type/:id
 // @access  Private (Admin, HR)
+// @desc    Send test WhatsApp message
+// @route   POST /api/admin/employees/:id/test-whatsapp
+// @access  Private (Admin)
+const testWhatsApp = async (req, res) => {
+    const { id } = req.params;
+    const { template } = req.body;
+
+    try {
+        const user = await prisma.user.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!user || !user.phone) {
+            return res.status(400).json({ message: 'User not found or phone number missing' });
+        }
+
+        const whatsappService = require('../utils/WhatsAppService');
+        let result;
+
+        if (template === 'hello_world') {
+            result = await whatsappService.sendTemplateMessage(user.phone, 'hello_world', []);
+        } else if (template === 'missed_logout_alert') {
+            result = await whatsappService.sendMissedLogoutNotification(user.phone, user.name);
+        } else if (template === 'missed_worklog_alert') {
+            result = await whatsappService.sendMissedWorklogNotification(user.phone, user.name);
+        } else if (template === 'late_login_alert') {
+            result = await whatsappService.sendLateLoginAlert(user.phone, user.name, 3);
+        } else {
+            return res.status(400).json({ message: 'Invalid template name' });
+        }
+
+        if (result) {
+            res.json({ message: `Test message (${template}) sent successfully to ${user.phone}` });
+        } else {
+            res.status(500).json({ message: 'Failed to send WhatsApp message. Check server logs for Meta API error.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 const deleteRequest = async (req, res) => {
     const { type, id } = req.params;
     const userRole = req.user.role;
@@ -1192,5 +1234,6 @@ module.exports = {
     updateEmployee,
     deleteEmployee,
     importEmployees,
-    deleteRequest
+    deleteRequest,
+    testWhatsApp
 };

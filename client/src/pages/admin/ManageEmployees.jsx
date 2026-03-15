@@ -104,6 +104,21 @@ const ManageEmployees = () => {
         }
     };
 
+    const handleTestWhatsApp = async (empId, templateName) => {
+        try {
+            const token = user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.post(`${baseUrl}/admin/employees/${empId}/test-whatsapp`, { template: templateName }, config);
+            alert(response.data.message);
+        } catch (error) {
+            console.error(error);
+            alert(error.response?.data?.message || 'Failed to send test message');
+        }
+    };
+
     const filteredEmployees = employees.filter(emp =>
         emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -253,11 +268,30 @@ const ManageEmployees = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <div className="flex items-center gap-1.5">
+                                        <div className="flex items-center gap-1.5 justify-between group/wa">
                                             {emp.phone ? (
                                                 <>
-                                                    <span className="text-emerald-500">📱</span>
-                                                    <span className="text-sm font-mono text-slate-600">{emp.phone}</span>
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="text-emerald-500">📱</span>
+                                                        <span className="text-sm font-mono text-slate-600">{emp.phone}</span>
+                                                    </div>
+                                                    {user?.role === 'ADMIN' && (
+                                                        <select 
+                                                            onChange={(e) => {
+                                                                if (e.target.value) {
+                                                                    handleTestWhatsApp(emp.id, e.target.value);
+                                                                    e.target.value = '';
+                                                                }
+                                                            }}
+                                                            className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 rounded px-1 py-0.5 opacity-0 group-hover/wa:opacity-100 transition-opacity cursor-pointer outline-none"
+                                                        >
+                                                            <option value="">Tests</option>
+                                                            <option value="hello_world">Hello World</option>
+                                                            <option value="missed_logout_alert">Logout Alert</option>
+                                                            <option value="missed_worklog_alert">Worklog Alert</option>
+                                                            <option value="late_login_alert">Late Alert</option>
+                                                        </select>
+                                                    )}
                                                 </>
                                             ) : (
                                                 <span className="text-xs text-slate-300 italic">Not Added</span>

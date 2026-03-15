@@ -19,18 +19,32 @@ async function testConnection() {
         return;
     }
 
-    console.log('\nSending test notification to:', config.testNumber);
-    console.log('Using Template: hello_world (Standard Meta test template)');
+    const template = process.argv[2] || 'hello_world';
+    const recipient = process.env.WHATSAPP_NOTIFICATION_NUMBER || 'MISSING';
+
+    console.log('\nSending test notification to:', recipient);
+    console.log('Using Template:', template);
 
     try {
-        const result = await whatsappService.sendTemplateMessage(config.testNumber, 'hello_world', []);
+        let result;
+        if (template === 'hello_world') {
+            result = await whatsappService.sendTemplateMessage(recipient, 'hello_world', []);
+        } else if (template === 'missed_logout_alert') {
+            result = await whatsappService.sendMissedLogoutNotification(recipient, 'Test Employee');
+        } else if (template === 'missed_worklog_alert') {
+            result = await whatsappService.sendMissedWorklogNotification(recipient, 'Test Employee');
+        } else if (template === 'late_login_alert') {
+            result = await whatsappService.sendLateLoginAlert(recipient, 'Test Employee', 3);
+        } else {
+            console.error('❌ Unknown template. Use: hello_world, missed_logout_alert, missed_worklog_alert, or late_login_alert');
+            return;
+        }
         
         if (result) {
-            console.log('\n✅ SUCCESS: Message sent to Meta API!');
-            console.log('Check your WhatsApp device for the notification.');
+            console.log(`\n✅ SUCCESS: "${template}" sent successfully!`);
         } else {
-            console.log('\n❌ FAILED: API response was empty or returned an error.');
-            console.log('Check the logs above for specific error messages from Meta.');
+            console.log(`\n❌ FAILED: Meta API rejected "${template}".`);
+            console.log('Ensure the template is Approved in your Meta Dashboard and the name matches exactly.');
         }
     } catch (error) {
         console.error('\n❌ CRITICAL ERROR:', error.message);
@@ -38,3 +52,11 @@ async function testConnection() {
 }
 
 testConnection();
+
+// Usage help
+if (!process.argv[2]) {
+    console.log('\n💡 TIP: You can test specific templates by running:');
+    console.log('node verify_whatsapp.js missed_logout_alert');
+    console.log('node verify_whatsapp.js missed_worklog_alert');
+    console.log('node verify_whatsapp.js late_login_alert');
+}
