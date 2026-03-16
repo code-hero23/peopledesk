@@ -446,9 +446,9 @@ const AdminCallReports = () => {
                                     <BarChart3 className="text-blue-500" size={14} /> Top Performers
                                 </h3>
                             </div>
-                            <div className="flex-1 w-full pb-4 min-h-[250px]">
-                                {isMounted && (
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                            <div className="flex-1 w-full min-h-[220px]">
+                         {barData.length > 0 ? (
+                             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
@@ -460,6 +460,11 @@ const AdminCallReports = () => {
                                         <Bar dataKey="Calls" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
                                     </BarChart>
                                 </ResponsiveContainer>
+                            ) : (
+                                <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full py-10">
+                                    <BarChart3 className="text-slate-300" size={48} />
+                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Performance Data</p>
+                                </div>
                             )}
                         </div>
                         </div>
@@ -628,10 +633,10 @@ const AdminCallReports = () => {
                             <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
                             <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
 
-                            <div className="w-full space-y-4">
-                                <div className="h-[250px] w-full">
-                                    {(isMounted && selectedEmployee) && (
-                                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                             <div className="w-full space-y-4">
+                                 <div className="h-[250px] w-full">
+                                     {(isMounted && selectedEmployee) && (
+                                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <PieChart>
                                             <Pie
                                                 data={getPieData(selectedEmployee)}

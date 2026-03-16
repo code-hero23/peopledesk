@@ -1181,14 +1181,18 @@ const testWhatsApp = async (req, res) => {
             return res.status(400).json({ message: 'Invalid template name' });
         }
 
-        if (result) {
+        if (result.success) {
             res.json({ message: `Test message (${template}) sent successfully to ${user.phone}` });
         } else {
-            res.status(500).json({ message: 'Failed to send WhatsApp message. Check server logs for Meta API error.' });
+            res.status(500).json({ 
+                message: 'Failed to send WhatsApp message.', 
+                error: result.error,
+                details: 'Check server logs for full Meta API error trace.' 
+            });
         }
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        console.error('testWhatsApp Error:', error);
+        res.status(500).json({ message: 'Server Internal Error', error: error.message });
     }
 };
 

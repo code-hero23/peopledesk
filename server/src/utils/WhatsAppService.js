@@ -12,6 +12,21 @@ class WhatsAppService {
     }
 
     /**
+     * Sanitize phone number to meet Meta's requirements:
+     * - Only digits
+     * - Include country code
+     * - No leading +
+     */
+    sanitizePhoneNumber(phone) {
+        if (!phone) return '';
+        // Remove all non-digit characters
+        let sanitized = String(phone).replace(/\D/g, '');
+        // Note: We assume the number already has a country code or is in a format the user provides.
+        // For Meta API, it must NOT have the '+' prefix.
+        return sanitized;
+    }
+
+    /**
      * Send a template message to a recipient.
      * @param {string} to - Recipient phone number (with country code, no + sign).
      * @param {string} templateName - Name of the pre-approved template.
@@ -21,13 +36,19 @@ class WhatsAppService {
     async sendTemplateMessage(to, templateName, parameters = [], languageCode = 'en_US') {
         if (!this.accessToken || !this.phoneNumberId) {
             console.warn('WhatsApp API credentials missing. Skipping notification.');
-            return;
+            return { success: false, error: 'WhatsApp API credentials missing' };
+        }
+
+        const sanitizedTo = this.sanitizePhoneNumber(to);
+        if (!sanitizedTo) {
+            console.warn(`Invalid phone number for ${templateName}: ${to}`);
+            return { success: false, error: 'Invalid phone number' };
         }
 
         try {
             const data = {
                 messaging_product: 'whatsapp',
-                to: to,
+                to: sanitizedTo,
                 type: 'template',
                 template: {
                     name: templateName,
@@ -53,12 +74,13 @@ class WhatsAppService {
                 }
             });
 
-            console.log(`WhatsApp notification sent to ${to}: ${templateName}`);
-            return response.data;
+            console.log(`WhatsApp notification sent to ${sanitizedTo}: ${templateName}`);
+            return { success: true, data: response.data };
         } catch (error) {
-            console.error('Error sending WhatsApp notification:', error.response ? error.response.data : error.message);
-            // We don't throw error to avoid breaking the main process (e.g., checkout/submission)
-            return null;
+            const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
+            console.error('Error sending WhatsApp notification:', errorMsg);
+            // We return detailed error info for internal debugging/logging
+            return { success: false, error: errorMsg };
         }
     }
 

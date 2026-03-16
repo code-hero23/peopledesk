@@ -422,7 +422,7 @@ const PerformanceAnalytics = () => {
                                         <h4 className="font-black text-slate-800 text-lg tracking-tight">Efficiency Trend</h4>
                                     </div>
                                     <div className="h-[250px] w-full">
-                                        <ResponsiveContainer width="100%" height="100%">
+                                        <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                             <LineChart data={employeeStats.dailyTrends} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                                                 <defs>
                                                     <linearGradient id="colorEfficiency" x1="0" y1="0" x2="0" y2="1">
@@ -463,7 +463,7 @@ const PerformanceAnalytics = () => {
                                     <h4 className="font-black text-slate-800 text-base">Efficiency Benchmarks</h4>
                                 </div>
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart data={teamChartData} barSize={24}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
@@ -486,7 +486,7 @@ const PerformanceAnalytics = () => {
                                     <h4 className="font-black text-slate-800 text-base">Consistency Score</h4>
                                 </div>
                                 <div className="h-[250px] w-full">
-                                    <ResponsiveContainer width="100%" height="100%">
+                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                                         <BarChart data={teamChartData} barSize={24}>
                                             <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                             <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '700', fill: '#94a3b8' }} dy={10} />
