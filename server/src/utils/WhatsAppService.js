@@ -54,18 +54,22 @@ class WhatsAppService {
                     name: templateName,
                     language: {
                         code: languageCode
-                    },
-                    components: [
-                        {
-                            type: 'body',
-                            parameters: parameters.map(p => ({
-                                type: 'text',
-                                text: String(p)
-                            }))
-                        }
-                    ]
+                    }
                 }
             };
+
+            // Only add components if we have parameters
+            if (parameters && parameters.length > 0) {
+                data.template.components = [
+                    {
+                        type: 'body',
+                        parameters: parameters.map(p => ({
+                            type: 'text',
+                            text: String(p)
+                        }))
+                    }
+                ];
+            }
 
             const response = await axios.post(this.baseUrl, data, {
                 headers: {
@@ -78,7 +82,7 @@ class WhatsAppService {
             return { success: true, data: response.data };
         } catch (error) {
             const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
-            console.error('Error sending WhatsApp notification:', errorMsg);
+            console.error(`Error sending WhatsApp notification to ${to}:`, errorMsg);
             // We return detailed error info for internal debugging/logging
             return { success: false, error: errorMsg };
         }

@@ -40,10 +40,12 @@ async function testConnection() {
             return;
         }
         
-        if (result) {
+        if (result && result.success) {
             console.log(`\n✅ SUCCESS: "${template}" sent successfully!`);
+            console.log('Response Detail:', JSON.stringify(result.data));
         } else {
             console.log(`\n❌ FAILED: Meta API rejected "${template}".`);
+            console.log('Error Message:', result ? result.error : 'Unknown error');
             console.log('Ensure the template is Approved in your Meta Dashboard and the name matches exactly.');
         }
     } catch (error) {
