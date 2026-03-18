@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
 import { UserPlus, Download } from 'lucide-react';
+import { useNavigate, Link } from 'react-router-dom';
 import { getAllEmployees, deleteEmployee, updateUserStatus, reset } from '../../features/admin/adminSlice';
 import CreateEmployeeModal from '../../components/CreateEmployeeModal';
 
@@ -211,7 +212,12 @@ const ManageEmployees = () => {
                             {filteredEmployees.map((emp) => (
                                 <tr key={emp.id} className="hover:bg-slate-50 transition-colors group">
                                     <td className="px-6 py-4">
-                                        <div className="font-bold text-slate-900">{emp.name}</div>
+                                        <Link 
+                                            to={`/admin/employees/${emp.id}/attendance`}
+                                            className="font-bold text-slate-900 hover:text-blue-600 hover:underline transition-all block"
+                                        >
+                                            {emp.name}
+                                        </Link>
                                         <div className="text-sm text-slate-500">{emp.email}</div>
                                     </td>
                                     <td className="px-6 py-4">

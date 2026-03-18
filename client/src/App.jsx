@@ -31,6 +31,7 @@ import Layout from './components/MainLayout';
 import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
 import SupportButton from './components/common/SupportButton';
+import EmployeeAttendanceDetail from './pages/admin/EmployeeAttendanceDetail';
 
 import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
 
@@ -64,6 +65,7 @@ function App() {
               <Route path="/admin/vouchers" element={<VoucherManagement />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />
               <Route path="/admin/employees" element={<ManageEmployees />} />
+              <Route path="/admin/employees/:id/attendance" element={<EmployeeAttendanceDetail />} />
               <Route path="/admin/worklogs" element={<WorkLogs />} />
               <Route path="/admin/attendance" element={<Attendance />} />
               <Route path="/admin/attendance-verification" element={<AttendanceVerification />} />

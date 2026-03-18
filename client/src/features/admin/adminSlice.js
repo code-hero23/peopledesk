@@ -16,6 +16,7 @@ const initialState = {
     message: '',
     callStats: [],
     excludedNumbers: [],
+    employeeAttendance: [],
 };
 
 // Create Employee
@@ -406,6 +407,28 @@ export const getCallStats = createAsyncThunk(
     }
 );
 
+// Get specific employee attendance
+export const getEmployeeAttendance = createAsyncThunk(
+    'admin/getEmployeeAttendance',
+    async ({ id, startDate, endDate }, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            let query = '';
+            if (startDate && endDate) {
+                query = `?startDate=${startDate}&endDate=${endDate}`;
+            }
+            const response = await axios.get(API_URL + `employees/${id}/attendance${query}`, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response && error.response.data && error.response.data.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 export const adminSlice = createSlice({
     name: 'admin',
     initialState,
@@ -643,6 +666,20 @@ export const adminSlice = createSlice({
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;
+            })
+            // Individual Employee Attendance
+            .addCase(getEmployeeAttendance.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(getEmployeeAttendance.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.employeeAttendance = action.payload;
+            })
+            .addCase(getEmployeeAttendance.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+                state.employeeAttendance = [];
             });
     },
 });

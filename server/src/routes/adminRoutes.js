@@ -16,8 +16,10 @@ const {
     deleteEmployee,
     importEmployees,
     deleteRequest,
-    testWhatsApp
+    testWhatsApp,
+    getEmployeeAttendance
 } = require('../controllers/adminController');
+router.get('/employees/:id/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getEmployeeAttendance);
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
 

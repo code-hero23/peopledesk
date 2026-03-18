@@ -1168,7 +1168,7 @@ const testWhatsApp = async (req, res) => {
         let result;
 
         if (template === 'hello_world') {
-            result = await whatsappService.sendTemplateMessage(user.phone, 'hello_world', []);
+            result = await whatsappService.sendTemplateMessage(user.phone, 'hello_world', [], 'en_US');
         } else if (template === 'missed_logout_alert') {
             result = await whatsappService.sendMissedLogoutNotification(user.phone, user.name);
         } else if (template === 'missed_worklog_alert') {
@@ -1184,15 +1184,81 @@ const testWhatsApp = async (req, res) => {
         if (result.success) {
             res.json({ message: `Test message (${template}) sent successfully to ${user.phone}` });
         } else {
-            res.status(500).json({ 
-                message: 'Failed to send WhatsApp message.', 
+            // Parse error if it's JSON string
+            let errorDetails = result.error;
+            try {
+                const parsed = JSON.parse(result.error);
+                errorDetails = parsed.error?.message || result.error;
+            } catch (e) {
+                // Not JSON, use as is
+            }
+
+            res.status(400).json({ 
+                message: `WhatsApp API Error: ${errorDetails}`, 
                 error: result.error,
-                details: 'Check server logs for full Meta API error trace.' 
+                details: 'If you see "API access blocked", please refresh your WhatsApp Access Token in .env' 
             });
         }
     } catch (error) {
         console.error('testWhatsApp Error:', error);
         res.status(500).json({ message: 'Server Internal Error', error: error.message });
+    }
+};
+
+// @desc    Get specific employee attendance history
+// @route   GET /api/admin/employees/:id/attendance
+// @access  Private (Admin, HR, BH)
+const getEmployeeAttendance = async (req, res) => {
+    try {
+        const userId = parseInt(req.params.id);
+        const { startDate, endDate } = req.query;
+
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Invalid employee ID' });
+        }
+
+        // Security check for BH: Can only view their own subordinates
+        if (req.user.role === 'BUSINESS_HEAD' || req.user.role === 'AE_MANAGER') {
+            const employee = await prisma.user.findUnique({
+                where: { id: userId },
+                select: { reportingBhId: true, designation: true }
+            });
+
+            if (!employee) return res.status(404).json({ message: 'Employee not found' });
+
+            const isAuthorized = employee.reportingBhId === req.user.id || (req.user.role === 'AE_MANAGER' && employee.designation === 'AE');
+            if (!isAuthorized) {
+                return res.status(403).json({ message: 'Not authorized to view this employee attendance history.' });
+            }
+        }
+
+        let dateFilter = {};
+        if (startDate && endDate) {
+            dateFilter = {
+                date: {
+                    gte: new Date(startDate),
+                    lte: new Date(endDate)
+                }
+            };
+        }
+
+        const history = await prisma.attendance.findMany({
+            where: {
+                userId: userId,
+                ...dateFilter
+            },
+            include: {
+                breaks: true
+            },
+            orderBy: {
+                date: 'desc'
+            }
+        });
+
+        res.json(history);
+    } catch (error) {
+        console.error("getEmployeeAttendance Error:", error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
@@ -1241,5 +1307,6 @@ module.exports = {
     deleteEmployee,
     importEmployees,
     deleteRequest,
-    testWhatsApp
+    testWhatsApp,
+    getEmployeeAttendance
 };

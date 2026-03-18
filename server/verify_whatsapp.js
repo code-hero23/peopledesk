@@ -28,7 +28,7 @@ async function testConnection() {
     try {
         let result;
         if (template === 'hello_world') {
-            result = await whatsappService.sendTemplateMessage(recipient, 'hello_world', []);
+            result = await whatsappService.sendTemplateMessage(recipient, 'hello_world', [], 'en_US');
         } else if (template === 'missed_logout_alert') {
             result = await whatsappService.sendMissedLogoutNotification(recipient, 'Test Employee');
         } else if (template === 'missed_worklog_alert') {
