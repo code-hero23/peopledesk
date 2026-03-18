@@ -31,9 +31,9 @@ class WhatsAppService {
      * @param {string} to - Recipient phone number (with country code, no + sign).
      * @param {string} templateName - Name of the pre-approved template.
      * @param {Array} parameters - Array of parameter objects for the template.
-     * @param {string} languageCode - Language code for the template (default 'en').
+     * @param {string} languageCode - Language code for the template (default 'en_US').
      */
-    async sendTemplateMessage(to, templateName, parameters = [], languageCode = 'en') {
+    async sendTemplateMessage(to, templateName, parameters = [], languageCode = 'en_US') {
         if (!this.accessToken || !this.phoneNumberId) {
             console.warn('WhatsApp API credentials missing. Skipping notification.');
             return { success: false, error: 'WhatsApp API credentials missing' };
@@ -94,7 +94,7 @@ class WhatsAppService {
     async sendMissedLogoutNotification(to, userName) {
         // Template: missed_logout_alert
         // Params: {{1}} = Name
-        return this.sendTemplateMessage(to, 'missed_logout_alert', [userName], 'en');
+        return this.sendTemplateMessage(to, 'missed_logout_alert', [userName], 'en_US');
     }
 
     /**
@@ -103,7 +103,7 @@ class WhatsAppService {
     async sendMissedWorklogNotification(to, userName) {
         // Template: missed_worklog_alert
         // Params: {{1}} = Name
-        return this.sendTemplateMessage(to, 'missed_worklog_alert', [userName], 'en');
+        return this.sendTemplateMessage(to, 'missed_worklog_alert', [userName], 'en_US');
     }
 
     /**
@@ -112,7 +112,7 @@ class WhatsAppService {
     async sendLateLoginAlert(to, userName, consecutiveDays) {
         // Template: late_login_alert
         // Params: {{1}} = Name, {{2}} = Days
-        return this.sendTemplateMessage(to, 'late_login_alert', [userName, consecutiveDays], 'en');
+        return this.sendTemplateMessage(to, 'late_login_alert', [userName, consecutiveDays], 'en_US');
     }
 
     /**
@@ -121,7 +121,7 @@ class WhatsAppService {
     async sendBreakExceedanceAlert(to, userName, breakType, limitMinutes) {
         // Template: break_exceed_alert
         // Params: {{1}} = Name, {{2}} = Break Type (Tea/Lunch), {{3}} = Limit Minutes
-        return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes], 'en');
+        return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes], 'en_US');
     }
 }
 

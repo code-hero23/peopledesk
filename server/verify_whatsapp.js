@@ -35,6 +35,8 @@ async function testConnection() {
             result = await whatsappService.sendMissedWorklogNotification(recipient, 'Test Employee');
         } else if (template === 'late_login_alert') {
             result = await whatsappService.sendLateLoginAlert(recipient, 'Test Employee', 3);
+        } else if (template === 'break_exceed_alert') {
+            result = await whatsappService.sendBreakExceedanceAlert(recipient, 'Test Employee', 'Tea Break', 15);
         } else {
             console.error('❌ Unknown template. Use: hello_world, missed_logout_alert, missed_worklog_alert, or late_login_alert');
             return;
