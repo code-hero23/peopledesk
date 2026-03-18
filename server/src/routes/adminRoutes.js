@@ -19,9 +19,10 @@ const {
     testWhatsApp,
     getEmployeeAttendance
 } = require('../controllers/adminController');
-router.get('/employees/:id/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getEmployeeAttendance);
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
+
+router.get('/employees/:id/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getEmployeeAttendance);
 
 router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllEmployees);
 router.post('/employees', protect, authorize('ADMIN', 'AE_MANAGER'), createEmployee);
