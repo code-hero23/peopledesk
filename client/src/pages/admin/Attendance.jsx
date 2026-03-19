@@ -114,11 +114,11 @@ const Attendance = () => {
 
     const getStatusStyles = (type) => {
         switch (type) {
-            case 'TEA': return { bg: 'bg-amber-50', text: 'text-amber-600', icon: Coffee, label: 'Tea Break' };
-            case 'LUNCH': return { bg: 'bg-orange-50', text: 'text-orange-600', icon: Utensils, label: 'Lunch Break' };
-            case 'CLIENT_MEETING': return { bg: 'bg-blue-50', text: 'text-blue-600', icon: Users, label: 'Client Meeting' };
-            case 'BH_MEETING': return { bg: 'bg-purple-50', text: 'text-purple-600', icon: Zap, label: 'BH Meeting' };
-            default: return { bg: 'bg-slate-50', text: 'text-slate-600', icon: Clock, label: 'On Break' };
+            case 'TEA': return { bg: 'bg-amber-50 dark:bg-slate-900', border: 'border-white dark:border-amber-500/30', text: 'text-amber-600 dark:text-amber-400', icon: Coffee, label: 'Tea Break' };
+            case 'LUNCH': return { bg: 'bg-orange-50 dark:bg-slate-900', border: 'border-white dark:border-orange-500/30', text: 'text-orange-600 dark:text-orange-400', icon: Utensils, label: 'Lunch Break' };
+            case 'CLIENT_MEETING': return { bg: 'bg-blue-50 dark:bg-slate-900', border: 'border-white dark:border-blue-500/30', text: 'text-blue-600 dark:text-blue-300', icon: Users, label: 'Client Meeting' };
+            case 'BH_MEETING': return { bg: 'bg-purple-50 dark:bg-slate-900', border: 'border-white dark:border-purple-500/30', text: 'text-purple-600 dark:text-purple-300', icon: Zap, label: 'BH Meeting' };
+            default: return { bg: 'bg-slate-50 dark:bg-slate-900', border: 'border-white dark:border-slate-700', text: 'text-slate-600 dark:text-slate-400', icon: Clock, label: 'On Break' };
         }
     };
 
@@ -330,21 +330,21 @@ const Attendance = () => {
                                                 initial={{ opacity: 0, scale: 0.9 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.9 }}
-                                                className={`${styles.bg} dark:bg-slate-800 p-4 rounded-2xl border border-white dark:border-slate-700 shadow-sm flex items-start gap-3`}
+                                                className={`${styles.bg} ${styles.border} p-4 rounded-2xl shadow-sm flex items-start gap-3 transition-all duration-300 hover:shadow-lg dark:hover:shadow-current/5`}
                                             >
-                                                <div className={`p-2.5 rounded-xl bg-white dark:bg-slate-900 ${styles.text} shadow-sm`}>
+                                                <div className={`p-2.5 rounded-xl bg-white dark:bg-slate-900 ${styles.text} shadow-sm transition-colors`}>
                                                     <Icon size={18} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-start mb-1">
                                                         <p className="text-sm font-black text-slate-800 dark:text-white truncate">{status.userName}</p>
-                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 ${styles.text} border border-current/10 whitespace-nowrap`}>
+                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 ${styles.text} border border-current/10 whitespace-nowrap transition-colors`}>
                                                             {styles.label}
                                                         </span>
                                                     </div>
                                                     <div className="mt-2 flex items-center justify-between text-[11px] font-black">
                                                         <span className="text-slate-400 dark:text-slate-500 font-bold uppercase">{status.designation}</span>
-                                                        <span className={styles.text}>{getDuration(status.startTime)}</span>
+                                                        <span className={`${styles.text} font-black`}>{getDuration(status.startTime)}</span>
                                                     </div>
                                                 </div>
                                             </motion.div>

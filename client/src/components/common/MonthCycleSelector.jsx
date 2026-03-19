@@ -92,10 +92,10 @@ const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
     const currentCycle = calculateCycleRange(selectedDate);
 
     return (
-        <div className="flex items-center gap-2 bg-white/80 backdrop-blur-md border border-slate-200 p-1.5 rounded-2xl shadow-sm">
+        <div className="flex items-center gap-2 bg-white/80 dark:bg-slate-900/80 backdrop-blur-md border border-slate-200 dark:border-slate-800 p-1.5 rounded-2xl shadow-sm transition-colors">
             <button
                 onClick={handlePrev}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 dark:text-slate-400"
                 title="Previous Cycle"
             >
                 <ChevronLeft size={20} />
@@ -115,18 +115,18 @@ const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
                         ease: "easeInOut"
                     }
                 }}
-                className="group flex items-center gap-4 px-7 py-3 rounded-[2rem] bg-white border border-slate-100 hover:border-indigo-200 shadow-xl hover:shadow-2xl hover:shadow-indigo-100/50 transition-all relative overflow-hidden active:scale-95 z-10"
+                className="group flex items-center gap-4 px-7 py-3 rounded-[2rem] bg-white dark:bg-slate-800 border border-slate-100 dark:border-slate-700 hover:border-indigo-200 dark:hover:border-indigo-500/50 shadow-xl hover:shadow-2xl hover:shadow-indigo-100/50 dark:hover:shadow-none transition-all relative overflow-hidden active:scale-95 z-10"
             >
                 {/* Decorative background glow */}
                 <div className="absolute top-0 right-0 w-20 h-20 bg-indigo-500/5 rounded-full blur-2xl -translate-y-1/2 translate-x-1/2 group-hover:bg-indigo-500/10 transition-colors" />
 
-                <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-3 rounded-2xl shadow-lg shadow-indigo-200 group-hover:scale-110 transition-transform">
+                <div className="bg-gradient-to-br from-indigo-500 to-blue-600 p-3 rounded-2xl shadow-lg shadow-indigo-200 dark:shadow-none group-hover:scale-110 transition-transform">
                     <CalendarIcon className="text-white" size={24} />
                 </div>
 
                 <div className="text-left">
                     <div className="flex items-center gap-3">
-                        <span className="text-base font-black text-slate-800 tracking-tight leading-none">
+                        <span className="text-base font-black text-slate-800 dark:text-white tracking-tight leading-none">
                             {formatDate(selectedDate).split('/').slice(1).join('/')}
                         </span>
                         <motion.div
@@ -139,18 +139,18 @@ const MonthCycleSelector = ({ onCycleChange, onCardClick }) => {
                                 repeat: Infinity,
                                 ease: "easeInOut"
                             }}
-                            className="px-3 py-1 rounded-full bg-indigo-600 text-[10px] font-black text-white uppercase tracking-widest shadow-md shadow-indigo-200"
+                            className="px-3 py-1 rounded-full bg-indigo-600 text-[10px] font-black text-white uppercase tracking-widest shadow-md shadow-indigo-200 dark:shadow-none"
                         >
                             My Calendar
                         </motion.div>
                     </div>
-                    <p className="text-[11px] font-bold text-slate-400 mt-1 uppercase tracking-wider opacity-70">View Cycle Details 26th - 25th</p>
+                    <p className="text-[11px] font-bold text-slate-400 dark:text-slate-500 mt-1 uppercase tracking-wider opacity-70">View Cycle Details 26th - 25th</p>
                 </div>
             </motion.button>
 
             <button
                 onClick={handleNext}
-                className="p-2 hover:bg-slate-100 rounded-xl transition-colors text-slate-500"
+                className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 dark:text-slate-400"
                 title="Next Cycle"
             >
                 <ChevronRight size={20} />
