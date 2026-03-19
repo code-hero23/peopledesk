@@ -1104,13 +1104,13 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
         }
 
         filteredCalls.forEach(c => {
-            userGroups[userName].Total++;
-            if (c.type === 'INCOMING') userGroups[userName].Incoming++;
-            if (c.type === 'OUTGOING') userGroups[userName].Outgoing++;
-            if (c.type === 'MISSED') userGroups[userName].Missed++;
-            if (c.type === 'REJECTED') userGroups[userName].Rejected++;
-            userGroups[userName].Duration += (c.duration || 0);
             if (c.number && !excludedNumbers.includes(c.number)) {
+                userGroups[userName].Total++;
+                if (c.type === 'INCOMING') userGroups[userName].Incoming++;
+                if (c.type === 'OUTGOING') userGroups[userName].Outgoing++;
+                if (c.type === 'MISSED') userGroups[userName].Missed++;
+                if (c.type === 'REJECTED') userGroups[userName].Rejected++;
+                userGroups[userName].Duration += (c.duration || 0);
                 userGroups[userName].UniqueContacts.add(c.number);
             }
 

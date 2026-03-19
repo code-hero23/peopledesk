@@ -451,7 +451,7 @@ const Overview = () => {
                             exit={{ height: 0, opacity: 0, y: -20 }}
                             className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 p-[2px] rounded-[2rem] shadow-lg shadow-amber-200/50 dark:shadow-amber-900/20 overflow-hidden"
                         >
-                            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4">
+                            <div className="bg-white/95 dark:bg-slate-900 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4 transition-colors">
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
                                         <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl">
@@ -463,8 +463,8 @@ const Overview = () => {
                                         </span>
                                     </div>
                                     <div>
-                                        <h4 className="text-lg font-black text-slate-800 dark:text-white tracking-tight">Break Session Active</h4>
-                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                        <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight transition-colors">Break Session Active</h4>
+                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2 transition-colors">
                                             Currently on {activeBreak.breakType} break since {formatTime(activeBreak.startTime)}
                                         </p>
                                     </div>
@@ -643,7 +643,7 @@ const Overview = () => {
                                     </div>
                                 </div>
                                 <div className="hidden md:block flex-shrink-0">
-                                    <SmartDisplayClock attendance={attendance} isCheckedIn={isCheckedIn} />
+                                    <SmartDisplayClock attendance={attendance} isCheckedIn={isCheckedIn} activeBreak={activeBreak} />
                                 </div>
                             </div>
                         </div>
@@ -981,7 +981,7 @@ function dataURLtoBlob(dataurl) {
     }
 }
 
-const SmartDisplayClock = ({ attendance, isCheckedIn }) => {
+const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
@@ -1010,7 +1010,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn }) => {
                 </div>
                 
                 {/* Progress Overlay - Subtle gradient fill from left */}
-                {isCheckedIn && (
+                {isCheckedIn && !activeBreak && (
                     <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: `${progress}%` }}
@@ -1019,56 +1019,94 @@ const SmartDisplayClock = ({ attendance, isCheckedIn }) => {
                 )}
             </div>
 
-            {/* Content Container */}
-            <div className="relative z-20 h-full p-8 flex flex-col justify-between text-white">
-                <div className="flex justify-between items-start">
-                    <div>
-                        <motion.h1 
-                            initial={{ y: 20, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            className="text-6xl xl:text-7xl font-black tracking-tighter drop-shadow-2xl select-none"
-                        >
-                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                        </motion.h1>
-                        <p className="text-sm xl:text-base font-bold text-white/80 mt-1 drop-shadow-md">
-                            {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                        </p>
-                    </div>
-
-                    {/* Status Icon/Info */}
-                    <div className="flex flex-col items-end">
-                        {isCheckedIn ? (
-                            <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 p-2 rounded-2xl flex items-center gap-2 group/status">
-                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
-                            </div>
-                        ) : (
-                            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex items-center gap-2">
-                                <Clock size={16} className="text-white/60" />
-                                <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Idle</span>
-                            </div>
-                        )}
-                    </div>
-                </div>
-
-                <div className="flex justify-between items-end">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
-                            <MapPinned size={18} className="text-white/80" />
+            {/* Break Animation Overlay */}
+            <AnimatePresence mode="wait">
+                {activeBreak ? (
+                    <motion.div
+                        key="break-animation"
+                        initial={{ opacity: 0, scale: 1.1 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.9 }}
+                        transition={{ duration: 0.5, ease: "anticipate" }}
+                        className="absolute inset-0 z-30"
+                    >
+                        <img 
+                            src="/break.gif" 
+                            alt="On Break" 
+                            className="w-full h-full object-contain bg-slate-950"
+                        />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
+                            <motion.div
+                                initial={{ y: 20, opacity: 0 }}
+                                animate={{ y: 0, opacity: 1 }}
+                                transition={{ delay: 0.3 }}
+                                className="flex items-center gap-2 bg-black/40 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/10"
+                            >
+                                <Coffee size={14} className="text-amber-400 animate-pulse" />
+                                <span className="text-[10px] font-black text-white uppercase tracking-widest">
+                                    RELAXING: {activeBreak.breakType}
+                                </span>
+                            </motion.div>
                         </div>
-                        <div className="text-left">
-                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 leading-none mb-1">Location</p>
-                            <p className="text-xs font-bold">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site Visit' : 'Main Office'}</p>
-                        </div>
-                    </div>
+                    </motion.div>
+                ) : (
+                    <motion.div
+                        key="clock-content"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="relative z-20 h-full p-8 flex flex-col justify-between text-white"
+                    >
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <motion.h1 
+                                    initial={{ y: 20, opacity: 0 }}
+                                    animate={{ y: 0, opacity: 1 }}
+                                    className="text-6xl xl:text-7xl font-black tracking-tighter drop-shadow-2xl select-none"
+                                >
+                                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                </motion.h1>
+                                <p className="text-sm xl:text-base font-bold text-white/80 mt-1 drop-shadow-md">
+                                    {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                                </p>
+                            </div>
 
-                    {/* Temperature/Secondary Stat Placeholder (Visual Polish) */}
-                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                        <TrendingUp size={14} className="text-emerald-400" />
-                        <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}% Done` : '--'}</span>
-                    </div>
-                </div>
-            </div>
+                            {/* Status Icon/Info */}
+                            <div className="flex flex-col items-end">
+                                {isCheckedIn ? (
+                                    <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 p-2 rounded-2xl flex items-center gap-2 group/status">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex items-center gap-2">
+                                        <Clock size={16} className="text-white/60" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Idle</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="flex justify-between items-end">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
+                                    <MapPinned size={18} className="text-white/80" />
+                                </div>
+                                <div className="text-left">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 leading-none mb-1">Location</p>
+                                    <p className="text-xs font-bold">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site Visit' : 'Main Office'}</p>
+                                </div>
+                            </div>
+
+                            {/* Temperature/Secondary Stat Placeholder (Visual Polish) */}
+                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                <TrendingUp size={14} className="text-emerald-400" />
+                                <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}% Done` : '--'}</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Glassmorphism Inner Shadow */}
             <div className="absolute inset-0 pointer-events-none border border-white/10 rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.05)]" />

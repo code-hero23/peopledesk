@@ -170,10 +170,12 @@ const AdminCallReports = () => {
         }
 
         const calls = log.calls || [];
-        acc[key].totalCalls += calls.length;
-        acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date })));
+        const filteredCalls = calls.filter(c => c.number && !excludedNumbers.includes(c.number));
+        
+        acc[key].totalCalls += filteredCalls.length;
+        acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date }))); // Keep raw logs for table
 
-        calls.forEach(c => {
+        filteredCalls.forEach(c => {
             if (c.type === 'INCOMING') acc[key].incoming++;
             if (c.type === 'OUTGOING') acc[key].outgoing++;
             if (c.type === 'MISSED' || c.type === 'REJECTED') acc[key].missed++;
@@ -205,16 +207,16 @@ const AdminCallReports = () => {
 
     callStats.forEach(log => {
         const calls = log.calls || [];
-        globalStats.total += calls.length;
-        calls.forEach(c => {
+        const filteredCalls = calls.filter(c => c.number && !excludedNumbers.includes(c.number));
+
+        globalStats.total += filteredCalls.length;
+        filteredCalls.forEach(c => {
             if (c.type === 'INCOMING') globalStats.incoming++;
             if (c.type === 'OUTGOING') globalStats.outgoing++;
             if (c.type === 'MISSED') globalStats.missed++;
             if (c.type === 'REJECTED') globalStats.rejected++;
             globalStats.duration += (c.duration || 0);
-            if (c.number && !excludedNumbers.includes(c.number)) {
-                globalStats.uniqueNumbers.add(c.number);
-            }
+            globalStats.uniqueNumbers.add(c.number);
         });
     });
 
