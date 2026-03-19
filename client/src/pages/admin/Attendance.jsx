@@ -114,11 +114,11 @@ const Attendance = () => {
 
     const getStatusStyles = (type) => {
         switch (type) {
-            case 'TEA': return { bg: 'bg-amber-50 dark:bg-slate-900', border: 'border-white dark:border-amber-500/30', text: 'text-amber-600 dark:text-amber-400', icon: Coffee, label: 'Tea Break' };
-            case 'LUNCH': return { bg: 'bg-orange-50 dark:bg-slate-900', border: 'border-white dark:border-orange-500/30', text: 'text-orange-600 dark:text-orange-400', icon: Utensils, label: 'Lunch Break' };
-            case 'CLIENT_MEETING': return { bg: 'bg-blue-50 dark:bg-slate-900', border: 'border-white dark:border-blue-500/30', text: 'text-blue-600 dark:text-blue-300', icon: Users, label: 'Client Meeting' };
-            case 'BH_MEETING': return { bg: 'bg-purple-50 dark:bg-slate-900', border: 'border-white dark:border-purple-500/30', text: 'text-purple-600 dark:text-purple-300', icon: Zap, label: 'BH Meeting' };
-            default: return { bg: 'bg-slate-50 dark:bg-slate-900', border: 'border-white dark:border-slate-700', text: 'text-slate-600 dark:text-slate-400', icon: Clock, label: 'On Break' };
+            case 'TEA': return { bg: 'bg-amber-50 dark:!bg-slate-900', border: 'border-white dark:border-amber-500/50', text: 'text-amber-600 dark:text-amber-400', icon: Coffee, label: 'Tea Break' };
+            case 'LUNCH': return { bg: 'bg-orange-50 dark:!bg-slate-900', border: 'border-white dark:border-orange-500/50', text: 'text-orange-600 dark:text-orange-400', icon: Utensils, label: 'Lunch Break' };
+            case 'CLIENT_MEETING': return { bg: 'bg-blue-50 dark:!bg-slate-900', border: 'border-white dark:border-blue-500/50', text: 'text-blue-600 dark:text-blue-300', icon: Users, label: 'Client Meeting' };
+            case 'BH_MEETING': return { bg: 'bg-purple-50 dark:!bg-slate-900', border: 'border-white dark:border-purple-500/50', text: 'text-purple-600 dark:text-purple-300', icon: Zap, label: 'BH Meeting' };
+            default: return { bg: 'bg-slate-50 dark:!bg-slate-900', border: 'border-white dark:border-slate-700', text: 'text-slate-600 dark:text-slate-400', icon: Clock, label: 'On Break' };
         }
     };
 
@@ -338,7 +338,7 @@ const Attendance = () => {
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-start mb-1">
                                                         <p className="text-sm font-black text-slate-800 dark:text-white truncate">{status.userName}</p>
-                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white dark:bg-slate-800 ${styles.text} border border-current/10 whitespace-nowrap transition-colors`}>
+                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white dark:!bg-slate-800 ${styles.text} border border-current/10 whitespace-nowrap transition-colors`}>
                                                             {styles.label}
                                                         </span>
                                                     </div>

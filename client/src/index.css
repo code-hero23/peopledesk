@@ -81,8 +81,12 @@ body {
 .dark .bg-gray-50, 
 .dark .bg-slate-50, 
 .dark .bg-zinc-50,
-.dark .bg-stone-50 { 
-    background-color: var(--bg-main) !important; 
+.dark .bg-stone-50,
+.dark .bg-amber-50,
+.dark .bg-orange-50,
+.dark .bg-blue-50,
+.dark .bg-purple-50 { 
+    background-color: var(--bg-card) !important; 
 }
 
 .dark .bg-white { 
