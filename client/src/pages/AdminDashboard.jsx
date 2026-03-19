@@ -14,6 +14,7 @@ const AdminDashboard = () => {
     const navigate = useNavigate();
     const { employees, pendingRequests, dailyAttendance, isLoading } = useSelector((state) => state.admin);
     const { user } = useSelector((state) => state.auth);
+    const { mode: themeMode } = useSelector((state) => state.theme);
 
     useEffect(() => {
         if (user && user.role === 'ANALYZER') {
@@ -381,12 +382,12 @@ const AdminDashboard = () => {
                                     </div>
                                     <div className="space-y-1.5 max-h-60 overflow-y-auto pr-1">
                                         {dailyAttendance.filter(a => a.status === 'ABSENT').map(att => (
-                                            <div key={att.user.id} className="flex items-center gap-2.5 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2.5 hover:bg-white hover:shadow-sm transition-all duration-300">
-                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 flex items-center justify-center text-slate-600 text-xs font-black flex-shrink-0">
+                                            <div key={att.user.id} className="flex items-center gap-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-xl px-3 py-2.5 hover:bg-white dark:hover:bg-slate-800 hover:shadow-sm transition-all duration-300">
+                                                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 text-xs font-black flex-shrink-0">
                                                     {att.user.name.charAt(0).toUpperCase()}
                                                 </div>
                                                 <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-slate-800 truncate leading-none">{att.user.name}</p>
+                                                    <p className="text-xs font-bold text-slate-800 dark:text-white truncate leading-none">{att.user.name}</p>
                                                     <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">{att.user.designation || 'Employee'}</p>
                                                 </div>
                                             </div>
@@ -403,17 +404,17 @@ const AdminDashboard = () => {
 
                     {/* Right: Expense Hub Pie Chart */}
                     {isCOO(user) && (
-                        <div className="bg-gradient-to-b from-white to-slate-50/50 rounded-3xl border border-slate-200/60 shadow-lg shadow-slate-200/20 overflow-hidden flex flex-col h-full relative">
+                        <div className="bg-gradient-to-b from-white to-slate-50/50 dark:from-slate-900 dark:to-slate-950 rounded-3xl border border-slate-200/60 dark:border-slate-800 shadow-lg shadow-slate-200/20 dark:shadow-none overflow-hidden flex flex-col h-full relative">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 pointer-events-none" />
                             
-                            <div className="px-6 py-5 border-b border-slate-100/80 flex justify-between items-center bg-white/50 backdrop-blur-sm z-10">
-                                <h3 className="font-extrabold text-slate-800 text-sm flex items-center gap-2.5">
-                                    <div className="p-1.5 bg-blue-50 rounded-lg text-blue-600">
+                            <div className="px-6 py-5 border-b border-slate-100/80 dark:border-slate-800 flex justify-between items-center bg-white/50 dark:bg-slate-900/50 backdrop-blur-sm z-10">
+                                <h3 className="font-extrabold text-slate-800 dark:text-white text-sm flex items-center gap-2.5">
+                                    <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 rounded-lg text-blue-600 dark:text-blue-400">
                                         <IndianRupee size={16} strokeWidth={2.5} />
                                     </div>
                                     Financial Overview
                                 </h3>
-                                <Link to="/admin/vouchers" className="text-[10px] font-black uppercase tracking-widest bg-slate-100 text-slate-500 hover:bg-blue-50 hover:text-blue-600 px-3 py-1.5 rounded-full transition-all flex items-center gap-1">Manage →</Link>
+                                <Link to="/admin/vouchers" className="text-[10px] font-black uppercase tracking-widest bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-blue-50 dark:hover:bg-blue-900/50 hover:text-blue-600 px-3 py-1.5 rounded-full transition-all flex items-center gap-1">Manage →</Link>
                             </div>
                             <div className="p-6 flex-grow flex flex-col items-center justify-center relative z-10 w-full">
                                 {financeSummary.currentCash === 0 && financeSummary.spent === 0 && financeSummary.pending === 0 ? (
@@ -441,9 +442,9 @@ const AdminDashboard = () => {
                                         return (
                                             <>
                                                 <div className="h-[460px] min-h-[460px] w-full relative">
-                                                    <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none mt-2 flex flex-col items-center justify-center w-[190px] h-[190px] bg-white rounded-full shadow-[inset_0_4px_15px_rgba(0,0,0,0.06)] border border-slate-50 z-0 transition-all duration-300">
-                                                        <p className="text-[11px] text-slate-400 font-bold uppercase tracking-[0.2em] leading-none mb-3 transition-all">{displayTitle}</p>
-                                                        <p className="text-4xl font-black text-slate-800 tracking-tighter transition-all">₹{displayValue.toLocaleString()}</p>
+                                                    <div className="absolute top-[45%] left-1/2 -translate-x-1/2 -translate-y-1/2 text-center pointer-events-none mt-2 flex flex-col items-center justify-center w-[190px] h-[190px] bg-white dark:bg-slate-800 rounded-full shadow-[inset_0_4px_15px_rgba(0,0,0,0.06)] dark:shadow-none border border-slate-50 dark:border-slate-700 z-0 transition-all duration-300">
+                                                        <p className="text-[11px] text-slate-400 dark:text-slate-500 font-bold uppercase tracking-[0.2em] leading-none mb-3 transition-all">{displayTitle}</p>
+                                                        <p className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter transition-all">₹{displayValue.toLocaleString()}</p>
                                                     </div>
                                                     
                                                     <ResponsiveContainer width="100%" height="100%" minWidth={0}>
@@ -496,15 +497,22 @@ const AdminDashboard = () => {
                                                             </Pie>
                                                             <Tooltip 
                                                                 formatter={(value) => [`₹${value.toLocaleString()}`, '']}
-                                                                contentStyle={{ borderRadius: '16px', border: '1px solid rgba(226, 232, 240, 0.8)', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', padding: '12px 18px', backgroundColor: 'rgba(255, 255, 255, 0.95)', backdropFilter: 'blur(8px)' }}
-                                                                itemStyle={{ color: '#0f172a', fontWeight: '900', fontSize: '14px', paddingTop: '4px' }}
-                                                                labelStyle={{ color: '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '800' }}
+                                                                contentStyle={{ 
+                                                                    borderRadius: '16px', 
+                                                                    border: themeMode === 'dark' ? '1px solid #334155' : '1px solid rgba(226, 232, 240, 0.8)', 
+                                                                    boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)', 
+                                                                    padding: '12px 18px', 
+                                                                    backgroundColor: themeMode === 'dark' ? '#1e293b' : 'rgba(255, 255, 255, 0.95)', 
+                                                                    backdropFilter: 'blur(8px)' 
+                                                                }}
+                                                                itemStyle={{ color: themeMode === 'dark' ? '#f8fafc' : '#0f172a', fontWeight: '900', fontSize: '14px', paddingTop: '4px' }}
+                                                                labelStyle={{ color: themeMode === 'dark' ? '#94a3b8' : '#64748b', fontSize: '10px', textTransform: 'uppercase', letterSpacing: '0.05em', fontWeight: '800' }}
                                                             />
                                                             <Legend 
                                                                 verticalAlign="bottom" 
                                                                 height={36} 
                                                                 iconType="circle" 
-                                                                wrapperStyle={{ fontSize: '11px', fontWeight: '800', color: '#475569', paddingTop: '20px' }}
+                                                                wrapperStyle={{ fontSize: '11px', fontWeight: '800', color: themeMode === 'dark' ? '#94a3b8' : '#475569', paddingTop: '20px' }}
                                                             />
                                                         </PieChart>
                                                     </ResponsiveContainer>
@@ -520,23 +528,23 @@ const AdminDashboard = () => {
                     {/* Middle: Visit Lists */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5 lg:col-span-2">
                         {/* Site Visits List */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/80">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
                                     <Building2 size={15} className="text-indigo-500" /> Today's Site Visits
                                 </h3>
-                                <span className="text-[10px] font-black bg-indigo-50 text-indigo-600 px-2 py-0.5 rounded-full border border-indigo-100 uppercase">
+                                <span className="text-[10px] font-black bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 px-2 py-0.5 rounded-full border border-indigo-100 dark:border-indigo-800 uppercase">
                                     {siteVisits.length} Active
                                 </span>
                             </div>
-                            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
                                 {siteVisits.length > 0 ? siteVisits.map((visit, idx) => (
-                                    <div key={idx} className="px-5 py-3 hover:bg-slate-50 transition-colors">
+                                    <div key={idx} className="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                         <div className="flex justify-between items-start mb-0.5">
-                                            <span className="text-xs font-bold text-slate-800">{visit.user?.name}</span>
-                                            <span className="text-[10px] font-bold text-slate-400">{visit.startTime} - {visit.endTime}</span>
+                                            <span className="text-xs font-bold text-slate-800 dark:text-white">{visit.user?.name}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">{visit.startTime} - {visit.endTime}</span>
                                         </div>
-                                        <p className="text-[10px] text-slate-500 font-semibold truncate flex items-center gap-1">
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold truncate flex items-center gap-1">
                                             <MapPin size={10} /> {visit.projectName || visit.location}
                                         </p>
                                     </div>
@@ -549,25 +557,25 @@ const AdminDashboard = () => {
                         </div>
 
                         {/* Showroom History List */}
-                        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                            <div className="px-5 py-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
-                                <h3 className="font-bold text-slate-700 text-sm flex items-center gap-2">
+                        <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-colors">
+                            <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/80">
+                                <h3 className="font-bold text-slate-700 dark:text-slate-200 text-sm flex items-center gap-2">
                                     <Home size={15} className="text-emerald-500" /> Showroom History
                                 </h3>
-                                <span className="text-[10px] font-black bg-emerald-50 text-emerald-600 px-2 py-0.5 rounded-full border border-emerald-100 uppercase">
+                                <span className="text-[10px] font-black bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 px-2 py-0.5 rounded-full border border-emerald-100 dark:border-emerald-800 uppercase">
                                     Today
                                 </span>
                             </div>
-                            <div className="divide-y divide-slate-100 max-h-60 overflow-y-auto">
+                            <div className="divide-y divide-slate-100 dark:divide-slate-800 max-h-60 overflow-y-auto">
                                 {showroomHistory.length > 0 ? showroomHistory.map((visit, idx) => (
-                                    <div key={idx} className="px-5 py-3 hover:bg-slate-50 transition-colors">
+                                    <div key={idx} className="px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
                                         <div className="flex justify-between items-start mb-0.5">
-                                            <span className="text-xs font-bold text-slate-800">{visit.user?.name}</span>
-                                            <span className="text-[10px] font-bold text-slate-400">
+                                            <span className="text-xs font-bold text-slate-800 dark:text-white">{visit.user?.name}</span>
+                                            <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500">
                                                 {new Date(visit.date).toLocaleDateString()}
                                             </span>
                                         </div>
-                                        <p className="text-[10px] text-slate-500 font-semibold truncate flex items-center gap-1">
+                                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-semibold truncate flex items-center gap-1">
                                             <Building2 size={10} /> {visit.showroomName}
                                         </p>
                                     </div>
@@ -594,13 +602,13 @@ const AdminDashboard = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: i * 0.06 }}
                         >
-                            <Link to={link.to} className="group flex flex-col gap-3 bg-white p-5 rounded-2xl border border-slate-200 hover:shadow-lg hover:border-slate-300 transition-all duration-300">
+                            <Link to={link.to} className="group flex flex-col gap-3 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200 dark:border-slate-800 hover:shadow-lg dark:hover:shadow-none hover:border-slate-300 dark:hover:border-slate-700 transition-all duration-300">
                                 <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${link.color} flex items-center justify-center text-white shadow-md group-hover:scale-110 transition-transform duration-300`}>
                                     {link.icon}
                                 </div>
                                 <div>
-                                    <h4 className="font-bold text-slate-800 text-sm group-hover:text-blue-600 transition-colors">{link.label}</h4>
-                                    <p className="text-slate-400 text-xs mt-0.5 leading-snug">{link.desc}</p>
+                                    <h4 className="font-bold text-slate-800 dark:text-white text-sm group-hover:text-blue-600 transition-colors">{link.label}</h4>
+                                    <p className="text-slate-400 dark:text-slate-500 text-xs mt-0.5 leading-snug">{link.desc}</p>
                                 </div>
                             </Link>
                         </motion.div>
