@@ -1,1 +1,111 @@
 @import "tailwindcss";
+
+:root {
+  --primary-color: #e00000;
+  --primary-dark: #b30000;
+  
+  /* Light Mode Defaults */
+  --bg-main: #f8fafc; /* Slate 50 */
+  --bg-card: #ffffff;
+  --bg-surface: #f1f5f9; /* Slate 100 */
+  --text-main: #0f172a; /* Slate 900 */
+  --text-muted: #64748b; /* Slate 500 */
+  --border-light: #f1f5f9; /* Slate 100 */
+  --shadow-color: rgba(0, 0, 0, 0.05);
+}
+
+.dark {
+  --bg-main: #020617; /* Slate 950 */
+  --bg-card: #0f172a; /* Slate 900 */
+  --bg-surface: #1e293b; /* Slate 800 */
+  --text-main: #f8fafc; /* Slate 50 */
+  --text-muted: #94a3b8; /* Slate 400 */
+  --border-color: #1e293b; /* Slate 800 */
+  --border-light: #0f172a; /* Slate 900 */
+  --shadow-color: rgba(0, 0, 0, 0.5);
+}
+
+/* Global Dark Scrollbar */
+* {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border-color) transparent;
+}
+
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 20px;
+}
+
+.dark ::-webkit-scrollbar-thumb {
+    background-color: var(--bg-surface);
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--text-muted);
+}
+
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Custom utility for primary color with opacity support */
+.bg-primary {
+  background-color: var(--primary-color);
+}
+
+.text-primary {
+  color: var(--primary-color);
+}
+
+.border-primary {
+  border-color: var(--primary-color);
+}
+
+/* Smooth Sidebar Transitions */
+.sidebar-transition {
+    transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Aggressive Dark Mode Overrides */
+.dark .bg-gray-50, 
+.dark .bg-slate-50, 
+.dark .bg-zinc-50,
+.dark .bg-stone-50 { 
+    background-color: var(--bg-main) !important; 
+}
+
+.dark .bg-white { 
+    background-color: var(--bg-card) !important; 
+}
+
+.dark .text-slate-900,
+.dark .text-gray-900,
+.dark .text-zinc-900 {
+    color: var(--text-main) !important;
+}
+
+.dark .border-slate-200,
+.dark .border-gray-200,
+.dark .border-zinc-200 {
+    border-color: var(--border-color) !important;
+}
+
+/* Scrollbar Styling for Sidebar */
+.scrollbar-hide::-webkit-scrollbar {
+    display: none;
+}
+.scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}

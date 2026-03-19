@@ -6,6 +6,7 @@ import projectReducer from '../features/projects/projectSlice';
 import analyticsReducer from '../features/analytics/analyticsSlice';
 import voucherReducer from '../features/voucher/voucherSlice';
 import carpenterReducer from '../features/carpenter/carpenterSlice';
+import themeReducer from '../features/theme/themeSlice';
 
 export const store = configureStore({
     reducer: {
@@ -16,5 +17,6 @@ export const store = configureStore({
         analytics: analyticsReducer,
         voucher: voucherReducer,
         carpenter: carpenterReducer,
+        theme: themeReducer,
     },
 });

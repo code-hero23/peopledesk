@@ -33,7 +33,7 @@ const Layout = () => {
     };
 
     return (
-        <div className="h-screen overflow-hidden bg-slate-50 flex font-sans text-slate-900 relative">
+        <div className="h-screen overflow-hidden bg-theme-bg flex font-sans text-theme-text relative transition-colors duration-300">
             {/* Mobile Sidebar Overlay Backdrop */}
             {isMobileMenuOpen && (
                 <div
@@ -50,11 +50,11 @@ const Layout = () => {
 
             {/* Mobile Header & Main Content */}
             <div className="flex-1 flex flex-col min-w-0 transition-all duration-300">
-                <header className="bg-white shadow-sm border-b border-slate-200 md:hidden p-4 flex justify-between items-center sticky top-0 z-[50] animate-fade-in-down">
+                <header className="bg-theme-card shadow-sm border-b border-theme-border md:hidden p-4 flex justify-between items-center sticky top-0 z-[50] animate-fade-in-down">
                     <div className="flex items-center gap-3">
                         <button
                             onClick={() => setIsMobileMenuOpen(true)}
-                            className="p-2 -ml-2 text-slate-600 hover:bg-slate-100 rounded-lg active:scale-95 transition-transform"
+                            className="p-2 -ml-2 text-theme-muted hover:bg-theme-bg rounded-lg active:scale-95 transition-transform"
                         >
                             <Menu size={24} />
                         </button>
@@ -63,7 +63,7 @@ const Layout = () => {
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleRefresh}
-                            className="bg-slate-100 p-2 rounded-full text-slate-600 active:bg-slate-200 transition-colors"
+                            className="bg-theme-bg p-2 rounded-full text-theme-muted active:bg-theme-card transition-colors"
                         >
                             <RefreshCw size={18} />
                         </button>

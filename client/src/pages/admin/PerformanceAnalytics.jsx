@@ -136,6 +136,29 @@ const PerformanceAnalytics = () => {
         }
     };
 
+    const handleDetailedDownload = async () => {
+        try {
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const response = await axios.get(`${import.meta.env.VITE_API_BASE_URL}/export/employee-contribution`, {
+                params: { ...dateRange, userId: selectedEmployee },
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob'
+            });
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            const empName = teamOverview.find(e => e.id === selectedEmployee)?.name || 'Employee';
+            link.setAttribute('download', `Contribution_Report_${empName.replace(/\s+/g, '_')}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error('Detailed download failed', error);
+            alert('Failed to download detailed report');
+        }
+    };
+
     // Prep data for charts
     const teamChartData = teamOverview.map(emp => ({
         name: emp.name.split(' ')[0],
@@ -388,10 +411,18 @@ const PerformanceAnalytics = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex-1 w-full flex justify-end">
+                                    <div className="flex-1 w-full flex flex-col sm:flex-row justify-end gap-3">
+                                        <button
+                                            onClick={handleDetailedDownload}
+                                            className="group flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl shadow-lg hover:shadow-emerald-200 transition-all duration-300 font-black text-[10px] active:scale-95"
+                                        >
+                                            <Download size={14} className="group-hover:animate-bounce" />
+                                            <span>Detailed Analysis</span>
+                                        </button>
+
                                         <button
                                             onClick={() => { setSelectedEmployee(null); dispatch(reset()); }}
-                                            className="group flex items-center gap-2 text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-all bg-white hover:bg-red-50 px-4 py-2 rounded-xl border border-slate-100 hover:border-red-100 ml-auto md:ml-0"
+                                            className="group flex items-center justify-center gap-2 text-slate-400 hover:text-red-500 text-[10px] font-black uppercase tracking-widest transition-all bg-white hover:bg-red-50 px-5 py-2.5 rounded-xl border border-slate-100 hover:border-red-100"
                                         >
                                             <AlertTriangle size={14} />
                                             Reset View

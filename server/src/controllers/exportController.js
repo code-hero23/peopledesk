@@ -1288,6 +1288,259 @@ const emailCallLogs = async (req, res) => {
     }
 };
 
+// Helper for Employee Contribution Report
+const calculatePunctuality = (checkInTime) => {
+    if (!checkInTime) return 0;
+    const utcDate = new Date(checkInTime);
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const checkInIST = new Date(utcDate.getTime() + istOffset);
+    const target = new Date(checkInIST);
+    target.setHours(10, 20, 0, 0);
+    return (checkInIST - target) / (1000 * 60);
+};
+
+// @desc    Export Employee Detailed Monthly Contribution Report
+// @route   GET /api/export/employee-contribution
+// @access  Private (Admin/HR/BH)
+const exportEmployeeContributionReport = async (req, res) => {
+    try {
+        const { userId, startDate, endDate } = req.query;
+        if (!userId) return res.status(400).json({ message: 'User ID is required' });
+
+        const start = startDate ? getStartOfDayIST(startDate) : getCycleStartDateIST();
+        const end = endDate ? getEndOfDayIST(endDate) : getCycleEndDateIST();
+
+        const employee = await prisma.user.findUnique({
+            where: { id: parseInt(userId) },
+            select: { id: true, name: true, email: true, designation: true }
+        });
+
+        if (!employee) return res.status(404).json({ message: 'Employee not found' });
+
+        const [attendance, workLogs] = await Promise.all([
+            prisma.attendance.findMany({
+                where: { userId: employee.id, date: { gte: start, lte: end } },
+                include: { breaks: true },
+                orderBy: { date: 'asc' }
+            }),
+            prisma.workLog.findMany({
+                where: { userId: employee.id, date: { gte: start, lte: end } },
+                orderBy: { date: 'asc' }
+            })
+        ]);
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Contribution Report');
+
+        // Styles
+        const headerStyle = {
+            font: { bold: true, color: { argb: 'FFFFFFFF' } },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } }, 
+            alignment: { horizontal: 'center', vertical: 'middle' },
+            border: {
+                top: { style: 'thin' },
+                left: { style: 'thin' },
+                bottom: { style: 'thin' },
+                right: { style: 'thin' }
+            }
+        };
+
+        const summaryLabelStyle = {
+            font: { bold: true },
+            fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } },
+            alignment: { horizontal: 'left' }
+        };
+
+        // Header Section
+        sheet.mergeCells('A1:H1');
+        const titleCell = sheet.getCell('A1');
+        titleCell.value = `EMPLOYEE CONTRIBUTION REPORT: ${employee.name.toUpperCase()}`;
+        titleCell.font = { size: 14, bold: true, color: { argb: 'FF0F172A' } };
+        titleCell.alignment = { horizontal: 'center' };
+
+        sheet.addRow([`Designation: ${employee.designation}`, '', `Period: ${start.toLocaleDateString('en-IN')} to ${end.toLocaleDateString('en-IN')}`]);
+        sheet.addRow([]);
+
+        // Table Headers
+        const headers = ['Date', 'In Time', 'Out Time', 'Gross Hours', 'Break (Mins)', 'Net Hours', 'Punctuality', 'Log Status'];
+        const headerRow = sheet.addRow(headers);
+        headerRow.height = 25;
+        headerRow.eachCell((cell) => {
+            cell.style = headerStyle;
+        });
+
+        // Data Rows
+        let totalNetMinutes = 0;
+        let totalLateness = 0;
+        let punctualityDays = 0;
+        const attendedDates = new Set();
+
+        attendance.forEach(record => {
+            const dateStr = new Date(record.date).toLocaleDateString('en-IN');
+            attendedDates.add(new Date(record.date).toDateString());
+
+            const inTimeStr = record.date ? new Date(record.date).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
+            const outTimeStr = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }) : '-';
+            
+            let grossMins = 0;
+            if (record.date && record.checkoutTime) {
+                grossMins = (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60);
+            }
+
+            const breakMins = record.breaks
+                ? record.breaks
+                    .filter(b => b.breakType === 'TEA' || b.breakType === 'LUNCH')
+                    .reduce((acc, b) => acc + (b.duration || 0), 0)
+                : 0;
+
+            const netMins = Math.max(0, grossMins - breakMins);
+            totalNetMinutes += netMins;
+
+            const lateness = calculatePunctuality(record.date);
+            totalLateness += lateness;
+            punctualityDays++;
+
+            const hasLog = workLogs.some(l => new Date(l.date).toDateString() === new Date(record.date).toDateString());
+
+            const row = sheet.addRow([
+                dateStr,
+                inTimeStr,
+                outTimeStr,
+                (grossMins/60).toFixed(2),
+                breakMins,
+                (netMins/60).toFixed(2),
+                lateness > 0 ? `${Math.round(lateness)}m Late` : `${Math.round(Math.abs(lateness))}m Early`,
+                hasLog ? 'SUBMITTED' : 'NOT SUBMITTED'
+            ]);
+
+            // Styling for rows
+            row.alignment = { horizontal: 'center' };
+            const logCell = row.getCell(8);
+            if (!hasLog) {
+                logCell.font = { color: { argb: 'FFEF4444' }, bold: true }; // Red-500
+            } else {
+                logCell.font = { color: { argb: 'FF10B981' }, bold: true }; // Emerald-500
+            }
+
+            const puncCell = row.getCell(7);
+            if (lateness > 10) {
+                puncCell.font = { color: { argb: 'FFF59E0B' } }; // Amber-500
+            }
+        });
+
+        // Summary Calculations
+        const daysWithLogs = new Set(workLogs.map(l => new Date(l.date).toDateString())).size;
+        const avgLateness = punctualityDays > 0 ? Math.round(totalLateness / punctualityDays) : 0;
+
+        sheet.addRow([]);
+        const sumHeader = sheet.addRow(['MONTHLY PERFORMANCE SUMMARY']);
+        sumHeader.getCell(1).font = { bold: true, size: 12 };
+        
+        sheet.addRow(['Total Days Present', '', attendedDates.size]);
+        sheet.addRow(['Logs Submitted', '', daysWithLogs]);
+        sheet.addRow(['Consistency %', '', attendedDates.size > 0 ? `${Math.round((daysWithLogs / attendedDates.size) * 100)}%` : '0%']);
+        sheet.addRow(['Total Contribution', '', `${(totalNetMinutes / 60).toFixed(1)} Hours`]);
+        sheet.addRow(['Average Punctuality', '', avgLateness > 0 ? `${avgLateness}m Late (Avg)` : `${Math.abs(avgLateness)}m Early (Avg)`]);
+
+        // Auto-width
+        sheet.columns.forEach(col => {
+            col.width = 18;
+        });
+
+        // --- SECOND SHEET: WORKLOG DETAILS ---
+        const logSheet = workbook.addWorksheet('Worklog Details');
+        const desig = employee.designation || 'OTHER';
+        
+        // Base columns
+        const logCols = [
+            { header: 'Date', key: 'Date', width: 15 },
+            { header: 'Hours', key: 'Hours', width: 10 }
+        ];
+
+        // Add dynamic columns based on designation
+        if (desig === 'CRE') {
+            logCols.push(
+                { header: 'Total Calls', key: 'totalCalls', width: 12 },
+                { header: 'WhatsApp', key: 'whatsapp', width: 12 },
+                { header: 'Showroom Vis', key: 'showroom', width: 12 },
+                { header: 'Orders', key: 'orders', width: 10 },
+                { header: 'Proposals', key: 'proposals', width: 10 }
+            );
+        } else if (desig === 'FA') {
+            logCols.push(
+                { header: 'Site Visits', key: 'siteVisits', width: 12 },
+                { header: 'Initial Quote', key: 'initQuote', width: 12 },
+                { header: 'Revised Quote', key: 'revisedQuote', width: 12 },
+                { header: 'Showroom Time', key: 'showroomTime', width: 15 }
+            );
+        } else if (desig === 'LA' || desig === 'AE') {
+            logCols.push(
+                { header: 'Projects & Tasks', key: 'projects', width: 60 },
+                { header: 'Site/Project Status', key: 'status', width: 25 }
+            );
+        }
+
+        logCols.push({ header: 'Daily Remarks', key: 'Remarks', width: 50 });
+        logSheet.columns = logCols;
+
+        logSheet.getRow(1).eachCell(cell => {
+            cell.style = headerStyle;
+        });
+
+        workLogs.forEach(log => {
+            const rowData = {
+                Date: new Date(log.date).toLocaleDateString('en-IN'),
+                Hours: log.hours || '-',
+                Remarks: log.remarks || log.notes || '-'
+            };
+
+            if (desig === 'CRE') {
+                const cl = safeParse(log.cre_closing_metrics);
+                rowData.totalCalls = cl?.uptoTodayCalls || log.cre_totalCalls || '-';
+                rowData.whatsapp = cl?.whatsappSent || '-';
+                rowData.showroom = cl?.showroomVisit || log.cre_showroomVisits || '-';
+                rowData.orders = cl?.orderCount || log.cre_orders || '-';
+                rowData.proposals = cl?.proposalCount || log.cre_proposals || '-';
+            } else if (desig === 'FA') {
+                const cl = safeParse(log.fa_closing_metrics);
+                rowData.siteVisits = log.fa_siteVisits || '-';
+                rowData.initQuote = cl?.initialQuote?.count || log.fa_initialQuoteRn || '-';
+                rowData.revisedQuote = cl?.revisedQuote?.count || log.fa_revisedQuoteRn || '-';
+                rowData.showroomTime = log.fa_showroomTime || '-';
+            } else if (desig === 'LA' || desig === 'AE') {
+                const reportsField = desig === 'AE' ? 'ae_project_reports' : 'la_project_reports';
+                const reports = safeParse(log[reportsField]);
+                if (Array.isArray(reports)) {
+                    rowData.projects = reports.map(r => {
+                        const item = typeof r === 'string' ? safeParse(r) : r;
+                        const tasks = Array.isArray(item.ae_tasksCompleted) ? item.ae_tasksCompleted.join(', ') : (item.ae_tasksCompleted || item.tasks || item.process || '');
+                        return `${item.clientName || 'Site'}: ${tasks}`;
+                    }).join(' | ');
+                    
+                    rowData.status = reports.map(r => {
+                        const item = typeof r === 'string' ? safeParse(r) : r;
+                        return `${item.clientName || 'Site'}: ${item.ae_siteStatus || item.status || '-'}`;
+                    }).join(' | ');
+                } else {
+                    rowData.projects = log.tasks || log.projectName || '-';
+                    rowData.status = log.ae_siteStatus || log.la_siteStatus || '-';
+                }
+            }
+
+            logSheet.addRow(rowData);
+        });
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment(`Monthly_Report_${employee.name.replace(/\s+/g, '_')}_${new Date().getTime()}.xlsx`);
+        res.send(buffer);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     exportWorkLogs,
     exportAttendance,
@@ -1296,5 +1549,6 @@ module.exports = {
     exportEmployees,
     exportIncentiveScorecard,
     exportCallLogs,
-    emailCallLogs
+    emailCallLogs,
+    exportEmployeeContributionReport
 };
