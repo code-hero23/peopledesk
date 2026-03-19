@@ -233,16 +233,16 @@ const Attendance = () => {
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold text-slate-800">Daily Attendance</h2>
-                    <p className="text-slate-500">Monitor employee check-ins and absences.</p>
+                    <h2 className="text-3xl font-bold text-slate-800 dark:text-white">Daily Attendance</h2>
+                    <p className="text-slate-500 dark:text-slate-400">Monitor employee check-ins and absences.</p>
                     {statusFilter && (
                         <div className="mt-2 flex items-center gap-2">
-                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${statusFilter === 'PRESENT' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'}`}>
+                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${statusFilter === 'PRESENT' ? 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400' : 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400'}`}>
                                 Showing: {statusFilter.toLowerCase()}
                             </span>
                             <button 
                                 onClick={() => setStatusFilter(null)}
-                                className="text-[10px] font-black text-blue-500 hover:text-blue-700 uppercase tracking-wider flex items-center gap-1 bg-blue-50 px-2 py-0.5 rounded-full transition-all"
+                                className="text-[10px] font-black text-blue-500 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 uppercase tracking-wider flex items-center gap-1 bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 rounded-full transition-all"
                             >
                                 <Zap size={28} /> Clear Filter
                             </button>
@@ -260,7 +260,7 @@ const Attendance = () => {
                             placeholder="Search employee..."
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 w-full border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium"
+                            className="pl-10 pr-4 py-2 w-full border border-slate-200 dark:border-slate-800 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 font-medium transition-colors"
                         />
                     </div>
 
@@ -276,24 +276,24 @@ const Attendance = () => {
                         </button>
                     )}
                     <MonthCycleSelector onCycleChange={handleCycleChange} />
-                    <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1 shadow-sm">
+                    <div className="flex items-center gap-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-lg px-3 py-1 shadow-sm transition-colors">
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase">From</span>
+                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">From</span>
                             <input
                                 type="date"
                                 value={startDate}
                                 onChange={(e) => setStartDate(e.target.value)}
-                                className="bg-transparent border-none focus:ring-0 text-slate-600 font-bold text-xs outline-none"
+                                className="bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-300 font-bold text-xs outline-none"
                             />
                         </div>
-                        <div className="w-[1px] h-4 bg-slate-200"></div>
+                        <div className="w-[1px] h-4 bg-slate-200 dark:bg-slate-800"></div>
                         <div className="flex items-center gap-2">
-                            <span className="text-[10px] font-black text-slate-400 uppercase">To</span>
+                            <span className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">To</span>
                             <input
                                 type="date"
                                 value={endDate}
                                 onChange={(e) => setEndDate(e.target.value)}
-                                className="bg-transparent border-none focus:ring-0 text-slate-600 font-bold text-xs outline-none"
+                                className="bg-transparent border-none focus:ring-0 text-slate-600 dark:text-slate-300 font-bold text-xs outline-none"
                             />
                         </div>
                     </div>
@@ -303,14 +303,14 @@ const Attendance = () => {
             {/* Live Status Content */}
             {
                 activeStatuses.length > 0 && (
-                    <div className="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden mb-6">
-                        <div className="px-6 py-4 border-b border-slate-50 flex justify-between items-center bg-slate-50/50">
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm overflow-hidden mb-6 transition-colors">
+                        <div className="px-6 py-4 border-b border-slate-50 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-900/80">
                             <div className="flex items-center gap-2">
                                 <div className="relative">
                                     <div className="w-2 h-2 bg-rose-500 rounded-full animate-ping absolute inset-0"></div>
                                     <div className="w-2 h-2 bg-rose-500 rounded-full relative"></div>
                                 </div>
-                                <h3 className="text-sm font-black text-slate-800 uppercase tracking-tight">Active Status Panel</h3>
+                                <h3 className="text-sm font-black text-slate-800 dark:text-white uppercase tracking-tight">Active Status Panel</h3>
                             </div>
                             <button onClick={fetchActiveStatuses} className="text-slate-400 hover:text-rose-500 transition-colors">
                                 <Zap size={14} />
@@ -330,20 +330,20 @@ const Attendance = () => {
                                                 initial={{ opacity: 0, scale: 0.9 }}
                                                 animate={{ opacity: 1, scale: 1 }}
                                                 exit={{ opacity: 0, scale: 0.9 }}
-                                                className={`${styles.bg} p-4 rounded-2xl border border-white shadow-sm flex items-start gap-3`}
+                                                className={`${styles.bg} dark:bg-slate-800 p-4 rounded-2xl border border-white dark:border-slate-700 shadow-sm flex items-start gap-3`}
                                             >
-                                                <div className={`p-2.5 rounded-xl bg-white ${styles.text} shadow-sm`}>
+                                                <div className={`p-2.5 rounded-xl bg-white dark:bg-slate-900 ${styles.text} shadow-sm`}>
                                                     <Icon size={18} />
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <div className="flex justify-between items-start mb-1">
-                                                        <p className="text-sm font-black text-slate-800 truncate">{status.userName}</p>
-                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white ${styles.text} border border-current/10 whitespace-nowrap`}>
+                                                        <p className="text-sm font-black text-slate-800 dark:text-white truncate">{status.userName}</p>
+                                                        <span className={`text-[9px] font-black uppercase px-2 py-0.5 rounded-full bg-white dark:bg-slate-900 ${styles.text} border border-current/10 whitespace-nowrap`}>
                                                             {styles.label}
                                                         </span>
                                                     </div>
                                                     <div className="mt-2 flex items-center justify-between text-[11px] font-black">
-                                                        <span className="text-slate-400 font-bold uppercase">{status.designation}</span>
+                                                        <span className="text-slate-400 dark:text-slate-500 font-bold uppercase">{status.designation}</span>
                                                         <span className={styles.text}>{getDuration(status.startTime)}</span>
                                                     </div>
                                                 </div>
@@ -357,11 +357,11 @@ const Attendance = () => {
                 )
             }
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden transition-colors">
                 <div className="overflow-x-auto">
                     <table className="w-full text-left border-collapse text-sm">
                         <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
+                            <tr className="bg-slate-50 dark:bg-slate-950 text-slate-500 dark:text-slate-400 text-xs uppercase tracking-wider">
                                 <th className="px-6 py-4 font-semibold">Employee</th>
                                 <th className="px-6 py-4 font-semibold text-center">Status</th>
                                 <th className="px-6 py-4 font-semibold text-center">In Device</th>
@@ -374,31 +374,31 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-semibold text-center">Net Hours</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                             {isLoading ? (
                                 <tr><td colSpan="10" className="text-center py-8">Loading...</td></tr>
                             ) : filteredAttendance.length === 0 ? (
                                 <tr><td colSpan="10" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
                             ) : (
                                 filteredAttendance.map((record) => (
-                                    <tr key={`row-${record.user.id}`} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4 font-medium text-slate-800">
+                                    <tr key={`row-${record.user.id}`} className="hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                                        <td className="px-6 py-4 font-medium text-slate-800 dark:text-white">
                                             <div className="flex items-center gap-2">
                                                 {record.user.name}
                                                 {activeStatuses.some(s => s.userId === record.user.id) && (
-                                                    <div className="flex items-center gap-1 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-100">
+                                                    <div className="flex items-center gap-1 bg-rose-50 dark:bg-rose-900/30 px-1.5 py-0.5 rounded border border-rose-100 dark:border-rose-800">
                                                         <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-ping"></div>
-                                                        <span className="text-[10px] font-black text-rose-600 uppercase">Break</span>
+                                                        <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase">Break</span>
                                                     </div>
                                                 )}
                                             </div>
-                                            <div className="text-xs text-slate-400 font-normal">{record.user.email}</div>
+                                            <div className="text-xs text-slate-400 dark:text-slate-500 font-normal">{record.user.email}</div>
                                         </td>
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center gap-1">
                                                 <span className={`inline-flex px-2 py-1 text-xs font-bold rounded-full ${record.status === 'PRESENT'
-                                                    ? 'bg-green-100 text-green-700'
-                                                    : 'bg-red-100 text-red-700'
+                                                    ? 'bg-green-100 dark:bg-emerald-900/30 text-green-700 dark:text-emerald-400'
+                                                    : 'bg-red-100 dark:bg-rose-900/30 text-red-700 dark:text-rose-400'
                                                     }`}>
                                                     {record.status}
                                                 </span>
@@ -456,13 +456,13 @@ const Attendance = () => {
                                             )}
                                         </td>
 
-                                        <td className="px-6 py-4 text-center text-slate-600 font-mono">
+                                        <td className="px-6 py-4 text-center text-slate-600 dark:text-slate-400 font-mono">
                                             {record.timeIn
                                                 ? formatTime(record.timeIn)
                                                 : '--:--'
                                             }
                                         </td>
-                                        <td className="px-6 py-4 text-center text-slate-600 font-mono">
+                                        <td className="px-6 py-4 text-center text-slate-600 dark:text-slate-400 font-mono">
                                             {record.timeOut
                                                 ? formatTime(record.timeOut)
                                                 : '--:--'
@@ -497,7 +497,7 @@ const Attendance = () => {
                                         </td>
 
                                         {/* Net Hours */}
-                                        <td className="px-6 py-4 text-center font-bold text-slate-800 font-mono">
+                                        <td className="px-6 py-4 text-center font-bold text-slate-800 dark:text-white font-mono">
                                             {record.effectiveMinutes !== undefined ? formatDuration(record.effectiveMinutes) : '-'}
                                         </td>
                                     </tr>
