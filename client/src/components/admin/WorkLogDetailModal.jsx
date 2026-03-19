@@ -39,9 +39,9 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
     const DataGrid = ({ items }) => (
         <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
             {items.filter(i => i.value !== null && i.value !== undefined && i.value !== '').map((item, idx) => (
-                <div key={idx} className="bg-slate-50 border border-slate-200 p-2 rounded">
-                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-0.5">{item.label}</p>
-                    <p className="text-sm font-bold text-slate-800">{item.value}</p>
+                <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-2 rounded transition-colors">
+                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">{item.label}</p>
+                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{item.value}</p>
                 </div>
             ))}
         </div>
@@ -58,7 +58,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
     const SectionHeader = ({ title, colorClass }) => (
         <div className={`mt-8 mb-4 flex items-center gap-3`}>
             <div className={`h-6 w-1 ${colorClass}`}></div>
-            <h3 className="text-sm font-black text-slate-800 uppercase tracking-widest">{title}</h3>
+            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">{title}</h3>
         </div>
     );
 
@@ -88,7 +88,7 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                 </button>
             </div>
 
-            <div ref={componentRef} id="printable-area" className="p-8 bg-white text-slate-900 border border-slate-100 rounded-xl print-only-visible">
+            <div ref={componentRef} id="printable-area" className="p-8 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 border border-slate-100 dark:border-slate-800 rounded-xl print:bg-white print:text-slate-900 print:border-slate-100">
                 <style type="text/css" media="print">
                     {`
                         @page { size: A4; margin: 15mm; }
@@ -98,20 +98,20 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                 </style>
 
                 {/* Report Header */}
-                <div className="flex justify-between items-start border-b-2 border-slate-900 pb-6 mb-8">
+                <div className="flex justify-between items-start border-b-2 border-slate-900 dark:border-slate-700 pb-6 mb-8 print:border-slate-900 transition-colors">
                     <div>
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tighter">DAILY WORK REPORT</h1>
+                        <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tighter">DAILY WORK REPORT</h1>
                         <div className="flex items-center gap-2 mt-2">
                             <span className="bg-blue-600 text-white text-[10px] font-bold px-2 py-0.5 rounded tracking-widest uppercase">
                                 {log.user?.designation || log.user?.role}
                             </span>
-                            <span className="text-slate-400 text-xs font-bold">|</span>
-                            <span className="text-slate-800 font-black text-lg">{log.user?.name}</span>
+                            <span className="text-slate-400 dark:text-slate-600 text-xs font-bold">|</span>
+                            <span className="text-slate-800 dark:text-slate-200 font-black text-lg">{log.user?.name}</span>
                         </div>
                     </div>
                     <div className="text-right">
-                        <p className="text-lg font-black text-slate-900">{formatDate(log.date)} · {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(log.date).getDay()]}</p>
-                        <p className="text-sm font-bold text-blue-600 mt-1 uppercase tracking-widest">
+                        <p className="text-lg font-black text-slate-900 dark:text-slate-100">{formatDate(log.date)} · {['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][new Date(log.date).getDay()]}</p>
+                        <p className="text-sm font-bold text-blue-600 dark:text-blue-400 mt-1 uppercase tracking-widest">
                             {log.startTime && log.endTime ? `${log.startTime} - ${log.endTime}` : 'Timeline Not Recorded'}
                         </p>
                     </div>

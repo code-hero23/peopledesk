@@ -52,17 +52,17 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             {isMandatory && (
-                <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl mb-2">
-                    <p className="text-rose-700 text-[10px] font-black uppercase tracking-widest text-center">Mandatory Site Visit Log Required</p>
+                <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/50 p-3 rounded-xl mb-2 transition-colors">
+                    <p className="text-rose-700 dark:text-rose-400 text-[10px] font-black uppercase tracking-widest text-center">Mandatory Site Visit Log Required</p>
                 </div>
             )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Project Name</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Project Name</label>
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                         required
                         value={formData.projectName}
                         onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
@@ -70,10 +70,10 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Location</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Location</label>
                     <input
                         type="text"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                         required
                         value={formData.location}
                         onChange={(e) => setFormData({ ...formData, location: e.target.value })}
@@ -84,30 +84,30 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Date</label>
                     <input
                         type="date"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                         required
                         value={formData.date}
                         onChange={(e) => setFormData({ ...formData, date: e.target.value })}
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Time</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Start Time</label>
                     <input
                         type="time"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                         required
                         value={formData.startTime}
                         onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
                     />
                 </div>
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Time</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">End Time</label>
                     <input
                         type="time"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                         required
                         value={formData.endTime}
                         onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
@@ -116,9 +116,9 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
             </div>
 
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Reason</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Reason</label>
                 <textarea
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                     required
                     rows="3"
                     value={formData.reason}
@@ -127,12 +127,12 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                 />
             </div>
 
-            <div className={`flex gap-3 pt-2`}>
+            <div className={`flex gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors`}>
                 {!isMandatory && (
                     <button
                         type="button"
                         onClick={onSuccess}
-                        className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                        className="flex-1 py-3 px-6 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-xs tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-95"
                     >
                         Cancel
                     </button>
@@ -140,7 +140,7 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95`}
+                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/20'} text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95`}
                 >
                     {isSubmitting ? 'Submitting...' : (isMandatory ? 'Submit Mandatory Report' : 'Update Site Visit')}
                 </button>

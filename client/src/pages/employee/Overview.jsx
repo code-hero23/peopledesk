@@ -440,7 +440,7 @@ const Overview = () => {
     };
 
     return (
-        <div className="min-h-screen bg-[#F8FAFC] pb-24 lg:pb-8">
+        <div className="min-h-screen bg-[#F8FAFC] dark:bg-slate-950 pb-24 lg:pb-8 transition-colors duration-500">
             <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-8">
                 {/* Active Break Notification */}
                 <AnimatePresence>
@@ -449,12 +449,12 @@ const Overview = () => {
                             initial={{ height: 0, opacity: 0, y: -20 }}
                             animate={{ height: 'auto', opacity: 1, y: 0 }}
                             exit={{ height: 0, opacity: 0, y: -20 }}
-                            className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 p-[2px] rounded-[2rem] shadow-lg shadow-amber-200/50 overflow-hidden"
+                            className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 p-[2px] rounded-[2rem] shadow-lg shadow-amber-200/50 dark:shadow-amber-900/20 overflow-hidden"
                         >
-                            <div className="bg-white/95 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4">
+                            <div className="bg-white/95 dark:bg-slate-900/95 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4">
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
-                                        <div className="p-3 bg-amber-100 text-amber-600 rounded-2xl">
+                                        <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl">
                                             <Coffee size={24} className="animate-bounce" />
                                         </div>
                                         <span className="absolute -top-1 -right-1 flex h-4 w-4">
@@ -463,8 +463,8 @@ const Overview = () => {
                                         </span>
                                     </div>
                                     <div>
-                                        <h4 className="text-lg font-black text-slate-800 tracking-tight">Break Session Active</h4>
-                                        <p className="text-sm font-bold text-slate-500 uppercase tracking-widest flex items-center gap-2">
+                                        <h4 className="text-lg font-black text-slate-800 dark:text-white tracking-tight">Break Session Active</h4>
+                                        <p className="text-sm font-bold text-slate-500 dark:text-slate-400 uppercase tracking-widest flex items-center gap-2">
                                             Currently on {activeBreak.breakType} break since {formatTime(activeBreak.startTime)}
                                         </p>
                                     </div>
@@ -484,7 +484,7 @@ const Overview = () => {
                                             }
                                         });
                                     }}
-                                    className="px-8 py-3 bg-slate-900 text-white rounded-2xl font-black text-sm hover:shadow-xl transition-all flex items-center gap-2 group"
+                                    className="px-8 py-3 bg-slate-900 dark:bg-primary text-white rounded-2xl font-black text-sm hover:shadow-xl transition-all flex items-center gap-2 group"
                                 >
                                     Resume Work <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                 </motion.button>
@@ -493,19 +493,19 @@ const Overview = () => {
                     )}
                 </AnimatePresence>
                 {/* Header Section */}
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white p-6 lg:p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 bg-white dark:bg-slate-900 p-6 lg:p-8 rounded-[2.5rem] shadow-sm border border-slate-100 dark:border-slate-800 transition-colors">
                     <div className="space-y-2">
                         <div className="flex items-center gap-3">
-                            <span className="px-4 py-1.5 bg-indigo-50 text-indigo-600 text-xs font-bold rounded-full uppercase tracking-wider">
+                            <span className="px-4 py-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 text-xs font-bold rounded-full uppercase tracking-wider">
                                 Employee Dashboard
                             </span>
                             <span className="w-2 h-2 rounded-full bg-indigo-400 animate-pulse" />
                         </div>
-                        <h1 className="text-4xl lg:text-5xl font-black text-slate-900 tracking-tight">
-                            Welcome back, <span className="text-indigo-600">{user?.name}</span>
+                        <h1 className="text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                            Welcome back, <span className="text-indigo-600 dark:text-primary">{user?.name}</span>
                         </h1>
-                        <p className="text-slate-500 font-medium flex items-center gap-2">
-                            <Calendar size={18} className="text-slate-400" />
+                        <p className="text-slate-500 dark:text-slate-400 font-medium flex items-center gap-2">
+                            <Calendar size={18} className="text-slate-400 dark:text-slate-500" />
                             {formatDate(new Date())} • {user?.designation}
                         </p>
                     </div>
@@ -515,21 +515,21 @@ const Overview = () => {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setIsAttendanceCalendarOpen(true)}
-                            className="flex items-center gap-3 px-6 py-4 bg-white border-2 border-slate-100 rounded-2xl hover:border-indigo-200 transition-all group"
+                            className="flex items-center gap-3 px-6 py-4 bg-white dark:bg-slate-900 border-2 border-slate-100 dark:border-slate-800 rounded-2xl hover:border-indigo-200 dark:hover:border-indigo-900 transition-all group"
                         >
-                            <div className="p-2 bg-slate-50 rounded-xl group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors">
+                            <div className="p-2 bg-slate-50 dark:bg-slate-800 rounded-xl group-hover:bg-indigo-50 dark:group-hover:bg-indigo-900/30 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
                                 <TrendingUp size={20} />
                             </div>
                             <div className="text-left">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider leading-none mb-1">View Stats</p>
-                                <p className="text-sm font-black text-slate-900">Attendance</p>
+                                <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider leading-none mb-1">View Stats</p>
+                                <p className="text-sm font-black text-slate-900 dark:text-white">Attendance</p>
                             </div>
                         </motion.button>
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             onClick={() => setActiveModal('worklog')}
-                            className="flex items-center gap-3 px-6 py-4 bg-indigo-600 text-white rounded-2xl shadow-xl shadow-indigo-200 hover:bg-indigo-700 transition-all"
+                            className="flex items-center gap-3 px-6 py-4 bg-indigo-600 dark:bg-primary text-white rounded-2xl shadow-xl shadow-indigo-200 dark:shadow-primary/20 hover:bg-indigo-700 dark:hover:opacity-90 transition-all"
                         >
                             <Sparkles size={20} />
                             <span className="font-bold">Work Log</span>
@@ -540,33 +540,33 @@ const Overview = () => {
                 <div className="grid lg:grid-cols-12 gap-8">
                     {/* Left Column */}
                     <div className="lg:col-span-8 space-y-8">
-                        <div className="bg-white rounded-[3rem] p-8 lg:p-12 shadow-sm border border-slate-100 relative overflow-hidden group">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 lg:p-12 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden group transition-colors">
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
                             <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-12">
                                 <div className="space-y-8">
                                     <div className="space-y-4">
                                         {getDeviceType() === 'desktop' && (
-                                            <div className="inline-flex py-1 px-1 bg-slate-100 rounded-2xl">
+                                            <div className="inline-flex py-1 px-1 bg-slate-100 dark:bg-slate-800 rounded-2xl transition-colors">
                                                 <button
                                                     onClick={() => setIsSiteLogin(false)}
-                                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isSiteLogin ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${!isSiteLogin ? 'bg-white dark:bg-slate-700 text-indigo-600 dark:text-primary shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                                                 >
                                                     Office
                                                 </button>
                                                 <button
                                                     onClick={() => setIsSiteLogin(true)}
-                                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSiteLogin ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700'}`}
+                                                    className={`px-6 py-2 rounded-xl text-xs font-black uppercase tracking-widest transition-all ${isSiteLogin ? 'bg-white dark:bg-slate-700 text-emerald-600 dark:text-emerald-400 shadow-sm' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'}`}
                                                 >
                                                     Site
                                                 </button>
                                             </div>
                                         )}
                                         <div className="space-y-2">
-                                            <h2 className="text-3xl font-black text-slate-900">
+                                            <h2 className="text-3xl font-black text-slate-900 dark:text-white transition-colors">
                                                 {isCheckedIn ? 'Session Active' : (isSessionFinished ? 'Session Completed' : 'Ready to Start?')}
                                             </h2>
                                             <div className="flex flex-col gap-1">
-                                                <p className="text-slate-500 font-medium text-lg">
+                                                <p className="text-slate-500 dark:text-slate-400 font-medium text-lg transition-colors">
                                                     {isCheckedIn
                                                         ? `Started at ${formatTime(attendance?.date)}`
                                                         : (isSessionFinished
@@ -574,20 +574,20 @@ const Overview = () => {
                                                             : 'Your daily progress begins here. Don\'t forget to sign in!')}
                                                 </p>
                                                 {(isCheckedIn || isSessionFinished) && (
-                                                    <div className="flex items-center gap-6 mt-2 pt-4 border-t border-slate-100">
+                                                    <div className="flex items-center gap-6 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                                                         <div className="flex items-center gap-2">
-                                                            <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
-                                                                <Clock size={14} />
+                                                            <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
+                                                                 <Clock size={14} />
                                                             </div>
-                                                            <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Duration:</span>
-                                                            <span className="text-sm font-bold text-slate-700 tabular-nums">{sessionDuration}</span>
+                                                            <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Duration:</span>
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300 tabular-nums">{sessionDuration}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2">
-                                                            <div className="p-1.5 bg-emerald-50 text-emerald-600 rounded-lg">
+                                                            <div className="p-1.5 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-lg">
                                                                 <MapPinned size={14} />
                                                             </div>
-                                                            <span className="text-xs font-black text-slate-400 uppercase tracking-wider">Type:</span>
-                                                            <span className="text-sm font-bold text-slate-700">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site' : 'Office'}</span>
+                                                            <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Type:</span>
+                                                            <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site' : 'Office'}</span>
                                                         </div>
                                                     </div>
                                                 )}
@@ -609,7 +609,7 @@ const Overview = () => {
                                         )}
 
                                         {isSessionFinished && (
-                                            <div className="flex items-center gap-3 px-8 py-5 bg-slate-100 text-slate-500 rounded-[2rem] font-bold border border-slate-200">
+                                            <div className="flex items-center gap-3 px-8 py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-[2rem] font-bold border border-slate-200 dark:border-slate-700 transition-colors">
                                                 <CheckCircle2 size={24} className="text-emerald-500" />
                                                 Attendance Blocked for Today
                                             </div>
@@ -635,18 +635,15 @@ const Overview = () => {
                                                         setActiveModal('break');
                                                     }
                                                 }}
-                                                className={`px-8 py-5 ${activeBreak ? 'bg-amber-100 text-amber-600 border-2 border-amber-200' : 'bg-white border-2 border-slate-100 text-slate-600'} rounded-[2rem] font-bold flex items-center gap-3 transition-all`}
+                                                className={`px-8 py-5 ${activeBreak ? 'bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 border-2 border-amber-200 dark:border-amber-900/50' : 'bg-white dark:bg-slate-800 border-2 border-slate-100 dark:border-slate-700 text-slate-600 dark:text-slate-300'} rounded-[2rem] font-bold flex items-center gap-3 transition-all`}
                                             >
                                                 {activeBreak ? <span className="flex items-center gap-2"><span className="w-2.5 h-2.5 rounded-full bg-amber-500 animate-pulse" /> End {activeBreak.breakType}</span> : <><Coffee size={24} /> Take Break</>}
                                             </motion.button>
                                         )}
                                     </div>
                                 </div>
-                                <div className="hidden md:flex lg:w-48 lg:h-48 xl:w-64 xl:h-64 rounded-full bg-indigo-50 border-[12px] border-white shadow-xl flex-col items-center justify-center relative">
-                                    <Clock size={48} className="text-indigo-500 mb-2" />
-                                    <p className="text-2xl font-black text-slate-900 tabular-nums">
-                                        {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                    </p>
+                                <div className="hidden md:block flex-shrink-0">
+                                    <SmartDisplayClock attendance={attendance} isCheckedIn={isCheckedIn} />
                                 </div>
                             </div>
                         </div>
@@ -657,14 +654,14 @@ const Overview = () => {
                                 { icon: AlertCircle, title: 'Requests', label: 'Pending', value: (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0), color: 'rose' },
                                 { icon: Star, title: 'Leaves', label: 'Available', value: Math.max(0, 4 - (requests?.leaves?.filter(l => l.status === 'APPROVED').length || 0)), color: 'emerald' }
                             ].map((stat, i) => (
-                                <div key={i} className={`bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm hover:border-${stat.color}-100 transition-all`}>
+                                <div key={i} className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:border-${stat.color}-100 dark:hover:border-${stat.color}-900 transition-all`}>
                                     <div className="flex items-center gap-4 mb-6">
-                                        <div className={`p-3 bg-${stat.color}-50 text-${stat.color}-600 rounded-2xl`}><stat.icon size={24} /></div>
-                                        <h4 className="font-bold text-slate-600">{stat.title}</h4>
+                                        <div className={`p-3 bg-${stat.color}-50 dark:bg-${stat.color}-900/30 text-${stat.color}-600 dark:text-${stat.color}-400 rounded-2xl`}><stat.icon size={24} /></div>
+                                        <h4 className="font-bold text-slate-600 dark:text-slate-400">{stat.title}</h4>
                                     </div>
                                     <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-black text-slate-900 tabular-nums">{stat.value}</span>
-                                        <span className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">{stat.label}</span>
+                                        <span className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{stat.value}</span>
+                                        <span className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">{stat.label}</span>
                                     </div>
                                 </div>
                             ))}
@@ -673,8 +670,8 @@ const Overview = () => {
 
                     {/* Right Column */}
                     <div className="lg:col-span-4 space-y-8">
-                        <div className="bg-slate-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
-                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Sparkles className="text-indigo-400" size={24} /> Quick Actions</h3>
+                        <div className="bg-slate-900 dark:bg-slate-900/40 backdrop-blur-md p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden transition-colors border border-white/5">
+                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Sparkles className="text-indigo-400 dark:text-primary" size={24} /> Quick Actions</h3>
                             <div className="space-y-4">
                                 {[
                                     { icon: Calendar, label: 'Leave Request', sub: 'Casual / Weekoff', type: 'leave', color: 'rose' },
@@ -700,22 +697,22 @@ const Overview = () => {
                             </div>
                         </div>
 
-                        <div className="bg-white p-8 rounded-[3rem] border border-slate-100 shadow-sm">
-                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-slate-900"><History className="text-slate-400" size={24} /> Recent Updates</h3>
+                        <div className="bg-white dark:bg-slate-900 p-8 rounded-[3rem] border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
+                            <h3 className="text-xl font-bold mb-8 flex items-center gap-3 text-slate-900 dark:text-white"><History className="text-slate-400 dark:text-slate-500" size={24} /> Recent Updates</h3>
                             <div className="space-y-6">
                                 {requests?.workLogs?.slice(0, 3).map((log, idx) => (
                                     <div key={idx} className="flex gap-4">
                                         <div className="flex flex-col items-center">
-                                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500" />
-                                            {idx !== 2 && <div className="w-0.5 h-full bg-slate-100" />}
+                                            <div className="w-2.5 h-2.5 rounded-full bg-indigo-500 dark:bg-primary" />
+                                            {idx !== 2 && <div className="w-0.5 h-full bg-slate-100 dark:bg-slate-800" />}
                                         </div>
                                         <div className="flex-1 pb-6">
-                                            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{formatDate(log.date)}</p>
-                                            <p className="text-sm font-black text-slate-800 line-clamp-1">{log.projectName || 'General Work'}</p>
-                                            <p className="text-xs text-slate-500 line-clamp-1">{log.tasks}</p>
+                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">{formatDate(log.date)}</p>
+                                            <p className="text-sm font-black text-slate-800 dark:text-slate-200 line-clamp-1">{log.projectName || 'General Work'}</p>
+                                            <p className="text-xs text-slate-500 dark:text-slate-400 line-clamp-1">{log.tasks}</p>
                                         </div>
                                     </div>
-                                )) || <p className="text-sm text-slate-400 text-center py-4">No recent logs</p>}
+                                )) || <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-4">No recent logs</p>}
                             </div>
                         </div>
                     </div>
@@ -983,5 +980,100 @@ function dataURLtoBlob(dataurl) {
         return null;
     }
 }
+
+const SmartDisplayClock = ({ attendance, isCheckedIn }) => {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const calculateProgress = () => {
+        if (!isCheckedIn || !attendance?.date) return 0;
+        const start = new Date(attendance.date);
+        const diff = (currentTime - start) / (1000 * 60 * 60); // hours
+        return Math.min((diff / 8) * 100, 100); // Progress towards 8h shift
+    };
+
+    const progress = calculateProgress();
+
+    return (
+        <div className="relative w-80 h-44 xl:w-96 xl:h-52 rounded-[2.5rem] overflow-hidden shadow-2xl group transition-all duration-700 hover:scale-[1.02]">
+            {/* Layered Diagonal Background Concept */}
+            <div className="absolute inset-0 bg-[#00607a] transition-colors duration-1000">
+                {/* Diagonal Stripes */}
+                <div className="absolute inset-0 opacity-80">
+                    <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-[#004e63] transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 left-1/4 w-1/2 h-full bg-[#00708f] transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 left-3/4 w-1/2 h-full bg-[#018ba1] transform -skew-x-12 transition-all duration-1000" />
+                </div>
+                
+                {/* Progress Overlay - Subtle gradient fill from left */}
+                {isCheckedIn && (
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent pointer-events-none z-10"
+                    />
+                )}
+            </div>
+
+            {/* Content Container */}
+            <div className="relative z-20 h-full p-8 flex flex-col justify-between text-white">
+                <div className="flex justify-between items-start">
+                    <div>
+                        <motion.h1 
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            className="text-6xl xl:text-7xl font-black tracking-tighter drop-shadow-2xl select-none"
+                        >
+                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        </motion.h1>
+                        <p className="text-sm xl:text-base font-bold text-white/80 mt-1 drop-shadow-md">
+                            {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                        </p>
+                    </div>
+
+                    {/* Status Icon/Info */}
+                    <div className="flex flex-col items-end">
+                        {isCheckedIn ? (
+                            <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 p-2 rounded-2xl flex items-center gap-2 group/status">
+                                <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                            </div>
+                        ) : (
+                            <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex items-center gap-2">
+                                <Clock size={16} className="text-white/60" />
+                                <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Idle</span>
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                <div className="flex justify-between items-end">
+                    <div className="flex items-center gap-3">
+                        <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
+                            <MapPinned size={18} className="text-white/80" />
+                        </div>
+                        <div className="text-left">
+                            <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 leading-none mb-1">Location</p>
+                            <p className="text-xs font-bold">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site Visit' : 'Main Office'}</p>
+                        </div>
+                    </div>
+
+                    {/* Temperature/Secondary Stat Placeholder (Visual Polish) */}
+                    <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                        <TrendingUp size={14} className="text-emerald-400" />
+                        <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}% Done` : '--'}</span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Glassmorphism Inner Shadow */}
+            <div className="absolute inset-0 pointer-events-none border border-white/10 rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.05)]" />
+        </div>
+    );
+};
 
 export default Overview;

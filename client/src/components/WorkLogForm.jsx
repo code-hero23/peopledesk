@@ -93,10 +93,10 @@ const WorkLogForm = ({ onSuccess }) => {
 
     if (isTodayClosed) {
         return (
-            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
-                <CheckCircle2 size={48} className="mx-auto text-emerald-500 mb-4" />
-                <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
-                <p className="text-emerald-600 font-bold">Daily reports submitted successfully.</p>
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-3xl text-center border border-emerald-100 dark:border-emerald-900/30 transition-colors">
+                <CheckCircle2 size={48} className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" />
+                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
+                <p className="text-emerald-600 dark:text-emerald-400 font-bold">Daily reports submitted successfully.</p>
             </div>
         );
     }
@@ -104,55 +104,55 @@ const WorkLogForm = ({ onSuccess }) => {
     if (isTodayOpen) {
         return (
             <form onSubmit={handleClosingSubmit} className="space-y-4">
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                    <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800 transition-colors">
+                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
                         <TrendingUp size={24} />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-slate-800">Closing Report</h3>
-                        <p className="text-xs text-slate-500 font-bold uppercase">Finalize your daily session</p>
+                        <h3 className="text-lg font-black text-slate-800 dark:text-slate-100 uppercase tracking-tight">Closing Report</h3>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 font-black uppercase tracking-widest">Finalize your daily session</p>
                     </div>
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-xs font-bold text-emerald-600 uppercase mb-1">Session Start</label>
-                            <div className="px-3 py-2 bg-emerald-50 rounded-lg text-emerald-700 font-bold border border-emerald-100">
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest ml-1">Session Start</label>
+                            <div className="px-4 py-2.5 bg-emerald-50 dark:bg-emerald-900/20 rounded-xl text-emerald-700 dark:text-emerald-300 font-black border border-emerald-100 dark:border-emerald-900/30 text-center">
                                 {todayLog.startTime}
                             </div>
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration (Hrs)</label>
-                            <div className="px-3 py-2 bg-slate-50 rounded-lg text-slate-700 font-mono font-bold border border-slate-100">
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Duration (Hrs)</label>
+                            <div className="px-4 py-2.5 bg-slate-50 dark:bg-slate-900/50 rounded-xl text-slate-700 dark:text-slate-300 font-mono font-black border border-slate-100 dark:border-slate-800 text-center">
                                 {calculateTotalTime()}
                             </div>
                         </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-2">
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Completed</label>
-                            <input type="number" name="completedImages" value={formData.completedImages} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
+                    <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Completed</label>
+                            <input type="number" name="completedImages" value={formData.completedImages} onChange={handleChange} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700" placeholder="0" />
                         </div>
-                        <div>
-                            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Pending</label>
-                            <input type="number" name="pendingImages" value={formData.pendingImages} onChange={handleChange} className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="0" />
+                        <div className="space-y-2">
+                            <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Pending</label>
+                            <input type="number" name="pendingImages" value={formData.pendingImages} onChange={handleChange} className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white transition-all font-bold placeholder:text-slate-300 dark:placeholder:text-slate-700" placeholder="0" />
                         </div>
                     </div>
                 </div>
-                <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Remarks</label>
-                    <textarea name="remarks" value={formData.remarks} onChange={handleChange} rows="1" className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none" placeholder="Technical issues or feedback..."></textarea>
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Remarks</label>
+                    <textarea name="remarks" value={formData.remarks} onChange={handleChange} rows="1" className="w-full px-4 py-2.5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white transition-all font-medium placeholder:text-slate-300 dark:placeholder:text-slate-700" placeholder="Technical issues or feedback..."></textarea>
                 </div>
-                <div>
-                    <label className="block text-xs font-bold text-blue-500 uppercase mb-1">Daily Notes (for Admin & HR)</label>
-                    <textarea name="notes" value={formData.notes} onChange={handleChange} rows="2" className="w-full px-3 py-2 border border-blue-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-blue-50/20" placeholder="Summary of your achievements today..."></textarea>
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-blue-500 dark:text-blue-400 uppercase tracking-widest ml-1">Daily Notes (for Admin & HR)</label>
+                    <textarea name="notes" value={formData.notes} onChange={handleChange} rows="2" className="w-full px-4 py-2.5 bg-blue-50/20 dark:bg-blue-900/10 border border-blue-200 dark:border-blue-900/30 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none dark:text-white transition-all font-medium placeholder:text-blue-300 dark:placeholder:text-blue-700/50" placeholder="Summary of your achievements today..."></textarea>
                 </div>
-                <div className="flex gap-3">
-                    <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors uppercase text-xs">
+                <div className="flex gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors">
+                    <button type="button" onClick={onSuccess} className="flex-1 py-3 px-6 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-xs tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-95">
                         Cancel
                     </button>
-                    <button type="submit" disabled={isSubmitting || isLoading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                    <button type="submit" disabled={isSubmitting || isLoading} className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg hover:shadow-emerald-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
                         {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Finish Day</>}
                     </button>
                 </div>
@@ -177,47 +177,47 @@ const WorkLogForm = ({ onSuccess }) => {
             </div>
 
             {/* NEW UI MATCHING USER IMAGE */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
                 <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Current Date</label>
-                    <div className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-lg border border-slate-100">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Current Date</label>
+                    <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-lg border border-slate-100 dark:border-slate-800 text-center">
                         {new Date().toLocaleDateString('en-GB')}
                     </div>
                 </div>
                 <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Session Time</label>
-                    <div className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-lg border border-slate-100">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Session Time</label>
+                    <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800/50 text-slate-700 dark:text-slate-200 rounded-2xl font-black text-lg border border-slate-100 dark:border-slate-800 text-center">
                         {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-6 rounded-3xl border border-slate-100 shadow-sm">
-                <div className="md:col-span-2 mb-2 pb-2 border-b border-slate-50">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Deployment Details</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-colors">
+                <div className="md:col-span-2 mb-2 pb-2 border-b border-slate-50 dark:border-slate-800">
+                    <h4 className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em] ml-1">Deployment Details</h4>
                 </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Client Name</label>
-                    <input type="text" name="clientName" required value={formData.clientName} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="e.g. Acme Corp" />
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Client Name</label>
+                    <input type="text" name="clientName" required value={formData.clientName} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-bold dark:text-white" placeholder="e.g. Acme Corp" />
                 </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Site</label>
-                    <input type="text" name="site" required value={formData.site} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="e.g. Head Office" />
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Site</label>
+                    <input type="text" name="site" required value={formData.site} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-bold dark:text-white" placeholder="e.g. Head Office" />
                 </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Process</label>
-                    <input type="text" name="process" required value={formData.process} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="e.g. Design / Review" />
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Process</label>
+                    <input type="text" name="process" required value={formData.process} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-bold dark:text-white" placeholder="e.g. Design / Review" />
                 </div>
-                <div>
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-2 ml-1">Planned Target</label>
-                    <input type="number" name="imageCount" value={formData.imageCount} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:bg-white focus:ring-2 focus:ring-indigo-100 focus:border-indigo-400 outline-none transition-all font-semibold" placeholder="Optional count" />
+                <div className="space-y-2">
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest ml-1">Planned Target</label>
+                    <input type="number" name="imageCount" value={formData.imageCount} onChange={handleChange} className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 rounded-xl focus:bg-white dark:focus:bg-slate-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 outline-none transition-all font-bold dark:text-white" placeholder="Optional count" />
                 </div>
             </div>
-            <div className="flex gap-3">
-                <button type="button" onClick={onSuccess} className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors uppercase text-xs">
+            <div className="flex gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors">
+                <button type="button" onClick={onSuccess} className="flex-1 py-3 px-6 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-xs tracking-widest hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-95">
                     Cancel
                 </button>
-                <button type="submit" disabled={isSubmitting || isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95 flex items-center justify-center gap-2">
+                <button type="submit" disabled={isSubmitting || isLoading} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg hover:shadow-indigo-500/20 transition-all active:scale-95 flex items-center justify-center gap-2">
                     {isSubmitting || isLoading ? 'Submitting...' : <><TrendingUp size={18} /> Start Session</>}
                 </button>
             </div>

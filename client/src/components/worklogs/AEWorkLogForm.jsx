@@ -290,14 +290,14 @@ const AEWorkLogForm = ({ onSuccess }) => {
         });
     };
 
-    if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading...</div>;
+    if (isLoading) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 animate-pulse transition-colors">Loading...</div>;
 
     if (isTodayClosed) {
         return (
-            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
-                <CheckCircle className="mx-auto text-emerald-500 mb-4" size={48} />
-                <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
-                <p className="text-emerald-600 font-bold">You have successfully submitted your daily reports.</p>
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-3xl text-center border border-emerald-100 dark:border-emerald-900/50 transition-colors">
+                <CheckCircle className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" size={48} />
+                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
+                <p className="text-emerald-600 dark:text-emerald-400 font-bold">You have successfully submitted your daily reports.</p>
             </div>
         );
     }
@@ -314,16 +314,16 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         onClick={() => setReportType('daily')}
                         className={`relative p-6 rounded-[2rem] text-left transition-all duration-300 group overflow-hidden ${reportType === 'daily'
                             ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-2xl shadow-slate-900/30 scale-[1.02] ring-4 ring-slate-900/10'
-                            : 'bg-white text-slate-500 border border-slate-100 hover:border-slate-300 hover:shadow-xl hover:scale-[1.01]'
+                            : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xl hover:scale-[1.01]'
                             } `}
                     >
                         <div className="relative z-10 flex items-start justify-between">
                             <div>
-                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'daily' ? 'bg-white/20 text-white' : 'bg-slate-100 text-slate-400 group-hover:bg-slate-200 group-hover:text-slate-600'} `}>
+                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'daily' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 group-hover:text-slate-600 dark:group-hover:text-slate-300'} `}>
                                     <Calendar size={28} strokeWidth={2.5} />
                                 </div>
-                                <h3 className={`text-xl font-black mb-1 ${reportType === 'daily' ? 'text-white' : 'text-slate-800'} `}>Closing Day</h3>
-                                <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'daily' ? 'text-slate-400' : 'text-slate-400'} `}>Final Summary</p>
+                                <h3 className={`text-xl font-black mb-1 transition-colors ${reportType === 'daily' ? 'text-white' : 'text-slate-800 dark:text-white'} `}>Closing Day</h3>
+                                <p className={`text-xs font-bold uppercase tracking-widest transition-colors ${reportType === 'daily' ? 'text-slate-400' : 'text-slate-400 dark:text-slate-500'} `}>Final Summary</p>
                             </div>
                             {reportType === 'daily' && <ChevronRight size={20} className="text-white bg-white/20 rounded-full p-1" />}
                         </div>
@@ -333,16 +333,16 @@ const AEWorkLogForm = ({ onSuccess }) => {
                         onClick={() => setReportType('project')}
                         className={`relative p-6 rounded-[2rem] text-left transition-all duration-300 group overflow-hidden ${reportType === 'project'
                             ? 'bg-gradient-to-br from-blue-600 to-indigo-600 text-white shadow-2xl shadow-blue-500/30 scale-[1.02] ring-4 ring-blue-500/10'
-                            : 'bg-white text-slate-500 border border-slate-100 hover:border-blue-200 hover:shadow-xl hover:scale-[1.01]'
+                            : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800 hover:border-blue-200 dark:hover:border-blue-800 hover:shadow-xl hover:scale-[1.01]'
                             } `}
                     >
                         <div className="relative z-10 flex items-start justify-between">
                             <div>
-                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'project' ? 'bg-white/20 text-white' : 'bg-blue-50 text-blue-500 group-hover:bg-blue-100 group-hover:text-blue-600'} `}>
+                                <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'project' ? 'bg-white/20 text-white' : 'bg-blue-50 dark:bg-blue-900/20 text-blue-500 dark:text-blue-400 group-hover:bg-blue-100 dark:group-hover:bg-blue-900/40 group-hover:text-blue-600 dark:group-hover:text-blue-300'} `}>
                                     <Briefcase size={28} strokeWidth={2.5} />
                                 </div>
-                                <h3 className={`text-xl font-black mb-1 ${reportType === 'project' ? 'text-white' : 'text-slate-800'} `}>Project Wise</h3>
-                                <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'project' ? 'text-blue-200' : 'text-slate-400'} `}>Detailed Task Logs</p>
+                                <h3 className={`text-xl font-black mb-1 transition-colors ${reportType === 'project' ? 'text-white' : 'text-slate-800 dark:text-white'} `}>Project Wise</h3>
+                                <p className={`text-xs font-bold uppercase tracking-widest transition-colors ${reportType === 'project' ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'} `}>Detailed Task Logs</p>
                             </div>
                             {reportType === 'project' && <ChevronRight size={20} className="text-white bg-white/20 rounded-full p-1" />}
                         </div>
@@ -359,14 +359,14 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                 <Label text="Daily Summary / Remarks" />
                                 <textarea
                                     name="remarks" value={closingData.remarks} onChange={(e) => setClosingData({ ...closingData, remarks: e.target.value })}
-                                    rows="4" className="w-full bg-slate-50 p-4 rounded-2xl border border-slate-200 font-medium text-sm outline-none resize-none focus:ring-2 ring-slate-100"
+                                    rows="4" className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 font-medium text-sm outline-none resize-none focus:ring-2 ring-slate-100 dark:ring-slate-800 dark:text-white transition-colors"
                                     placeholder="Write any final notes about your day..."
                                 />
                                 <div className="mt-4">
                                     <Label text="Daily Notes (for Admin & HR)" />
                                     <textarea
                                         name="notes" value={closingData.notes} onChange={(e) => setClosingData({ ...closingData, notes: e.target.value })}
-                                        rows="3" className="w-full bg-blue-50/30 p-4 rounded-2xl border border-blue-100 font-medium text-sm outline-none resize-none focus:ring-2 ring-blue-100"
+                                        rows="3" className="w-full bg-blue-50/30 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/50 font-medium text-sm outline-none resize-none focus:ring-2 ring-blue-100 dark:ring-blue-900/40 dark:text-white transition-colors"
                                         placeholder="Share daily summary or issues with Admin/HR..."
                                     />
                                 </div>
@@ -380,31 +380,31 @@ const AEWorkLogForm = ({ onSuccess }) => {
                             key="project" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                             className="space-y-8"
                         >
-                            <div className="bg-white p-8 rounded-[2.5rem] border border-blue-100 shadow-xl shadow-blue-200/20">
+                            <div className="bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-blue-100 dark:border-slate-800 shadow-xl shadow-blue-200/20 dark:shadow-none transition-colors">
                                 <div className="flex items-center gap-4 mb-8">
-                                    <div className="p-4 bg-blue-50 rounded-2xl text-blue-600">
+                                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600 dark:text-blue-400 transition-colors">
                                         <Briefcase size={28} strokeWidth={2.5} />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black text-slate-800 tracking-tight">Add Project Entry</h2>
-                                        <p className="text-blue-400 font-bold text-xs uppercase tracking-widest">Site Visit Report</p>
+                                        <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight transition-colors">Add Project Entry</h2>
+                                        <p className="text-blue-400 dark:text-blue-500 font-bold text-xs uppercase tracking-widest transition-colors">Site Visit Report</p>
                                     </div>
                                 </div>
 
                                 <form onSubmit={handleProjectReportSubmit} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                        <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200 focus-within:ring-4 ring-blue-500/10 transition-all">
+                                        <div className="bg-slate-50/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-4 ring-blue-500/10 transition-all">
                                             <Label text="Project Selection" />
-                                            <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 outline-none text-lg" required>
-                                                <option value="">-- Select Project --</option>
+                                            <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none text-lg transition-colors" required>
+                                                <option value="" className="dark:bg-slate-800">-- Select Project --</option>
                                                 {projects?.map(p => (
-                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                    <option key={p.id} value={p.id} className="dark:bg-slate-800">{p.name}</option>
                                                 ))}
                                             </select>
                                         </div>
-                                        <div className="bg-slate-50/80 p-5 rounded-2xl border border-slate-200">
+                                        <div className="bg-slate-50/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 transition-all">
                                             <Label text="Site Location (Area)" />
-                                            <input type="text" name="ae_siteLocation" value={projectReport.ae_siteLocation || ''} onChange={handleProjectReportChange} className="w-full bg-transparent font-bold text-slate-700 outline-none" placeholder="Enter Area..." />
+                                            <input type="text" name="ae_siteLocation" value={projectReport.ae_siteLocation || ''} onChange={handleProjectReportChange} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none transition-colors" placeholder="Enter Area..." />
                                         </div>
                                     </div>
 
@@ -413,7 +413,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                             <Label text="Visit Type" />
                                             <div className="flex flex-wrap gap-2">
                                                 {visitTypes.map(type => (
-                                                    <label key={type} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_visitType.includes(type) ? 'bg-cyan-50 border-cyan-200 text-cyan-700' : 'bg-slate-50 border-slate-100 text-slate-500'} `}>
+                                                    <label key={type} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_visitType.includes(type) ? 'bg-cyan-50 dark:bg-cyan-900/20 border-cyan-200 dark:border-cyan-800 text-cyan-700 dark:text-cyan-400' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400'} `}>
                                                         <input type="checkbox" checked={projectReport.ae_visitType.includes(type)} onChange={() => handleMultiSelect('ae_visitType', type)} className="hidden" />
                                                         {type}
                                                     </label>
@@ -422,14 +422,14 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                             <div className="mt-4 grid grid-cols-2 gap-3">
                                                 <div>
                                                     <Label text="Work Stage" />
-                                                    <select name="ae_workStage" value={projectReport.ae_workStage} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2.5 rounded-xl text-xs font-bold text-slate-700 outline-none">
-                                                        <option value="">Select...</option>
-                                                        {workStages.map(s => <option key={s} value={s}>{s}</option>)}
+                                                    <select name="ae_workStage" value={projectReport.ae_workStage} onChange={handleProjectReportChange} className="w-full bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-white border dark:border-slate-700 outline-none transition-colors">
+                                                        <option value="" className="dark:bg-slate-800">Select...</option>
+                                                        {workStages.map(s => <option key={s} value={s} className="dark:bg-slate-800">{s}</option>)}
                                                     </select>
                                                 </div>
                                                 <div>
                                                     <Label text="Process (Task)" />
-                                                    <input type="text" name="process" value={projectReport.process || ''} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2.5 rounded-xl text-xs font-bold text-slate-700 outline-none" placeholder="e.g. Survey" />
+                                                    <input type="text" name="process" value={projectReport.process || ''} onChange={handleProjectReportChange} className="w-full bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl text-xs font-bold text-slate-700 dark:text-white border dark:border-slate-700 outline-none transition-colors" placeholder="e.g. Survey" />
                                                 </div>
                                             </div>
                                         </Card>
@@ -438,22 +438,22 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                             <div className="grid grid-cols-2 gap-4 mb-4">
                                                 <div>
                                                     <Label text="Start Time" />
-                                                    <div className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold text-slate-700 border border-slate-100 italic">
+                                                    <div className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 italic transition-colors">
                                                         {projectStartTime || 'Selecting...'}
                                                     </div>
                                                 </div>
                                                 <div>
                                                     <Label text="Log Time" />
-                                                    <div className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold text-slate-700 border border-slate-100 italic">
+                                                    <div className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-sm font-bold text-slate-700 dark:text-slate-300 border border-slate-100 dark:border-slate-700 italic transition-colors">
                                                         {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                                                     </div>
                                                 </div>
                                             </div>
-                                            <div className="bg-slate-50 border border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-100 transition-colors relative">
+                                            <div className="bg-slate-50 dark:bg-slate-800 border border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-4 text-center cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors relative">
                                                 <input type="file" multiple accept="image/*" onChange={handleFileChange} className="absolute inset-0 opacity-0 cursor-pointer" />
-                                                <Camera className="mx-auto text-slate-400 mb-1" size={20} />
-                                                <p className="text-[10px] font-black text-slate-500 uppercase">Upload Photos</p>
-                                                <p className="text-[9px] text-slate-400">{projectReport.ae_photos?.length || 0} files selected</p>
+                                                <Camera className="mx-auto text-slate-400 dark:text-slate-500 mb-1" size={20} />
+                                                <p className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase">Upload Photos</p>
+                                                <p className="text-[9px] text-slate-400 dark:text-slate-500">{projectReport.ae_photos?.length || 0} files selected</p>
                                             </div>
                                             {imagePreviews.length > 0 && (
                                                 <div className="flex flex-wrap gap-2 mt-3">
@@ -471,7 +471,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                         <Label text="Tasks Completed" />
                                         <div className="flex flex-wrap gap-2 mb-4">
                                             {tasksList.map(task => (
-                                                <label key={task} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_tasksCompleted.includes(task) ? 'bg-green-50 border-green-200 text-green-700' : 'bg-slate-50 border-slate-100 text-slate-500'} `}>
+                                                <label key={task} className={`cursor-pointer px-3 py-1.5 rounded-lg text-[10px] font-black transition-all border ${projectReport.ae_tasksCompleted.includes(task) ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800 text-green-700 dark:text-green-400' : 'bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-500 dark:text-slate-400'} `}>
                                                     <input type="checkbox" checked={projectReport.ae_tasksCompleted.includes(task)} onChange={() => handleMultiSelect('ae_tasksCompleted', task)} className="hidden" />
                                                     {task}
                                                 </label>
@@ -480,30 +480,30 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                             <div>
                                                 <Label text="Measurements" />
-                                                <input type="text" name="ae_measurements" value={projectReport.ae_measurements} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold" placeholder="Details..." />
+                                                <input type="text" name="ae_measurements" value={projectReport.ae_measurements} onChange={handleProjectReportChange} className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-sm font-bold dark:text-white border dark:border-slate-700 transition-colors" placeholder="Details..." />
                                             </div>
                                             <div>
                                                 <Label text="Items Installed" />
-                                                <input type="text" name="ae_itemsInstalled" value={projectReport.ae_itemsInstalled} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2 rounded-lg text-sm font-bold" placeholder="#" />
+                                                <input type="text" name="ae_itemsInstalled" value={projectReport.ae_itemsInstalled} onChange={handleProjectReportChange} className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-lg text-sm font-bold dark:text-white border dark:border-slate-700 transition-colors" placeholder="#" />
                                             </div>
                                             <div>
                                                 <Label text="Site Status" />
-                                                <select name="ae_siteStatus" value={projectReport.ae_siteStatus} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2 rounded-xl text-xs font-bold text-slate-700 outline-none">
-                                                    <option value="">Select...</option>
-                                                    {siteStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                                                <select name="ae_siteStatus" value={projectReport.ae_siteStatus} onChange={handleProjectReportChange} className="w-full bg-slate-50 dark:bg-slate-800 p-2 rounded-xl text-xs font-bold text-slate-700 dark:text-white border dark:border-slate-700 outline-none transition-colors">
+                                                    <option value="" className="dark:bg-slate-800">Select...</option>
+                                                    {siteStatuses.map(s => <option key={s} value={s} className="dark:bg-slate-800">{s}</option>)}
                                                 </select>
                                             </div>
                                         </div>
                                     </Card>
 
-                                    <div className={`p-5 rounded-2xl border transition-colors ${projectReport.ae_hasIssues ? 'bg-red-50 border-red-100' : 'bg-white border-slate-100'} `}>
+                                    <div className={`p-5 rounded-2xl border transition-colors ${projectReport.ae_hasIssues ? 'bg-red-50 dark:bg-red-900/20 border-red-100 dark:border-red-900/40' : 'bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800'} `}>
                                         <div className="flex justify-between items-center">
-                                            <div className="flex items-center gap-2 text-red-600 font-black text-sm uppercase">
+                                            <div className="flex items-center gap-2 text-red-600 dark:text-red-400 font-black text-sm uppercase transition-colors">
                                                 <AlertOctagon size={18} /> Issues Found?
                                             </div>
                                             <label className="relative inline-flex items-center cursor-pointer">
                                                 <input type="checkbox" name="ae_hasIssues" checked={projectReport.ae_hasIssues} onChange={handleProjectReportChange} className="sr-only peer" />
-                                                <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
+                                                <div className="w-11 h-6 bg-slate-200 dark:bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-500"></div>
                                             </label>
                                         </div>
 
@@ -513,23 +513,23 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                                     <div className="grid grid-cols-2 gap-4">
                                                         <div>
                                                             <Label text="Issue Type" />
-                                                            <select name="ae_issueType" value={projectReport.ae_issueType} onChange={handleProjectReportChange} className="w-full bg-white p-2 text-xs font-bold border border-red-200 rounded-lg">
-                                                                <option value="">Select Type</option>
-                                                                {issueTypes.map(t => <option key={t} value={t}>{t}</option>)}
+                                                            <select name="ae_issueType" value={projectReport.ae_issueType} onChange={handleProjectReportChange} className="w-full bg-white dark:bg-slate-800 p-2 text-xs font-bold border border-red-200 dark:border-red-900/50 rounded-lg dark:text-white transition-colors">
+                                                                <option value="" className="dark:bg-slate-800">Select Type</option>
+                                                                {issueTypes.map(t => <option key={t} value={t} className="dark:bg-slate-800">{t}</option>)}
                                                             </select>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-2">
                                                             <div>
                                                                 <Label text="Raised" />
-                                                                <input type="number" name="ae_issuesRaised" value={projectReport.ae_issuesRaised} onChange={handleProjectReportChange} className="w-full bg-white p-2 rounded-lg border border-red-200 text-xs font-bold" />
+                                                                <input type="number" name="ae_issuesRaised" value={projectReport.ae_issuesRaised} onChange={handleProjectReportChange} className="w-full bg-white dark:bg-slate-800 p-2 rounded-lg border border-red-200 dark:border-red-900/50 text-xs font-bold dark:text-white transition-colors" />
                                                             </div>
                                                             <div>
                                                                 <Label text="Resolved" />
-                                                                <input type="number" name="ae_issuesResolved" value={projectReport.ae_issuesResolved} onChange={handleProjectReportChange} className="w-full bg-white p-2 rounded-lg border border-red-200 text-xs font-bold" />
+                                                                <input type="number" name="ae_issuesResolved" value={projectReport.ae_issuesResolved} onChange={handleProjectReportChange} className="w-full bg-white dark:bg-slate-800 p-2 rounded-lg border border-red-200 dark:border-red-900/50 text-xs font-bold dark:text-white transition-colors" />
                                                             </div>
                                                         </div>
                                                     </div>
-                                                    <textarea name="ae_issueDescription" value={projectReport.ae_issueDescription} onChange={handleProjectReportChange} rows="2" className="w-full bg-white p-3 rounded-xl border border-red-200 text-sm" placeholder="Describe the issue..."></textarea>
+                                                    <textarea name="ae_issueDescription" value={projectReport.ae_issueDescription} onChange={handleProjectReportChange} rows="2" className="w-full bg-white dark:bg-slate-800 p-3 rounded-xl border border-red-200 dark:border-red-900/50 text-sm dark:text-slate-300 transition-colors" placeholder="Describe the issue..."></textarea>
                                                 </motion.div>
                                             )}
                                         </AnimatePresence>
@@ -537,24 +537,24 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <Card title="Next Steps" icon={CornerDownRight} color="purple">
-                                            <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 cursor-pointer">
-                                                <input type="checkbox" name="ae_nextVisitRequired" checked={projectReport.ae_nextVisitRequired} onChange={handleProjectReportChange} className="rounded text-purple-600" />
-                                                <span className="text-sm font-bold text-slate-700">Next Visit Required?</span>
+                                            <label className="flex items-center gap-2 p-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors">
+                                                <input type="checkbox" name="ae_nextVisitRequired" checked={projectReport.ae_nextVisitRequired} onChange={handleProjectReportChange} className="rounded text-purple-600 dark:bg-slate-800 dark:border-slate-700" />
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors">Next Visit Required?</span>
                                             </label>
                                             {projectReport.ae_nextVisitRequired && (
-                                                <input type="date" name="ae_nextVisitDate" value={projectReport.ae_nextVisitDate} onChange={handleProjectReportChange} className="w-full bg-slate-50 p-2.5 rounded-xl border border-slate-200 font-bold text-xs" />
+                                                <input type="date" name="ae_nextVisitDate" value={projectReport.ae_nextVisitDate} onChange={handleProjectReportChange} className="w-full bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-xs dark:text-white transition-colors" />
                                             )}
                                         </Card>
 
                                         <Card title="Client Feedback" icon={UserCheck} color="pink">
-                                            <label className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-50 cursor-pointer mb-2">
-                                                <input type="checkbox" name="ae_clientMet" checked={projectReport.ae_clientMet} onChange={handleProjectReportChange} className="rounded text-pink-600" />
-                                                <span className="text-sm font-bold text-slate-700">Client Met?</span>
+                                            <label className="flex items-center gap-2 p-1 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer mb-2 transition-colors">
+                                                <input type="checkbox" name="ae_clientMet" checked={projectReport.ae_clientMet} onChange={handleProjectReportChange} className="rounded text-pink-600 dark:bg-slate-800 dark:border-slate-700" />
+                                                <span className="text-sm font-bold text-slate-700 dark:text-slate-300 transition-colors">Client Met?</span>
                                             </label>
                                             {projectReport.ae_clientMet && (
                                                 <div className="flex gap-2">
                                                     {['😊', '😐', '😟'].map(feedback => (
-                                                        <label key={feedback} className={`flex-1 flex justify-center py-2 rounded-xl border cursor-pointer transition-all ${projectReport.ae_clientFeedback === feedback ? 'bg-pink-50 border-pink-300 shadow-sm' : 'border-slate-100 opacity-50 hover:opacity-100'} `}>
+                                                        <label key={feedback} className={`flex-1 flex justify-center py-2 rounded-xl border cursor-pointer transition-all ${projectReport.ae_clientFeedback === feedback ? 'bg-pink-50 dark:bg-pink-900/20 border-pink-300 dark:border-pink-800 shadow-sm' : 'border-slate-100 dark:border-slate-800 opacity-50 hover:opacity-100'} `}>
                                                             <input type="radio" name="ae_clientFeedback" value={feedback} checked={projectReport.ae_clientFeedback === feedback} onChange={handleProjectReportChange} className="hidden" />
                                                             <span className="text-2xl filter drop-shadow-sm">{feedback}</span>
                                                         </label>
@@ -589,22 +589,22 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                                 return (
                                                     <motion.div
                                                         initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }}
-                                                        key={idx} className="bg-white p-5 border border-slate-100 rounded-3xl shadow-sm hover:shadow-md transition-shadow flex justify-between items-center group cursor-default"
+                                                        key={idx} className="bg-white dark:bg-slate-900 p-5 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-md transition-all flex justify-between items-center group cursor-default"
                                                     >
                                                         <div className="flex-1">
-                                                            <p className="font-black text-slate-800 text-base mb-1">{r.clientName || 'Unknown Site'}</p>
+                                                            <p className="font-black text-slate-800 dark:text-white text-base mb-1 transition-colors">{r.clientName || 'Unknown Site'}</p>
                                                             <div className="flex flex-wrap items-center gap-2">
-                                                                <span className="text-[9px] font-black uppercase text-blue-600 bg-blue-50 px-2 py-0.5 rounded-md">{r.process}</span>
-                                                                <span className="text-[9px] font-black uppercase text-cyan-600 bg-cyan-50 px-2 py-0.5 rounded-md">{r.ae_workStage || 'N/A'}</span>
-                                                                <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1"><Clock size={10} /> {r.startTime} - {r.endTime}</span>
+                                                                <span className="text-[9px] font-black uppercase text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-0.5 rounded-md transition-colors">{r.process}</span>
+                                                                <span className="text-[9px] font-black uppercase text-cyan-600 dark:text-cyan-400 bg-cyan-50 dark:bg-cyan-900/20 px-2 py-0.5 rounded-md transition-colors">{r.ae_workStage || 'N/A'}</span>
+                                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 transition-colors"><Clock size={10} /> {r.startTime} - {r.endTime}</span>
                                                             </div>
                                                             <div className="flex gap-3 mt-2">
-                                                                <span className="text-[9px] text-slate-400 font-bold uppercase">Tasks: {(r.ae_tasksCompleted || []).length}</span>
-                                                                <span className="text-[9px] text-slate-400 font-bold uppercase text-indigo-500">Photos: {(r.ae_photos || []).length}</span>
+                                                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase transition-colors">Tasks: {(r.ae_tasksCompleted || []).length}</span>
+                                                                <span className="text-[9px] text-slate-400 dark:text-slate-500 font-bold uppercase text-indigo-500 dark:text-indigo-400 transition-colors">Photos: {(r.ae_photos || []).length}</span>
                                                             </div>
                                                         </div>
                                                         <div className="text-right">
-                                                            <span className={`text-[10px] font-black px-3 py-1 rounded-full ${r.status === 'Completed' || r.ae_siteStatus === 'Completed' ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700'} `}>
+                                                            <span className={`text-[10px] font-black px-3 py-1 rounded-full transition-colors ${r.status === 'Completed' || r.ae_siteStatus === 'Completed' ? 'bg-green-100 dark:bg-green-900/20 text-green-700 dark:text-green-400' : 'bg-orange-100 dark:bg-orange-900/20 text-orange-700 dark:text-orange-400'} `}>
                                                                 {r.status || r.ae_siteStatus || 'N/A'}
                                                             </span>
                                                         </div>
@@ -638,7 +638,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
             onSubmit={handleOpeningSubmit} className="space-y-6"
         >
             {/* --- NEW START DAY CARD --- */}
-            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden mb-4">
+            <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 dark:shadow-blue-900/20 relative overflow-hidden mb-4 transition-all">
                 <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
                 <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
                 
@@ -669,25 +669,25 @@ const AEWorkLogForm = ({ onSuccess }) => {
             <Card title="Location Details" icon={Navigation} color="blue">
                 <Label text="Current Location / Site" />
                 <div className="flex gap-2 mb-4">
-                    <input type="text" name="ae_siteLocation" value={openingData.ae_siteLocation} onChange={handleOpeningChange} className="flex-1 bg-slate-50 p-3 rounded-xl border border-slate-200 font-bold text-slate-700 outline-none focus:ring-2 ring-blue-100" placeholder="Enter Area..." required />
-                    <button type="button" onClick={captureLocation} className="bg-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-200 hover:bg-blue-700 transition-colors">
+                    <input type="text" name="ae_siteLocation" value={openingData.ae_siteLocation} onChange={handleOpeningChange} className="flex-1 bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-bold text-slate-700 dark:text-white outline-none focus:ring-2 ring-blue-100 dark:ring-blue-900/40 transition-colors" placeholder="Enter Area..." required />
+                    <button type="button" onClick={captureLocation} className="bg-blue-600 text-white p-3 rounded-xl shadow-lg shadow-blue-200 dark:shadow-blue-900/20 hover:bg-blue-700 transition-colors">
                         {locationLoading ? <span className="animate-spin text-sm">⌛</span> : <MapPin size={20} />}
                     </button>
                 </div>
                 {openingData.ae_gpsCoordinates && (
-                    <div className="flex items-center gap-2 text-[10px] font-bold text-green-600 bg-green-50 p-2 rounded-lg border border-green-100">
+                    <div className="flex items-center gap-2 text-[10px] font-bold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-2 rounded-lg border border-green-100 dark:border-green-900/50 transition-colors">
                         <CheckCircle size={12} /> GPS COORDINATES CAPTURED
                     </div>
                 )}
                 <Label text="Site Status" />
-                <select name="ae_siteStatus" value={openingData.ae_siteStatus} onChange={handleOpeningChange} className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 font-semibold text-sm outline-none">
-                    <option value="">Select Status</option>
-                    {siteStatuses.map(s => <option key={s} value={s}>{s}</option>)}
+                <select name="ae_siteStatus" value={openingData.ae_siteStatus} onChange={handleOpeningChange} className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-semibold text-sm dark:text-white outline-none transition-colors">
+                    <option value="" className="dark:bg-slate-800">Select Status</option>
+                    {siteStatuses.map(s => <option key={s} value={s} className="dark:bg-slate-800">{s}</option>)}
                 </select>
             </Card>
 
             <Card title="Daily Plan" icon={Clipboard} color="emerald">
-                <textarea name="ae_plannedWork" value={openingData.ae_plannedWork} onChange={handleOpeningChange} rows="3" className="w-full bg-slate-50 p-3 rounded-xl border border-slate-200 font-medium text-sm outline-none resize-none" placeholder="What are your goals for today?" required></textarea>
+                <textarea name="ae_plannedWork" value={openingData.ae_plannedWork} onChange={handleOpeningChange} rows="3" className="w-full bg-slate-50 dark:bg-slate-800 p-3 rounded-xl border border-slate-200 dark:border-slate-700 font-medium text-sm dark:text-slate-300 outline-none resize-none transition-colors" placeholder="What are your goals for today?" required></textarea>
             </Card>
 
             <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl shadow-xl hover:shadow-2xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
@@ -710,19 +710,19 @@ export default AEWorkLogForm;
 
 // --- UI COMPONENTS ---
 const Label = ({ icon: Icon, text }) => (
-    <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 mb-1.5">
+    <span className="flex items-center gap-1.5 text-[10px] font-black uppercase text-slate-400 dark:text-slate-500 mb-1.5 transition-colors">
         {Icon && <Icon size={12} />} {text}
     </span>
 );
 
 const Card = ({ title, icon: Icon, children, color = "blue" }) => (
-    <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow">
+    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all">
         {title && (
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50">
-                <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600`}>
+            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50 dark:border-slate-800 transition-colors">
+                <div className={`p-2 rounded-lg bg-${color}-50 dark:bg-${color}-900/20 text-${color}-600 dark:text-${color}-400 transition-colors`}>
                     <Icon size={18} />
                 </div>
-                <h4 className="text-xs font-black text-slate-600 uppercase tracking-widest leading-none mt-1">{title}</h4>
+                <h4 className="text-xs font-black text-slate-600 dark:text-slate-400 uppercase tracking-widest leading-none mt-1 transition-colors">{title}</h4>
             </div>
         )}
         <div className="space-y-4">{children}</div>

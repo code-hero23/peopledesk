@@ -69,11 +69,11 @@ const LeaveRequestForm = ({ onSuccess }) => {
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             {isLimitExceeded && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 flex items-start gap-3 transition-colors">
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                     <div>
-                        <p className="text-sm font-bold text-amber-800">Monthly Leave Limit Alert</p>
-                        <p className="text-xs text-amber-600 font-medium">
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Monthly Leave Limit Alert</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                             Your total leave for this month (including this request) will be {(totalExistingDays + newRequestDays).toFixed(1)} days. This exceeds the 4-day threshold and will be flagged for review.
                         </p>
                     </div>
@@ -81,16 +81,16 @@ const LeaveRequestForm = ({ onSuccess }) => {
             )}
             {/* BH Selection */}
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Business Head</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Select Business Head</label>
                 <select
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     required
                     value={formData.targetBhId}
                     onChange={(e) => setFormData({ ...formData, targetBhId: e.target.value })}
                 >
-                    <option value="">-- Select Reporting Manager --</option>
+                    <option value="" className="dark:bg-slate-900 font-bold italic">-- Select Reporting Manager --</option>
                     {businessHeads.map((bh) => (
-                        <option key={bh.id} value={bh.id}>
+                        <option key={bh.id} value={bh.id} className="dark:bg-slate-900 font-bold">
                             {bh.name} ({bh.email})
                         </option>
                     ))}
@@ -98,22 +98,22 @@ const LeaveRequestForm = ({ onSuccess }) => {
             </div>
 
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Duration</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Duration</label>
                 <select
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     value={formData.type}
                     onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                 >
-                    <option value="CASUAL">Full Day</option>
-                    <option value="HALF_DAY">Half Day</option>
+                    <option value="CASUAL" className="dark:bg-slate-900 font-bold">Full Day</option>
+                    <option value="HALF_DAY" className="dark:bg-slate-900 font-bold">Half Day</option>
                 </select>
             </div>
             {formData.type === 'HALF_DAY' ? (
                 <div>
-                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Date</label>
                     <input
                         type="date"
-                        className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                        className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                         required
                         value={formData.startDate}
                         onChange={(e) => setFormData({ ...formData, startDate: e.target.value, endDate: e.target.value })}
@@ -122,20 +122,20 @@ const LeaveRequestForm = ({ onSuccess }) => {
             ) : (
                 <div className="grid grid-cols-2 gap-4">
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Start Date</label>
+                        <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Start Date</label>
                         <input
                             type="date"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                             required
                             value={formData.startDate}
                             onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
                         />
                     </div>
                     <div>
-                        <label className="block text-xs font-bold text-slate-500 uppercase mb-1">End Date</label>
+                        <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">End Date</label>
                         <input
                             type="date"
-                            className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                            className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                             required
                             value={formData.endDate}
                             onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
@@ -144,9 +144,9 @@ const LeaveRequestForm = ({ onSuccess }) => {
                 </div>
             )}
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Reason</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Reason</label>
                 <textarea
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     required
                     rows="3"
                     value={formData.reason}
@@ -154,18 +154,18 @@ const LeaveRequestForm = ({ onSuccess }) => {
                     placeholder="Why do you need leave?"
                 />
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors">
                 <button
                     type="button"
                     onClick={onSuccess}
-                    className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                    className="flex-1 py-3 px-6 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-xs tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-95"
                 >
                     Cancel
                 </button>
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95`}
+                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/20'} text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95`}
                 >
                     {isSubmitting ? 'Submitting...' : 'Submit Request'}
                 </button>

@@ -203,14 +203,14 @@ const CREWorkLogForm = ({ onSuccess }) => {
         });
     };
 
-    if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
+    if (isLoading) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 animate-pulse transition-colors">Loading workspace...</div>;
 
     if (isTodayClosed) {
         return (
-            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
-                <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
-                <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
-                <p className="text-emerald-600 font-bold">Daily metrics submitted successfully.</p>
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-3xl text-center border border-emerald-100 dark:border-emerald-900/50 transition-colors">
+                <CheckSquare size={48} className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" />
+                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
+                <p className="text-emerald-600 dark:text-emerald-400 font-bold">Daily metrics submitted successfully.</p>
             </div>
         );
     }
@@ -222,13 +222,13 @@ const CREWorkLogForm = ({ onSuccess }) => {
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
                 onSubmit={handleClosingSubmit} className="space-y-6"
             >
-                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
-                    <div className="p-3 bg-emerald-100 text-emerald-600 rounded-xl">
+                <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800 transition-colors">
+                    <div className="p-3 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-600 dark:text-emerald-400 rounded-xl">
                         <TrendingUp size={24} />
                     </div>
                     <div>
-                        <h3 className="text-lg font-black text-slate-800">Closing Report</h3>
-                        <p className="text-xs text-slate-500 font-bold uppercase">End of Day Metrics</p>
+                        <h3 className="text-lg font-black text-slate-800 dark:text-white transition-colors">Closing Report</h3>
+                        <p className="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase transition-colors">End of Day Metrics</p>
                     </div>
                 </div>
 
@@ -272,19 +272,19 @@ const CREWorkLogForm = ({ onSuccess }) => {
                         <InputGroup label="Site Msmt/Disc" name="siteMsmtDisc" value={closingData.cre_closing_metrics.siteMsmtDisc} onChange={handleClosingChange} />
                         <InputGroup label="WhatsApp Sent" name="whatsappSent" value={closingData.cre_closing_metrics.whatsappSent} onChange={handleClosingChange} />
 
-                        <div className="mt-4 pt-4 border-t border-slate-100 flex flex-col gap-2">
+                        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-col gap-2 transition-colors">
                             <button
                                 type="button"
                                 onClick={() => navigate('/dashboard/call-reports')}
-                                className="w-full text-center text-[10px] font-black text-blue-600 hover:text-blue-700 transition-colors py-2 bg-blue-50 rounded-lg"
+                                className="w-full text-center text-[10px] font-black text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 transition-colors py-2 bg-blue-50 dark:bg-blue-900/20 rounded-lg"
                             >
                                 VIEW DETAILED ANALYTICS →
                             </button>
                         </div>
                     </MetricCard>
 
-                    <div className="md:col-span-2 bg-blue-50/50 p-6 rounded-3xl border border-blue-100 flex flex-col gap-3">
-                        <div className="flex items-center gap-2 text-blue-600">
+                    <div className="md:col-span-2 bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-3xl border border-blue-100 dark:border-blue-900/30 flex flex-col gap-3 transition-colors">
+                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 transition-colors">
                             <MessageSquare size={18} />
                             <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
                         </div>
@@ -292,7 +292,7 @@ const CREWorkLogForm = ({ onSuccess }) => {
                             name="notes"
                             value={closingData.notes}
                             onChange={handleClosingChange}
-                            className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                            className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl font-medium text-slate-700 dark:text-white text-sm outline-none border border-blue-200 dark:border-slate-700 focus:ring-2 ring-blue-100 dark:ring-blue-900/40 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600 min-h-[100px]"
                             placeholder="Share daily summary, insights, or site updates for Admin and HR..."
                         ></textarea>
                     </div>
@@ -319,10 +319,10 @@ const CREWorkLogForm = ({ onSuccess }) => {
             initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
             onSubmit={handleOpeningSubmit} className="space-y-6"
         >
-            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100">
+            <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-100 dark:border-slate-800 transition-colors">
                 <div>
-                    <h3 className="text-xl font-black text-slate-800">Opening Report</h3>
-                    <p className="text-xs text-slate-500 font-bold uppercase tracking-wider">Plan your day & targets</p>
+                    <h3 className="text-xl font-black text-slate-800 dark:text-white transition-colors">Opening Report</h3>
+                    <p className="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase tracking-wider transition-colors">Plan your day & targets</p>
                 </div>
             </div>
 
@@ -408,12 +408,12 @@ export default CREWorkLogForm;
 
 // --- REUSABLE CARD COMPONENT ---
 const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
-    <div className={`bg-white p-5 rounded-2xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow group`}>
-        <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50`}>
-            <div className={`p-2 rounded-lg bg-${color}-50 text-${color}-600 group-hover:bg-${color}-100 transition-colors`}>
+    <div className={`bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm hover:shadow-md transition-all group`}>
+        <div className={`flex items-center gap-2 mb-4 pb-2 border-b border-slate-50 dark:border-slate-800 transition-colors`}>
+            <div className={`p-2 rounded-lg bg-${color}-50 dark:bg-${color}-900/20 text-${color}-600 dark:text-${color}-400 group-hover:bg-${color}-100 dark:group-hover:bg-${color}-900/40 transition-colors`}>
                 <Icon size={18} />
             </div>
-            <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{title}</h4>
+            <h4 className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest transition-colors">{title}</h4>
         </div>
         <div className="space-y-3">
             {children}
@@ -423,13 +423,13 @@ const MetricCard = ({ title, icon: Icon, children, color = "blue" }) => (
 
 const InputGroup = ({ label, name, value, onChange, placeholder = "0" }) => (
     <div>
-        <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">{label}</label>
+        <label className="block text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 transition-colors">{label}</label>
         <input
             type="text"
             name={name}
             value={value}
             onChange={onChange}
-            className="w-full bg-slate-50 p-2.5 rounded-xl font-bold text-slate-700 text-sm outline-none border border-slate-200 focus:border-blue-400 focus:bg-white transition-all placeholder:text-slate-300"
+            className="w-full bg-slate-50 dark:bg-slate-800 p-2.5 rounded-xl font-bold text-slate-700 dark:text-white text-sm outline-none border border-slate-200 dark:border-slate-700 focus:border-blue-400 dark:focus:border-blue-600 focus:bg-white dark:focus:bg-slate-700 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
             placeholder={placeholder}
         />
     </div>

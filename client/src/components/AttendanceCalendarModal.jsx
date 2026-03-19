@@ -109,14 +109,14 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     onClick={onClose}
-                    className="absolute inset-0 bg-slate-900/60 backdrop-blur-sm pointer-events-auto"
+                    className="absolute inset-0 bg-slate-900/80 backdrop-blur-md pointer-events-auto"
                 />
 
                 <motion.div
                     initial={{ opacity: 0, scale: 0.9, y: 20 }}
                     animate={{ opacity: 1, scale: 1, y: 0 }}
                     exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                    className="relative w-full max-w-2xl bg-white rounded-3xl shadow-2xl flex flex-col max-h-[95vh] pointer-events-auto border border-white/20 overflow-hidden"
+                    className="relative w-full max-w-2xl bg-white dark:bg-slate-900 rounded-[2.5rem] shadow-2xl flex flex-col max-h-[95vh] pointer-events-auto border border-white/20 dark:border-slate-800 overflow-hidden transition-all"
                 >
                     {/* Header */}
                     <div className="bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-6 text-white relative">
@@ -167,28 +167,28 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                         </div>
                     </div>
 
-                    <div className="p-6 overflow-y-auto custom-scrollbar">
+                    <div className="p-6 overflow-y-auto custom-scrollbar dark:bg-slate-900 transition-colors">
                         {/* Stats Summary */}
                         <div className="grid grid-cols-4 gap-3 mb-8">
-                            <div className="bg-emerald-50/50 rounded-2xl p-4 border border-emerald-100/50 group hover:bg-emerald-50 transition-colors">
-                                <p className="text-emerald-600 text-[9px] font-black uppercase tracking-wider mb-1">Present</p>
-                                <p className="text-2xl font-black text-emerald-700">{attendanceHistory?.length || 0}</p>
+                            <div className="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl p-4 border border-emerald-100/50 dark:border-emerald-900/30 group hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
+                                <p className="text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-wider mb-1">Present</p>
+                                <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 transition-colors">{attendanceHistory?.length || 0}</p>
                             </div>
-                            <div className={`${sortedLeaveDates.length <= 4 ? 'bg-blue-50/50 border-blue-100/50 hover:bg-blue-50' : 'bg-orange-50/50 border-orange-100/50 hover:bg-orange-50'} rounded-2xl p-4 border transition-colors group`}>
-                                <p className={`${sortedLeaveDates.length <= 4 ? 'text-blue-600' : 'text-orange-600'} text-[9px] font-black uppercase tracking-wider mb-1`}>Leaves</p>
-                                <p className={`text-2xl font-black ${sortedLeaveDates.length <= 4 ? 'text-blue-700' : 'text-orange-700'}`}>{sortedLeaveDates.length}</p>
+                            <div className={`${sortedLeaveDates.length <= 4 ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100/50' : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-100/50'} rounded-2xl p-4 border transition-all group overflow-hidden relative`}>
+                                <p className={`${sortedLeaveDates.length <= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'} text-[9px] font-black uppercase tracking-wider mb-1`}>Leaves</p>
+                                <p className={`text-2xl font-black ${sortedLeaveDates.length <= 4 ? 'text-blue-700 dark:text-blue-300' : 'text-orange-700 dark:text-orange-300'}`}>{sortedLeaveDates.length}</p>
                             </div>
-                            <div className="bg-purple-50/50 rounded-2xl p-4 border border-purple-100/50 hover:bg-purple-50 transition-colors group">
-                                <p className="text-purple-600 text-[9px] font-black uppercase tracking-wider mb-1">Permission</p>
-                                <p className="text-2xl font-black text-purple-700">{approvedPermissionDates.size}</p>
+                            <div className="bg-purple-50/50 dark:bg-purple-900/10 rounded-2xl p-4 border border-purple-100/50 dark:border-purple-900/30 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-colors group">
+                                <p className="text-purple-600 dark:text-purple-400 text-[9px] font-black uppercase tracking-wider mb-1">Permission</p>
+                                <p className="text-2xl font-black text-purple-700 dark:text-purple-300 transition-colors">{approvedPermissionDates.size}</p>
                             </div>
-                            <div className="bg-slate-50/50 rounded-2xl p-4 border border-slate-100/50 hover:bg-slate-50 transition-colors group">
-                                <p className="text-slate-500 text-[9px] font-black uppercase tracking-wider mb-1">Status</p>
+                            <div className="bg-slate-50/50 dark:bg-slate-800/50 rounded-2xl p-4 border border-slate-100/50 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors group">
+                                <p className="text-slate-500 dark:text-slate-400 text-[9px] font-black uppercase tracking-wider mb-1">Status</p>
                                 <div className={`mt-1 font-black leading-none`}>
                                     {sortedLeaveDates.length > 4 ? (
-                                        <span className="text-orange-600 text-[10px] uppercase">Alert</span>
+                                        <span className="text-orange-600 dark:text-orange-400 text-[10px] uppercase">Alert</span>
                                     ) : (
-                                        <span className="text-emerald-600 text-[10px] uppercase">Safe</span>
+                                        <span className="text-emerald-600 dark:text-emerald-400 text-[10px] uppercase">Safe</span>
                                     )}
                                 </div>
                             </div>
@@ -197,7 +197,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                         {/* Calendar Grid */}
                         <div className="grid grid-cols-7 gap-1.5 mb-8">
                             {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-                                <div key={day} className="text-center text-[9px] font-black text-slate-400 uppercase tracking-widest py-2">
+                                <div key={day} className="text-center text-[9px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-widest py-2 transition-colors">
                                     {day}
                                 </div>
                             ))}
@@ -215,17 +215,17 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                                 const getStatusStyles = (status) => {
                                     switch (status) {
                                         case 'PRESENT':
-                                            return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 text-white shadow-lg shadow-emerald-200/50';
+                                            return 'bg-gradient-to-br from-emerald-400 to-emerald-600 border-emerald-300 dark:border-emerald-500 text-white shadow-lg shadow-emerald-200/50 dark:shadow-none';
                                         case 'ABSENT':
-                                            return 'bg-gradient-to-br from-rose-400 to-rose-600 border-rose-300 text-white shadow-lg shadow-rose-200/50';
+                                            return 'bg-gradient-to-br from-rose-400 to-rose-600 border-rose-300 dark:border-rose-500 text-white shadow-lg shadow-rose-200/50 dark:shadow-none';
                                         case 'LEAVE_BLUE':
-                                            return 'bg-gradient-to-br from-indigo-400 to-indigo-600 border-indigo-300 text-white shadow-lg shadow-indigo-200/50';
+                                            return 'bg-gradient-to-br from-indigo-400 to-indigo-600 border-indigo-300 dark:border-indigo-500 text-white shadow-lg shadow-indigo-200/50 dark:shadow-none';
                                         case 'LEAVE_ORANGE':
-                                            return 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-300 text-white shadow-lg shadow-amber-200/50';
+                                            return 'bg-gradient-to-br from-amber-400 to-amber-600 border-amber-300 dark:border-amber-500 text-white shadow-lg shadow-amber-200/50 dark:shadow-none';
                                         case 'PERMISSION':
-                                            return 'bg-gradient-to-br from-violet-400 to-violet-600 border-violet-300 text-white shadow-lg shadow-violet-200/50';
+                                            return 'bg-gradient-to-br from-violet-400 to-violet-600 border-violet-300 dark:border-violet-500 text-white shadow-lg shadow-violet-200/50 dark:shadow-none';
                                         default:
-                                            return 'bg-white border-slate-100 text-slate-400 hover:border-slate-300';
+                                            return 'bg-white dark:bg-slate-800 border-slate-100 dark:border-slate-700 text-slate-400 dark:text-slate-500 hover:border-slate-300 dark:hover:border-slate-600 transition-colors';
                                     }
                                 };
 
@@ -263,18 +263,18 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                         </div>
 
                         {/* Legend */}
-                        <div className="flex flex-wrap gap-4 mt-6 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                        <div className="flex flex-wrap gap-4 mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-2xl border border-slate-100 dark:border-slate-800/50 transition-colors">
                             {[
                                 { color: 'bg-gradient-to-br from-emerald-400 to-emerald-600', label: 'Present' },
                                 { color: 'bg-gradient-to-br from-rose-400 to-rose-600', label: 'Absent' },
                                 { color: 'bg-gradient-to-br from-indigo-400 to-indigo-600', label: 'Leave' },
                                 { color: 'bg-gradient-to-br from-amber-400 to-amber-600', label: 'Excess' },
                                 { color: 'bg-gradient-to-br from-violet-400 to-violet-600', label: 'Permit' },
-                                { color: 'bg-white border-slate-200', label: 'Empty' },
+                                { color: 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700', label: 'Empty' },
                             ].map((item, i) => (
                                 <div key={i} className="flex items-center gap-2">
-                                    <div className={`w-4 h-4 rounded-md ${item.color} shadow-sm border border-black/5`}></div>
-                                    <span className="text-[10px] font-black text-slate-500 uppercase tracking-wider">{item.label}</span>
+                                    <div className={`w-4 h-4 rounded-md ${item.color} shadow-sm border border-black/5 dark:border-white/5`}></div>
+                                    <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">{item.label}</span>
                                 </div>
                             ))}
                         </div>

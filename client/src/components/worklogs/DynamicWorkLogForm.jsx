@@ -65,14 +65,14 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
 
     if (isTodayClosed) {
         return (
-            <div className="bg-emerald-50 p-8 rounded-3xl text-center border border-emerald-100">
-                <CheckSquare size={48} className="mx-auto text-emerald-500 mb-4" />
-                <h3 className="text-2xl font-black text-emerald-800 mb-2">Day Completed!</h3>
-                <p className="text-emerald-600 font-bold">Daily reports submitted successfully.</p>
-                <div className="mt-4 text-[10px] text-emerald-400 font-bold uppercase tracking-widest text-emerald-300">
+            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-3xl text-center border border-emerald-100 dark:border-emerald-900/30 transition-colors">
+                <CheckSquare size={48} className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" />
+                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
+                <p className="text-emerald-600 dark:text-emerald-400 font-bold">Daily reports submitted successfully.</p>
+                <div className="mt-4 text-[10px] text-emerald-400 dark:text-emerald-500 font-bold uppercase tracking-widest">
                     Session: {todayLog?.startTime} - {todayLog?.endTime}
                 </div>
-                <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 hover:text-emerald-800 underline">Okay, close</button>
+                <button onClick={onSuccess} className="mt-6 text-sm font-bold text-emerald-700 dark:text-emerald-300 hover:text-emerald-800 dark:hover:text-emerald-200 underline">Okay, close</button>
             </div>
         );
     }
@@ -151,7 +151,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
             onSubmit={onSubmit} className="space-y-6 max-h-[75vh] overflow-y-auto px-1 pr-2 scrollbar-hide"
         >
-            <div className={`bg-gradient-to-r ${isTodayOpen ? 'from-emerald-500 to-teal-500' : 'from-indigo-600 to-violet-600'} p-6 rounded-3xl text-white shadow-lg sticky top-0 z-10`}>
+            <div className={`bg-gradient-to-r ${isTodayOpen ? 'from-emerald-500 to-teal-500 dark:from-emerald-600 dark:to-teal-600' : 'from-indigo-600 to-violet-600 dark:from-indigo-700 dark:to-violet-700'} p-6 rounded-3xl text-white shadow-lg sticky top-0 z-10 transition-all`}>
                 <div className="flex items-center gap-4">
                     <div className="bg-white/20 p-3 rounded-2xl backdrop-blur-sm">
                         {isTodayOpen ? <CheckSquare size={24} /> : <Clock size={24} />}
@@ -166,32 +166,32 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             </div>
 
             {/* Time/Date Selection - NEW UI MATCHING USER IMAGE */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white p-8 rounded-[2rem] border border-slate-100 shadow-sm">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 bg-white dark:bg-slate-900 p-8 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-sm transition-colors">
                 <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">{isTodayOpen ? "Session Started At" : "Current Date"}</label>
-                    <div className={`px-5 py-4 rounded-2xl font-black text-lg border transition-all ${isTodayOpen ? 'bg-emerald-50/50 text-emerald-700 border-emerald-100' : 'bg-slate-50 text-slate-600 border-slate-100'}`}>
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">{isTodayOpen ? "Session Started At" : "Current Date"}</label>
+                    <div className={`px-5 py-4 rounded-2xl font-black text-lg border transition-all ${isTodayOpen ? 'bg-emerald-50/50 dark:bg-emerald-900/10 text-emerald-700 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/30' : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-100 dark:border-slate-700'}`}>
                         {isTodayOpen ? (todayLog.startTime || 'Not recorded') : new Date().toLocaleDateString('en-GB')}
                     </div>
                 </div>
                 <div className="space-y-3">
-                    <label className="block text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Session Time</label>
-                    <div className="px-5 py-4 bg-slate-50 text-slate-600 rounded-2xl font-black text-lg border border-slate-100">
+                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-[0.2em]">Session Time</label>
+                    <div className="px-5 py-4 bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 rounded-2xl font-black text-lg border border-slate-100 dark:border-slate-700 transition-colors">
                         {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
                     </div>
                 </div>
             </div>
 
             {activeTables.map((table, tableIndex) => (
-                <div key={tableIndex} className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm transition-shadow hover:shadow-md">
-                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50">
-                        <div className={`p-2 rounded-lg ${!isTodayOpen ? 'bg-indigo-50 text-indigo-600' : 'bg-emerald-50 text-emerald-600'}`}>
+                <div key={tableIndex} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700">
+                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50 dark:border-slate-800 transition-colors">
+                        <div className={`p-2 rounded-lg transition-colors ${!isTodayOpen ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'}`}>
                             <List size={18} />
                         </div>
-                        <h4 className="text-xs font-black text-slate-500 uppercase tracking-widest">{table.label}</h4>
+                        <h4 className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">{table.label}</h4>
                     </div>
 
                     {/* Table Header */}
-                    <div className="hidden md:flex gap-4 mb-2 px-4 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                    <div className="hidden md:flex gap-4 mb-2 px-4 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-wider transition-colors">
                         {table.fields.map(field => (
                             <div key={field.name} className="flex-1">{field.label}</div>
                         ))}
@@ -204,21 +204,21 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                 <motion.div
                                     key={row._id}
                                     initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}
-                                    className="flex flex-col md:flex-row gap-3 bg-slate-50 p-3 rounded-xl border border-slate-100 group hover:bg-white hover:border-indigo-100 transition-all"
+                                    className="flex flex-col md:flex-row gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 group hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all"
                                 >
                                     {table.fields.map(field => (
                                         <div key={field.name} className="flex-1">
-                                            <label className="md:hidden text-[10px] font-bold text-slate-400 uppercase mb-1 block">{field.label}</label>
+                                            <label className="md:hidden text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 block">{field.label}</label>
                                             {field.type === 'select' ? (
                                                 <div className="relative">
                                                     <select
                                                         value={row[field.name] || ''}
                                                         onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
-                                                        className="w-full px-3 py-2 text-sm font-semibold border border-slate-200 rounded-lg focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300 outline-none bg-white appearance-none cursor-pointer hover:bg-slate-50 transition-all"
+                                                        className="w-full px-3 py-2 text-sm font-semibold border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 focus:border-indigo-300 dark:focus:border-indigo-700 outline-none bg-white dark:bg-slate-800 appearance-none cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all"
                                                     >
-                                                        <option value="">Select...</option>
+                                                        <option value="" className="dark:bg-slate-900 text-slate-400">Select...</option>
                                                         {field.options?.map(opt => (
-                                                            <option key={opt} value={opt}>{opt}</option>
+                                                            <option key={opt} value={opt} className="dark:bg-slate-900">{opt}</option>
                                                         ))}
                                                     </select>
                                                 </div>
@@ -229,10 +229,10 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                                     onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
                                                     placeholder={field.label}
                                                     disabled={field.disabled}
-                                                    className={`w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none transition-all placeholder:text-slate-300
+                                                    className={`w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600
                                                         ${field.disabled
-                                                            ? 'bg-slate-100 border-slate-200 text-slate-500'
-                                                            : 'bg-white border-slate-200 focus:ring-2 focus:ring-indigo-100 focus:border-indigo-300'}
+                                                            ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-600'
+                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 focus:border-indigo-300 dark:focus:border-indigo-700 text-slate-700 dark:text-slate-200'}
                                                     `}
                                                 />
                                             )}
@@ -242,7 +242,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                         <button
                                             type="button"
                                             onClick={() => removeRow(tableIndex, rowIndex)}
-                                            className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors self-end md:self-auto"
+                                            className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors self-end md:self-auto"
                                             title="Delete Row"
                                         >
                                             <Trash2 size={18} />
@@ -257,7 +257,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                         <button
                             type="button"
                             onClick={() => addRow(tableIndex)}
-                            className={`mt-4 w-full py-3 border-2 border-dashed ${!isTodayOpen ? 'border-indigo-200 text-indigo-500' : 'border-emerald-200 text-emerald-500'} rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide`}
+                            className={`mt-4 w-full py-3 border-2 border-dashed ${!isTodayOpen ? 'border-indigo-200 dark:border-indigo-900/30 text-indigo-500 dark:text-indigo-400 hover:border-indigo-400' : 'border-emerald-200 dark:border-emerald-900/30 text-emerald-500 dark:text-emerald-400 hover:border-emerald-400'} rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide`}
                         >
                             <Plus size={16} /> Add Entry
                         </button>
@@ -266,25 +266,25 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             ))}
 
             {isTodayOpen && (
-                <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100 space-y-3">
-                    <div className="flex items-center gap-2 text-blue-600 mb-2">
+                <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 space-y-3 transition-colors">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
                         <Clock size={18} />
                         <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
                     </div>
                     <textarea
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        className="w-full bg-white p-4 rounded-xl font-medium text-slate-700 text-sm outline-none border border-blue-200 focus:ring-2 ring-blue-100 transition-all placeholder:text-slate-300 min-h-[100px]"
+                        className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl font-medium text-slate-700 dark:text-slate-200 text-sm outline-none border border-blue-200 dark:border-slate-700 focus:ring-2 ring-blue-100 dark:ring-blue-900/40 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600 min-h-[100px]"
                         placeholder="Share daily summary, insights, or site updates for Admin and HR..."
                     ></textarea>
                 </div>
             )}
 
-            <div className="flex gap-3 pt-4 border-t border-slate-100 bg-white sticky bottom-0">
+            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0 transition-colors">
                 <button
                     type="button"
                     onClick={onSuccess}
-                    className="flex-1 py-4 rounded-xl border border-slate-200 text-slate-500 font-bold hover:bg-slate-50 transition-colors uppercase text-xs tracking-wider"
+                    className="flex-1 py-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors uppercase text-xs tracking-wider"
                 >
                     Cancel
                 </button>

@@ -18,35 +18,35 @@ const TimePicker = ({ label, value, onChange }) => {
 
     return (
         <div>
-            <label className="block text-xs font-bold text-slate-500 uppercase mb-1">{label}</label>
+            <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">{label}</label>
             <div className="flex gap-2">
                 <select
-                    className="flex-1 px-2 py-2 border rounded-lg outline-none bg-white focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     value={hour}
                     onChange={(e) => handleChange('hour', e.target.value)}
                 >
                     {Array.from({ length: 12 }, (_, i) => {
                         const h = (i + 1).toString().padStart(2, '0');
-                        return <option key={h} value={h}>{h}</option>;
+                        return <option key={h} value={h} className="dark:bg-slate-900 font-bold">{h}</option>;
                     })}
                 </select>
                 <select
-                    className="flex-1 px-2 py-2 border rounded-lg outline-none bg-white focus:ring-2 focus:ring-blue-500"
+                    className="flex-1 px-3 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     value={minute}
                     onChange={(e) => handleChange('minute', e.target.value)}
                 >
                     {Array.from({ length: 12 }, (_, i) => {
                         const m = (i * 5).toString().padStart(2, '0');
-                        return <option key={m} value={m}>{m}</option>;
+                        return <option key={m} value={m} className="dark:bg-slate-900 font-bold">{m}</option>;
                     })}
                 </select>
                 <select
-                    className="w-20 px-2 py-2 border rounded-lg outline-none bg-white focus:ring-2 focus:ring-blue-500"
+                    className="w-24 px-3 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     value={ampm}
                     onChange={(e) => handleChange('ampm', e.target.value)}
                 >
-                    <option value="AM">AM</option>
-                    <option value="PM">PM</option>
+                    <option value="AM" className="dark:bg-slate-900 font-bold">AM</option>
+                    <option value="PM" className="dark:bg-slate-900 font-bold">PM</option>
                 </select>
             </div>
         </div>
@@ -115,11 +115,11 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             {isLimitExceeded && (
-                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex items-start gap-3">
-                    <AlertCircle className="w-5 h-5 text-amber-600 mt-0.5" />
+                <div className="bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-900/50 rounded-xl p-4 flex items-start gap-3 transition-colors">
+                    <AlertCircle className="w-5 h-5 text-amber-600 dark:text-amber-400 mt-0.5" />
                     <div>
-                        <p className="text-sm font-bold text-amber-800">Monthly Permission Limit Reached</p>
-                        <p className="text-xs text-amber-600 font-medium">
+                        <p className="text-sm font-bold text-amber-800 dark:text-amber-200">Monthly Permission Limit Reached</p>
+                        <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">
                             You have already submitted {monthlyPermissions} permission requests this month. This request will be flagged for review.
                         </p>
                     </div>
@@ -127,16 +127,16 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
             )}
             {/* BH Selection */}
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Select Business Head</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Select Business Head</label>
                 <select
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none bg-white"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     required
                     value={formData.targetBhId}
                     onChange={(e) => setFormData({ ...formData, targetBhId: e.target.value })}
                 >
-                    <option value="">-- Select Reporting Manager --</option>
+                    <option value="" className="dark:bg-slate-900 font-bold italic">-- Select Reporting Manager --</option>
                     {businessHeads.map((bh) => (
-                        <option key={bh.id} value={bh.id}>
+                        <option key={bh.id} value={bh.id} className="dark:bg-slate-900 font-bold">
                             {bh.name} ({bh.email})
                         </option>
                     ))}
@@ -144,10 +144,10 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
             </div>
 
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Date</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Date</label>
                 <input
                     type="date"
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     required
                     value={formData.date}
                     onChange={(e) => setFormData({ ...formData, date: e.target.value })}
@@ -166,9 +166,9 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                 />
             </div>
             <div>
-                <label className="block text-xs font-bold text-slate-500 uppercase mb-1">Reason</label>
+                <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Reason</label>
                 <textarea
-                    className="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
+                    className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm"
                     required
                     rows="2"
                     value={formData.reason}
@@ -176,12 +176,12 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                     placeholder="Short processing, personal work..."
                 />
             </div>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-4 pt-4 border-t border-slate-100 dark:border-slate-800 transition-colors">
                 {!isMandatory && (
                     <button
                         type="button"
                         onClick={onSuccess}
-                        className="flex-1 py-3 rounded-lg border border-slate-300 text-slate-600 font-bold hover:bg-slate-50 transition-colors"
+                        className="flex-1 py-3 px-6 rounded-xl border border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 font-black uppercase text-xs tracking-wider hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-all active:scale-95"
                     >
                         Cancel
                     </button>
@@ -189,9 +189,9 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                 <button
                     type="submit"
                     disabled={isSubmitting}
-                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'} text-white font-bold py-3 rounded-lg shadow-lg transition-transform active:scale-95`}
+                    className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/20'} text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95`}
                 >
-                    {isSubmitting ? 'Submitting...' : 'Submit'}
+                    {isSubmitting ? 'Submitting...' : 'Submit Request'}
                 </button>
             </div>
 

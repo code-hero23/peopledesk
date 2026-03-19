@@ -173,7 +173,7 @@ const HourlyAlarm = () => {
                             playChime();
                             subscribeToPush(); // Ensure subscribed on test
                         }}
-                        className="px-4 py-2 bg-white text-indigo-600 rounded-2xl shadow-lg border border-indigo-100 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"
+                        className="px-4 py-2 bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 rounded-2xl shadow-lg border border-indigo-100 dark:border-indigo-900/30 text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-colors"
                     >
                         <Sparkles size={14} /> Test Sound
                     </motion.button>
@@ -195,8 +195,8 @@ const HourlyAlarm = () => {
                 }}
                 className={`p-4 rounded-full shadow-xl flex items-center gap-3 transition-all ${
                     isEnabled 
-                    ? 'bg-indigo-600 text-white ring-4 ring-indigo-100' 
-                    : 'bg-slate-200 text-slate-500'
+                    ? 'bg-indigo-600 dark:bg-indigo-500 text-white ring-4 ring-indigo-100 dark:ring-indigo-900/40' 
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
                 }`}
                 title={isEnabled ? "Mute Hourly Alarm" : "Enable Hourly Alarm"}
             >

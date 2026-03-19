@@ -16,21 +16,21 @@ const Modal = ({ title, onClose, children, showClose = true, closeOnClickOutside
             onClick={() => closeOnClickOutside && onClose()}
         >
             <div
-                className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all scale-100 flex flex-col"
+                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all scale-100 flex flex-col border dark:border-slate-800"
                 onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
             >
-                <div className="flex justify-between items-center p-6 border-b border-slate-100 sticky top-0 bg-white z-10">
-                    <h3 className="text-xl font-bold text-slate-800">{title}</h3>
+                <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10 transition-colors">
+                    <h3 className="text-xl font-bold text-slate-800 dark:text-white transition-colors">{title}</h3>
                     {showClose && (
                         <button
                             onClick={onClose}
-                            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 text-slate-500 hover:bg-red-50 hover:text-red-500 transition-colors font-bold"
+                            className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-red-50 dark:hover:bg-red-900/40 hover:text-red-500 dark:hover:text-red-400 transition-colors font-bold"
                         >
                             &times;
                         </button>
                     )}
                 </div>
-                <div className="p-6">
+                <div className="p-6 transition-colors dark:text-slate-300">
                     {children}
                 </div>
             </div>
