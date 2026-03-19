@@ -1168,7 +1168,7 @@ const testWhatsApp = async (req, res) => {
         let result;
 
         if (template === 'hello_world') {
-            result = await whatsappService.sendTemplateMessage(user.phone, 'hello_world', [], 'en_US');
+            result = await whatsappService.sendTemplateMessage(user.phone, 'hello_world', [], 'en');
         } else if (template === 'missed_logout_alert') {
             result = await whatsappService.sendMissedLogoutNotification(user.phone, user.name);
         } else if (template === 'missed_worklog_alert') {
