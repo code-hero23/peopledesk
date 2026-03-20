@@ -29,7 +29,7 @@ function checkFileType(file, cb) {
     if (mimetype && extname) {
         return cb(null, true);
     } else {
-        cb('Error: Images or PDFs Only!');
+        cb(new Error('Error: Images or PDFs Only!'));
     }
 }
 
@@ -41,7 +41,7 @@ function checkExcelType(file, cb) {
     if (extname) {
         return cb(null, true);
     } else {
-        cb('Error: Excel or CSV files only!');
+        cb(new Error('Error: Excel or CSV files only!'));
     }
 }
 

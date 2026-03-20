@@ -7,6 +7,7 @@ const { parseRobustDate } = require('../utils/dateHelpers');
 // @access  Private (Employee)
 const createVoucher = async (req, res) => {
     try {
+        console.log('DEBUG: Full req.body:', JSON.stringify(req.body, null, 2));
         const userId = req.user.id;
         const { type, amount, purpose, date } = req.body;
         let proofUrl = req.body.proofUrl;
@@ -76,7 +77,7 @@ const createVoucher = async (req, res) => {
         res.status(500).json({ 
             message: 'Server Error', 
             error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined 
+            stack: error.stack // Temporarily always include stack for debugging
         });
     }
 };
