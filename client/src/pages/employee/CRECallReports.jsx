@@ -21,6 +21,7 @@ const CallLog = getCallLogPlugin();
 
 const CRECallReports = () => {
     const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth);
     const { callLogs, workLogs, isLoading } = useSelector((state) => state.employee);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('ALL');
@@ -304,7 +305,9 @@ const CRECallReports = () => {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
                     <div className="space-y-2">
                         <div className="flex items-center gap-4">
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Call Analytics</h1>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tighter">
+                                {user?.name?.split(' ')[0]}'s Call Analytics
+                            </h1>
                             <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${Capacitor.isNativePlatform() ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                                 <Zap size={12} /> {Capacitor.isNativePlatform() ? "Sync Active" : "Web Preview"}
                             </div>

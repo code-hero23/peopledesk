@@ -247,6 +247,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {user?.wfhViewEnabled && (
                                 <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
                             )}
+                            {['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation) && (
+                                <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
+                            )}
                         </div>
 
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>
