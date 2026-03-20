@@ -10,7 +10,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <title>PeopleDesk</title>
   <script>
-    if (localStorage.getItem('themeMode') === 'dark' || (!('themeMode' in localStorage))) {
+    if (localStorage.getItem('themeMode') === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
