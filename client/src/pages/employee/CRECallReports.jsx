@@ -201,9 +201,23 @@ const CRECallReports = () => {
         }
     };
 
+    // helper to get IST date string consistently
+    const toIstDateString = (dateInput) => {
+        if (!dateInput) return null;
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return null;
+        // Shift to IST for comparison
+        const ist = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+        return ist.toISOString().split('T')[0];
+    };
+
     // Extract & Merge from Decoupled State
     const allSyncedCalls = (callLogs || [])
-        .filter(log => log.calls && Array.isArray(log.calls))
+        .filter(log => {
+            const hasCalls = log.calls && Array.isArray(log.calls);
+            if (!hasCalls && log.calls) console.warn("Diagnostic: Found CallLog record with non-array calls property", log);
+            return hasCalls;
+        })
         .flatMap(log => {
             return log.calls.map(call => ({
                 ...call,
@@ -212,10 +226,23 @@ const CRECallReports = () => {
         })
         .filter(call => {
             if (!call.date) return false;
-            const callDateStr = new Date(call.date).toISOString().split('T')[0];
-            return callDateStr === selectedDate;
+            const callDateStr = toIstDateString(call.date);
+            const isMatch = callDateStr === selectedDate;
+            
+            // Helpful for debugging if anything appears missing
+            if (searchTerm === 'DEBUG') {
+                console.log(`[DateCheck] Call: ${call.number} | Time: ${new Date(call.date).toLocaleTimeString()} | CallDate: ${callDateStr} | Selected: ${selectedDate} | Match: ${isMatch}`);
+            }
+            
+            return isMatch;
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Intelligence
+    if (searchTerm === 'DEBUG' && callLogs?.length > 0) {
+        console.log(`[Diagnostic] callLogs in state:`, callLogs.length);
+        console.log(`[Diagnostic] allSyncedCalls count:`, allSyncedCalls.length);
+    }
 
     // Intelligence
     const availableSims = [...new Set(allSyncedCalls.map(c => c.simId))].filter(Boolean);
