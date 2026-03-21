@@ -13,25 +13,42 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         const logsResult = await CallLogPlugin.getCallLogs();
         const logs = logsResult.logs;
 
-        if (!logs || logs.length === 0) {
-            console.log("No new call logs to sync.");
-            return resolve(); // Exit successfully
-        }
-
-        // 2. Fetch User Token from Preferences since LocalStorage is inaccessible Headless
+        // 2. Fetch User and SIM Preferences from Preferences (Headless friendly)
         const Preferences = Capacitor.Plugins.Preferences;
-        const userPrefs = await Preferences.get({ key: 'user' });
-
+        const [userPrefs, simPrefs] = await Promise.all([
+            Preferences.get({ key: 'user' }),
+            Preferences.get({ key: 'cre_official_sim' })
+        ]);
+        
         if (!userPrefs.value) {
             throw new Error("User credentials not found in Preferences. Cannot sync.");
         }
         const user = JSON.parse(userPrefs.value);
+        const officialSim = simPrefs.value ? String(simPrefs.value) : "0"; // Default to sync all if not set
 
-        // 3. POST logs to the VPS server
+        // 3. Filter logs by SIM slot if a specific SIM is selected
+        let filteredLogs = logs;
+        if (officialSim !== "0") {
+            console.log(`Filtering logs for Official SIM: ${officialSim}`);
+            filteredLogs = logs.filter(log => {
+                const logSlot = String(log.simSlot || log.simId || "");
+                // Match exact slot or check if ID contains the slot number
+                return logSlot === officialSim || logSlot.includes(officialSim);
+            });
+            console.log(`Filtered ${logs.length} down to ${filteredLogs.length} logs.`);
+        }
+
+        if (filteredLogs.length === 0) {
+            console.log("No matching logs for current SIM selection.");
+            return resolve();
+        }
+
+        // 4. POST logs to the VPS server
         const API_URL = 'https://peopledesk.orbixdesigns.com/api/worklogs/sync-calls';
 
         const requestBody = JSON.stringify({
-            logs: logs,
+            logs: filteredLogs,
+            simFilter: officialSim,
             syncDate: new Date().toISOString()
         });
 
