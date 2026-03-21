@@ -830,56 +830,97 @@ const Overview = () => {
             <AnimatePresence>
                 {showCheckInModal && (
                     <div className="fixed inset-0 z-[200] flex sm:items-center sm:justify-center">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onClick={() => !loading && setShowCheckInModal(false)} />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/95 backdrop-blur-2xl" onClick={() => !loading && setShowCheckInModal(false)} />
                         
                         <motion.div 
-                            initial={{ scale: 0.95, opacity: 0, y: 50 }} 
+                            initial={{ scale: 0.9, opacity: 0, y: 100 }} 
                             animate={{ scale: 1, opacity: 1, y: 0 }} 
-                            exit={{ scale: 0.95, opacity: 0, y: 50 }} 
+                            exit={{ scale: 0.9, opacity: 0, y: 100 }} 
+                            transition={{ type: "spring", damping: 25, stiffness: 300 }}
                             className="bg-white sm:w-full sm:max-w-xl w-full h-full sm:h-auto sm:rounded-[3rem] overflow-hidden shadow-2xl relative z-10 flex flex-col"
                         >
                             {/* Header Section */}
-                            <div className="p-6 sm:p-8 flex items-center justify-between border-b border-slate-100 shrink-0">
+                            <div className="p-6 sm:p-8 flex items-center justify-between border-b border-slate-100 shrink-0 bg-white/80 backdrop-blur-md">
                                 <div className="flex items-center gap-4">
-                                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shadow-sm"><Camera size={24} /></div>
+                                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shadow-sm animate-pulse-subtle"><Camera size={24} /></div>
                                     <div>
-                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Identity Verification</h3>
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCheckingOut ? 'Finishing Session' : 'Starting Session'}</p>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Identity Check</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCheckingOut ? 'Session End Verification' : 'Session Start Verification'}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowCheckInModal(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors"><X size={20} className="text-slate-400" /></button>
+                                <button onClick={() => setShowCheckInModal(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all hover:rotate-90"><X size={20} className="text-slate-400" /></button>
                             </div>
 
                             {/* Camera Area - Flexible height */}
                             <div className="flex-1 relative bg-slate-900 sm:m-6 sm:rounded-[2rem] overflow-hidden group shadow-inner">
                                 {!photo ? (
-                                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
+                                    <>
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
+                                        
+                                        {/* Focus Ring Animation */}
+                                        <motion.div 
+                                            initial={{ scale: 1.5, opacity: 0 }}
+                                            animate={{ scale: 1, opacity: [0, 1, 0] }}
+                                            transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
+                                            className="absolute inset-0 m-auto w-32 h-32 border-2 border-indigo-400/50 rounded-full pointer-events-none flex items-center justify-center"
+                                        >
+                                            <div className="w-2 h-2 bg-indigo-400/50 rounded-full" />
+                                        </motion.div>
+
+                                        {/* Camera Grid Overlay */}
+                                        <div className="absolute inset-0 pointer-events-none opacity-10">
+                                            <div className="absolute top-1/3 w-full h-px bg-white" />
+                                            <div className="absolute top-2/3 w-full h-px bg-white" />
+                                            <div className="absolute left-1/3 h-full w-px bg-white" />
+                                            <div className="absolute left-2/3 h-full w-px bg-white" />
+                                        </div>
+                                    </>
                                 ) : (
                                     <div className="relative w-full h-full">
                                         <img src={photo} alt="Verification" className="w-full h-full object-cover scale-x-[-1]" />
                                         <motion.button 
-                                            initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                            initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }}
                                             onClick={() => setPhoto(null)} 
-                                            className="absolute top-6 right-6 p-4 bg-white/95 text-rose-500 rounded-2xl shadow-2xl border border-white hover:bg-white transition-all"
+                                            className="absolute top-6 right-6 p-4 bg-white/95 text-rose-500 rounded-2xl shadow-2xl border border-white hover:bg-rose-50 transition-all z-20"
                                         >
                                             <Trash2 size={24} />
                                         </motion.button>
                                     </div>
                                 )}
                                 
-                                {/* Location Overlay (Subtle) */}
-                                <div className="absolute top-4 left-4 right-4 pointer-events-none">
-                                    <div className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <p className="text-[10px] font-bold text-white truncate drop-shadow-sm px-2">📍 {location.address || 'Locating...'}</p>
-                                    </div>
+                                {/* Shutter Flash Effect */}
+                                <AnimatePresence>
+                                    {photo && (
+                                        <motion.div 
+                                            initial={{ opacity: 1 }} 
+                                            animate={{ opacity: 0 }} 
+                                            exit={{ opacity: 0 }}
+                                            transition={{ duration: 0.3 }}
+                                            className="absolute inset-0 bg-white z-[50] pointer-events-none"
+                                        />
+                                    )}
+                                </AnimatePresence>
+
+                                {/* Location Overlay (Subtle banner style) */}
+                                <div className="absolute top-4 left-4 right-4 pointer-events-none z-10">
+                                    <motion.div 
+                                        initial={{ y: -20, opacity: 0 }} 
+                                        animate={{ y: 0, opacity: 1 }}
+                                        className="bg-black/40 backdrop-blur-xl px-5 py-3 rounded-2xl border border-white/10 flex items-center gap-3 shadow-2xl"
+                                    >
+                                        <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse" />
+                                        <div className="flex-1">
+                                            <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Live Location Verified</p>
+                                            <p className="text-xs font-bold text-white truncate drop-shadow-sm">{location.address || 'Locating site...'}</p>
+                                        </div>
+                                    </motion.div>
                                 </div>
 
-                                {/* Shutter Button Overlay Center */}
+                                {/* Shutter Button - Floating Overlay */}
                                 {!photo && (
-                                    <div className="absolute inset-x-0 bottom-8 flex justify-center pointer-events-none">
+                                    <div className="absolute inset-x-0 bottom-10 flex justify-center items-center gap-8 pointer-events-none z-20">
                                         <motion.button
-                                            whileTap={{ scale: 0.9 }}
+                                            whileTap={{ scale: 0.85 }}
                                             disabled={!cameraState.active || location.error || !location.lat}
                                             onClick={(e) => {
                                                 e.stopPropagation();
@@ -891,9 +932,9 @@ const Overview = () => {
                                                 ctx.drawImage(v, 0, 0);
                                                 ctx.setTransform(1, 0, 0, 1, 0, 0);
                                                 
-                                                // Metadata Overlay
-                                                const overlayHeight = Math.max(120, c.height * 0.1);
-                                                ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                                                // Metadata Overlay (High definition)
+                                                const overlayHeight = Math.max(140, c.height * 0.12);
+                                                ctx.fillStyle = 'rgba(0, 0, 0, 0.5)';
                                                 ctx.fillRect(0, c.height - overlayHeight, c.width, overlayHeight);
                                                 ctx.fillStyle = 'white';
                                                 
@@ -903,41 +944,44 @@ const Overview = () => {
                                                 ctx.font = `bold ${fontSizeLarge}px Inter, sans-serif`;
                                                 const now = new Date();
                                                 const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                                                ctx.fillText(`${dateStr} | ${timeStr}`, 32, c.height - (overlayHeight * 0.6));
+                                                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+                                                ctx.fillText(`${dateStr} | ${timeStr}`, 40, c.height - (overlayHeight * 0.65));
                                                 
                                                 ctx.font = `500 ${fontSizeSmall}px Inter, sans-serif`;
-                                                ctx.fillText(`📍 ${location.address || 'Location Unavailable'}`, 32, c.height - (overlayHeight * 0.25));
+                                                ctx.fillText(`📍 ${location.address || 'Location Unavailable'}`, 40, c.height - (overlayHeight * 0.3));
                                                 
                                                 setPhoto(c.toDataURL('image/jpeg', 0.9));
                                             }}
-                                            className={`pointer-events-auto h-20 w-20 rounded-full border-4 border-white flex items-center justify-center p-1 shadow-2xl transition-all ${(!cameraState.active || location.error || !location.lat) ? 'opacity-50 scale-90 grayscale' : 'hover:scale-105 active:scale-90 bg-white/10'}`}
+                                            className={`pointer-events-auto h-24 w-24 rounded-full border-[6px] border-white flex items-center justify-center p-1.5 shadow-2xl transition-all ${(!cameraState.active || location.error || !location.lat) ? 'opacity-50 scale-90 grayscale' : 'hover:scale-110 active:scale-95 bg-white/20'}`}
                                         >
-                                            <div className="w-full h-full rounded-full bg-white shadow-inner" />
+                                            <div className="w-full h-full rounded-full bg-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex items-center justify-center">
+                                                <div className="w-16 h-16 rounded-full border-2 border-slate-100" />
+                                            </div>
                                         </motion.button>
                                     </div>
                                 )}
                             </div>
 
                             {/* Footer Action Area */}
-                            <div className="p-8 sm:p-10 shrink-0 bg-white shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] border-t border-slate-50">
+                            <div className="p-8 sm:p-10 shrink-0 bg-white shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] border-t border-slate-50 relative z-30">
                                 {!photo ? (
-                                    <div className="flex flex-col gap-4">
-                                        <div className="flex items-center gap-3 text-slate-500 font-bold text-xs p-4 bg-slate-50 rounded-2xl">
-                                            <Info size={16} className="text-indigo-400" />
-                                            <span>Center your face and ensure your site background is visible.</span>
+                                    <div className="flex flex-col gap-5">
+                                        <div className="flex items-start gap-4 text-slate-500 font-bold text-xs p-5 bg-indigo-50/50 rounded-3xl border border-indigo-100/50">
+                                            <Sparkles size={20} className="text-indigo-400 shrink-0" />
+                                            <p className="leading-relaxed">Sleek Photo Capture: Ensure your face is centered and the site background is clearly visible for automatic verification.</p>
                                         </div>
-                                        <button 
+                                        <motion.button 
+                                            whileHover={{ y: -2 }}
                                             onClick={() => setShowCheckInModal(false)}
-                                            className="w-full py-5 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
+                                            className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:text-rose-500 transition-colors"
                                         >
-                                            Cancel Verification
-                                        </button>
+                                            Cancel & Go Back
+                                        </motion.button>
                                     </div>
                                 ) : (
                                     <div className="flex gap-4">
                                         <motion.button 
-                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                            whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
                                             onClick={() => {
                                                 const formData = new FormData();
                                                 const blob = dataURLtoBlob(photo);
@@ -955,14 +999,15 @@ const Overview = () => {
                                             }} 
                                             className="flex-1 py-6 bg-slate-900 border-b-4 border-slate-700 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-3 group"
                                         >
-                                            <CheckCircle2 size={20} className="text-emerald-400" /> Confirm Verification
+                                            <CheckCircle2 size={20} className="text-emerald-400 group-hover:scale-125 transition-transform" /> Confirm Identity
                                         </motion.button>
-                                        <button 
+                                        <motion.button 
+                                            whileHover={{ scale: 1.05 }}
                                             onClick={() => setPhoto(null)} 
-                                            className="px-10 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-bold hover:bg-slate-200 transition-colors"
+                                            className="px-10 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-bold hover:bg-slate-200 transition-colors flex items-center gap-2"
                                         >
-                                            Retake
-                                        </button>
+                                            <History size={18} /> Retake
+                                        </motion.button>
                                     </div>
                                 )}
                             </div>
