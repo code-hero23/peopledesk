@@ -59,10 +59,14 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         // 4. POST logs to the VPS server
         const API_URL = 'https://peopledesk.orbixdesigns.com/api/worklogs/sync-calls';
 
+        const now = new Date();
+        const istDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
         const requestBody = JSON.stringify({
-            logs: filteredLogs,
+            date: istDate,
+            calls: filteredLogs,
             simFilter: officialSim,
-            syncDate: new Date().toISOString()
+            syncDate: now.toISOString() // Keeping for backup
         });
 
         const response = await fetch(API_URL, {

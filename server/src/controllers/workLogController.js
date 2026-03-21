@@ -415,11 +415,12 @@ const getMyWorkLogs = async (req, res) => {
 // @route   PUT /api/worklogs/sync-calls
 // @access  Private (CRE)
 const syncCallLogs = async (req, res) => {
-    const { logs, syncDate, simFilter } = req.body;
+    const { logs, calls, date, syncDate, simFilter } = req.body;
+    const incomingData = calls || logs || [];
 
     try {
         const userId = req.user.id;
-        let newLogs = typeof logs === 'string' ? JSON.parse(logs) : logs;
+        let newLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
 
         // Filter by SIM slot if requested
         if (simFilter !== undefined && simFilter !== null) {

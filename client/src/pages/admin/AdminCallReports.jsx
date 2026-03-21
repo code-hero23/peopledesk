@@ -154,6 +154,8 @@ const AdminCallReports = () => {
     };
 
     // Data Processing
+    const normalize = (num) => String(num || "").replace(/\D/g, "").slice(-10);
+
     const employeeMetrics = callStats.reduce((acc, log) => {
         const key = log.empId;
         if (!acc[key]) {
@@ -170,7 +172,11 @@ const AdminCallReports = () => {
         }
 
         const calls = log.calls || [];
-        const filteredCalls = calls.filter(c => c.number && !excludedNumbers.includes(c.number));
+        const normExcluded = (excludedNumbers || []).map(normalize);
+        const filteredCalls = calls.filter(c => {
+            if (!c.number) return false;
+            return !normExcluded.includes(normalize(c.number));
+        });
         
         acc[key].totalCalls += filteredCalls.length;
         acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date }))); // Keep raw logs for table
@@ -207,7 +213,11 @@ const AdminCallReports = () => {
 
     callStats.forEach(log => {
         const calls = log.calls || [];
-        const filteredCalls = calls.filter(c => c.number && !excludedNumbers.includes(c.number));
+        const normExcluded = (excludedNumbers || []).map(normalize);
+        const filteredCalls = calls.filter(c => {
+            if (!c.number) return false;
+            return !normExcluded.includes(normalize(c.number));
+        });
 
         globalStats.total += filteredCalls.length;
         filteredCalls.forEach(c => {
@@ -670,7 +680,7 @@ const AdminCallReports = () => {
                                 <MetricBox label="Incoming" value={selectedEmployee.incoming} color="emerald" icon={PhoneIncoming} />
                                 <MetricBox label="Outgoing" value={selectedEmployee.outgoing} color="sky" icon={PhoneOutgoing} />
                                 <MetricBox label="Missed" value={selectedEmployee.missed} color="rose" icon={PhoneMissed} />
-                                <MetricBox label="Unique Leads" value={new Set(selectedEmployee.logs.map(l => l.number).filter(n => !excludedNumbers.includes(n))).size} color="indigo" icon={User} />
+                                <MetricBox label="Unique Leads" value={new Set(selectedEmployee.logs.map(l => normalize(l.number)).filter(n => n && !(excludedNumbers || []).map(normalize).includes(n))).size} color="indigo" icon={User} />
                                 <MetricBox label="Session Time" value={formatDuration(selectedEmployee.duration)} color="fuchsia" icon={Clock} />
                             </div>
 
