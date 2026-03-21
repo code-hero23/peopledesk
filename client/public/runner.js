@@ -29,13 +29,26 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         // 3. Filter logs by SIM slot if a specific SIM is selected
         let filteredLogs = logs;
         if (officialSim !== "0") {
-            console.log(`Filtering logs for Official SIM: ${officialSim}`);
+            const normalizedOfficialSim = String(officialSim).toLowerCase();
+            console.log(`Filtering logs for Official SIM: ${normalizedOfficialSim}`);
+            
             filteredLogs = logs.filter(log => {
-                const logSlot = String(log.simSlot || log.simId || "");
-                // Match exact slot or check if ID contains the slot number
-                return logSlot === officialSim || logSlot.includes(officialSim);
+                const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
+                if (!logSlot || logSlot === "null" || logSlot === "undefined") return false;
+                return logSlot === normalizedOfficialSim || logSlot.includes(normalizedOfficialSim);
             });
-            console.log(`Filtered ${logs.length} down to ${filteredLogs.length} logs.`);
+
+            // SINGLE SIM FALLBACK: If filtering resulted in 0 logs but device has logs, 
+            // and there's only one unique SIM present, assume it's the official one.
+            if (filteredLogs.length === 0 && logs.length > 0) {
+                const uniqueSims = [...new Set(logs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null" && s !== "undefined");
+                if (uniqueSims.length === 1) {
+                    console.log("Single SIM detected on device. Applying auto-fallback to sync all logs.");
+                    filteredLogs = logs;
+                }
+            }
+            
+            console.log(`Final filtered count: ${filteredLogs.length} logs.`);
         }
 
         if (filteredLogs.length === 0) {
