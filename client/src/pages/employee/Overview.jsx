@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
     Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
-    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send
+    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2
 } from 'lucide-react';
 import {
     getAttendanceStatus,
@@ -826,123 +826,145 @@ const Overview = () => {
             </AnimatePresence>
 
             {/* AE Modal */}
+            {/* AE Camera Modal - Optimized for Mobile First (Big Experience) */}
             <AnimatePresence>
                 {showCheckInModal && (
-                    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/80 backdrop-blur-md" onClick={() => !loading && setShowCheckInModal(false)} />
-                        <motion.div initial={{ scale: 0.9, opacity: 0, y: 20 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.9, opacity: 0, y: 20 }} className="bg-white w-full max-w-xl rounded-[3rem] overflow-hidden shadow-2xl relative z-10">
-                            <div className="p-8 lg:p-10 space-y-8 text-center">
-                                <div className="inline-flex p-4 bg-indigo-50 text-indigo-600 rounded-[2rem]"><Camera size={32} /></div>
-                                <h3 className="text-3xl font-black text-slate-900 tracking-tight">Take a picture with site</h3>
-                                <div className="relative aspect-[3/4] bg-slate-900 rounded-[2.5rem] overflow-hidden">
-                                    {!photo ? (
-                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
-                                    ) : (
-                                        <div className="relative w-full h-full">
-                                            <img src={photo} alt="Verification" className="w-full h-full object-cover scale-x-[-1]" />
-                                            <button onClick={() => setPhoto(null)} className="absolute top-6 right-6 p-4 bg-white/90 rounded-2xl shadow-xl"><X size={24} /></button>
-                                        </div>
-                                    )}
+                    <div className="fixed inset-0 z-[200] flex sm:items-center sm:justify-center">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/90 backdrop-blur-xl" onClick={() => !loading && setShowCheckInModal(false)} />
+                        
+                        <motion.div 
+                            initial={{ scale: 0.95, opacity: 0, y: 50 }} 
+                            animate={{ scale: 1, opacity: 1, y: 0 }} 
+                            exit={{ scale: 0.95, opacity: 0, y: 50 }} 
+                            className="bg-white sm:w-full sm:max-w-xl w-full h-full sm:h-auto sm:rounded-[3rem] overflow-hidden shadow-2xl relative z-10 flex flex-col"
+                        >
+                            {/* Header Section */}
+                            <div className="p-6 sm:p-8 flex items-center justify-between border-b border-slate-100 shrink-0">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-3 bg-indigo-50 text-indigo-600 rounded-2xl shadow-sm"><Camera size={24} /></div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-900 tracking-tight">Identity Verification</h3>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCheckingOut ? 'Finishing Session' : 'Starting Session'}</p>
+                                    </div>
                                 </div>
-                                <div className="flex gap-4">
-                                    {!photo ? (
-                                        <div className="w-full space-y-4">
-                                            {(!cameraState.active || location.error || !location.lat) && (
-                                                <div className="p-4 bg-orange-50 text-orange-600 rounded-2xl flex items-start gap-3 text-sm font-bold text-left">
-                                                    <AlertCircle className="shrink-0 mt-0.5" size={18} />
-                                                    <p>Camera and Location access must be enabled to check in. Please allow permissions and try again.</p>
-                                                </div>
-                                            )}
-                                            <button
-                                                disabled={!cameraState.active || location.error || !location.lat}
-                                                onClick={() => {
-                                                    const v = videoRef.current;
-                                                    const c = document.createElement('canvas');
-                                                    c.width = v.videoWidth; c.height = v.videoHeight;
-                                                    const ctx = c.getContext('2d');
+                                <button onClick={() => setShowCheckInModal(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-colors"><X size={20} className="text-slate-400" /></button>
+                            </div>
 
-                                                    // Flip horizontally for user-facing camera
-                                                    ctx.translate(c.width, 0); ctx.scale(-1, 1);
-                                                    ctx.drawImage(v, 0, 0);
-
-                                                    // Reset transform to draw text
-                                                    ctx.setTransform(1, 0, 0, 1, 0, 0);
-
-                                                    // Draw metadata overlay
-                                                    const overlayHeight = 120;
-                                                    ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
-                                                    ctx.fillRect(0, c.height - overlayHeight, c.width, overlayHeight);
-
-                                                    ctx.fillStyle = 'white';
-                                                    ctx.font = 'bold 32px Inter, sans-serif';
-
-                                                    const now = new Date();
-                                                    const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-                                                    const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                                                    const locStr = location.address || 'Location Unavailable';
-
-                                                    ctx.fillText(dateStr, 32, c.height - (overlayHeight - 40));
-                                                    ctx.fillText(`| ${timeStr}`, 250, c.height - (overlayHeight - 40));
-                                                    ctx.font = '500 22px Inter, sans-serif';
-
-                                                    // Word wrap for long addresses
-                                                    const words = locStr.split(', ');
-                                                    let line = '📍 ';
-                                                    let y = c.height - (overlayHeight - 80);
-                                                    words.forEach((word, i) => {
-                                                        const testLine = line + word + (i < words.length - 1 ? ', ' : '');
-                                                        if (ctx.measureText(testLine).width > c.width - 64) {
-                                                            ctx.fillText(line, 32, y);
-                                                            line = word + (i < words.length - 1 ? ', ' : '');
-                                                            y += 28;
-                                                        } else {
-                                                            line = testLine;
-                                                        }
-                                                    });
-                                                    ctx.fillText(line, 32, y);
-
-                                                    // Draw coordinates small in corner
-                                                    if (location.lat) {
-                                                        ctx.font = '400 14px Inter, sans-serif';
-                                                        ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-                                                        ctx.fillText(`${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}`, c.width - 130, c.height - 15);
-                                                    }
-
-                                                    setPhoto(c.toDataURL('image/jpeg', 0.9));
-                                                }}
-                                                className={`w-full py-6 rounded-[2rem] font-bold transition-all ${(!cameraState.active || location.error || !location.lat)
-                                                    ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                                                    : 'bg-slate-900 text-white hover:bg-slate-800 shadow-xl hover:shadow-2xl hover:-translate-y-1'
-                                                    }`}
-                                            >
-                                                {(!cameraState.active || location.error || !location.lat) ? 'Waiting for Permissions...' : 'Capture Photo'}
-                                            </button>
-                                        </div>
-                                    ) : (
-                                        <button onClick={() => {
-                                            const formData = new FormData();
-                                            const blob = dataURLtoBlob(photo);
-                                            if (!blob) {
-                                                toast.error("Failed to process photo. Please try again.");
-                                                return;
-                                            }
-                                            // FIXED: Backend expects field name 'photo'
-                                            formData.append('photo', blob, 'photo.jpg');
-                                            formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE | ' : ''}${navigator.userAgent}`);
-                                            const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
-                                            dispatch(action).then((res) => {
-                                                if (!res.error) {
-                                                    dispatch(getAttendanceStatus());
-                                                    setPhoto(null); setShowCheckInModal(false);
-                                                    if (!isCheckingOut) {
-                                                        checkLatenessAndRedirect(new Date(), true);
-                                                    }
-                                                }
-                                            });
-                                        }} className="flex-1 py-6 bg-indigo-600 text-white rounded-[2rem] font-bold">Confirm</button>
-                                    )}
-                                    <button onClick={() => setShowCheckInModal(false)} className="px-10 py-6 bg-slate-100 rounded-[2rem]">Cancel</button>
+                            {/* Camera Area - Flexible height */}
+                            <div className="flex-1 relative bg-slate-900 sm:m-6 sm:rounded-[2rem] overflow-hidden group shadow-inner">
+                                {!photo ? (
+                                    <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
+                                ) : (
+                                    <div className="relative w-full h-full">
+                                        <img src={photo} alt="Verification" className="w-full h-full object-cover scale-x-[-1]" />
+                                        <motion.button 
+                                            initial={{ scale: 0 }} animate={{ scale: 1 }}
+                                            onClick={() => setPhoto(null)} 
+                                            className="absolute top-6 right-6 p-4 bg-white/95 text-rose-500 rounded-2xl shadow-2xl border border-white hover:bg-white transition-all"
+                                        >
+                                            <Trash2 size={24} />
+                                        </motion.button>
+                                    </div>
+                                )}
+                                
+                                {/* Location Overlay (Subtle) */}
+                                <div className="absolute top-4 left-4 right-4 pointer-events-none">
+                                    <div className="bg-black/30 backdrop-blur-md px-4 py-2 rounded-xl border border-white/10 flex items-center gap-3">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                        <p className="text-[10px] font-bold text-white truncate drop-shadow-sm px-2">📍 {location.address || 'Locating...'}</p>
+                                    </div>
                                 </div>
+
+                                {/* Shutter Button Overlay Center */}
+                                {!photo && (
+                                    <div className="absolute inset-x-0 bottom-8 flex justify-center pointer-events-none">
+                                        <motion.button
+                                            whileTap={{ scale: 0.9 }}
+                                            disabled={!cameraState.active || location.error || !location.lat}
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                const v = videoRef.current;
+                                                const c = document.createElement('canvas');
+                                                c.width = v.videoWidth; c.height = v.videoHeight;
+                                                const ctx = c.getContext('2d');
+                                                ctx.translate(c.width, 0); ctx.scale(-1, 1);
+                                                ctx.drawImage(v, 0, 0);
+                                                ctx.setTransform(1, 0, 0, 1, 0, 0);
+                                                
+                                                // Metadata Overlay
+                                                const overlayHeight = Math.max(120, c.height * 0.1);
+                                                ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+                                                ctx.fillRect(0, c.height - overlayHeight, c.width, overlayHeight);
+                                                ctx.fillStyle = 'white';
+                                                
+                                                const fontSizeLarge = Math.round(c.width * 0.04);
+                                                const fontSizeSmall = Math.round(c.width * 0.025);
+                                                
+                                                ctx.font = `bold ${fontSizeLarge}px Inter, sans-serif`;
+                                                const now = new Date();
+                                                const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+                                                const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                                                ctx.fillText(`${dateStr} | ${timeStr}`, 32, c.height - (overlayHeight * 0.6));
+                                                
+                                                ctx.font = `500 ${fontSizeSmall}px Inter, sans-serif`;
+                                                ctx.fillText(`📍 ${location.address || 'Location Unavailable'}`, 32, c.height - (overlayHeight * 0.25));
+                                                
+                                                setPhoto(c.toDataURL('image/jpeg', 0.9));
+                                            }}
+                                            className={`pointer-events-auto h-20 w-20 rounded-full border-4 border-white flex items-center justify-center p-1 shadow-2xl transition-all ${(!cameraState.active || location.error || !location.lat) ? 'opacity-50 scale-90 grayscale' : 'hover:scale-105 active:scale-90 bg-white/10'}`}
+                                        >
+                                            <div className="w-full h-full rounded-full bg-white shadow-inner" />
+                                        </motion.button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {/* Footer Action Area */}
+                            <div className="p-8 sm:p-10 shrink-0 bg-white shadow-[0_-20px_40px_-15px_rgba(0,0,0,0.05)] border-t border-slate-50">
+                                {!photo ? (
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-center gap-3 text-slate-500 font-bold text-xs p-4 bg-slate-50 rounded-2xl">
+                                            <Info size={16} className="text-indigo-400" />
+                                            <span>Center your face and ensure your site background is visible.</span>
+                                        </div>
+                                        <button 
+                                            onClick={() => setShowCheckInModal(false)}
+                                            className="w-full py-5 text-slate-400 font-black text-xs uppercase tracking-widest hover:text-slate-600 transition-colors"
+                                        >
+                                            Cancel Verification
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div className="flex gap-4">
+                                        <motion.button 
+                                            whileHover={{ scale: 1.02 }} whileTap={{ scale: 0.98 }}
+                                            onClick={() => {
+                                                const formData = new FormData();
+                                                const blob = dataURLtoBlob(photo);
+                                                if (!blob) { toast.error("Processing failed"); return; }
+                                                formData.append('photo', blob, 'photo.jpg');
+                                                formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE | ' : ''}${navigator.userAgent}`);
+                                                const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
+                                                dispatch(action).then((res) => {
+                                                    if (!res.error) {
+                                                        dispatch(getAttendanceStatus());
+                                                        setPhoto(null); setShowCheckInModal(false);
+                                                        if (!isCheckingOut) checkLatenessAndRedirect(new Date(), true);
+                                                    }
+                                                });
+                                            }} 
+                                            className="flex-1 py-6 bg-slate-900 border-b-4 border-slate-700 text-white rounded-[2rem] font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-black transition-all flex items-center justify-center gap-3 group"
+                                        >
+                                            <CheckCircle2 size={20} className="text-emerald-400" /> Confirm Verification
+                                        </motion.button>
+                                        <button 
+                                            onClick={() => setPhoto(null)} 
+                                            className="px-10 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-bold hover:bg-slate-200 transition-colors"
+                                        >
+                                            Retake
+                                        </button>
+                                    </div>
+                                )}
                             </div>
                         </motion.div>
                     </div>
