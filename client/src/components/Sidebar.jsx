@@ -211,6 +211,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             )}
                             <NavItem to="/admin/analytics" icon={BarChart3} label="Performance Analytics" indent />
                             <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />
+                            <NavItem to="/admin/walkin-hub" icon={Users} label="Walkin Hub" indent />
                         </NavGroup>
 
                         <NavGroup id="admin" label="Administration" icon={ShieldCheck}>
@@ -246,6 +247,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
                             {user?.wfhViewEnabled && (
                                 <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
+                            )}
+                            {['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation) && (
+                                <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
+                            )}
+                            {user?.designation === 'CRE' && (
+                                <NavItem to="/dashboard/walkin-hub" icon={Users} label="Walkin Hub" />
                             )}
                         </div>
 

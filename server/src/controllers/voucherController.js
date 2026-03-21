@@ -7,45 +7,78 @@ const { parseRobustDate } = require('../utils/dateHelpers');
 // @access  Private (Employee)
 const createVoucher = async (req, res) => {
     try {
+        console.log('DEBUG: Full req.body:', JSON.stringify(req.body, null, 2));
         const userId = req.user.id;
         const { type, amount, purpose, date } = req.body;
         let proofUrl = req.body.proofUrl;
 
+        console.log('DEBUG: CreateVoucher Request:', {
+            userId,
+            type,
+            amount,
+            purpose,
+            date,
+            hasFile: !!req.file
+        });
+
         // If file is uploaded, use it
         if (req.file) {
             proofUrl = `/api/uploads/${req.file.filename}`;
+            console.log('DEBUG: File uploaded:', proofUrl);
         }
 
         if (!amount || !purpose) {
+            console.log('DEBUG: Missing amount or purpose');
             return res.status(400).json({ message: 'Amount and purpose are required' });
         }
 
         if (type === 'POSTPAID' && !proofUrl) {
+            console.log('DEBUG: Missing proof for POSTPAID');
             return res.status(400).json({ message: 'Bill/Proof is mandatory for Postpaid vouchers' });
         }
 
         const isAM = req.user.role === 'ACCOUNTS_MANAGER';
+        const parsedAmount = parseFloat(amount);
+        const parsedDate = date ? parseRobustDate(date) : new Date();
+
+        console.log('DEBUG: Parsed values:', { parsedAmount, parsedDate, isAM });
+
+        if (isNaN(parsedAmount)) {
+            console.log('DEBUG: Invalid amount:', amount);
+            return res.status(400).json({ message: 'Invalid amount value' });
+        }
+
+        const prismaData = {
+            userId,
+            type: type || 'POSTPAID',
+            amount: parsedAmount,
+            purpose,
+            date: parsedDate,
+            proofUrl: proofUrl || null,
+            status: 'PENDING',
+            amStatus: isAM ? 'APPROVED' : 'PENDING',
+            amId: isAM ? userId : null,
+            amApprovedAt: isAM ? new Date() : null,
+            cooStatus: 'PENDING'
+        };
+
+        console.log('DEBUG: Final Prisma Data:', prismaData);
 
         const voucher = await prisma.voucher.create({
-            data: {
-                userId,
-                type: type || 'POSTPAID',
-                amount: parseFloat(amount),
-                purpose,
-                date: date ? parseRobustDate(date) : new Date(),
-                proofUrl: proofUrl || null,
-                status: 'PENDING',
-                amStatus: isAM ? 'APPROVED' : 'PENDING',
-                amId: isAM ? userId : null,
-                amApprovedAt: isAM ? new Date() : null,
-                cooStatus: 'PENDING'
-            }
+            data: prismaData
         });
 
+        console.log('DEBUG: Voucher created successfully:', voucher.id);
         res.status(201).json(voucher);
     } catch (error) {
         console.error('ERROR in createVoucher:', error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
+        if (error.code) console.error('Prisma Error Code:', error.code);
+        if (error.meta) console.error('Prisma Error Meta:', error.meta);
+        res.status(500).json({ 
+            message: 'Server Error', 
+            error: error.message,
+            stack: error.stack // Temporarily always include stack for debugging
+        });
     }
 };
 

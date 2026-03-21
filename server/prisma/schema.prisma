@@ -44,6 +44,8 @@ model User {
   vouchers                     Voucher[]
   deposits                     Deposit[]
   pushSubscriptions            PushSubscription[]
+  walkinEntries                WalkinEntry[]          @relation("CreatedBy")
+  assignedWalkins              WalkinEntry[]          @relation("AssignedBh")
 }
 
 model PushSubscription {
@@ -554,4 +556,28 @@ model CarpenterRecord {
   status          String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
+}
+
+model WalkinEntry {
+  id               Int      @id @default(autoincrement())
+  faTeam           String
+  creName          String?
+  architect        String?
+  bhId             Int
+  clientName       String
+  contactNumber    String
+  project          String?
+  status           String?
+  dateOfVisit      DateTime
+  dayOfVisit       String?
+  tentativeTime    String?
+  showroom         String?
+  visitStatus      String?
+  remarks          String?
+  createdById      Int
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  createdBy        User     @relation("CreatedBy", fields: [createdById], references: [id])
+  bh               User     @relation("AssignedBh", fields: [bhId], references: [id])
 }

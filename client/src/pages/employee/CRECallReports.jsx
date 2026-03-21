@@ -21,6 +21,7 @@ const CallLog = getCallLogPlugin();
 
 const CRECallReports = () => {
     const dispatch = useDispatch();
+    const { user } = useSelector((state) => state.auth);
     const { callLogs, workLogs, isLoading } = useSelector((state) => state.employee);
     const [searchTerm, setSearchTerm] = useState('');
     const [filterType, setFilterType] = useState('ALL');
@@ -200,9 +201,23 @@ const CRECallReports = () => {
         }
     };
 
+    // helper to get IST date string consistently
+    const toIstDateString = (dateInput) => {
+        if (!dateInput) return null;
+        const d = new Date(dateInput);
+        if (isNaN(d.getTime())) return null;
+        // Shift to IST for comparison
+        const ist = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+        return ist.toISOString().split('T')[0];
+    };
+
     // Extract & Merge from Decoupled State
     const allSyncedCalls = (callLogs || [])
-        .filter(log => log.calls && Array.isArray(log.calls))
+        .filter(log => {
+            const hasCalls = log.calls && Array.isArray(log.calls);
+            if (!hasCalls && log.calls) console.warn("Diagnostic: Found CallLog record with non-array calls property", log);
+            return hasCalls;
+        })
         .flatMap(log => {
             return log.calls.map(call => ({
                 ...call,
@@ -211,10 +226,23 @@ const CRECallReports = () => {
         })
         .filter(call => {
             if (!call.date) return false;
-            const callDateStr = new Date(call.date).toISOString().split('T')[0];
-            return callDateStr === selectedDate;
+            const callDateStr = toIstDateString(call.date);
+            const isMatch = callDateStr === selectedDate;
+            
+            // Helpful for debugging if anything appears missing
+            if (searchTerm === 'DEBUG') {
+                console.log(`[DateCheck] Call: ${call.number} | Time: ${new Date(call.date).toLocaleTimeString()} | CallDate: ${callDateStr} | Selected: ${selectedDate} | Match: ${isMatch}`);
+            }
+            
+            return isMatch;
         })
         .sort((a, b) => new Date(b.date) - new Date(a.date));
+
+    // Intelligence
+    if (searchTerm === 'DEBUG' && callLogs?.length > 0) {
+        console.log(`[Diagnostic] callLogs in state:`, callLogs.length);
+        console.log(`[Diagnostic] allSyncedCalls count:`, allSyncedCalls.length);
+    }
 
     // Intelligence
     const availableSims = [...new Set(allSyncedCalls.map(c => c.simId))].filter(Boolean);
@@ -304,7 +332,9 @@ const CRECallReports = () => {
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 relative z-10">
                     <div className="space-y-2">
                         <div className="flex items-center gap-4">
-                            <h1 className="text-4xl font-black text-slate-800 tracking-tighter">Call Analytics</h1>
+                            <h1 className="text-4xl font-black text-slate-800 tracking-tighter">
+                                {user?.name?.split(' ')[0]}'s Call Analytics
+                            </h1>
                             <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${Capacitor.isNativePlatform() ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                                 <Zap size={12} /> {Capacitor.isNativePlatform() ? "Sync Active" : "Web Preview"}
                             </div>
@@ -414,6 +444,38 @@ const CRECallReports = () => {
                     </div>
                 </div>
             </motion.header>
+
+            {/* Debug Banner - Visible only when data is missing but logs exist in state */}
+            {(callLogs?.length > 0 && displayLogs.length === 0) && (
+                <div className="bg-amber-50 border-2 border-amber-200 p-6 rounded-[2rem] space-y-3">
+                    <div className="flex items-center gap-3 text-amber-700 font-black uppercase text-xs">
+                        <Activity size={18} /> Sync Diagnostic Intelligence
+                    </div>
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                        <div className="bg-white/50 p-3 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Raw Records</p>
+                            <p className="text-xl font-black text-slate-800">{callLogs.length}</p>
+                        </div>
+                        <div className="bg-white/50 p-3 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Selected Date</p>
+                            <p className="text-sm font-black text-slate-800">{selectedDate}</p>
+                        </div>
+                        <div className="bg-white/50 p-3 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">SIM Filter</p>
+                            <p className="text-sm font-black text-slate-800">{simFilter}</p>
+                        </div>
+                        <div className="bg-white/50 p-3 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Raw Calls</p>
+                            <p className="text-xl font-black text-slate-800">
+                                {callLogs.reduce((acc, log) => acc + (log.calls?.length || 0), 0)}
+                            </p>
+                        </div>
+                    </div>
+                    <p className="text-[10px] font-bold text-amber-600 bg-amber-100/50 p-2 rounded-lg">
+                        Tip: If {'Total Raw Calls'} is {'>'} 0 but metrics are 0, the dates in your phone logs do not match "{selectedDate}". Check your phone's date/time settings.
+                    </p>
+                </div>
+            )}
 
             {/* Premium Analytics Section */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

@@ -68,7 +68,7 @@ const Overview = () => {
 
         // Fallback Native Sync
         const performFallbackSync = async () => {
-            if (user?.designation === 'CRE') {
+            if (['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) {
                 try {
                     const { Capacitor } = await import('@capacitor/core');
                     if (!Capacitor.isNativePlatform()) return;

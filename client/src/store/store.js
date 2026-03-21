@@ -7,6 +7,7 @@ import analyticsReducer from '../features/analytics/analyticsSlice';
 import voucherReducer from '../features/voucher/voucherSlice';
 import carpenterReducer from '../features/carpenter/carpenterSlice';
 import themeReducer from '../features/theme/themeSlice';
+import walkinReducer from '../features/walkin/walkinSlice';
 
 export const store = configureStore({
     reducer: {
@@ -18,5 +19,6 @@ export const store = configureStore({
         voucher: voucherReducer,
         carpenter: carpenterReducer,
         theme: themeReducer,
+        walkin: walkinReducer,
     },
 });
