@@ -36,14 +36,9 @@ public class CallLogSyncWorker extends Worker {
         Log.d(TAG, "Starting background sync work...");
 
         try {
-            // 1. Check if already synced today (Failsafe)
+            // 1. Get User Token and SIM Preference
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             String istToday = getIstToday();
-            String lastSync = prefs.getString("lastBackgroundSyncDate", "");
-            if (istToday.equals(lastSync)) {
-                Log.d(TAG, "Already synced for today (" + istToday + "). Skipping.");
-                return Result.success();
-            }
 
             // 2. Get User Token and SIM Preference
             String userJsonStr = prefs.getString("user", null);

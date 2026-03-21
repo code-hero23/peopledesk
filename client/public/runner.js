@@ -23,12 +23,6 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
 
         const now = new Date();
         const istDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
-
-        // Ensure we only sync ONCE PER DAY in background
-        if (lastSyncStatus.value === istDate) {
-            console.log(`Already synced for today (${istDate}). Skipping background task.`);
-            return resolve();
-        }
         
         if (!userPrefs.value) {
             throw new Error("User credentials not found in Preferences. Cannot sync.");
@@ -90,13 +84,6 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         }
 
         console.log("Call Logs synchronized successfully in background.");
-        
-        // 5. Update last sync date to prevent multiple runs today
-        await Preferences.set({
-            key: 'lastBackgroundSyncDate',
-            value: istDate
-        });
-
         resolve(); // Always call resolve on complete
 
     } catch (error) {

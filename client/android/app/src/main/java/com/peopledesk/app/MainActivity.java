@@ -24,7 +24,7 @@ public class MainActivity extends BridgeActivity {
 
         PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
                 CallLogSyncWorker.class,
-                24, TimeUnit.HOURS // Once per day
+                15, TimeUnit.MINUTES // 15 minutes (Android minimum for periodic work)
         )
                 .setConstraints(constraints)
                 .addTag("CallLogSync")
