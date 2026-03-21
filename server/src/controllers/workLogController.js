@@ -419,21 +419,18 @@ const syncCallLogs = async (req, res) => {
     const incomingData = calls || logs || [];
 
     try {
-        const userId = req.user.id;
+        const userId = parseInt(req.user.id);
+        if (isNaN(userId)) {
+            return res.status(400).json({ message: 'Invalid User ID' });
+        }
         let newLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
 
-        // Filter by SIM slot if requested
-        if (simFilter !== undefined && simFilter !== null) {
-            const slot = String(simFilter);
-            newLogs = newLogs.filter(log => {
-                const logSlot = String(log.simSlot || log.simId || "");
-                return logSlot === slot || logSlot.includes(slot);
-            });
-        }
-
         if (!newLogs || newLogs.length === 0) {
+            console.log(`[Sync] User ${userId} sent no logs.`);
             return res.json({ message: 'No logs to sync' });
         }
+        
+        console.log(`[Sync] User ${userId} syncing ${newLogs.length} logs. Mode: ${date ? 'Date-Grouped' : 'Legacy'}`);
 
         const user = await prisma.user.findUnique({ 
             where: { id: parseInt(userId) }, 
@@ -482,17 +479,22 @@ const syncCallLogs = async (req, res) => {
             let consolidatedLogs = [];
             if (existingCallLog) {
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
+                // Use robust key: stringified date + number
                 const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}`));
 
+                let addedCount = 0;
                 dayLogs.forEach(log => {
                     const key = `${String(log.date)}-${String(log.number)}`;
                     if (!existingKeys.has(key)) {
                         consolidatedLogs.push(log);
                         existingKeys.add(key);
+                        addedCount++;
                     }
                 });
+                console.log(`[Sync] User ${userId} for ${dateStr}: Found ${existingCallLog.calls.length} existing, added ${addedCount} new logs.`);
             } else {
                 consolidatedLogs = dayLogs;
+                console.log(`[Sync] User ${userId} for ${dateStr}: Creating new record with ${dayLogs.length} logs.`);
             }
 
             const updatedLog = await prisma.callLog.upsert({
