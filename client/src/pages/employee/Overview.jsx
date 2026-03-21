@@ -855,20 +855,23 @@ const Overview = () => {
                             <div className="flex-1 relative bg-slate-900 sm:m-6 sm:rounded-[2rem] overflow-hidden group shadow-inner">
                                 {!photo ? (
                                     <>
-                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover scale-x-[-1]" onLoadedMetadata={() => videoRef.current?.play()} />
+                                        {/* Blurred Background for immersive feel */}
+                                        <video ref={(el) => { if(el) el.srcObject = videoRef.current?.srcObject; }} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-x-[-1]" />
+                                        
+                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain scale-x-[-1] relative z-10" onLoadedMetadata={() => videoRef.current?.play()} />
                                         
                                         {/* Focus Ring Animation */}
                                         <motion.div 
                                             initial={{ scale: 1.5, opacity: 0 }}
                                             animate={{ scale: 1, opacity: [0, 1, 0] }}
                                             transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 2 }}
-                                            className="absolute inset-0 m-auto w-32 h-32 border-2 border-indigo-400/50 rounded-full pointer-events-none flex items-center justify-center"
+                                            className="absolute inset-0 m-auto w-32 h-32 border-2 border-indigo-400/50 rounded-full pointer-events-none flex items-center justify-center z-20"
                                         >
                                             <div className="w-2 h-2 bg-indigo-400/50 rounded-full" />
                                         </motion.div>
 
                                         {/* Camera Grid Overlay */}
-                                        <div className="absolute inset-0 pointer-events-none opacity-10">
+                                        <div className="absolute inset-0 pointer-events-none opacity-10 z-20">
                                             <div className="absolute top-1/3 w-full h-px bg-white" />
                                             <div className="absolute top-2/3 w-full h-px bg-white" />
                                             <div className="absolute left-1/3 h-full w-px bg-white" />
@@ -877,11 +880,14 @@ const Overview = () => {
                                     </>
                                 ) : (
                                     <div className="relative w-full h-full">
-                                        <img src={photo} alt="Verification" className="w-full h-full object-cover scale-x-[-1]" />
+                                        {/* Blurred Background for immersive feel */}
+                                        <img src={photo} alt="" className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40" />
+                                        
+                                        <img src={photo} alt="Verification" className="w-full h-full object-contain relative z-10" />
                                         <motion.button 
                                             initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }}
                                             onClick={() => setPhoto(null)} 
-                                            className="absolute top-6 right-6 p-4 bg-white/95 text-rose-500 rounded-2xl shadow-2xl border border-white hover:bg-rose-50 transition-all z-20"
+                                            className="absolute top-6 right-6 p-4 bg-white/95 text-rose-500 rounded-2xl shadow-2xl border border-white hover:bg-rose-50 transition-all z-30"
                                         >
                                             <Trash2 size={24} />
                                         </motion.button>
