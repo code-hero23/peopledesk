@@ -624,6 +624,7 @@ const getAllCallStats = async (req, res) => {
             return {
                 id: log.id,
                 date: log.date,
+                lastSync: log.updatedAt,
                 user: log.user.name,
                 empId: `EMP-${log.user.id}`,
                 calls: filteredCalls,

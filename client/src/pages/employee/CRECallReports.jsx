@@ -66,6 +66,11 @@ const CRECallReports = () => {
             startDate: selectedDate, 
             endDate: selectedDate 
         }));
+        
+        // Auto-sync on mount for native devices
+        if (Capacitor.isNativePlatform() && selectedDate === getIstToday()) {
+            syncDeviceLogs();
+        }
     }, [dispatch, selectedDate]);
 
     const handleSimChange = async (slot) => {

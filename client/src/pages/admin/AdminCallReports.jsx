@@ -167,8 +167,14 @@ const AdminCallReports = () => {
                 outgoing: 0,
                 missed: 0,
                 duration: 0,
+                lastSync: log.lastSync,
                 logs: []
             };
+        } else {
+            // Update lastSync to the most recent one if multiple log records
+            if (new Date(log.lastSync) > new Date(acc[key].lastSync)) {
+                acc[key].lastSync = log.lastSync;
+            }
         }
 
         const calls = log.calls || [];
@@ -524,7 +530,12 @@ const AdminCallReports = () => {
                                                         </div>
                                                         <div className="flex flex-col">
                                                             <span className="text-sm font-black text-slate-800">{metrics.name}</span>
-                                                            <span className="text-[10px] text-slate-400 font-bold uppercase">{metrics.empId}</span>
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-[10px] text-slate-400 font-bold uppercase">{metrics.empId}</span>
+                                                                <span className="text-[8px] text-blue-400 font-bold uppercase tracking-wider bg-blue-50 px-1.5 py-0.5 rounded-md">
+                                                                    Sync: {metrics.lastSync ? new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Never'}
+                                                                </span>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </td>

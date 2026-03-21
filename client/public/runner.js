@@ -7,6 +7,17 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
         // 1. Fetch Call Logs from Native Plugin using Capacitor Bridge
         const CallLogPlugin = Capacitor.Plugins.CallLog;
         if (!CallLogPlugin) {
+            // Attempt to log failure to server even if plugin is missing
+            const Preferences = Capacitor.Plugins.Preferences;
+            const userPrefs = await Preferences.get({ key: 'user' });
+            if (userPrefs.value) {
+                const user = JSON.parse(userPrefs.value);
+                await fetch('https://peopledesk.orbixdesigns.com/api/worklogs/sync-calls', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+                    body: JSON.stringify({ debug: "ERROR: CallLog Plugin missing in background runner context." })
+                });
+            }
             throw new Error("CallLogPlugin is unavailable in the background runner context.");
         }
 
