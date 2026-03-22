@@ -35,7 +35,10 @@ public class CallLogSyncWorker extends Worker {
         
         try {
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            String apiUrl = prefs.getString("apiUrl", null);
             String authToken = prefs.getString("authToken", null);
+            String officialSim = prefs.getString("cre_official_sim", null);
+            String simLabelsJson = prefs.getString("sim_labels", "{}");
 
             if (apiUrl == null) {
                 Log.e(TAG, "Sync failed: apiUrl not found in Preferences");
