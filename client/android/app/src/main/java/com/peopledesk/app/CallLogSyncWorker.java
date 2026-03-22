@@ -59,10 +59,6 @@ public class CallLogSyncWorker extends Worker {
 
             // Fetch logs
             JSONArray logs = fetchLogs(officialSim, simLabelsJson);
-            if (logs.length() == 0) {
-                Log.d(TAG, "No logs found to sync for SIM: " + officialSim);
-                return Result.success();
-            }
 
             // Send to server
             boolean success = sendLogs(apiUrl, authToken, logs);
