@@ -16,6 +16,7 @@ import {
     PieChart, Pie, Cell, ResponsiveContainer, Tooltip as RechartsTooltip, Legend
 } from 'recharts';
 import { motion, AnimatePresence } from 'framer-motion';
+import ConfirmationModal from '../../components/ConfirmationModal';
 
 const CallLog = getCallLogPlugin();
 
@@ -38,9 +39,11 @@ const CRECallReports = () => {
 
     // Persisted SIM slot preference — default SIM 2
     const [officialSim, setOfficialSim] = useState(() =>
-        parseInt(localStorage.getItem('cre_official_sim') || '2')
+        parseInt(localStorage.getItem('cre_official_sim') || '0') // Changed default to 0 (None)
     );
     const [simLabels, setSimLabels] = useState({});
+    const [pendingSim, setPendingSim] = useState(null); // For Confirmation Modal
+    const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
     useEffect(() => {
         const loadPrefs = async () => {
@@ -73,8 +76,16 @@ const CRECallReports = () => {
         }
     }, [dispatch, selectedDate]);
 
-    const handleSimChange = async (slot) => {
+    const handleSimChange = (slot) => {
         const parsed = parseInt(slot);
+        setPendingSim(parsed);
+        setIsConfirmOpen(true);
+    };
+
+    const confirmSimChange = async () => {
+        if (pendingSim === null) return;
+        
+        const parsed = pendingSim;
         setOfficialSim(parsed);
         localStorage.setItem('cre_official_sim', String(parsed));
         if (Capacitor.isNativePlatform()) {
@@ -82,6 +93,13 @@ const CRECallReports = () => {
                 key: 'cre_official_sim',
                 value: String(parsed)
             });
+        }
+        toast.success(`SIM ${parsed} set as Official Work SIM.`);
+        setIsConfirmOpen(false);
+
+        // Re-sync logs for the newly selected SIM if today
+        if (selectedDate === getIstToday()) {
+            syncDeviceLogs();
         }
     };
 
@@ -262,7 +280,14 @@ const CRECallReports = () => {
         const matchesSearch = call.number.toLowerCase().includes(searchTerm.toLowerCase()) ||
             (call.name && call.name.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = filterType === 'ALL' || call.type === filterType;
-        const matchesSim = simFilter === 'ALL' || String(call.simId) === String(simFilter);
+        
+        // Auto-filter by Official SIM preference only (Removed the redundant bottom filter)
+        if (officialSim === 0) return matchesSearch && matchesType; // Show all if none selected yet for review
+        
+        const logSlot = String(call.simId).toLowerCase();
+        const targetSlot = String(officialSim).toLowerCase();
+        const matchesSim = logSlot === targetSlot || logSlot.includes(targetSlot);
+        
         return matchesSearch && matchesType && matchesSim;
     });
 
@@ -350,11 +375,10 @@ const CRECallReports = () => {
                     <div className="flex flex-wrap items-center gap-3">
                         {/* SIM Slot Selector */}
                         <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
-                            <span className="text-[9px] font-black text-slate-400 uppercase px-2">SIM</span>
-                            {[1, 2, 0].map((slot) => {
-                                // Try to find a label for this slot if it matches a simId
+                            <span className="text-[9px] font-black text-slate-400 uppercase px-2">OFFICIAL SIM</span>
+                            {[1, 2].map((slot) => { // Removed '0' (ALL) option 
                                 const matchingSimId = availableSims.find(id => String(id) === String(slot) || String(id).includes(String(slot)));
-                                const label = slot === 0 ? "ALL" : (activeSimLabels[matchingSimId] || slot);
+                                const label = activeSimLabels[matchingSimId] || slot;
 
                                 return (
                                     <button
@@ -427,18 +451,9 @@ const CRECallReports = () => {
                     <div className="xl:col-span-3 flex items-center justify-between gap-4 bg-slate-50/70 p-2 rounded-[1.5rem] border border-slate-100">
                         <div className="flex items-center gap-3 pl-4">
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Smartphone size={14} /></div>
-                            <select
-                                value={simFilter}
-                                onChange={(e) => setSimFilter(e.target.value)}
-                                className="bg-transparent text-[10px] font-black uppercase tracking-widest outline-none border-none cursor-pointer text-slate-700 font-black"
-                            >
-                                <option value="ALL">ALL SIMS</option>
-                                {availableSims.map(sim => (
-                                    <option key={sim} value={sim}>
-                                        {activeSimLabels[sim] ? `${activeSimLabels[sim]}` : `Slot ${sim.length > 3 ? sim.substring(0, 3) : sim}`}
-                                    </option>
-                                ))}
-                            </select>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                {officialSim === 0 ? "NO SIM SELECTED" : `SYNCING SIM ${officialSim}`}
+                            </span>
                         </div>
                         <button
                             onClick={() => setIsUniqueOnly(!isUniqueOnly)}
@@ -615,6 +630,17 @@ const CRECallReports = () => {
                     </table>
                 </div>
             </motion.div>
+
+            {/* SIM Selection Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={isConfirmOpen}
+                onClose={() => setIsConfirmOpen(false)}
+                onConfirm={confirmSimChange}
+                title="Confirm Official Work SIM"
+                message={`Are you sure you want to set SIM ${pendingSim}${activeSimLabels[pendingSim] ? ` (${activeSimLabels[pendingSim]})` : ''} as your Official Work SIM?\n\nOnly calls from this SIM will be synced to the VPS server.`}
+                type="info"
+                confirmText="Set as Official"
+            />
         </div>
     );
 };

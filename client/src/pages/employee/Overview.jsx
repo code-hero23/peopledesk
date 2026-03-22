@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
     Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
-    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2
+    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone
 } from 'lucide-react';
 import {
     getAttendanceStatus,
@@ -53,7 +53,10 @@ const Overview = () => {
     // Explicitly add an error flag to block capture if needed
     const [location, setLocation] = useState({ lat: null, lng: null, address: 'Locating...', error: null });
     const [cameraState, setCameraState] = useState({ active: false, error: null });
-
+    const [showMandatorySimModal, setShowMandatorySimModal] = useState(false);
+    const [availableSims, setAvailableSims] = useState([]);
+    const [simLabels, setSimLabels] = useState({});
+    const [isDiscoveringSims, setIsDiscoveringSims] = useState(false);
     useEffect(() => {
         if (user?.wfhViewEnabled) {
             navigate('/dashboard/wfh');
@@ -66,7 +69,52 @@ const Overview = () => {
             setIsSiteLogin(true);
         }
 
-        // Fallback Native Sync
+        const checkSimPreference = async () => {
+            if (!['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) return;
+            
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                if (!Capacitor.isNativePlatform()) return;
+
+                const { Preferences } = await import('@capacitor/preferences');
+                const { value } = await Preferences.get({ key: 'cre_official_sim' });
+                
+                if (!value || value === "0") {
+                    setShowMandatorySimModal(true);
+                    discoverSims();
+                }
+            } catch (e) {
+                console.error("Error checking SIM preference", e);
+            }
+        };
+
+        const discoverSims = async () => {
+            setIsDiscoveringSims(true);
+            try {
+                const { Capacitor } = await import('@capacitor/core');
+                const CallLogPlugin = Capacitor.Plugins.CallLog;
+                if (!CallLogPlugin) return;
+
+                const result = await CallLogPlugin.getCallLogs();
+                if (result.logs && result.logs.length > 0) {
+                    const logs = result.logs;
+                    const detectedSims = [...new Set(logs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null");
+                    setAvailableSims(detectedSims);
+
+                    const labels = {};
+                    logs.forEach(log => {
+                        const id = String(log.simSlot || log.simId);
+                        if (id && log.simLabel) labels[id] = log.simLabel;
+                    });
+                    setSimLabels(labels);
+                }
+            } catch (e) {
+                console.error("SIM discovery failed", e);
+            } finally {
+                setIsDiscoveringSims(false);
+            }
+        };
+
         const performFallbackSync = async () => {
             if (['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) {
                 try {
@@ -74,13 +122,19 @@ const Overview = () => {
                     if (!Capacitor.isNativePlatform()) return;
 
                     const CallLogPlugin = Capacitor.Plugins.CallLog;
-                    const Preferences = Capacitor.Plugins.Preferences;
+                    const { Preferences } = await import('@capacitor/preferences');
                     if (!CallLogPlugin || !Preferences) return;
 
                     // Retrieve Work SIM Preference
                     const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
-                    const targetSlot = officialSim || "2"; // Default to 2
+                    
+                    // NEW: Skip sync if no official SIM is selected
+                    if (!officialSim || officialSim === "0") {
+                        console.log("Fallback sync skipped: No official SIM selected.");
+                        return;
+                    }
 
+                    const targetSlot = officialSim;
                     const logsResult = await CallLogPlugin.getCallLogs();
                     if (!logsResult?.logs || logsResult.logs.length === 0) return;
 
@@ -113,6 +167,7 @@ const Overview = () => {
             }
         };
 
+        checkSimPreference();
         performFallbackSync();
     }, [user]);
 
@@ -807,21 +862,101 @@ const Overview = () => {
                                             type: 'info',
                                             onConfirm: () => {
                                                 dispatch(pauseAttendance({ breakType: t.id })).then(() => {
-                                                    setActiveModal(null);
                                                     dispatch(getAttendanceStatus());
+                                                    setActiveModal(null);
                                                 });
-                                                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
                                             }
                                         });
                                     }}
-                                    className="flex flex-col items-center p-6 bg-slate-50 hover:bg-white hover:shadow-xl transition-all rounded-[2rem] border-2 border-transparent hover:border-indigo-100 group"
+                                    className="flex flex-col items-center gap-3 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-600 group"
                                 >
-                                    <div className={`p-4 bg-${t.color}-50 text-${t.color}-500 rounded-[1.5rem] mb-4 group-hover:scale-110 transition-transform`}><t.icon size={32} /></div>
-                                    <p className="font-black text-slate-800 tracking-tight">{t.title}</p>
+                                    <div className={`p-4 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform`}>
+                                        <t.icon size={32} />
+                                    </div>
+                                    <span className="font-bold text-slate-700 dark:text-slate-300">{t.title}</span>
                                 </button>
                             ))}
                         </div>
                     </Modal>
+                )}
+            </AnimatePresence>
+
+            {/* Mandatory SIM Selection Modal */}
+            <AnimatePresence>
+                {showMandatorySimModal && (
+                    <div className="fixed inset-0 z-[10000] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-xl">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            className="bg-white dark:bg-slate-900 w-full max-w-md rounded-[2.5rem] shadow-2xl overflow-hidden"
+                        >
+                            <div className="p-8 lg:p-10 space-y-8">
+                                <div className="space-y-4 text-center">
+                                    <div className="inline-flex p-4 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-3xl">
+                                        <Smartphone size={40} className="animate-pulse" />
+                                    </div>
+                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Select Official SIM</h2>
+                                    <p className="text-slate-500 dark:text-slate-400 font-medium">
+                                        To sync your call logs correctly, please identify which SIM is your **Official Work SIM**.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    {isDiscoveringSims ? (
+                                        <div className="flex flex-col items-center py-8 space-y-4">
+                                            <div className="w-10 h-10 border-4 border-indigo-100 border-t-indigo-600 rounded-full animate-spin" />
+                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Identifying SIM Slots...</p>
+                                        </div>
+                                    ) : (
+                                        <>
+                                            {(availableSims.length > 0 ? availableSims : ["1", "2"]).map((simId) => (
+                                                <motion.button
+                                                    key={simId}
+                                                    whileHover={{ scale: 1.02 }}
+                                                    whileTap={{ scale: 0.98 }}
+                                                    onClick={() => {
+                                                        setConfirmationConfig({
+                                                            isOpen: true,
+                                                            title: 'Confirm Official SIM',
+                                                            message: `Confirm selection of ${simLabels[simId] || `SIM ${simId}`} as your Official Work SIM?\n\nThis will be used for all background syncing.`,
+                                                            type: 'info',
+                                                            onConfirm: async () => {
+                                                                const { Preferences } = await import('@capacitor/preferences');
+                                                                await Preferences.set({ key: 'cre_official_sim', value: String(simId) });
+                                                                localStorage.setItem('cre_official_sim', String(simId));
+                                                                setShowMandatorySimModal(false);
+                                                                toast.success(`${simLabels[simId] || `SIM ${simId}`} set as official.`);
+                                                                performFallbackSync();
+                                                            }
+                                                        });
+                                                    }}
+                                                    className="w-full flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800 transition-all group"
+                                                >
+                                                    <div className="flex items-center gap-4">
+                                                        <div className="p-3 bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-2xl group-hover:text-indigo-600 dark:group-hover:text-primary transition-colors">
+                                                            <Smartphone size={24} />
+                                                        </div>
+                                                        <div className="text-left">
+                                                            <p className="font-black text-slate-900 dark:text-white">{simLabels[simId] || `SIM Slot ${simId}`}</p>
+                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Available Device Slot</p>
+                                                        </div>
+                                                    </div>
+                                                    <ChevronRight size={20} className="text-slate-300 group-hover:translate-x-1 transition-all" />
+                                                </motion.button>
+                                            ))}
+                                        </>
+                                    )}
+                                </div>
+
+                                <div className="bg-amber-50 dark:bg-amber-900/10 p-4 rounded-2xl border border-amber-100 dark:border-amber-900/30 flex gap-3">
+                                    <Info size={20} className="text-amber-600 dark:text-amber-400 flex-shrink-0" />
+                                    <p className="text-[11px] font-bold text-amber-800 dark:text-amber-200 leading-relaxed uppercase tracking-wide">
+                                        You can change this anytime in the Call Reports settings.
+                                    </p>
+                                </div>
+                            </div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 

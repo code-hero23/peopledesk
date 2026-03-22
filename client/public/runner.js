@@ -28,9 +28,15 @@ addEventListener('dailyCallLogSync', async (resolve, reject) => {
             throw new Error("User credentials not found in Preferences. Cannot sync.");
         }
         const user = JSON.parse(userPrefs.value);
-        const officialSim = simPrefs.value ? String(simPrefs.value) : "0"; // Default to sync all if not set
+        const officialSim = simPrefs.value ? String(simPrefs.value) : "0"; 
 
-        // 3. Filter logs by SIM slot if a specific SIM is selected
+        // 3. Mandatory SIM Check: Skip if not yet selected
+        if (officialSim === "0") {
+            console.log("No official SIM selected in settings. Skipping background sync.");
+            return resolve();
+        }
+
+        // 4. Filter logs by SIM slot
         let filteredLogs = logs;
         if (officialSim !== "0") {
             const normalizedOfficialSim = String(officialSim).toLowerCase();

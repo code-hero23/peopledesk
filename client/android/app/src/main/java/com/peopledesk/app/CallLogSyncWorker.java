@@ -56,7 +56,12 @@ public class CallLogSyncWorker extends Worker {
 
             String officialSim = prefs.getString("cre_official_sim", "0");
 
-            // 3. Fetch Call Logs
+            // 3. Fetch Call Logs - Skip if no SIM selected (0 is the "Unset" marker now)
+            if (officialSim.equals("0")) {
+                Log.d(TAG, "No default SIM selected. Skipping background sync.");
+                return Result.success();
+            }
+
             JSONArray logs = fetchLogs(officialSim);
             if (logs.length() == 0) {
                 Log.d(TAG, "No logs to sync.");
