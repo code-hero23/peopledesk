@@ -425,18 +425,34 @@ const syncCallLogs = async (req, res) => {
         }
         let newLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
 
-        if (!newLogs || newLogs.length === 0) {
-            console.log(`[Sync] User ${userId} sent no logs.`);
-            return res.json({ message: 'No logs to sync' });
-        }
+        // HEARTBEAT LOGIC: If no logs, still perform an upsert for "today" to update updatedAt
+        const isHeartbeat = !newLogs || newLogs.length === 0;
         
-        console.log(`[Sync] User ${userId} syncing ${newLogs.length} logs. Mode: ${date ? 'Date-Grouped' : 'Legacy'}`);
-
         const user = await prisma.user.findUnique({ 
             where: { id: parseInt(userId) }, 
             select: { name: true, role: true } 
         });
-        console.log(`[Sync] User ${userId} (${user?.name || "No User"}) sending ${newLogs.length} logs. SIM Filter: ${simFilter}`);
+        console.log(`[Sync] User ${userId} (${user?.name || "No User"}) syncing ${isHeartbeat ? '0 (Heartbeat)' : newLogs.length} logs. SIM Filter: ${simFilter}`);
+
+        if (isHeartbeat) {
+            // Create a dummy group for today so the upsert loop runs and updates updatedAt
+            const todayIST = new Date(Date.now() + (5.5 * 60 * 60 * 1000));
+            const dateStr = todayIST.toISOString().split('T')[0];
+            const targetDate = new Date(dateStr);
+            targetDate.setHours(0, 0, 0, 0);
+
+            await prisma.callLog.upsert({
+                where: { userId_date: { userId, date: targetDate } },
+                update: { updatedAt: new Date() }, // Force update timestamp
+                create: {
+                    userId,
+                    date: targetDate,
+                    calls: [],
+                    totalCalls: 0
+                }
+            });
+            return res.json({ message: 'Sync heartbeat successful' });
+        }
 
         // Group logs by Date (YYYY-MM-DD) - IST Aware (UTC+5:30)
         const groupedLogs = newLogs.reduce((acc, log) => {
