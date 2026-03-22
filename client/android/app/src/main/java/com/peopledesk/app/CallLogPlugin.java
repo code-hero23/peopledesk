@@ -15,7 +15,9 @@ import com.getcapacitor.annotation.PermissionCallback;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
+import androidx.work.*;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(
     name = "CallLog",
@@ -217,6 +219,32 @@ public class CallLogPlugin extends Plugin {
             case CallLog.Calls.MISSED_TYPE: return "MISSED";
             case CallLog.Calls.REJECTED_TYPE: return "REJECTED";
             default: return "OTHER";
+        }
+    }
+
+    @PluginMethod
+    public void scheduleCallLogSync(PluginCall call) {
+        try {
+            Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+            PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
+                CallLogSyncWorker.class,
+                15, TimeUnit.MINUTES
+            ).setConstraints(constraints).build();
+
+            WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork(
+                "CallLogSync",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                syncRequest
+            );
+
+            Log.d("CallLogPlugin", "Background sync scheduled (REPLACE policy)");
+            if (call != null) call.resolve();
+        } catch (Exception e) {
+            Log.e("CallLogPlugin", "Failed to schedule sync", e);
+            if (call != null) call.reject(e.getMessage());
         }
     }
 }

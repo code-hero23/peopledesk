@@ -276,6 +276,13 @@ const Overview = () => {
                 await Preferences.set({ key: 'authToken', value: user.token });
             }
 
+            // Trigger background sync scheduling
+            const CallLogPlugin = Capacitor.Plugins.CallLog;
+            if (CallLogPlugin?.scheduleCallLogSync) {
+                await CallLogPlugin.scheduleCallLogSync();
+                console.log("[Sync] Background worker scheduled/updated.");
+            }
+
             const { value } = await Preferences.get({ key: 'cre_official_sim' });
             if (!value || value === "0") {
                 setShowMandatorySimModal(true);
