@@ -95,19 +95,39 @@ const Overview = () => {
                 const CallLogPlugin = Capacitor.Plugins.CallLog;
                 if (!CallLogPlugin) return;
 
+                const labels = {};
+                const slots = [];
+
+                // 1. Precise Discovery via SubscriptionManager (New method)
+                if (CallLogPlugin.getSimInfo) {
+                    const simInfo = await CallLogPlugin.getSimInfo();
+                    if (simInfo.sims && simInfo.sims.length > 0) {
+                        simInfo.sims.forEach(sim => {
+                            const slot = String(sim.simSlot);
+                            labels[slot] = sim.simLabel || sim.displayName;
+                            slots.push(slot);
+                            // Also map the subscription ID just in case
+                            labels[String(sim.simId)] = sim.simLabel || sim.displayName;
+                        });
+                    }
+                }
+
+                // 2. Fallback/Complementary Discovery via Call Logs
                 const result = await CallLogPlugin.getCallLogs();
                 if (result.logs && result.logs.length > 0) {
-                    const logs = result.logs;
-                    const detectedSims = [...new Set(logs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null");
-                    setAvailableSims(detectedSims);
-
-                    const labels = {};
-                    logs.forEach(log => {
+                    result.logs.forEach(log => {
                         const id = String(log.simSlot || log.simId);
-                        if (id && log.simLabel) labels[id] = log.simLabel;
+                        if (id && log.simLabel && !labels[id]) {
+                            labels[id] = log.simLabel;
+                        }
+                        if (id && !slots.includes(id) && id !== "null") {
+                            slots.push(id);
+                        }
                     });
-                    setSimLabels(labels);
                 }
+
+                setSimLabels(labels);
+                setAvailableSims([...new Set(slots)].sort());
             } catch (e) {
                 console.error("SIM discovery failed", e);
             } finally {

@@ -42,6 +42,7 @@ const CRECallReports = () => {
         parseInt(localStorage.getItem('cre_official_sim') || '0') // Changed default to 0 (None)
     );
     const [simLabels, setSimLabels] = useState({});
+    const [simMap, setSimMap] = useState({}); // Maps subId to slot and vice versa
     const [pendingSim, setPendingSim] = useState(null); // For Confirmation Modal
     const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
@@ -53,6 +54,9 @@ const CRECallReports = () => {
 
                 const { value: labelsPref } = await Preferences.get({ key: 'sim_labels' });
                 if (labelsPref) setSimLabels(JSON.parse(labelsPref));
+                
+                // Trigger Discovery
+                discoverSims();
             } else {
                 const val = localStorage.getItem('cre_official_sim');
                 if (val) setOfficialSim(parseInt(val));
@@ -63,6 +67,38 @@ const CRECallReports = () => {
         };
         loadPrefs();
     }, []);
+
+    const discoverSims = async () => {
+        try {
+            const CallLogPlugin = Capacitor.Plugins.CallLog;
+            if (!CallLogPlugin) return;
+
+            const labels = { ...simLabels };
+            const mapping = {};
+
+            // 1. Precise Discovery via SubscriptionManager
+            if (CallLogPlugin.getSimInfo) {
+                const simInfo = await CallLogPlugin.getSimInfo();
+                if (simInfo.sims && simInfo.sims.length > 0) {
+                    simInfo.sims.forEach(sim => {
+                        const slot = String(sim.simSlot);
+                        const subId = String(sim.simId);
+                        labels[slot] = sim.simLabel || sim.displayName;
+                        labels[subId] = sim.simLabel || sim.displayName;
+                        mapping[subId] = slot;
+                        mapping[slot] = subId;
+                    });
+                }
+            }
+            setSimLabels(labels);
+            setSimMap(mapping);
+            if (Capacitor.isNativePlatform()) {
+                await Preferences.set({ key: 'sim_labels', value: JSON.stringify(labels) });
+            }
+        } catch (e) {
+            console.error("SIM discovery failed", e);
+        }
+    };
 
     useEffect(() => {
         dispatch(getMyCallLogs({ 
@@ -284,9 +320,17 @@ const CRECallReports = () => {
         // Auto-filter by Official SIM preference only (Removed the redundant bottom filter)
         if (officialSim === 0) return matchesSearch && matchesType; // Show all if none selected yet for review
         
-        const logSlot = String(call.simId).toLowerCase();
+        const logSimId = String(call.simId || "").toLowerCase();
         const targetSlot = String(officialSim).toLowerCase();
-        const matchesSim = logSlot === targetSlot || logSlot.includes(targetSlot);
+        
+        // 1. Direct match with slot string
+        if (logSimId === targetSlot) return matchesSearch && matchesType;
+        
+        // 2. Match via simMap (SubId to Slot)
+        if (simMap[logSimId] === targetSlot) return matchesSearch && matchesType;
+        
+        // 3. Partial match (for subscription IDs containing the slot index)
+        const matchesSim = logSimId.includes(targetSlot);
         
         return matchesSearch && matchesType && matchesSim;
     });
@@ -376,17 +420,16 @@ const CRECallReports = () => {
                         {/* SIM Slot Selector */}
                         <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
                             <span className="text-[9px] font-black text-slate-400 uppercase px-2">OFFICIAL SIM</span>
-                            {[1, 2].map((slot) => { // Removed '0' (ALL) option 
-                                const matchingSimId = availableSims.find(id => String(id) === String(slot) || String(id).includes(String(slot)));
-                                const label = activeSimLabels[matchingSimId] || slot;
+                            {[1, 2].map((slot) => {
+                                const label = simLabels[slot] || `SIM ${slot}`;
 
                                 return (
                                     <button
                                         key={slot}
                                         onClick={() => handleSimChange(slot)}
                                         className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === slot
-                                                ? 'bg-slate-900 text-white shadow'
-                                                : 'text-slate-400 hover:bg-white hover:shadow-sm'
+                                            ? 'bg-slate-900 text-white shadow'
+                                            : 'text-slate-400 hover:bg-white hover:shadow-sm'
                                             }`}
                                     >
                                         {label}
@@ -452,7 +495,7 @@ const CRECallReports = () => {
                         <div className="flex items-center gap-3 pl-4">
                             <div className="p-2 bg-blue-50 text-blue-600 rounded-lg"><Smartphone size={14} /></div>
                             <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                                {officialSim === 0 ? "NO SIM SELECTED" : `SYNCING SIM ${officialSim}`}
+                                {officialSim === 0 ? "NO SIM SELECTED" : (simLabels[officialSim] || `SYNCING SIM ${officialSim}`)}
                             </span>
                         </div>
                         <button
@@ -481,19 +524,36 @@ const CRECallReports = () => {
                             <p className="text-sm font-black text-slate-800">{selectedDate}</p>
                         </div>
                         <div className="bg-white/50 p-3 rounded-xl">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">SIM Filter</p>
-                            <p className="text-sm font-black text-slate-800">{simFilter}</p>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Selected SIM</p>
+                            <p className="text-[10px] font-black text-slate-800">{simLabels[officialSim] || `SIM ${officialSim}`}</p>
                         </div>
-                        <div className="bg-white/50 p-3 rounded-xl">
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Total Raw Calls</p>
-                            <p className="text-xl font-black text-slate-800">
-                                {callLogs.reduce((acc, log) => acc + (log.calls?.length || 0), 0)}
+                        <div className="bg-white/50 p-3 rounded-xl overflow-hidden">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Found in Data</p>
+                            <p className="text-[9px] font-black text-slate-600 truncate">
+                                {Object.entries(
+                                    allSyncedCalls.reduce((acc, c) => {
+                                        const id = c.simId || "None";
+                                        acc[id] = (acc[id] || 0) + 1;
+                                        return acc;
+                                    }, {})
+                                ).map(([id, count]) => `${simLabels[id] || id}:${count}`).join(", ") || "None"}
                             </p>
                         </div>
+                        <div className="bg-white/50 p-3 rounded-xl">
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Filtered Calls</p>
+                            <p className="text-xl font-black text-slate-800">{filteredSynced.length}</p>
+                        </div>
                     </div>
-                    <p className="text-[10px] font-bold text-amber-600 bg-amber-100/50 p-2 rounded-lg">
-                        Tip: If {'Total Raw Calls'} is {'>'} 0 but metrics are 0, the dates in your phone logs do not match "{selectedDate}". Check your phone's date/time settings.
-                    </p>
+                    {allSyncedCalls.length > 0 && filteredSynced.length === 0 ? (
+                        <p className="text-[10px] font-bold text-red-600 bg-red-100/50 p-2 rounded-lg">
+                            ATTENTION: {allSyncedCalls.length} logs are hidden because they belong to a DIFFERENT SIM. 
+                            Current view is filtered for <b>{simLabels[officialSim] || `SIM ${officialSim}`}</b>.
+                        </p>
+                    ) : (
+                        <p className="text-[10px] font-bold text-amber-600 bg-amber-100/50 p-2 rounded-lg">
+                            Tip: If {'Total Raw Calls'} is {'>'} 0 but metrics are 0, the dates in your phone logs do not match "{selectedDate}". Check your phone's date/time settings.
+                        </p>
+                    )}
                 </div>
             )}
 

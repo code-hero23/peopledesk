@@ -12,6 +12,10 @@ import com.getcapacitor.PermissionState;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
+import android.telephony.SubscriptionInfo;
+import android.telephony.SubscriptionManager;
+import android.util.Log;
+import java.util.List;
 
 @CapacitorPlugin(
     name = "CallLog",
@@ -36,6 +40,37 @@ public class CallLogPlugin extends Plugin {
         } else {
             fetchCallLogs(call);
         }
+    }
+
+    @PluginMethod
+    public void getSimInfo(PluginCall call) {
+        JSObject ret = new JSObject();
+        JSArray simList = new JSArray();
+
+        try {
+            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
+                SubscriptionManager subscriptionManager = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                if (subscriptionManager != null) {
+                    List<SubscriptionInfo> activeSubscriptionInfoList = subscriptionManager.getActiveSubscriptionInfoList();
+
+                    if (activeSubscriptionInfoList != null) {
+                        for (SubscriptionInfo si : activeSubscriptionInfoList) {
+                            JSObject sim = new JSObject();
+                            sim.put("simId", String.valueOf(si.getSubscriptionId()));
+                            sim.put("simSlot", String.valueOf(si.getSimSlotIndex() + 1)); // 1-based for users
+                            sim.put("simLabel", si.getCarrierName().toString());
+                            sim.put("displayName", si.getDisplayName().toString());
+                            simList.put(sim);
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            Log.e("CallLogPlugin", "Error getting SIM info", e);
+        }
+
+        ret.put("sims", simList);
+        call.resolve(ret);
     }
 
     @PermissionCallback
