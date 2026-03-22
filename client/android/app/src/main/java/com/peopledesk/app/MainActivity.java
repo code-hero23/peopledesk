@@ -2,7 +2,7 @@ package com.peopledesk.app;
 
 import android.os.Bundle;
 import com.getcapacitor.BridgeActivity;
-import com.capacitorjs.plugins.backgroundrunner.BackgroundRunnerPlugin;
+import io.ionic.backgroundrunner.plugin.BackgroundRunnerPlugin;
 
 public class MainActivity extends BridgeActivity {
     @Override
