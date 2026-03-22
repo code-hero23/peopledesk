@@ -60,6 +60,12 @@ public class CallLogPlugin extends Plugin {
                             sim.put("simSlot", String.valueOf(si.getSimSlotIndex() + 1)); // 1-based for users
                             sim.put("simLabel", si.getCarrierName().toString());
                             sim.put("displayName", si.getDisplayName().toString());
+                            // Try to get phone number if available (often requires extra perms or not set)
+                            String number = "";
+                            try {
+                                number = si.getNumber();
+                            } catch (Exception e) {}
+                            sim.put("number", number != null ? number : "");
                             simList.put(sim);
                         }
                     }

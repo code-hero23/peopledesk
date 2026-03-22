@@ -80,11 +80,21 @@ const CRECallReports = () => {
             if (CallLogPlugin.getSimInfo) {
                 const simInfo = await CallLogPlugin.getSimInfo();
                 if (simInfo.sims && simInfo.sims.length > 0) {
-                    simInfo.sims.forEach(sim => {
+                    const sims = simInfo.sims;
+                    sims.forEach(sim => {
                         const slot = String(sim.simSlot);
                         const subId = String(sim.simId);
-                        labels[slot] = sim.simLabel || sim.displayName;
-                        labels[subId] = sim.simLabel || sim.displayName;
+                        
+                        let label = sim.simLabel || sim.displayName || `SIM ${slot}`;
+                        
+                        // Check for duplicates
+                        const isIdentical = sims.some(s => String(s.simSlot) !== slot && (s.simLabel === sim.simLabel || s.displayName === sim.displayName));
+                        if (isIdentical) {
+                            label = `${label} (${slot === "1" ? "P" : "S"})`;
+                        }
+
+                        labels[slot] = label;
+                        labels[subId] = label;
                         mapping[subId] = slot;
                         mapping[slot] = subId;
                     });

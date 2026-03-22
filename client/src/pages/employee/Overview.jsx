@@ -102,12 +102,22 @@ const Overview = () => {
                 if (CallLogPlugin.getSimInfo) {
                     const simInfo = await CallLogPlugin.getSimInfo();
                     if (simInfo.sims && simInfo.sims.length > 0) {
-                        simInfo.sims.forEach(sim => {
+                        const sims = simInfo.sims;
+                        sims.forEach(sim => {
                             const slot = String(sim.simSlot);
-                            labels[slot] = sim.simLabel || sim.displayName;
+                            const subId = String(sim.simId);
+                            
+                            let label = sim.simLabel || sim.displayName || `SIM ${slot}`;
+                            
+                            // Check for identical labels in other slots to distinguish
+                            const isIdentical = sims.some(s => String(s.simSlot) !== slot && (s.simLabel === sim.simLabel || s.displayName === sim.displayName));
+                            if (isIdentical) {
+                                label = `${label} (${slot === "1" ? "P" : "S"})`;
+                            }
+                            
+                            labels[slot] = label;
                             slots.push(slot);
-                            // Also map the subscription ID just in case
-                            labels[String(sim.simId)] = sim.simLabel || sim.displayName;
+                            labels[subId] = label;
                         });
                     }
                 }
@@ -957,8 +967,12 @@ const Overview = () => {
                                                             <Smartphone size={24} />
                                                         </div>
                                                         <div className="text-left">
-                                                            <p className="font-black text-slate-900 dark:text-white">{simLabels[simId] || `SIM Slot ${simId}`}</p>
-                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">Available Device Slot</p>
+                                                            <p className="font-black text-slate-900 dark:text-white">
+                                                                {simLabels[simId] || `SIM Slot ${simId}`}
+                                                            </p>
+                                                            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
+                                                                {simLabels[simId] ? `Slot ${simId}` : "Available Device Slot"}
+                                                            </p>
                                                         </div>
                                                     </div>
                                                     <ChevronRight size={20} className="text-slate-300 group-hover:translate-x-1 transition-all" />
