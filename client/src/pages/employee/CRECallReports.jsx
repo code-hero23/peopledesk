@@ -2,7 +2,6 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyWorkLogs, getMyCallLogs, syncCallLogs } from '../../features/employee/employeeSlice';
 import { Capacitor } from '@capacitor/core';
-import { BackgroundRunner } from '@capacitor/background-runner';
 import { Preferences } from '@capacitor/preferences';
 import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
@@ -262,27 +261,7 @@ const CRECallReports = () => {
         }
     };
 
-    const testBackgroundSync = async () => {
-        if (!Capacitor.isNativePlatform()) {
-            toast.error("Background Runner is only available on native Android/iOS.");
-            return;
-        }
 
-        try {
-            toast.info("Dispatching test event to Background Engine...");
-            const result = await BackgroundRunner.dispatchEvent({
-                label: 'com.peopledesk.app.runner',
-                event: 'dailyCallLogSync',
-                details: {}
-            });
-            console.log("Background Hub Result:", result);
-            toast.success("Event dispatched! Check your server data in a few moments.");
-        } catch (error) {
-            console.error("Native Dispatch Error:", error);
-            const errMsg = error.message || String(error);
-            toast.error(`Sync Trigger Error: ${errMsg}`, { autoClose: 5000 });
-        }
-    };
 
     // helper to get IST date string consistently
     const toIstDateString = (dateInput) => {
@@ -531,11 +510,11 @@ const CRECallReports = () => {
                                 Unique
                             </button>
                             <button
-                                onClick={testBackgroundSync}
-                                className="px-4 py-3 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
-                                title="Dispatch dailyCallLogSync"
+                                onClick={() => setIsFilterModalOpen(true)}
+                                className={`p-2 rounded-xl transition-all duration-300 ${isFilterModalOpen ? 'bg-primary/20 text-primary' : 'bg-surface-light dark:bg-dark-surface-light text-text-muted hover:bg-surface-dark dark:hover:bg-dark-surface-dark'}`}
+                                title="Filter Calls"
                             >
-                                <Zap size={14} /> Dispatch
+                                <Filter size={20} />
                             </button>
                         </div>
                     </div>

@@ -10,13 +10,5 @@
     ]
   },
   "plugins": {
-    "BackgroundRunner": {
-      "label": "com.peopledesk.app.runner",
-      "src": "runner.js",
-      "event": "dailyCallLogSync",
-      "repeat": true,
-      "interval": 10,
-      "autoStart": true
-    }
   }
 }
