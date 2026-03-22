@@ -77,8 +77,8 @@ const CRECallReports = () => {
             const mapping = {};
 
             // 1. Precise Discovery via SubscriptionManager
-            if (CallLogPlugin.getSimInfo) {
-                const simInfo = await CallLogPlugin.getSimInfo();
+            if (CallLog.getSimInfo) {
+                const simInfo = await CallLog.getSimInfo();
                 if (simInfo.sims && simInfo.sims.length > 0) {
                     const sims = simInfo.sims;
                     sims.forEach(sim => {
@@ -103,7 +103,7 @@ const CRECallReports = () => {
 
             // 2. Fallback via Call Logs (If manager found nothing or just one)
             try {
-                const result = await CallLogPlugin.getCallLogs();
+                const result = await CallLog.getCallLogs();
                 if (result.logs && result.logs.length > 0) {
                     result.logs.forEach(log => {
                         const id = String(log.simSlot || log.simId);

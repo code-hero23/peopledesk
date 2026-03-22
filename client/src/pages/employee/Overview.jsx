@@ -29,6 +29,116 @@ import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
 
+// Helper: DataURL to Blob
+function dataURLtoBlob(dataurl) {
+    if (!dataurl || typeof dataurl !== 'string' || !dataurl.includes(',')) return null;
+    try {
+        const arr = dataurl.split(',');
+        const match = arr[0].match(/:(.*?);/);
+        if (!match) return null;
+        const mime = match[1];
+        const bstr = atob(arr[1]);
+        let n = bstr.length;
+        const u8arr = new Uint8Array(n);
+        while (n--) {
+            u8arr[n] = bstr.charCodeAt(n);
+        }
+        return new Blob([u8arr], { type: mime });
+    } catch (e) {
+        console.error("Error converting dataURL to blob:", e);
+        return null;
+    }
+}
+
+// Sub-component: Clock
+const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
+    const [currentTime, setCurrentTime] = useState(new Date());
+
+    useEffect(() => {
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
+    }, []);
+
+    const calculateProgress = () => {
+        if (!isCheckedIn || !attendance?.date) return 0;
+        const start = new Date(attendance.date);
+        const diff = (currentTime - start) / (1000 * 60 * 60); // hours
+        return Math.min((diff / 8) * 100, 100); // Progress towards 8h shift
+    };
+
+    const progress = calculateProgress();
+
+    return (
+        <div className="relative w-80 h-44 xl:w-96 xl:h-52 rounded-[2.5rem] overflow-hidden shadow-2xl group transition-all duration-700 hover:scale-[1.02]">
+            <div className="absolute inset-0 bg-[#00607a] transition-colors duration-1000">
+                <div className="absolute inset-0 opacity-80">
+                    <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-[#004e63] transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 left-1/4 w-1/2 h-full bg-[#00708f] transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 left-3/4 w-1/2 h-full bg-[#018ba1] transform -skew-x-12 transition-all duration-1000" />
+                </div>
+                {isCheckedIn && !activeBreak && (
+                    <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${progress}%` }}
+                        className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent pointer-events-none z-10"
+                    />
+                )}
+            </div>
+            <AnimatePresence mode="wait">
+                {activeBreak ? (
+                    <motion.div key="break-animation" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.5, ease: "anticipate" }} className="absolute inset-0 z-30">
+                        <img src="/break.gif" alt="On Break" className="w-full h-full object-contain bg-slate-950" />
+                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-black/40 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/10">
+                                <Coffee size={14} className="text-amber-400 animate-pulse" />
+                                <span className="text-[10px] font-black text-white uppercase tracking-widest">RELAXING: {activeBreak.breakType}</span>
+                            </motion.div>
+                        </div>
+                    </motion.div>
+                ) : (
+                    <motion.div key="clock-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-20 h-full p-8 flex flex-col justify-between text-white">
+                        <div className="flex justify-between items-start">
+                            <div>
+                                <motion.h1 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-6xl xl:text-7xl font-black tracking-tighter drop-shadow-2xl select-none">
+                                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                                </motion.h1>
+                                <p className="text-sm xl:text-base font-bold text-white/80 mt-1 drop-shadow-md">{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                            </div>
+                            <div className="flex flex-col items-end">
+                                {isCheckedIn ? (
+                                    <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 p-2 rounded-2xl flex items-center gap-2 group/status">
+                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                                    </div>
+                                ) : (
+                                    <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex items-center gap-2">
+                                        <Clock size={16} className="text-white/60" />
+                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Idle</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                        <div className="flex justify-between items-end">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10"><MapPinned size={18} className="text-white/80" /></div>
+                                <div className="text-left">
+                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 leading-none mb-1">Location</p>
+                                    <p className="text-xs font-bold">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site Visit' : 'Main Office'}</p>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+                                <TrendingUp size={14} className="text-emerald-400" />
+                                <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}% Done` : '--'}</span>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+            <div className="absolute inset-0 pointer-events-none border border-white/10 rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.05)]" />
+        </div>
+    );
+};
+
 const Overview = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -63,11 +173,19 @@ const Overview = () => {
         }
     }, [user, navigate]);
 
+    const getDeviceType = () => {
+        const ua = navigator.userAgent;
+        if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return "tablet";
+        if (/Mobile|iP(hone|od)|Android|BlackBerry|IEMobile|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(ua)) return "mobile";
+        return "desktop";
+    };
+
     useEffect(() => {
         const deviceType = getDeviceType();
         if (deviceType === 'mobile' || user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
             setIsSiteLogin(true);
         }
+    }, [user]);
 
     const discoverSims = async () => {
         if (isDiscoveringSims) return;
@@ -143,87 +261,61 @@ const Overview = () => {
         }
     };
 
-    useEffect(() => {
-        const checkSimPreference = async () => {
-            if (!['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) return;
-            
+    const checkSimPreference = async () => {
+        if (!['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) return;
+        try {
+            const { Capacitor } = await import('@capacitor/core');
+            if (!Capacitor.isNativePlatform()) return;
+            const { Preferences } = await import('@capacitor/preferences');
+            const { value } = await Preferences.get({ key: 'cre_official_sim' });
+            if (!value || value === "0") {
+                setShowMandatorySimModal(true);
+                discoverSims();
+                setTimeout(() => discoverSims(), 3000);
+            }
+        } catch (e) { console.error("Error checking SIM preference", e); }
+    };
+
+    const performFallbackSync = async () => {
+        if (['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) {
             try {
                 const { Capacitor } = await import('@capacitor/core');
-                if (!Capacitor.isNativePlatform()) return;
-
                 const { Preferences } = await import('@capacitor/preferences');
-                const { value } = await Preferences.get({ key: 'cre_official_sim' });
-                
-                if (!value || value === "0") {
-                    setShowMandatorySimModal(true);
-                    discoverSims();
-                    // Retry discovery after a delay to give permission time to settle
-                    setTimeout(() => discoverSims(), 3000);
-                }
-            } catch (e) {
-                console.error("Error checking SIM preference", e);
-            }
-        };
+                if (!Capacitor.isNativePlatform()) return;
+                const CallLogPlugin = Capacitor.Plugins.CallLog;
+                if (!CallLogPlugin || !Preferences) return;
 
+                const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
+                if (!officialSim || officialSim === "0") return;
+
+                const logsResult = await CallLogPlugin.getCallLogs();
+                if (!logsResult?.logs || logsResult.logs.length === 0) return;
+
+                const filteredLogs = logsResult.logs.filter(log => {
+                    const logSlot = String(log.simSlot || log.simId || "");
+                    return !logSlot || logSlot === "null" || logSlot === officialSim || logSlot.includes(officialSim);
+                });
+
+                if (filteredLogs.length === 0) return;
+
+                const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/worklogs/sync-calls';
+                await fetch(API_URL, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${user.token}`
+                    },
+                    body: JSON.stringify({ logs: filteredLogs, syncDate: new Date().toISOString(), simFilter: officialSim })
+                });
+            } catch (e) { console.error("Fallback sync failed", e); }
+        }
+    };
+
+    useEffect(() => {
         if (user) {
             checkSimPreference();
+            performFallbackSync();
         }
-    }, [user]);
-
-        const performFallbackSync = async () => {
-            if (['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) {
-                try {
-                    const { Capacitor } = await import('@capacitor/core');
-                    if (!Capacitor.isNativePlatform()) return;
-
-                    const CallLogPlugin = Capacitor.Plugins.CallLog;
-                    const { Preferences } = await import('@capacitor/preferences');
-                    if (!CallLogPlugin || !Preferences) return;
-
-                    // Retrieve Work SIM Preference
-                    const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
-                    
-                    // NEW: Skip sync if no official SIM is selected
-                    if (!officialSim || officialSim === "0") {
-                        console.log("Fallback sync skipped: No official SIM selected.");
-                        return;
-                    }
-
-                    const targetSlot = officialSim;
-                    const logsResult = await CallLogPlugin.getCallLogs();
-                    if (!logsResult?.logs || logsResult.logs.length === 0) return;
-
-                    // Filter logs client-side
-                    const filteredLogs = logsResult.logs.filter(log => {
-                        const logSlot = String(log.simSlot || log.simId || "");
-                        if (!logSlot || logSlot === "null" || logSlot === "undefined") return true;
-                        return logSlot === targetSlot || logSlot.includes(targetSlot);
-                    });
-
-                    if (filteredLogs.length === 0) return;
-
-                    const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/worklogs/sync-calls';
-                    await fetch(API_URL, {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${user.token}`
-                        },
-                        body: JSON.stringify({
-                            logs: filteredLogs,
-                            syncDate: new Date().toISOString(),
-                            simFilter: targetSlot
-                        })
-                    });
-                    console.log(`Fallback sync (${filteredLogs.length} logs) completed for SIM ${targetSlot}`);
-                } catch (e) {
-                    console.error("Fallback native sync failed", e);
-                }
-            }
-        };
-
-        checkSimPreference();
-        performFallbackSync();
     }, [user]);
 
     const fetchLocation = useCallback(() => {
@@ -468,12 +560,7 @@ const Overview = () => {
         };
     }, [showCheckInModal, fetchLocation]);
 
-    const getDeviceType = () => {
-        const ua = navigator.userAgent;
-        if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua)) return 'tablet';
-        if (/Mobile|android|iphone|ipod|blackberry|benq|palm|windows ce|x11/i.test(ua)) return 'mobile';
-        return 'desktop';
-    };
+
 
     const handleMarkAttendance = (isSiteLoginAction = false) => {
         setConfirmationConfig({
@@ -1243,159 +1330,6 @@ const Overview = () => {
                 message={confirmationConfig.message}
                 type={confirmationConfig.type}
             />
-        </div>
-    );
-};
-
-function dataURLtoBlob(dataurl) {
-    if (!dataurl || typeof dataurl !== 'string' || !dataurl.includes(',')) return null;
-    try {
-        const arr = dataurl.split(',');
-        const match = arr[0].match(/:(.*?);/);
-        if (!match) return null;
-        const mime = match[1];
-        const bstr = atob(arr[1]);
-        let n = bstr.length;
-        const u8arr = new Uint8Array(n);
-        while (n--) {
-            u8arr[n] = bstr.charCodeAt(n);
-        }
-        return new Blob([u8arr], { type: mime });
-    } catch (e) {
-        console.error("Error converting dataURL to blob:", e);
-        return null;
-    }
-}
-
-const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
-    const [currentTime, setCurrentTime] = useState(new Date());
-
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
-
-    const calculateProgress = () => {
-        if (!isCheckedIn || !attendance?.date) return 0;
-        const start = new Date(attendance.date);
-        const diff = (currentTime - start) / (1000 * 60 * 60); // hours
-        return Math.min((diff / 8) * 100, 100); // Progress towards 8h shift
-    };
-
-    const progress = calculateProgress();
-
-    return (
-        <div className="relative w-80 h-44 xl:w-96 xl:h-52 rounded-[2.5rem] overflow-hidden shadow-2xl group transition-all duration-700 hover:scale-[1.02]">
-            {/* Layered Diagonal Background Concept */}
-            <div className="absolute inset-0 bg-[#00607a] transition-colors duration-1000">
-                {/* Diagonal Stripes */}
-                <div className="absolute inset-0 opacity-80">
-                    <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-[#004e63] transform -skew-x-12 transition-all duration-1000" />
-                    <div className="absolute top-0 left-1/4 w-1/2 h-full bg-[#00708f] transform -skew-x-12 transition-all duration-1000" />
-                    <div className="absolute top-0 left-3/4 w-1/2 h-full bg-[#018ba1] transform -skew-x-12 transition-all duration-1000" />
-                </div>
-                
-                {/* Progress Overlay - Subtle gradient fill from left */}
-                {isCheckedIn && !activeBreak && (
-                    <motion.div 
-                        initial={{ width: 0 }}
-                        animate={{ width: `${progress}%` }}
-                        className="absolute inset-0 bg-gradient-to-r from-emerald-500/20 to-transparent pointer-events-none z-10"
-                    />
-                )}
-            </div>
-
-            {/* Break Animation Overlay */}
-            <AnimatePresence mode="wait">
-                {activeBreak ? (
-                    <motion.div
-                        key="break-animation"
-                        initial={{ opacity: 0, scale: 1.1 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.9 }}
-                        transition={{ duration: 0.5, ease: "anticipate" }}
-                        className="absolute inset-0 z-30"
-                    >
-                        <img 
-                            src="/break.gif" 
-                            alt="On Break" 
-                            className="w-full h-full object-contain bg-slate-950"
-                        />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
-                            <motion.div
-                                initial={{ y: 20, opacity: 0 }}
-                                animate={{ y: 0, opacity: 1 }}
-                                transition={{ delay: 0.3 }}
-                                className="flex items-center gap-2 bg-black/40 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/10"
-                            >
-                                <Coffee size={14} className="text-amber-400 animate-pulse" />
-                                <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                                    RELAXING: {activeBreak.breakType}
-                                </span>
-                            </motion.div>
-                        </div>
-                    </motion.div>
-                ) : (
-                    <motion.div
-                        key="clock-content"
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        className="relative z-20 h-full p-8 flex flex-col justify-between text-white"
-                    >
-                        <div className="flex justify-between items-start">
-                            <div>
-                                <motion.h1 
-                                    initial={{ y: 20, opacity: 0 }}
-                                    animate={{ y: 0, opacity: 1 }}
-                                    className="text-6xl xl:text-7xl font-black tracking-tighter drop-shadow-2xl select-none"
-                                >
-                                    {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-                                </motion.h1>
-                                <p className="text-sm xl:text-base font-bold text-white/80 mt-1 drop-shadow-md">
-                                    {currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
-                                </p>
-                            </div>
-
-                            {/* Status Icon/Info */}
-                            <div className="flex flex-col items-end">
-                                {isCheckedIn ? (
-                                    <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 p-2 rounded-2xl flex items-center gap-2 group/status">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
-                                    </div>
-                                ) : (
-                                    <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex items-center gap-2">
-                                        <Clock size={16} className="text-white/60" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Idle</span>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
-                        <div className="flex justify-between items-end">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10">
-                                    <MapPinned size={18} className="text-white/80" />
-                                </div>
-                                <div className="text-left">
-                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 leading-none mb-1">Location</p>
-                                    <p className="text-xs font-bold">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site Visit' : 'Main Office'}</p>
-                                </div>
-                            </div>
-
-                            {/* Temperature/Secondary Stat Placeholder (Visual Polish) */}
-                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                                <TrendingUp size={14} className="text-emerald-400" />
-                                <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}% Done` : '--'}</span>
-                            </div>
-                        </div>
-                    </motion.div>
-                )}
-            </AnimatePresence>
-
-            {/* Glassmorphism Inner Shadow */}
-            <div className="absolute inset-0 pointer-events-none border border-white/10 rounded-[2.5rem] shadow-[inset_0_0_80px_rgba(255,255,255,0.05)]" />
         </div>
     );
 };
