@@ -39,6 +39,8 @@ const WalkinHub = () => {
     const [filterStatus, setFilterStatus] = useState('');
     const [sortField, setSortField] = useState('dateOfVisit'); // default sort
     const [sortOrder, setSortOrder] = useState('desc'); // default order
+    const [fromDate, setFromDate] = useState('');
+    const [toDate, setToDate] = useState('');
 
     const [formData, setFormData] = useState({
         faTeam: '',
@@ -127,11 +129,18 @@ const WalkinHub = () => {
     };
 
     const filteredEntries = entries.filter(entry => {
+        const entryDate = new Date(entry.dateOfVisit);
+        entryDate.setHours(0, 0, 0, 0);
+
         const matchesSearch = entry.clientName.toLowerCase().includes(searchTerm.toLowerCase()) || 
                              (entry.project && entry.project.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesBH = filterBH === '' || entry.bhId.toString() === filterBH;
         const matchesStatus = filterStatus === '' || entry.visitStatus === filterStatus;
-        return matchesSearch && matchesBH && matchesStatus;
+        
+        const matchesFrom = !fromDate || entryDate >= new Date(fromDate);
+        const matchesTo = !toDate || entryDate <= new Date(toDate);
+
+        return matchesSearch && matchesBH && matchesStatus && matchesFrom && matchesTo;
     }).sort((a, b) => {
         let valA = a[sortField];
         let valB = b[sortField];
@@ -156,6 +165,25 @@ const WalkinHub = () => {
         }
     };
 
+    // Calculate Stats for Admin
+    const getStats = () => {
+        const now = new Date();
+        now.setHours(0, 0, 0, 0);
+
+        const last7Days = new Date(now); last7Days.setDate(now.getDate() - 7);
+        const last15Days = new Date(now); last15Days.setDate(now.getDate() - 15);
+        const last30Days = new Date(now); last30Days.setDate(now.getDate() - 30);
+
+        return {
+            total: entries.length,
+            last7: entries.filter(e => new Date(e.dateOfVisit) >= last7Days).length,
+            last15: entries.filter(e => new Date(e.dateOfVisit) >= last15Days).length,
+            last30: entries.filter(e => new Date(e.dateOfVisit) >= last30Days).length
+        };
+    };
+
+    const stats = getStats();
+
     return (
         <div className="max-w-7xl mx-auto space-y-8 pb-20 px-4 animate-in fade-in duration-500">
             {/* Header section with modern glassmorphism */}
@@ -167,76 +195,161 @@ const WalkinHub = () => {
                     <h1 className="text-4xl font-black text-slate-800 tracking-tight">Walkin Hub</h1>
                     <p className="text-slate-500 font-bold">Manage client visits and follow-ups in one place.</p>
                 </div>
-                <button
-                    onClick={() => { setEditingEntry(null); clearForm(); setIsFormOpen(true); }}
-                    className="flex items-center justify-center gap-3 bg-slate-900 border-b-4 border-slate-700 hover:bg-black hover:border-slate-800 text-white px-8 py-4 rounded-[1.5rem] font-bold shadow-xl transition-all active:scale-95 active:border-b-0 active:translate-y-1 group"
-                >
-                    <Plus size={20} className="group-hover:rotate-90 transition-transform" /> New Visit Entry
-                </button>
-            </div>
-
-            {/* Filters Bar */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
-                <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input
-                        type="text"
-                        placeholder="Search client or project..."
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm transition-all"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
-                <div className="relative">
-                    <UserCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <select
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
-                        value={filterBH}
-                        onChange={(e) => setFilterBH(e.target.value)}
+                <div className="flex gap-4">
+                    <button
+                        onClick={() => { setEditingEntry(null); clearForm(); setIsFormOpen(true); }}
+                        className="flex items-center justify-center gap-3 bg-slate-900 border-b-4 border-slate-700 hover:bg-black hover:border-slate-800 text-white px-8 py-4 rounded-[1.5rem] font-bold shadow-xl transition-all active:scale-95 active:border-b-0 active:translate-y-1 group"
                     >
-                        <option value="">All Business Heads</option>
-                        {bhs.map(bh => (
-                            <option key={bh.id} value={bh.id}>{bh.name}</option>
-                        ))}
-                    </select>
-                </div>
-                <div className="relative">
-                    <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <select
-                        className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
-                        value={filterStatus}
-                        onChange={(e) => setFilterStatus(e.target.value)}
-                    >
-                        <option value="">All Statuses</option>
-                        <option value="PENDING">Pending</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="RESCHEDULED">Rescheduled</option>
-                        <option value="CANCELLED">Cancelled</option>
-                    </select>
-                </div>
-                <div className="relative flex gap-2">
-                    <div className="relative flex-1">
-                        <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                        <select
-                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
-                            value={sortField}
-                            onChange={(e) => setSortField(e.target.value)}
-                        >
-                            <option value="dateOfVisit">Sort: Date</option>
-                            <option value="visitStatus">Sort: Status</option>
-                            <option value="clientName">Sort: Name</option>
-                        </select>
-                    </div>
-                    <button 
-                        onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                        className="p-3 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 transition-colors text-slate-600"
-                        title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
-                    >
-                        {sortOrder === 'asc' ? <ArrowUp size={18} /> : <ArrowDown size={18} />}
+                        <Plus size={20} className="group-hover:rotate-90 transition-transform" /> New Entry
                     </button>
                 </div>
-                <div className="flex items-center justify-center bg-slate-50 rounded-2xl px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    Showing {filteredEntries.length} entries
+            </div>
+
+            {/* Admin Stats Grid */}
+            {user.role === 'ADMIN' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-blue-50 rounded-2xl text-blue-600">
+                                <Users size={24} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">{stats.total}</h3>
+                        <p className="text-slate-400 text-xs font-bold mt-1">Total Walkins Registered</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-emerald-50 rounded-2xl text-emerald-600">
+                                <Calendar size={24} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last 7 Days</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">{stats.last7}</h3>
+                        <p className="text-slate-400 text-xs font-bold mt-1">Recent Weekly Activity</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-amber-50 rounded-2xl text-amber-600">
+                                <Clock size={24} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Last 15 Days</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">{stats.last15}</h3>
+                        <p className="text-slate-400 text-xs font-bold mt-1">Bi-weekly Engagement</p>
+                    </div>
+                    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 bg-rose-50 rounded-2xl text-rose-600">
+                                <LayoutGrid size={24} />
+                            </div>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Monthly</span>
+                        </div>
+                        <h3 className="text-3xl font-black text-slate-800 tracking-tight">{stats.last30}</h3>
+                        <p className="text-slate-400 text-xs font-bold mt-1">30-day Volume</p>
+                    </div>
+                </div>
+            )}
+
+            {/* Filters Bar */}
+            <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4 bg-white p-6 rounded-[2rem] shadow-sm border border-slate-100">
+                    <div className="relative">
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input
+                            type="text"
+                            placeholder="Search client or project..."
+                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm transition-all"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    <div className="relative">
+                        <UserCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <select
+                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
+                            value={filterBH}
+                            onChange={(e) => setFilterBH(e.target.value)}
+                        >
+                            <option value="">All Business Heads</option>
+                            {bhs.map(bh => (
+                                <option key={bh.id} value={bh.id}>{bh.name}</option>
+                            ))}
+                        </select>
+                    </div>
+                    <div className="relative">
+                        <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <select
+                            className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                        >
+                            <option value="">All Statuses</option>
+                            <option value="PENDING">Pending</option>
+                            <option value="COMPLETED">Completed</option>
+                            <option value="RESCHEDULED">Rescheduled</option>
+                            <option value="CANCELLED">Cancelled</option>
+                        </select>
+                    </div>
+                    <div className="relative flex gap-2">
+                        <div className="relative flex-1">
+                            <ArrowUpDown className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                            <select
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
+                                value={sortField}
+                                onChange={(e) => setSortField(e.target.value)}
+                            >
+                                <option value="dateOfVisit">Sort: Date</option>
+                                <option value="visitStatus">Sort: Status</option>
+                                <option value="clientName">Sort: Name</option>
+                            </select>
+                        </div>
+                        <button 
+                            onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                            className="p-3 bg-slate-50 border border-slate-100 rounded-2xl hover:bg-slate-100 transition-colors text-slate-600"
+                            title={sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                        >
+                            {sortOrder === 'asc' ? <ArrowUp size={18} /> : <ArrowDown size={18} />}
+                        </button>
+                    </div>
+                    <div className="flex items-center justify-center bg-slate-50 rounded-2xl px-4 py-3 text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                        Showing {filteredEntries.length} entries
+                    </div>
+                </div>
+
+                {/* Date Filter Row */}
+                <div className="flex flex-col sm:flex-row gap-4 items-center bg-white p-4 rounded-[1.5rem] border border-slate-100 shadow-sm">
+                    <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 rounded-xl text-blue-700 text-xs font-black uppercase tracking-widest">
+                        <Filter size={14} /> Date Filter
+                    </div>
+                    <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-widest">From:</span>
+                            <input
+                                type="date"
+                                className="w-full pl-16 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
+                                value={fromDate}
+                                onChange={(e) => setFromDate(e.target.value)}
+                            />
+                        </div>
+                        <div className="relative">
+                            <span className="absolute left-4 top-1/2 -translate-y-1/2 text-[10px] font-black text-slate-400 uppercase tracking-widest">To:</span>
+                            <input
+                                type="date"
+                                className="w-full pl-12 pr-4 py-3 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none cursor-pointer"
+                                value={toDate}
+                                onChange={(e) => setToDate(e.target.value)}
+                            />
+                        </div>
+                    </div>
+                    {(fromDate || toDate) && (
+                        <button 
+                            onClick={() => { setFromDate(''); setToDate(''); }}
+                            className="px-4 py-3 bg-rose-50 text-rose-600 rounded-2xl font-bold text-xs hover:bg-rose-100 transition-colors"
+                        >
+                            Clear Date
+                        </button>
+                    )}
                 </div>
             </div>
 
