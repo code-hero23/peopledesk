@@ -35,12 +35,15 @@ public class CallLogSyncWorker extends Worker {
         
         try {
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            String apiUrl = prefs.getString("apiUrl", null);
-            String officialSim = prefs.getString("cre_official_sim", null);
-            String simLabelsJson = prefs.getString("sim_labels", "{}");
+            String authToken = prefs.getString("authToken", null);
 
             if (apiUrl == null) {
                 Log.e(TAG, "Sync failed: apiUrl not found in Preferences");
+                return Result.failure();
+            }
+
+            if (authToken == null) {
+                Log.e(TAG, "Sync failed: authToken not found in Preferences");
                 return Result.failure();
             }
 
@@ -59,7 +62,7 @@ public class CallLogSyncWorker extends Worker {
             }
 
             // Send to server
-            boolean success = sendLogs(apiUrl, logs);
+            boolean success = sendLogs(apiUrl, authToken, logs);
             if (success) {
                 Log.d(TAG, "Successfully synced " + logs.length() + " logs");
                 return Result.success();
@@ -122,8 +125,12 @@ public class CallLogSyncWorker extends Worker {
                         simLabel = labelMap.get(simId);
                     }
 
-                    // MATCHING LOGIC (Must match officialSim label)
-                    if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) {
+                    // MATCHING LOGIC (Match officialSim against ID or Label)
+                    boolean matches = false;
+                    if (simId != null && simId.equals(officialSim)) matches = true;
+                    if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true;
+
+                    if (matches) {
                         JSONObject log = new JSONObject();
                         log.put("number", cursor.getString(numberIndex));
                         log.put("name", cursor.getString(nameIndex));
@@ -154,7 +161,7 @@ public class CallLogSyncWorker extends Worker {
         }
     }
 
-    private boolean sendLogs(String baseUrl, JSONArray logs) {
+    private boolean sendLogs(String baseUrl, String authToken, JSONArray logs) {
         try {
             String fullUrl = baseUrl;
             if (!fullUrl.endsWith("/")) fullUrl += "/";
@@ -164,6 +171,7 @@ public class CallLogSyncWorker extends Worker {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("PUT");
             conn.setRequestProperty("Content-Type", "application/json");
+            conn.setRequestProperty("Authorization", "Bearer " + authToken);
             conn.setDoOutput(true);
 
             JSONObject payload = new JSONObject();

@@ -268,9 +268,13 @@ const Overview = () => {
             if (!Capacitor.isNativePlatform()) return;
             const { Preferences } = await import('@capacitor/preferences');
             
-            // Save API URL for background runner
+            // Save API URL and Auth Token for background sync
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
             await Preferences.set({ key: 'apiUrl', value: baseUrl });
+            
+            if (user?.token) {
+                await Preferences.set({ key: 'authToken', value: user.token });
+            }
 
             const { value } = await Preferences.get({ key: 'cre_official_sim' });
             if (!value || value === "0") {
