@@ -19,10 +19,20 @@ class WhatsAppService {
      */
     sanitizePhoneNumber(phone) {
         if (!phone) return '';
+        
         // Remove all non-digit characters
         let sanitized = String(phone).replace(/\D/g, '');
-        // Note: We assume the number already has a country code or is in a format the user provides.
-        // For Meta API, it must NOT have the '+' prefix.
+        
+        // Strip leading zeros if present
+        sanitized = sanitized.replace(/^0+/, '');
+        
+        // If it's a 10-digit number, assume India (91) - common for this application
+        if (sanitized.length === 10) {
+            sanitized = '91' + sanitized;
+            console.log(`WhatsApp: Prefixed 10-digit number with 91: ${sanitized}`);
+        }
+        
+        // Meta API must NOT have the '+' prefix, which we've already stripped with \D
         return sanitized;
     }
 
@@ -78,7 +88,7 @@ class WhatsAppService {
                 }
             });
 
-            console.log(`WhatsApp notification sent to ${sanitizedTo}: ${templateName}`);
+            console.log(`WhatsApp: Template "${templateName}" enqueued for ${sanitizedTo}. Message ID: ${response.data.messages?.[0]?.id}`);
             return { success: true, data: response.data };
         } catch (error) {
             const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
