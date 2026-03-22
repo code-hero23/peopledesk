@@ -100,6 +100,20 @@ const CRECallReports = () => {
                     });
                 }
             }
+
+            // 2. Fallback via Call Logs (If manager found nothing or just one)
+            try {
+                const result = await CallLogPlugin.getCallLogs();
+                if (result.logs && result.logs.length > 0) {
+                    result.logs.forEach(log => {
+                        const id = String(log.simSlot || log.simId);
+                        if (id && log.simLabel && !labels[id]) {
+                            labels[id] = log.simLabel;
+                        }
+                    });
+                }
+            } catch (err) {}
+
             setSimLabels(labels);
             setSimMap(mapping);
             if (Capacitor.isNativePlatform()) {
@@ -318,7 +332,9 @@ const CRECallReports = () => {
 
     // Merge persisted labels with any found in current call set
     const activeSimLabels = (allSyncedCalls || []).reduce((acc, curr) => {
-        if (curr.simId && curr.simLabel) acc[curr.simId] = curr.simLabel;
+        const id = String(curr.simId || "");
+        const label = curr.simLabel;
+        if (id && label && !acc[id]) acc[id] = label; // Only add if NOT already discovered via plugin
         return acc;
     }, { ...simLabels });
 

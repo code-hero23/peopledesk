@@ -69,6 +69,81 @@ const Overview = () => {
             setIsSiteLogin(true);
         }
 
+    const discoverSims = async () => {
+        if (isDiscoveringSims) return;
+        setIsDiscoveringSims(true);
+        console.log("[Discovery] Starting SIM discovery...");
+        try {
+            const { Capacitor } = await import('@capacitor/core');
+            const CallLogPlugin = Capacitor.Plugins.CallLog;
+            if (!CallLogPlugin) return;
+
+            const labels = { ...simLabels };
+            const slots = [];
+
+            // 1. Precise Discovery via SubscriptionManager (New method)
+            if (CallLogPlugin.getSimInfo) {
+                try {
+                    const simInfo = await CallLogPlugin.getSimInfo();
+                    if (simInfo.sims && simInfo.sims.length > 0) {
+                        const sims = simInfo.sims;
+                        sims.forEach(sim => {
+                            const slot = String(sim.simSlot);
+                            const subId = String(sim.simId);
+                            
+                            let label = sim.simLabel || sim.displayName || `SIM Slot ${slot}`;
+                            
+                            // DISTINCTION: Append (P) or (S) if labels are identical (e.g. Jio/Jio)
+                            const isIdentical = sims.some(s => String(s.simSlot) !== slot && (s.simLabel === sim.simLabel || s.displayName === sim.displayName));
+                            if (isIdentical) {
+                                label = `${label} (${slot === "1" ? "P" : "S"})`;
+                            }
+                            
+                            labels[slot] = label;
+                            slots.push(slot);
+                            labels[subId] = label;
+                        });
+                    }
+                } catch (e) {
+                    console.log("[Discovery] getSimInfo failed likely due to perms", e);
+                }
+            }
+
+            // 2. Fallback/Complementary Discovery via Call Logs
+            try {
+                const result = await CallLogPlugin.getCallLogs();
+                if (result.logs && result.logs.length > 0) {
+                    result.logs.forEach(log => {
+                        const id = String(log.simSlot || log.simId);
+                        if (id && log.simLabel && !labels[id]) {
+                            labels[id] = log.simLabel;
+                        }
+                        if (id && !slots.includes(id) && id !== "null") {
+                            slots.push(id);
+                        }
+                    });
+                }
+            } catch (e) {
+                console.log("[Discovery] getCallLogs fallback failed", e);
+            }
+
+            if (slots.length > 0) {
+                setSimLabels(labels);
+                setAvailableSims([...new Set(slots)].sort());
+                const { Preferences } = await import('@capacitor/preferences');
+                await Preferences.set({ key: 'sim_labels', value: JSON.stringify(labels) });
+            } else {
+                // If still nothing, default to [1, 2] but keep trying
+                setAvailableSims(["1", "2"]);
+            }
+        } catch (e) {
+            console.error("[Discovery] Global failure", e);
+        } finally {
+            setIsDiscoveringSims(false);
+        }
+    };
+
+    useEffect(() => {
         const checkSimPreference = async () => {
             if (!['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) return;
             
@@ -82,68 +157,18 @@ const Overview = () => {
                 if (!value || value === "0") {
                     setShowMandatorySimModal(true);
                     discoverSims();
+                    // Retry discovery after a delay to give permission time to settle
+                    setTimeout(() => discoverSims(), 3000);
                 }
             } catch (e) {
                 console.error("Error checking SIM preference", e);
             }
         };
 
-        const discoverSims = async () => {
-            setIsDiscoveringSims(true);
-            try {
-                const { Capacitor } = await import('@capacitor/core');
-                const CallLogPlugin = Capacitor.Plugins.CallLog;
-                if (!CallLogPlugin) return;
-
-                const labels = {};
-                const slots = [];
-
-                // 1. Precise Discovery via SubscriptionManager (New method)
-                if (CallLogPlugin.getSimInfo) {
-                    const simInfo = await CallLogPlugin.getSimInfo();
-                    if (simInfo.sims && simInfo.sims.length > 0) {
-                        const sims = simInfo.sims;
-                        sims.forEach(sim => {
-                            const slot = String(sim.simSlot);
-                            const subId = String(sim.simId);
-                            
-                            let label = sim.simLabel || sim.displayName || `SIM ${slot}`;
-                            
-                            // Check for identical labels in other slots to distinguish
-                            const isIdentical = sims.some(s => String(s.simSlot) !== slot && (s.simLabel === sim.simLabel || s.displayName === sim.displayName));
-                            if (isIdentical) {
-                                label = `${label} (${slot === "1" ? "P" : "S"})`;
-                            }
-                            
-                            labels[slot] = label;
-                            slots.push(slot);
-                            labels[subId] = label;
-                        });
-                    }
-                }
-
-                // 2. Fallback/Complementary Discovery via Call Logs
-                const result = await CallLogPlugin.getCallLogs();
-                if (result.logs && result.logs.length > 0) {
-                    result.logs.forEach(log => {
-                        const id = String(log.simSlot || log.simId);
-                        if (id && log.simLabel && !labels[id]) {
-                            labels[id] = log.simLabel;
-                        }
-                        if (id && !slots.includes(id) && id !== "null") {
-                            slots.push(id);
-                        }
-                    });
-                }
-
-                setSimLabels(labels);
-                setAvailableSims([...new Set(slots)].sort());
-            } catch (e) {
-                console.error("SIM discovery failed", e);
-            } finally {
-                setIsDiscoveringSims(false);
-            }
-        };
+        if (user) {
+            checkSimPreference();
+        }
+    }, [user]);
 
         const performFallbackSync = async () => {
             if (['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) {
@@ -963,21 +988,40 @@ const Overview = () => {
                                                     className="w-full flex items-center justify-between p-6 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-3xl border border-slate-100 dark:border-slate-800 transition-all group"
                                                 >
                                                     <div className="flex items-center gap-4">
-                                                        <div className="p-3 bg-white dark:bg-slate-700 text-slate-400 dark:text-slate-500 rounded-2xl group-hover:text-indigo-600 dark:group-hover:text-primary transition-colors">
+                                                        <div className={`p-3 rounded-2xl transition-colors ${simLabels[simId] ? 'bg-indigo-50 text-indigo-600' : 'bg-slate-100 text-slate-400'} dark:bg-slate-700/50`}>
                                                             <Smartphone size={24} />
                                                         </div>
                                                         <div className="text-left">
                                                             <p className="font-black text-slate-900 dark:text-white">
-                                                                {simLabels[simId] || `SIM Slot ${simId}`}
+                                                                {simLabels[simId] || (isDiscoveringSims ? "Identifying..." : `SIM Slot ${simId}`)}
                                                             </p>
                                                             <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest">
-                                                                {simLabels[simId] ? `Slot ${simId}` : "Available Device Slot"}
+                                                                {simLabels[simId] ? `System Slot ${simId}` : "Waiting for Provider Name"}
                                                             </p>
                                                         </div>
                                                     </div>
                                                     <ChevronRight size={20} className="text-slate-300 group-hover:translate-x-1 transition-all" />
                                                 </motion.button>
                                             ))}
+
+                                            {/* Manual Scan Button */}
+                                            <button 
+                                                onClick={discoverSims}
+                                                disabled={isDiscoveringSims}
+                                                className="w-full mt-4 flex items-center justify-center gap-3 py-4 bg-slate-100 dark:bg-slate-800 rounded-2xl hover:bg-slate-200 dark:hover:bg-slate-700 transition-all group active:scale-95"
+                                            >
+                                                <RefreshCw size={16} className={`${isDiscoveringSims ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'} text-slate-500`} />
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-slate-600 dark:text-slate-400">
+                                                    {isDiscoveringSims ? "Identifying SIMs..." : "Scan for Provider Names"}
+                                                </span>
+                                            </button>
+                                            
+                                            {/* Tip for Dual Sims with same labels */}
+                                            {availableSims.length > 1 && new Set(availableSims.map(s => simLabels[s])).size === 1 && (
+                                                <p className="mt-3 text-[9px] font-bold text-slate-400 text-center uppercase tracking-tighter">
+                                                    Same provider for both? Try "Scan" or ensure Phone Permission is ON.
+                                                </p>
+                                            )}
                                         </>
                                     )}
                                 </div>

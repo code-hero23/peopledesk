@@ -44,35 +44,75 @@ public class CallLogPlugin extends Plugin {
 
     @PluginMethod
     public void getSimInfo(PluginCall call) {
+        if (getPermissionState("callLog") != PermissionState.GRANTED) {
+            requestPermissionForAlias("callLog", call, "simInfoCallback");
+            return;
+        }
+        fetchSimInfo(call);
+    }
+
+    @PermissionCallback
+    private void simInfoCallback(PluginCall call) {
+        if (getPermissionState("callLog") == PermissionState.GRANTED) {
+            fetchSimInfo(call);
+        } else {
+            call.reject("Permission required for SIM info");
+        }
+    }
+
+    private void fetchSimInfo(PluginCall call) {
+        if (getPermissionState("callLog") != PermissionState.GRANTED) {
+            Log.w("CallLogPlugin", "getSimInfo called without permissions");
+            call.reject("PERMISSION_DENIED");
+            return;
+        }
+        
         JSObject ret = new JSObject();
         JSArray simList = new JSArray();
 
         try {
+            Log.d("CallLogPlugin", "Fetching SIM info...");
             if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                 SubscriptionManager subscriptionManager = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                 if (subscriptionManager != null) {
                     List<SubscriptionInfo> activeSubscriptionInfoList = subscriptionManager.getActiveSubscriptionInfoList();
+                    Log.d("CallLogPlugin", "Active subscriptions found in system: " + (activeSubscriptionInfoList != null ? activeSubscriptionInfoList.size() : 0));
 
                     if (activeSubscriptionInfoList != null) {
                         for (SubscriptionInfo si : activeSubscriptionInfoList) {
                             JSObject sim = new JSObject();
                             sim.put("simId", String.valueOf(si.getSubscriptionId()));
-                            sim.put("simSlot", String.valueOf(si.getSimSlotIndex() + 1)); // 1-based for users
-                            sim.put("simLabel", si.getCarrierName().toString());
-                            sim.put("displayName", si.getDisplayName().toString());
-                            // Try to get phone number if available (often requires extra perms or not set)
+                            int slotIndex = si.getSimSlotIndex();
+                            sim.put("simSlot", String.valueOf(slotIndex + 1));
+                            
+                            // Important: CarrierName vs DisplayName vs Number
+                            String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : "";
+                            String display = si.getDisplayName() != null ? si.getDisplayName().toString() : "";
+                            
+                            Log.d("CallLogPlugin", "Discovery [Slot " + (slotIndex+1) + "] -> SubId: " + si.getSubscriptionId() + " | Carrier: " + carrier + " | Display: " + display);
+                            
+                            sim.put("simLabel", carrier);
+                            sim.put("displayName", display);
+                            
                             String number = "";
                             try {
                                 number = si.getNumber();
                             } catch (Exception e) {}
                             sim.put("number", number != null ? number : "");
+                            
                             simList.put(sim);
                         }
+                    } else {
+                        Log.e("CallLogPlugin", "Active subscription list is NULL");
                     }
+                } else {
+                    Log.e("CallLogPlugin", "SubscriptionManager is NULL");
                 }
+            } else {
+                Log.w("CallLogPlugin", "SDK level too low for SubscriptionManager");
             }
         } catch (Exception e) {
-            Log.e("CallLogPlugin", "Error getting SIM info", e);
+            Log.e("CallLogPlugin", "Critical Error getting SIM info", e);
         }
 
         ret.put("sims", simList);
@@ -109,23 +149,49 @@ public class CallLogPlugin extends Plugin {
                 int limit = 500; // Increased limit for automated sync
                 int count = 0;
 
+                // PRE-FETCH active SIMs to match labels precisely
+                java.util.Map<String, String> labelMap = new java.util.HashMap<>();
+                java.util.Map<String, String> slotMap = new java.util.HashMap<>();
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
+                    SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                    if (sm != null) {
+                        java.util.List<SubscriptionInfo> activeList = sm.getActiveSubscriptionInfoList();
+                        if (activeList != null) {
+                            for (SubscriptionInfo si : activeList) {
+                                String id = String.valueOf(si.getSubscriptionId());
+                                String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : si.getDisplayName().toString();
+                                labelMap.put(id, carrier);
+                                slotMap.put(id, String.valueOf(si.getSimSlotIndex() + 1));
+                            }
+                        }
+                    }
+                }
+
                 while (cursor.moveToNext() && count < limit) {
                     JSObject log = new JSObject();
                     log.put("number", cursor.getString(numberIndex));
-                    log.put("name", cursor.getString(nameIndex)); // Contact name if exists
+                    log.put("name", cursor.getString(nameIndex)); 
                     
-                    // Safe access for simId and simLabel
-                    String simId = null;
-                    if (simIdIndex != -1) {
-                         simId = cursor.getString(simIdIndex);
-                    }
-                    log.put("simId", simId); // For SIM selection
+                    String simId = simIdIndex != -1 ? cursor.getString(simIdIndex) : null;
+                    log.put("simId", simId);
                     
-                    String simLabel = null;
-                    if (simLabelIndex != -1) {
-                        simLabel = cursor.getString(simLabelIndex);
+                    String simLabel = simLabelIndex != -1 ? cursor.getString(simLabelIndex) : null;
+                    String simSlot = "0";
+
+                    // OVERRIDE with real-time info if available
+                    if (simId != null && labelMap.containsKey(simId)) {
+                        simLabel = labelMap.get(simId);
+                        simSlot = slotMap.get(simId);
+                    } else if (simId != null && simId.length() <= 2) {
+                        // If simId is already a slot number (0 or 1), try to match
+                        simSlot = String.valueOf(Integer.parseInt(simId) + 1);
+                        if (labelMap.containsValue(simSlot)) {
+                           // reverse lookup or just keep simLabel
+                        }
                     }
-                    log.put("simLabel", simLabel); // Carrier/Provider Name
+                    
+                    log.put("simLabel", simLabel != null ? simLabel : "Unknown");
+                    log.put("simSlot", simSlot);
                     
                     log.put("type", getCallType(cursor.getInt(typeIndex)));
                     log.put("date", cursor.getLong(dateIndex));
