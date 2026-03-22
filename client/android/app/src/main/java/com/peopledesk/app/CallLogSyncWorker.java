@@ -99,14 +99,17 @@ public class CallLogSyncWorker extends Worker {
 
                 // Pre-fetch active SIMs for real-time label matching
                 Map<String, String> labelMap = new HashMap<>();
+                Map<String, String> slotMap = new HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getApplicationContext().getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
                         List<SubscriptionInfo> activeList = sm.getActiveSubscriptionInfoList();
                         if (activeList != null) {
                             for (SubscriptionInfo si : activeList) {
+                                String id = String.valueOf(si.getSubscriptionId());
                                 String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : si.getDisplayName().toString();
-                                labelMap.put(String.valueOf(si.getSubscriptionId()), carrier);
+                                labelMap.put(id, carrier);
+                                slotMap.put(id, String.valueOf(si.getSimSlotIndex() + 1));
                             }
                         }
                     }
@@ -124,12 +127,17 @@ public class CallLogSyncWorker extends Worker {
                         simLabel = labelMap.get(simId);
                     }
 
-                    // MATCHING LOGIC (Match officialSim against ID or Label)
-                    // "0" means ALL SIMs
-                    boolean matches = officialSim.equals("0");
+                    // MATCHING LOGIC (Match officialSim against Slot, ID or Label)
+                    boolean matches = officialSim.equals("0"); // "0" means ALL SIMs
+                    String simSlot = "0";
+                    if (simId != null && slotMap.containsKey(simId)) {
+                        simSlot = slotMap.get(simId);
+                    }
+
                     if (!matches) {
-                        if (simId != null && simId.equals(officialSim)) matches = true;
-                        if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true;
+                        if (simSlot.equals(officialSim)) matches = true; // Check Slot (1 or 2)
+                        else if (simId != null && simId.equals(officialSim)) matches = true; // Check ID
+                        else if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true; // Check Label
                     }
 
                     if (matches) {
@@ -140,6 +148,7 @@ public class CallLogSyncWorker extends Worker {
                         log.put("date", cursor.getLong(dateIndex));
                         log.put("duration", cursor.getInt(durationIndex));
                         log.put("simLabel", simLabel);
+                        log.put("simSlot", simSlot);
                         
                         callLogs.put(log);
                         count++;
