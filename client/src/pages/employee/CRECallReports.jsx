@@ -455,11 +455,7 @@ const CRECallReports = () => {
                             />
                         </div>
 
-                        <div className="flex bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
-                            <button onClick={testBackgroundSync} className="p-3 bg-white text-emerald-600 hover:text-emerald-700 rounded-xl transition-all shadow-sm active:scale-90" title="Test Background Engine">
-                                <PlayCircle size={18} />
-                            </button>
-                        </div>
+
                         <button
                             disabled={isFetchingLocal} onClick={syncDeviceLogs}
                             className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 group"
@@ -508,13 +504,6 @@ const CRECallReports = () => {
                                 className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isUniqueOnly ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
                             >
                                 Unique
-                            </button>
-                            <button
-                                onClick={() => setIsFilterModalOpen(true)}
-                                className={`p-2 rounded-xl transition-all duration-300 ${isFilterModalOpen ? 'bg-primary/20 text-primary' : 'bg-surface-light dark:bg-dark-surface-light text-text-muted hover:bg-surface-dark dark:hover:bg-dark-surface-dark'}`}
-                                title="Filter Calls"
-                            >
-                                <Filter size={20} />
                             </button>
                         </div>
                     </div>
