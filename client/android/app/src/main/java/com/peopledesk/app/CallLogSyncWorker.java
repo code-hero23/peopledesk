@@ -125,9 +125,12 @@ public class CallLogSyncWorker extends Worker {
                     }
 
                     // MATCHING LOGIC (Match officialSim against ID or Label)
-                    boolean matches = false;
-                    if (simId != null && simId.equals(officialSim)) matches = true;
-                    if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true;
+                    // "0" means ALL SIMs
+                    boolean matches = officialSim.equals("0");
+                    if (!matches) {
+                        if (simId != null && simId.equals(officialSim)) matches = true;
+                        if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true;
+                    }
 
                     if (matches) {
                         JSONObject log = new JSONObject();
