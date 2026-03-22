@@ -523,12 +523,21 @@ const CRECallReports = () => {
                                 {officialSim === 0 ? "NO SIM SELECTED" : (simLabels[officialSim] || `SYNCING SIM ${officialSim}`)}
                             </span>
                         </div>
-                        <button
-                            onClick={() => setIsUniqueOnly(!isUniqueOnly)}
-                            className={`px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isUniqueOnly ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
-                        >
-                            Unique
-                        </button>
+                        <div className="flex items-center gap-2">
+                            <button
+                                onClick={() => setIsUniqueOnly(!isUniqueOnly)}
+                                className={`px-4 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${isUniqueOnly ? 'bg-blue-600 text-white shadow-xl' : 'text-slate-400 hover:text-slate-600'}`}
+                            >
+                                Unique
+                            </button>
+                            <button
+                                onClick={testBackgroundSync}
+                                className="px-4 py-3 bg-blue-50 text-blue-600 rounded-xl text-[10px] font-black uppercase tracking-widest hover:bg-blue-600 hover:text-white transition-all shadow-sm flex items-center gap-2"
+                                title="Dispatch dailyCallLogSync"
+                            >
+                                <Zap size={14} /> Dispatch
+                            </button>
+                        </div>
                     </div>
                 </div>
             </motion.header>
