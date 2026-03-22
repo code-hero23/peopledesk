@@ -324,14 +324,13 @@ const CRECallReports = () => {
     // Intelligence
     if (searchTerm === 'DEBUG' && callLogs?.length > 0) {
         console.log(`[Diagnostic] callLogs in state:`, callLogs.length);
-        console.log(`[Diagnostic] allSyncedCalls count:`, allSyncedCalls.length);
     }
 
     // Intelligence
-    const availableSims = [...new Set(allSyncedCalls.map(c => c.simId))].filter(Boolean);
+    const availableSims = [...new Set((callLogs || []).map(c => c.simId))].filter(Boolean);
 
     // Merge persisted labels with any found in current call set
-    const activeSimLabels = (allSyncedCalls || []).reduce((acc, curr) => {
+    const activeSimLabels = (callLogs || []).reduce((acc, curr) => {
         const id = String(curr.simId || "");
         const label = curr.simLabel;
         if (id && label && !acc[id]) acc[id] = label; // Only add if NOT already discovered via plugin

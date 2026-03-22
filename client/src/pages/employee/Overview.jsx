@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
     Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
-    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone
+    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone, RefreshCw
 } from 'lucide-react';
 import {
     getAttendanceStatus,
