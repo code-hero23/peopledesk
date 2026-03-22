@@ -1,99 +1,94 @@
-// runner.js
-// This headless script runs purely without DOM access.
-addEventListener('dailyCallLogSync', async (resolve, reject) => {
+// runner.js - Capacitor Background Runner
+// This script runs in a headless environment to sync call logs.
+
+addEventListener('dailyCallLogSync', async (resolve, reject, args) => {
+    console.log("Background Sync Triggered: dailyCallLogSync");
     try {
-        console.log("Background Task Triggered: dailyCallLogSync");
-
-        // 1. Fetch Call Logs from Native Plugin using Capacitor Bridge
         const CallLogPlugin = Capacitor.Plugins.CallLog;
-        if (!CallLogPlugin) {
-            throw new Error("CallLogPlugin is unavailable in the background runner context.");
-        }
-
-        const logsResult = await CallLogPlugin.getCallLogs();
-        const logs = logsResult.logs;
-
-        // 2. Fetch User and SIM Preferences from Preferences (Headless friendly)
         const Preferences = Capacitor.Plugins.Preferences;
-        const [userPrefs, simPrefs, lastSyncStatus] = await Promise.all([
-            Preferences.get({ key: 'user' }),
-            Preferences.get({ key: 'cre_official_sim' }),
-            Preferences.get({ key: 'lastBackgroundSyncDate' })
-        ]);
 
-        const now = new Date();
-        const istDate = new Date(now.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
-        
-        if (!userPrefs.value) {
-            throw new Error("User credentials not found in Preferences. Cannot sync.");
-        }
-        const user = JSON.parse(userPrefs.value);
-        const officialSim = simPrefs.value ? String(simPrefs.value) : "0"; 
-
-        // 3. Mandatory SIM Check: Skip if not yet selected
-        if (officialSim === "0") {
-            console.log("No official SIM selected in settings. Skipping background sync.");
+        if (!CallLogPlugin || !Preferences) {
+            console.error("Required plugins not available in background context.");
             return resolve();
         }
 
-        // 4. Filter logs by SIM slot
-        let filteredLogs = logs;
-        if (officialSim !== "0") {
-            const normalizedOfficialSim = String(officialSim).toLowerCase();
-            console.log(`Filtering logs for Official SIM: ${normalizedOfficialSim}`);
-            
-            filteredLogs = logs.filter(log => {
-                const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
-                if (!logSlot || logSlot === "null" || logSlot === "undefined") return false;
-                return logSlot === normalizedOfficialSim || logSlot.includes(normalizedOfficialSim);
-            });
+        // 1. Get User and Settings
+        const { value: userStr } = await Preferences.get({ key: 'user' });
+        if (!userStr) {
+            console.warn("No user credentials found. Aborting sync.");
+            return resolve();
+        }
+        const user = JSON.parse(userStr);
 
-            // SINGLE SIM FALLBACK: If filtering resulted in 0 logs but device has logs, 
-            // and there's only one unique SIM present, assume it's the official one.
-            if (filteredLogs.length === 0 && logs.length > 0) {
-                const uniqueSims = [...new Set(logs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null" && s !== "undefined");
-                if (uniqueSims.length === 1) {
-                    console.log("Single SIM detected on device. Applying auto-fallback to sync all logs.");
-                    filteredLogs = logs;
-                }
+        const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
+        if (!officialSim || officialSim === "0") {
+            console.log("No official SIM selected. Skipping sync.");
+            return resolve();
+        }
+
+        const { value: savedApiUrl } = await Preferences.get({ key: 'apiUrl' });
+        const API_BASE = savedApiUrl || 'https://peopledesk.orbixdesigns.com/api';
+        const SYNC_URL = API_BASE + '/worklogs/sync-calls';
+
+        // 2. Fetch Call Logs
+        const logsResult = await CallLogPlugin.getCallLogs();
+        const logs = logsResult.logs || [];
+        if (logs.length === 0) {
+            console.log("No call logs found on device.");
+            return resolve();
+        }
+
+        // 3. Robust Filtering (Matches Foreground Logic)
+        const targetSlot = String(officialSim).toLowerCase();
+        let filteredLogs = logs.filter(log => {
+            const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
+            if (!logSlot || logSlot === "null" || logSlot === "undefined") return false;
+            return logSlot === targetSlot || logSlot.includes(targetSlot);
+        });
+
+        // Single SIM Fallback
+        if (filteredLogs.length === 0 && logs.length > 0) {
+            const uniqueSims = [...new Set(logs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null" && s !== "undefined");
+            if (uniqueSims.length === 1) {
+                console.log("Single SIM detected. Applying auto-fallback.");
+                filteredLogs = logs;
             }
-            
-            console.log(`Final filtered count: ${filteredLogs.length} logs.`);
         }
 
         if (filteredLogs.length === 0) {
-            console.log("No matching logs for current SIM selection.");
+            console.log("No logs match SIM selection:", officialSim);
             return resolve();
         }
 
-        // 4. POST logs to the VPS server
-        const API_URL = 'https://peopledesk.orbixdesigns.com/api/worklogs/sync-calls';
-
-        const requestBody = JSON.stringify({
-            date: istDate,
-            calls: filteredLogs,
+        // 4. Sync
+        const istToday = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+        const payload = {
+            date: istToday,
+            logs: filteredLogs, // CONSISTENCY: Use 'logs' as in manual sync
             simFilter: officialSim,
-            syncDate: now.toISOString() // Keeping for backup
-        });
+            syncDate: new Date().toISOString()
+        };
 
-        const response = await fetch(API_URL, {
+        console.log(`Syncing ${filteredLogs.length} logs to ${SYNC_URL}`);
+        const response = await fetch(SYNC_URL, {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${user.token}`
             },
-            body: requestBody
+            body: JSON.stringify(payload)
         });
 
-        if (!response.ok) {
-            throw new Error(`Server returned error: ${response.status} ${response.statusText}`);
+        if (response.ok) {
+            console.log("Background sync successful!");
+            resolve();
+        } else {
+            console.error("Background sync failed status:", response.status);
+            resolve(); // Still resolve to avoid OS retrying too aggressively if server is down
         }
 
-        console.log("Call Logs synchronized successfully in background.");
-        resolve(); // Always call resolve on complete
-
-    } catch (error) {
-        console.error("Background Runner Error: ", error);
-        reject(error); // Reject signals failure to the OS job scheduler
+    } catch (err) {
+        console.error("Error in runner.js:", err.message);
+        reject(err);
     }
 });

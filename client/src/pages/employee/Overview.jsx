@@ -267,6 +267,11 @@ const Overview = () => {
             const { Capacitor } = await import('@capacitor/core');
             if (!Capacitor.isNativePlatform()) return;
             const { Preferences } = await import('@capacitor/preferences');
+            
+            // Save API URL for background runner
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
+            await Preferences.set({ key: 'apiUrl', value: baseUrl });
+
             const { value } = await Preferences.get({ key: 'cre_official_sim' });
             if (!value || value === "0") {
                 setShowMandatorySimModal(true);
@@ -298,7 +303,8 @@ const Overview = () => {
 
                 if (filteredLogs.length === 0) return;
 
-                const API_URL = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api') + '/worklogs/sync-calls';
+                const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
+                const API_URL = API_BASE + '/worklogs/sync-calls';
                 await fetch(API_URL, {
                     method: 'PUT',
                     headers: {
