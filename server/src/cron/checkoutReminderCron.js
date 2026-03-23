@@ -5,10 +5,10 @@ const { getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
 const { sendEmail } = require('../utils/emailService');
 
 const initCheckoutReminderCron = () => {
-    // @desc    Reminder to Checkout (Daily at 11:30 PM IST)
-    // Runs at 23:30 (11:30 PM) for users who haven't checked out
-    cron.schedule('30 23 * * *', async () => {
-        console.log('CRON: Running Checkout Reminder Job [11:30 PM IST]...');
+    // @desc    Reminder to Checkout (Daily at 10:00 PM IST)
+    // Runs at 22:00 (10:00 PM) for users who haven't checked out
+    cron.schedule('0 22 * * *', async () => {
+        console.log('CRON: Running Checkout Reminder Job [10:00 PM IST]...');
 
         try {
             const start = getStartOfDayIST();

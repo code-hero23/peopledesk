@@ -26,8 +26,8 @@ initAttendanceCron();
 initCheckoutReminderCron();
 initNotificationCron();
 initFinanceCron();
-initWorklogReminderCron();
-initBreakExceedanceCron();
+// initWorklogReminderCron();
+// initBreakExceedanceCron();
 
 
 // Security Middlewares
