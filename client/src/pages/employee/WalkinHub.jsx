@@ -23,7 +23,8 @@ import {
     Briefcase,
     ArrowUpDown,
     ArrowUp,
-    ArrowDown
+    ArrowDown,
+    AlertTriangle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -37,6 +38,7 @@ const WalkinHub = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [filterBH, setFilterBH] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
+    const [showConfirmDuplicate, setShowConfirmDuplicate] = useState(false);
     const [sortField, setSortField] = useState('dateOfVisit'); // default sort
     const [sortOrder, setSortOrder] = useState('desc'); // default order
     const [fromDate, setFromDate] = useState('');
@@ -121,11 +123,26 @@ const WalkinHub = () => {
 
     const onSubmit = (e) => {
         e.preventDefault();
+        
+        if (!editingEntry && !showConfirmDuplicate) {
+            // Check for potential duplicate
+            const isDuplicate = entries.some(entry => 
+                entry.contactNumber === formData.contactNumber && 
+                new Date(entry.dateOfVisit).toDateString() === new Date(formData.dateOfVisit).toDateString()
+            );
+
+            if (isDuplicate) {
+                setShowConfirmDuplicate(true);
+                return;
+            }
+        }
+
         if (editingEntry) {
             dispatch(updateWalkin({ id: editingEntry.id, data: formData }));
         } else {
             dispatch(createWalkin(formData));
         }
+        setShowConfirmDuplicate(false);
     };
 
     const filteredEntries = entries.filter(entry => {
@@ -613,6 +630,45 @@ const WalkinHub = () => {
                                     </button>
                                 </motion.div>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Duplicate Confirmation Dialog */}
+            <AnimatePresence>
+                {showConfirmDuplicate && (
+                    <div className="fixed inset-0 z-[110] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0 }} 
+                            animate={{ scale: 1, opacity: 1 }} 
+                            exit={{ scale: 0.9, opacity: 0 }} 
+                            className="bg-white rounded-[2.5rem] shadow-2xl w-full max-w-md relative overflow-hidden p-10 text-center space-y-6"
+                        >
+                            <div className="w-20 h-20 bg-amber-100 text-amber-600 rounded-3xl flex items-center justify-center mx-auto animate-bounce">
+                                <AlertTriangle size={40} />
+                            </div>
+                            <div className="space-y-2">
+                                <h3 className="text-2xl font-black text-slate-800 tracking-tight">Duplicate Entry?</h3>
+                                <p className="text-slate-500 font-bold text-sm">
+                                    An entry with this contact number already exists for the selected date. Do you want to create another one?
+                                </p>
+                            </div>
+                            <div className="flex flex-col gap-3">
+                                <button 
+                                    onClick={onSubmit}
+                                    className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all"
+                                >
+                                    Yes, Create Duplicate
+                                </button>
+                                <button 
+                                    onClick={() => setShowConfirmDuplicate(false)}
+                                    className="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
+                                >
+                                    No, Cancel
+                                </button>
+                            </div>
                         </motion.div>
                     </div>
                 )}

@@ -95,14 +95,32 @@ const walkinSlice = createSlice({
             .addCase(fetchBHs.fulfilled, (state, action) => {
                 state.bhs = action.payload;
             })
+            .addCase(createWalkin.pending, (state) => {
+                state.isLoading = true;
+            })
             .addCase(createWalkin.fulfilled, (state, action) => {
+                state.isLoading = false;
                 state.isSuccess = true;
                 state.entries.unshift(action.payload);
             })
+            .addCase(createWalkin.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(updateWalkin.pending, (state) => {
+                state.isLoading = true;
+            })
             .addCase(updateWalkin.fulfilled, (state, action) => {
+                state.isLoading = false;
                 state.isSuccess = true;
                 const index = state.entries.findIndex((e) => e.id === action.payload.id);
                 if (index !== -1) state.entries[index] = action.payload;
+            })
+            .addCase(updateWalkin.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
             })
             .addCase(deleteWalkin.fulfilled, (state, action) => {
                 state.entries = state.entries.filter((e) => e.id !== action.payload);
