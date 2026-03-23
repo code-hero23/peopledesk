@@ -39,6 +39,8 @@ const WalkinHub = () => {
     const [filterBH, setFilterBH] = useState('');
     const [filterStatus, setFilterStatus] = useState('');
     const [showConfirmDuplicate, setShowConfirmDuplicate] = useState(false);
+    const [selectedEntry, setSelectedEntry] = useState(null);
+    const [isViewModalOpen, setIsViewModalOpen] = useState(false);
     const [sortField, setSortField] = useState('dateOfVisit'); // default sort
     const [sortOrder, setSortOrder] = useState('desc'); // default order
     const [fromDate, setFromDate] = useState('');
@@ -143,6 +145,11 @@ const WalkinHub = () => {
             dispatch(createWalkin(formData));
         }
         setShowConfirmDuplicate(false);
+    };
+
+    const handleRowClick = (entry) => {
+        setSelectedEntry(entry);
+        setIsViewModalOpen(true);
     };
 
     const filteredEntries = entries.filter(entry => {
@@ -400,7 +407,11 @@ const WalkinHub = () => {
                         </thead>
                         <tbody className="divide-y divide-slate-50">
                             {filteredEntries.map((entry) => (
-                                <tr key={entry.id} className="hover:bg-slate-50/70 transition-all group">
+                                <tr 
+                                    key={entry.id} 
+                                    onClick={() => handleRowClick(entry)}
+                                    className="hover:bg-slate-50/70 transition-all group cursor-pointer"
+                                >
                                     <td className="px-8 py-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform">
@@ -446,7 +457,7 @@ const WalkinHub = () => {
                                             {entry.visitStatus || 'PENDING'}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-8 text-right">
+                                    <td className="px-8 py-8 text-right" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-end gap-2">
                                             <button 
                                                 onClick={() => handleEdit(entry)}
@@ -667,6 +678,121 @@ const WalkinHub = () => {
                                     className="w-full bg-slate-100 text-slate-600 py-4 rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-slate-200 transition-all"
                                 >
                                     No, Cancel
+                                </button>
+                            </div>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* View Entry Detail Modal */}
+            <AnimatePresence>
+                {isViewModalOpen && selectedEntry && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsViewModalOpen(false)} className="absolute inset-0 bg-slate-900/60 backdrop-blur-md" />
+                        <motion.div 
+                            initial={{ scale: 0.9, opacity: 0, y: 20 }} 
+                            animate={{ scale: 1, opacity: 1, y: 0 }} 
+                            exit={{ scale: 0.9, opacity: 0, y: 20 }} 
+                            className="bg-white rounded-[3rem] shadow-2xl w-full max-w-2xl relative overflow-hidden" 
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {/* Header */}
+                            <div className="bg-slate-900 px-10 py-8 flex justify-between items-center text-white">
+                                <div>
+                                    <h3 className="text-2xl font-black tracking-tight">Visit Details</h3>
+                                    <p className="text-slate-400 text-[10px] font-black uppercase tracking-[0.2em] mt-1">Client Case File</p>
+                                </div>
+                                <button onClick={() => setIsViewModalOpen(false)} className="bg-white/10 hover:bg-white/20 p-2 rounded-2xl transition-colors">
+                                    <X size={24} />
+                                </button>
+                            </div>
+
+                            <div className="p-10 space-y-8 max-h-[70vh] overflow-y-auto scrollbar-hide">
+                                {/* Client Header Section */}
+                                <div className="flex items-start gap-6 pb-8 border-b border-slate-100">
+                                    <div className="w-20 h-20 bg-blue-600 rounded-[2rem] flex items-center justify-center text-white text-3xl font-black shadow-lg shadow-blue-200">
+                                        {selectedEntry.clientName.charAt(0)}
+                                    </div>
+                                    <div className="space-y-1">
+                                        <h2 className="text-3xl font-black text-slate-800 tracking-tight uppercase">{selectedEntry.clientName}</h2>
+                                        <div className="flex items-center gap-3 text-slate-500 font-bold">
+                                            <span className="flex items-center gap-1.5 text-blue-600 bg-blue-50 px-3 py-1 rounded-full text-xs uppercase tracking-widest">
+                                                <Phone size={12} /> {selectedEntry.contactNumber}
+                                            </span>
+                                            <span className="text-slate-300">|</span>
+                                            <span className="text-xs uppercase tracking-widest">{selectedEntry.project || 'Untitled Project'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Information Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                    <div className="space-y-6">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Visit Schedule</label>
+                                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <Calendar className="text-blue-500" size={18} />
+                                                <span className="font-bold text-slate-700">{new Date(selectedEntry.dateOfVisit).toLocaleDateString(undefined, { dateStyle: 'full' })}</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">FA Team</label>
+                                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <Users className="text-blue-500" size={18} />
+                                                <span className="font-bold text-slate-700">{selectedEntry.faTeam}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-6">
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Assigned BH</label>
+                                            <div className="flex items-center gap-3 p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                                                <UserCircle2 className="text-blue-500" size={18} />
+                                                <span className="font-bold text-slate-700">{selectedEntry.bh?.name || 'Unassigned'}</span>
+                                            </div>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em]">Visit Status</label>
+                                            <div className={`flex items-center gap-3 p-4 rounded-2xl border ${getVisitStatusColor(selectedEntry.visitStatus)} shadow-sm`}>
+                                                <CheckCircle size={18} />
+                                                <span className="font-black text-xs uppercase tracking-widest">{selectedEntry.visitStatus || 'PENDING'}</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Extra Details */}
+                                <div className="space-y-6 pt-2">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Showroom</p>
+                                            <p className="font-bold text-slate-700">{selectedEntry.showroom || 'Not Specified'}</p>
+                                        </div>
+                                        <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tentative Time</p>
+                                            <p className="font-bold text-slate-700">{selectedEntry.tentativeTime || 'N/A'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
+                                            <MessageSquare size={12} /> Detailed Remarks
+                                        </p>
+                                        <p className="text-slate-600 font-medium leading-relaxed italic border-l-4 border-blue-500 pl-4 bg-white/50 py-3 rounded-r-xl">
+                                            {selectedEntry.remarks || 'No remarks provided for this visit.'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="p-8 bg-slate-50 border-t border-slate-100 flex justify-end">
+                                <button 
+                                    onClick={() => setIsViewModalOpen(false)}
+                                    className="px-10 py-4 bg-slate-900 text-white rounded-2xl font-black text-xs uppercase tracking-widest hover:bg-black transition-all shadow-lg"
+                                >
+                                    Close Details
                                 </button>
                             </div>
                         </motion.div>
