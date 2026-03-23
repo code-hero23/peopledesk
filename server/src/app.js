@@ -106,4 +106,23 @@ app.get('/', (req, res) => {
     res.json({ message: 'Welcome to Cookscape WorkSphere API' }); // Server Restart Triggered v4 (Bug Fixed)
 });
 
+// Error Handlers
+const notFound = (req, res, next) => {
+    const error = new Error(`Not Found - ${req.originalUrl}`);
+    res.status(404);
+    next(error);
+};
+
+const errorHandler = (err, req, res, next) => {
+    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    console.error('SERVER ERROR:', err);
+    res.status(statusCode).json({
+        message: err.message,
+        stack: process.env.NODE_ENV === 'production' ? '🍰' : err.stack,
+    });
+};
+
+app.use(notFound);
+app.use(errorHandler);
+
 module.exports = app;

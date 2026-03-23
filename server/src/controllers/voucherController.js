@@ -71,13 +71,16 @@ const createVoucher = async (req, res) => {
         console.log('DEBUG: Voucher created successfully:', voucher.id);
         res.status(201).json(voucher);
     } catch (error) {
-        console.error('ERROR in createVoucher:', error);
+        console.error('CRITICAL ERROR in createVoucher:', error);
         if (error.code) console.error('Prisma Error Code:', error.code);
-        if (error.meta) console.error('Prisma Error Meta:', error.meta);
+        if (error.meta) console.error('Prisma Error Meta:', JSON.stringify(error.meta));
+        
         res.status(500).json({ 
             message: 'Server Error', 
             error: error.message,
-            stack: error.stack // Temporarily always include stack for debugging
+            code: error.code,
+            meta: error.meta,
+            stack: process.env.NODE_ENV === 'production' ? '🍰' : error.stack
         });
     }
 };
