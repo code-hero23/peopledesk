@@ -93,6 +93,24 @@ const updateWalkinEntry = async (req, res) => {
         const { id } = req.params;
         const updateData = { ...req.body };
 
+        // Security: Fetch existing entry
+        const existingEntry = await prisma.walkinEntry.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!existingEntry) {
+            return res.status(404).json({ message: 'Walkin entry not found' });
+        }
+
+        // Authorization: ADMIN, Creator, or assigned BH can update
+        const isAuthorized = req.user.role === 'ADMIN' || 
+                           existingEntry.createdById === req.user.id || 
+                           existingEntry.bhId === req.user.id;
+        
+        if (!isAuthorized) {
+            return res.status(403).json({ message: 'Not authorized to update this entry' });
+        }
+
         if (updateData.bhId) updateData.bhId = parseInt(updateData.bhId);
         if (updateData.dateOfVisit) updateData.dateOfVisit = parseRobustDate(updateData.dateOfVisit);
 

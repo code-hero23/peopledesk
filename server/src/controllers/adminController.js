@@ -36,6 +36,7 @@ const getAllEmployees = async (req, res) => {
                 salaryDeductionBreakdown: true,
                 timeShortageDeductionEnabled: true,
                 wfhViewEnabled: true,
+                walkinViewEnabled: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -499,7 +500,8 @@ const createEmployee = async (req, res) => {
                 salaryViewEnabled: req.body.salaryViewEnabled === true || req.body.salaryViewEnabled === 'true',
                 timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : true,
                 salaryDeductions: req.body.salaryDeductions ? parseFloat(req.body.salaryDeductions) : 0,
-                salaryDeductionBreakdown: req.body.salaryDeductionBreakdown || []
+                salaryDeductionBreakdown: req.body.salaryDeductionBreakdown || [],
+                walkinViewEnabled: req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true'
             },
             select: {
                 id: true, name: true, email: true, phone: true, role: true, status: true, designation: true, lastWorkLogDate: true,
@@ -508,6 +510,8 @@ const createEmployee = async (req, res) => {
                 allocatedSalary: true,
                 salaryViewEnabled: true,
                 timeShortageDeductionEnabled: true,
+                wfhViewEnabled: true,
+                walkinViewEnabled: true,
                 salaryDeductions: true,
                 salaryDeductionBreakdown: true,
                 reportingBh: { select: { name: true } }
@@ -877,8 +881,13 @@ const updateEmployee = async (req, res) => {
             // Managers can ONLY update wfhViewEnabled
             if (req.body.wfhViewEnabled !== undefined) {
                 updateData.wfhViewEnabled = (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true');
-            } else {
-                return res.status(400).json({ message: 'Managers are only permitted to update WFH Request settings.' });
+            } 
+            if (req.body.walkinViewEnabled !== undefined) {
+                updateData.walkinViewEnabled = (req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true');
+            }
+            
+            if (Object.keys(updateData).length === 0) {
+                return res.status(400).json({ message: 'Managers are only permitted to update WFH/Walkin settings.' });
             }
         } else {
             // Admin has full control
@@ -895,7 +904,8 @@ const updateEmployee = async (req, res) => {
                 salaryDeductions: req.body.salaryDeductions !== undefined ? parseFloat(req.body.salaryDeductions) : undefined,
                 salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined,
                 timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined,
-                wfhViewEnabled: req.body.wfhViewEnabled !== undefined ? (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true') : undefined
+                wfhViewEnabled: req.body.wfhViewEnabled !== undefined ? (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true') : undefined,
+                walkinViewEnabled: req.body.walkinViewEnabled !== undefined ? (req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true') : undefined
             };
 
             // If password is provided, hash it and add to update data
@@ -908,7 +918,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, phone: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
+            select: { id: true, name: true, email: true, phone: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, walkinViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
         });
         res.json(user);
     } catch (error) {

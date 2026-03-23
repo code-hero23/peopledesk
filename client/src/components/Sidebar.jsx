@@ -251,7 +251,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation) && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
-                            {user?.designation === 'CRE' && (
+                            {(user?.designation === 'CRE' || user?.walkinViewEnabled) && (
                                 <NavItem to="/dashboard/walkin-hub" icon={Users} label="Walkin Hub" />
                             )}
                         </div>

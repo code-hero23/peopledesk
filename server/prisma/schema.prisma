@@ -28,6 +28,7 @@ model User {
   salaryDeductionBreakdown     Json?                  @default("[]")
   timeShortageDeductionEnabled Boolean                @default(true)
   wfhViewEnabled               Boolean                @default(false)
+  walkinViewEnabled            Boolean                @default(false)
   announcements                Announcement[]         @relation("AuthorAnnouncements")
   attendance                   Attendance[]
   leaveRequests                LeaveRequest[]

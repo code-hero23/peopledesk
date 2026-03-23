@@ -262,10 +262,15 @@ const ManageEmployees = () => {
                                         )}
                                     </td>
                                     <td className="px-6 py-4 text-center">
-                                        <div className="flex flex-col items-center gap-1">
-                                            <span className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-tighter ${emp.salaryViewEnabled ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
-                                                {emp.salaryViewEnabled ? 'Dashboard ON' : 'Dashboard OFF'}
-                                            </span>
+                                        <div className="flex flex-col items-center gap-1.5">
+                                            <div className="flex gap-1">
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.salaryViewEnabled ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
+                                                    Salary {emp.salaryViewEnabled ? 'ON' : 'OFF'}
+                                                </span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.walkinViewEnabled ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
+                                                    Walkin {emp.walkinViewEnabled ? 'ON' : 'OFF'}
+                                                </span>
+                                            </div>
                                             {emp.allocatedSalary > 0 && (
                                                 <span className="text-[10px] font-mono font-bold text-slate-500">
                                                     ₹{emp.allocatedSalary.toLocaleString()}
