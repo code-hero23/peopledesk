@@ -231,6 +231,13 @@ const VoucherManagement = () => {
                 await dispatch(approveVoucherAM(payload)).unwrap();
             } else if (user.role === 'BUSINESS_HEAD' && isCOO(user)) {
                 await dispatch(approveVoucherCOO(payload)).unwrap();
+            } else if (user.role === 'ADMIN') {
+                // Admin can act as either AM or COO depending on current status
+                if (selectedVoucher.amStatus === 'PENDING') {
+                    await dispatch(approveVoucherAM(payload)).unwrap();
+                } else {
+                    await dispatch(approveVoucherCOO(payload)).unwrap();
+                }
             }
             
             toast.success(`Voucher ${status.toLowerCase()} successfully`);
@@ -283,9 +290,16 @@ const VoucherManagement = () => {
 
     const handleRaiseVoucher = async (e) => {
         e.preventDefault();
+        if (!raiseData.amount || parseFloat(raiseData.amount) <= 0) {
+            return toast.error('Please enter a valid amount');
+        }
+        if (!raiseData.purpose || raiseData.purpose.length < 5) {
+            return toast.error('Please provide a detailed purpose (min 5 characters)');
+        }
         if (raiseData.type === 'POSTPAID' && !raiseData.proofFile) {
             return toast.error('Bill/Proof is mandatory for Postpaid vouchers');
         }
+        
         try {
             const data = new FormData();
             data.append('type', raiseData.type);
@@ -1143,32 +1157,34 @@ const VoucherManagement = () => {
                                         </div>
 
                                         <div className="flex gap-4">
-                                            {user.role === 'ADMIN' ? (
+                                            {/* Unified Approval Buttons for AM, COO, and ADMIN */}
+                                            {((user.role === 'ACCOUNTS_MANAGER' && selectedVoucher.amStatus === 'PENDING') || 
+                                              (user.role === 'BUSINESS_HEAD' && isCOO(user) && selectedVoucher.amStatus === 'APPROVED' && selectedVoucher.cooStatus === 'PENDING') ||
+                                              (user.role === 'ADMIN' && (selectedVoucher.amStatus === 'PENDING' || selectedVoucher.cooStatus === 'PENDING'))) && (
+                                                <>
+                                                    <button
+                                                        onClick={() => handleAction('REJECTED')}
+                                                        className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
+                                                    >
+                                                        Reject
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleAction('APPROVED')}
+                                                        className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                    >
+                                                        {selectedVoucher.amStatus === 'PENDING' ? 'AM Approval' : 'COO Approval'} <ArrowUpRight size={18} />
+                                                    </button>
+                                                </>
+                                            )}
+                                            
+                                            {/* Admin Note - Always show for Admin as an additional action or if already approved */}
+                                            {user.role === 'ADMIN' && (
                                                 <button
                                                     onClick={handleAdminNote}
                                                     className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                                                 >
-                                                    Save Admin Note <ArrowUpRight size={18} />
+                                                    {selectedVoucher.amStatus !== 'PENDING' && selectedVoucher.cooStatus !== 'PENDING' ? 'Update Admin Note' : 'Add Note Only'}
                                                 </button>
-                                            ) : (
-                                                <>
-                                                    {((user.role === 'ACCOUNTS_MANAGER' && selectedVoucher.amStatus === 'PENDING') || (user.role === 'BUSINESS_HEAD' && isCOO(user) && selectedVoucher.amStatus === 'APPROVED' && selectedVoucher.cooStatus === 'PENDING')) && (
-                                                        <>
-                                                            <button
-                                                                onClick={() => handleAction('REJECTED')}
-                                                                className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
-                                                            >
-                                                                Reject
-                                                            </button>
-                                                            <button
-                                                                onClick={() => handleAction('APPROVED')}
-                                                                className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                                            >
-                                                                Approve & Advance <ArrowUpRight size={18} />
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </>
                                             )}
                                         </div>
                                     </>

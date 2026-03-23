@@ -74,6 +74,14 @@ const ExpenseHub = () => {
 
     const onSubmit = (e) => {
         e.preventDefault();
+        
+        if (!formData.amount || parseFloat(formData.amount) <= 0) {
+            return toast.error('Please enter a valid amount');
+        }
+        if (!formData.purpose || formData.purpose.length < 5) {
+            return toast.error('Please provide a detailed purpose (min 5 characters)');
+        }
+        
         if (formData.type === 'POSTPAID' && !formData.proofFile) {
             return toast.error('Bill/Proof is mandatory for Postpaid vouchers');
         }

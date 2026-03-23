@@ -23,10 +23,10 @@ router.route('/manage')
     .get(protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), getManageableVouchers);
 
 router.route('/:id/approve-am')
-    .put(protect, authorize('ACCOUNTS_MANAGER'), approveVoucherAM);
+    .put(protect, authorize('ACCOUNTS_MANAGER', 'ADMIN'), approveVoucherAM);
 
 router.route('/:id/approve-coo')
-    .put(protect, authorize('BUSINESS_HEAD'), approveVoucherCOO);
+    .put(protect, authorize('BUSINESS_HEAD', 'ADMIN'), approveVoucherCOO);
 
 router.route('/:id/proof')
     .put(protect, upload.single('proof'), uploadProof);

@@ -142,6 +142,11 @@ const approveVoucherAM = async (req, res) => {
         const { id } = req.params;
         const { status, remarks } = req.body; // 'APPROVED' or 'REJECTED'
         const amId = req.user.id;
+        const isAdmin = req.user.role === 'ADMIN';
+
+        if (req.user.role !== 'ACCOUNTS_MANAGER' && !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized for AM approval' });
+        }
 
         const voucher = await prisma.voucher.findUnique({
             where: { id: parseInt(id) }
@@ -179,9 +184,10 @@ const approveVoucherCOO = async (req, res) => {
         const { id } = req.params;
         const { status, remarks } = req.body;
         const cooId = req.user.id;
-        const { designation } = req.user;
+        const { designation, role } = req.user;
+        const isAdmin = role === 'ADMIN';
 
-        if (designation !== 'COO' && designation !== 'Chief Operational Officer') {
+        if (!isAdmin && designation !== 'COO' && designation !== 'Chief Operational Officer') {
             return res.status(403).json({ message: 'Not authorized as COO' });
         }
 
@@ -213,16 +219,21 @@ const approveVoucherCOO = async (req, res) => {
 
         // Deduct from Finance for both COMPLETED (Postpaid) and WAITING (Prepaid Advance)
         if (status === 'APPROVED') {
-            const finance = await prisma.finance.findFirst();
-            if (finance) {
-                await prisma.finance.update({
-                    where: { id: finance.id },
-                    data: {
-                        currentCash: finance.currentCash - updatedVoucher.amount,
-                        totalSpent: finance.totalSpent + updatedVoucher.amount
-                    }
+            let finance = await prisma.finance.findFirst();
+            if (!finance) {
+                // Initialize finance if it doesn't exist
+                finance = await prisma.finance.create({
+                    data: { currentCash: 0, totalSpent: 0 }
                 });
             }
+
+            await prisma.finance.update({
+                where: { id: finance.id },
+                data: {
+                    currentCash: finance.currentCash - updatedVoucher.amount,
+                    totalSpent: finance.totalSpent + updatedVoucher.amount
+                }
+            });
         }
 
         res.json(updatedVoucher);
