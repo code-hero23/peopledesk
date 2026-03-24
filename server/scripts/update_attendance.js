@@ -82,30 +82,49 @@ async function updateAttendance(email, dateStr, checkInTimeStr, checkOutTimeStr)
             }
         });
 
+        if (args.includes('--delete')) {
+            if (attendance) {
+                await prisma.attendance.delete({ where: { id: attendance.id } });
+                console.log(`✅ Success! Attendance record DELETED.`);
+            } else {
+                console.log(`ℹ️ No record found to delete.`);
+            }
+            return;
+        }
+
         if (!attendance) {
             console.log(`⚠️ No attendance record found for this date. Creating a new one...`);
             
-            const newCheckIn = setTimeOnDate(targetDate, checkInTimeStr || '09:00');
-            const newCheckOut = checkOutTimeStr ? setTimeOnDate(targetDate, checkOutTimeStr) : null;
+            const isAbsent = args.includes('--absent');
+            const newCheckIn = isAbsent ? targetDate : setTimeOnDate(targetDate, checkInTimeStr || '09:00');
+            const newCheckOut = !isAbsent && checkOutTimeStr ? setTimeOnDate(targetDate, checkOutTimeStr) : null;
 
             const createdRecord = await prisma.attendance.create({
                 data: {
                     userId: user.id,
                     date: newCheckIn,
-                    status: 'PRESENT',
+                    status: isAbsent ? 'ABSENT' : 'PRESENT',
                     checkoutTime: newCheckOut === 'CLEAR' ? null : newCheckOut,
                     deviceInfo: 'Manual Script Update'
                 }
             });
 
             console.log(`✅ Success! New attendance record created.`);
+            console.log(`Status:    ${createdRecord.status}`);
             console.log(`Check-In:  ${createdRecord.date.toLocaleString()}`);
-            console.log(`Check-Out: ${createdRecord.checkoutTime ? createdRecord.checkoutTime.toLocaleString() : 'Not Checked Out'}`);
+            console.log(`Check-Out: ${createdRecord.checkoutTime ? createdRecord.checkoutTime.toLocaleString() : 'N/A'}`);
             return;
         }
 
         // Prepare Updates
         const updateData = {};
+        
+        if (args.includes('--absent')) {
+            updateData.status = 'ABSENT';
+            updateData.checkoutTime = null;
+        } else {
+            updateData.status = 'PRESENT';
+        }
 
         if (checkInTimeStr) {
             const newCheckIn = setTimeOnDate(targetDate, checkInTimeStr);
@@ -124,7 +143,7 @@ async function updateAttendance(email, dateStr, checkInTimeStr, checkOutTimeStr)
         }
 
         if (Object.keys(updateData).length === 0) {
-            console.log(`⚠️ No changes specified. Use --in "HH:mm" or --out "HH:mm"`);
+            console.log(`⚠️ No changes specified. Use --in, --out, --absent, or --delete`);
             return;
         }
 
@@ -135,8 +154,9 @@ async function updateAttendance(email, dateStr, checkInTimeStr, checkOutTimeStr)
         });
 
         console.log(`✅ Success! Attendance updated.`);
-        console.log(`Check-In:  ${updatedRecord.date.toLocaleTimeString()}`);
-        console.log(`Check-Out: ${updatedRecord.checkoutTime ? updatedRecord.checkoutTime.toLocaleTimeString() : 'Not Checked Out'}`);
+        console.log(`Status:    ${updatedRecord.status}`);
+        console.log(`Check-In:  ${updatedRecord.date.toLocaleString()}`);
+        console.log(`Check-Out: ${updatedRecord.checkoutTime ? updatedRecord.checkoutTime.toLocaleString() : 'Not Checked Out'}`);
 
     } catch (error) {
         console.error('An error occurred:', error);
