@@ -15,7 +15,7 @@ const importBiometricData = async (req, res) => {
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
         const sheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(sheet);
+        const data = xlsx.utils.sheet_to_json(sheet, { cellDates: true });
 
         // Cleanup temp file
         try {
@@ -61,11 +61,11 @@ const importBiometricData = async (req, res) => {
         for (const [index, row] of data.entries()) {
             // Updated columns based on sample: First Name, Date, First Punch, Last Punch
             const name = (row['First Name'] || row['Name'] || row['name'] || '').toString().trim();
-            const dateStr = (row['Date'] || '').toString().trim(); // DD-MM-YYYY
-            const firstPunchStr = (row['First Punch'] || '').toString().trim(); // HH:mm
-            const lastPunchStr = (row['Last Punch'] || '').toString().trim(); // HH:mm
+            const dateVal = row['Date']; // May be a Date object or string
+            const firstPunchVal = row['First Punch']; // May be a Date object or string
+            const lastPunchVal = row['Last Punch']; // May be a Date object or string
 
-            if (!name || !dateStr || !firstPunchStr) {
+            if (!name || !dateVal || !firstPunchVal) {
                 results.failed++;
                 results.errors.push(`Row ${index + 2}: Missing Name, Date, or First Punch`);
                 continue;
@@ -86,22 +86,40 @@ const importBiometricData = async (req, res) => {
                 continue;
             }
 
-            // Parse Date: DD-MM-YYYY
-            const dateParts = dateStr.split('-');
-            if (dateParts.length !== 3) {
-                results.failed++;
-                results.errors.push(`Row ${index + 2}: Invalid date format "${dateStr}" (Expected DD-MM-YYYY)`);
-                continue;
+            // Parse Date
+            let day, month, year;
+            if (dateVal instanceof Date) {
+                day = dateVal.getDate();
+                month = dateVal.getMonth();
+                year = dateVal.getFullYear();
+            } else {
+                const dateStr = dateVal.toString().trim();
+                const dateParts = dateStr.split(/[-/]/);
+                if (dateParts.length !== 3) {
+                    results.failed++;
+                    results.errors.push(`Row ${index + 2}: Invalid date format "${dateStr}" (Expected DD-MM-YYYY)`);
+                    continue;
+                }
+                day = parseInt(dateParts[0]);
+                month = parseInt(dateParts[1]) - 1;
+                year = parseInt(dateParts[2]);
             }
-            const day = parseInt(dateParts[0]);
-            const month = parseInt(dateParts[1]) - 1;
-            const year = parseInt(dateParts[2]);
 
-            const createLog = async (timeStr, type) => {
-                if (!timeStr || timeStr === '--' || timeStr === '00:00') return;
-                const timeParts = timeStr.split(':');
-                const hour = parseInt(timeParts[0]);
-                const min = parseInt(timeParts[1]);
+            const createLog = async (val, type) => {
+                if (!val || val === '--' || val === '00:00') return;
+                
+                let hour, min;
+                if (val instanceof Date) {
+                    // Excel time only cells become Date objects starting at 1899-12-30
+                    hour = val.getHours();
+                    min = val.getMinutes();
+                } else {
+                    const timeParts = val.toString().trim().split(':');
+                    if (timeParts.length < 2) return;
+                    hour = parseInt(timeParts[0]);
+                    min = parseInt(timeParts[1]);
+                }
+
                 const punchTime = new Date(year, month, day, hour, min, 0);
 
                 if (isNaN(punchTime.getTime())) return;
@@ -132,11 +150,11 @@ const importBiometricData = async (req, res) => {
 
             try {
                 // First Punch (IN)
-                await createLog(firstPunchStr, 'IN');
+                await createLog(firstPunchVal, 'IN');
                 
                 // Last Punch (OUT) - Only if different and valid
-                if (lastPunchStr && lastPunchStr !== firstPunchStr) {
-                    await createLog(lastPunchStr, 'OUT');
+                if (lastPunchVal && lastPunchVal !== firstPunchVal) {
+                    await createLog(lastPunchVal, 'OUT');
                 }
             } catch (err) {
                 console.error(`Error saving biometric record at row ${index + 2}:`, err);
