@@ -298,10 +298,12 @@ const getMyAttendanceHistory = async (req, res) => {
 
         let dateFilter = {};
         if (startDate && endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
             dateFilter = {
                 date: {
                     gte: new Date(startDate),
-                    lte: new Date(endDate)
+                    lte: end
                 }
             };
         }
@@ -322,9 +324,11 @@ const getMyAttendanceHistory = async (req, res) => {
         // Fetch biometric logs separately for the user in the same date range
         let biometricFilter = { userId };
         if (startDate && endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
             biometricFilter.punchTime = {
                 gte: new Date(startDate),
-                lte: new Date(endDate)
+                lte: end
             };
         }
 
@@ -339,9 +343,16 @@ const getMyAttendanceHistory = async (req, res) => {
         // The current frontend expect them inside each attendance record.
         const historyWithBiometrics = history.map(record => ({
             ...record,
-            biometricLogs: biometricLogs.filter(log => 
-                log.punchTime.toISOString().split('T')[0] === record.date.toISOString().split('T')[0]
-            )
+            biometricLogs: biometricLogs.filter(log => {
+                // Robust IST Date comparison (YYYY-MM-DD in India)
+                const toISTDateString = (date) => {
+                    const d = new Date(date);
+                    // Shift to IST (+5:30) for display comparison
+                    const istDate = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+                    return istDate.toISOString().split('T')[0];
+                };
+                return toISTDateString(log.punchTime) === toISTDateString(record.date);
+            })
         }));
 
         res.json(historyWithBiometrics);

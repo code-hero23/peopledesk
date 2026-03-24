@@ -44,29 +44,28 @@ const importBiometricData = async (req, res) => {
             let match = allUsers.find(u => u.name.toLowerCase().trim() === normalizedInput);
             if (match) return match;
 
-            // 2. Try partial match (if input is part of full name or vice versa)
+            // 2. Try partial match
             match = allUsers.find(u => 
                 u.name.toLowerCase().includes(normalizedInput) || 
                 normalizedInput.includes(u.name.toLowerCase())
             );
             if (match) return match;
 
-            // 3. Fallback: Word match (check first name)
+            // 3. Fallback: First word match
             const inputFirst = normalizedInput.split(' ')[0];
             match = allUsers.find(u => u.name.toLowerCase().split(' ')[0] === inputFirst);
             
             return match;
         };
 
-        // Track user-dates to delete existing data once per combo
-        const processedCombos = new Set();
+        // Track seen users to delete their month data once
+        const refreshedUsers = new Set();
 
         for (const [index, row] of data.entries()) {
-            // Updated columns based on sample: First Name, Date, First Punch, Last Punch
             const name = (row['First Name'] || row['Name'] || row['name'] || '').toString().trim();
-            const dateVal = row['Date']; // May be a Date object or string
-            const firstPunchVal = row['First Punch']; // May be a Date object or string
-            const lastPunchVal = row['Last Punch']; // May be a Date object or string
+            const dateVal = row['Date'];
+            const firstPunchVal = row['First Punch'];
+            const lastPunchVal = row['Last Punch'];
 
             if (!name || !dateVal || !firstPunchVal) {
                 results.failed++;
@@ -74,16 +73,13 @@ const importBiometricData = async (req, res) => {
                 continue;
             }
 
-            // Find user with fuzzy matching
             const user = findUserByName(name);
-
             if (!user) {
                 results.failed++;
                 results.errors.push(`Row ${index + 2}: No user found for name "${name}"`);
                 continue;
             }
 
-            // EXCLUDE AEs
             if (user.designation === 'AE') {
                 results.skipped++;
                 continue;
@@ -105,7 +101,7 @@ const importBiometricData = async (req, res) => {
                 const dateParts = dateStr.split(/[-/]/);
                 if (dateParts.length !== 3) {
                     results.failed++;
-                    results.errors.push(`Row ${index + 2}: Invalid date format "${dateStr}" (Expected DD-MM-YYYY)`);
+                    results.errors.push(`Row ${index + 2}: Invalid date format "${dateStr}"`);
                     continue;
                 }
                 day = parseInt(dateParts[0]);
@@ -113,23 +109,14 @@ const importBiometricData = async (req, res) => {
                 year = parseInt(dateParts[2]);
             }
 
-            // DELETE EXISTING DATA for this user on this date (Clean-Replace)
-            const comboKey = `${user.id}-${year}-${month}-${day}`;
-            if (!processedCombos.has(comboKey)) {
-                const startOfDay = new Date(Date.UTC(year, month, day, 0, 0, 0) - (5.5 * 60 * 60 * 1000));
-                const endOfDay = new Date(Date.UTC(year, month, day, 23, 59, 59) - (5.5 * 60 * 60 * 1000));
-                
+            // TOTAL REFRESH: Delete all biometric data for this user for the months being imported
+            // Expanding range significantly to catch any "shifted" legacy data
+            if (!refreshedUsers.has(user.id)) {
                 const deleteResult = await prisma.biometricLog.deleteMany({
-                    where: {
-                        userId: user.id,
-                        punchTime: {
-                            gte: startOfDay,
-                            lte: endOfDay
-                        }
-                    }
+                    where: { userId: user.id }
                 });
                 results.deleted += deleteResult.count;
-                processedCombos.add(comboKey);
+                refreshedUsers.add(user.id);
             }
 
             const createLog = async (val, type) => {
