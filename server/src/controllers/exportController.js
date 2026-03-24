@@ -403,7 +403,7 @@ const exportAttendance = async (req, res) => {
                 select: { id: true, name: true, email: true, designation: true }
             }),
             prisma.permissionRequest.findMany({
-                where: { status: 'APPROVED', date: { gte: startDate, lte: endDate } }
+                where: { date: { gte: startDate, lte: endDate } }
             })
         ]);
 
@@ -432,7 +432,7 @@ const exportAttendance = async (req, res) => {
                     Employee: record.user.name, Email: record.user.email, Designation: record.user.designation || 'N/A', Date: dateStr,
                     firstLogin: dateObj, lastLogout: null, bioIn: null, bioOut: null,
                     totalGrossMs: 0, totalBreakMinutes: 0, status: record.status,
-                    hasActiveSession: false, sessionCount: 0, sessionLogs: [], sessionPhotos: [], permissionCount: 0
+                    hasActiveSession: false, sessionCount: 0, sessionLogs: [], sessionPhotos: [], approvedPermissionCount: 0, pendingPermissionCount: 0
                 });
             }
 
@@ -474,11 +474,14 @@ const exportAttendance = async (req, res) => {
             }
         });
 
-        // Process Permissions
         permissions.forEach(p => {
             const dateStr = new Date(p.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
             const key = `${p.userId}_${dateStr}`;
-            if (groupedMap.has(key)) groupedMap.get(key).permissionCount++;
+            if (groupedMap.has(key)) {
+                const group = groupedMap.get(key);
+                if (p.status === 'APPROVED') group.approvedPermissionCount++;
+                else if (p.status === 'PENDING') group.pendingPermissionCount++;
+            }
         });
 
         // Fill ABSENT & Logic
@@ -509,7 +512,7 @@ const exportAttendance = async (req, res) => {
                 'Logout (PeopleDesk)': group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'Bio In': group.bioIn ? group.bioIn.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'Bio Out': group.bioOut ? group.bioOut.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
-                'No. of Permissions': group.permissionCount,
+                'No. of Permissions': `Approved: ${group.approvedPermissionCount} | Pending: ${group.pendingPermissionCount}`,
                 'C1 (Login < 10:30)': c1 ? 'TRUE' : 'FALSE',
                 'C2 (Logout > 19:00)': c2 ? 'TRUE' : 'FALSE',
                 'C3 (BioIn 10:15-10:30)': c3 ? 'TRUE' : 'FALSE',

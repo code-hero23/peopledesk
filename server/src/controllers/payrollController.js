@@ -64,7 +64,7 @@ const generatePayrollReport = async (req, res) => {
                     where: { userId: user.id, status: 'APPROVED', startDate: { lte: endDate }, endDate: { gte: startDate } }
                 }),
                 prisma.permissionRequest.findMany({
-                    where: { userId: user.id, status: 'APPROVED', date: { gte: startDate, lte: endDate } }
+                    where: { userId: user.id, date: { gte: startDate, lte: endDate } }
                 })
             ]);
 
