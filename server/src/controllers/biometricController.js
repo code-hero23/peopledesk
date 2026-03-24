@@ -35,40 +35,35 @@ const importBiometricData = async (req, res) => {
             select: { id: true, name: true, role: true, designation: true }
         });
 
-        // Robust fuzzy matcher / normalizer
+        // Extremely robust fuzzy matcher for names
         const findUserByName = (name) => {
             if (!name) return null;
             
-            // Helper to clean names: lowercase, alphanumeric only, trimmed
             const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
             const cleanInput = clean(name);
-            
             if (!cleanInput) return null;
 
-            // 1. Try exact clean match
+            // 1. Exact clean match
             let match = allUsers.find(u => clean(u.name) === cleanInput);
             if (match) return match;
 
-            // 2. Try matching any word in the input to the start of a user name
-            // OR matching the start of the input to any word in the user name
-            const inputWords = name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
+            // 2. Word-based matching (Relaxed)
+            const inputWords = name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
             
             match = allUsers.find(u => {
-                const userWords = u.name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
+                const userWords = u.name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
                 
-                // Cross-check: Do any significant words match?
-                return inputWords.some(iw => userWords.includes(iw)) || 
-                       userWords.some(uw => inputWords.includes(uw));
+                // Does ANY input word share a 4-character prefix with ANY user word?
+                // This catches "Pugazh" vs "Pugazendhi" (Pugaz...) and "Sudarmadhi" vs "Sudharmadhi" (Sud...)
+                return inputWords.some(iw => 
+                    userWords.some(uw => {
+                        const min = Math.min(iw.length, uw.length, 5); // Match at least 5 chars or full word
+                        return iw.substring(0, min) === uw.substring(0, min) || 
+                               uw.includes(iw) || iw.includes(uw);
+                    })
+                );
             });
 
-            if (match) return match;
-
-            // 3. Fallback: First significant word match
-            const firstWord = inputWords[0];
-            if (firstWord) {
-                match = allUsers.find(u => u.name.toLowerCase().split(/[^a-z0-9]+/)[0] === firstWord);
-            }
-            
             return match;
         };
 
