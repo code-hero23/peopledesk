@@ -73,6 +73,43 @@ const EmployeeAttendanceDetail = () => {
         return dates.sort((a, b) => a - b);
     };
 
+    const aggregateDayData = (dateStr) => {
+        const daySessions = employeeAttendance?.filter(a => a.date.startsWith(dateStr)) || [];
+        if (daySessions.length === 0) return null;
+
+        const sortedSessions = [...daySessions].sort((a, b) => new Date(a.date) - new Date(b.date));
+        const firstSession = sortedSessions[0];
+        const lastSession = sortedSessions[sortedSessions.length - 1];
+
+        const allBreaks = daySessions.flatMap(s => s.breaks || []);
+        const allBiometricLogs = daySessions.flatMap(s => s.biometricLogs || [])
+            .sort((a, b) => new Date(a.punchTime) - new Date(b.punchTime));
+
+        const biometricIn = allBiometricLogs.find(l => l.punchType === 'IN')?.punchTime || (allBiometricLogs.length > 0 ? allBiometricLogs[0].punchTime : null);
+        const biometricOut = [...allBiometricLogs].reverse().find(l => l.punchType === 'OUT')?.punchTime || (allBiometricLogs.length > 0 ? allBiometricLogs[allBiometricLogs.length - 1].punchTime : null);
+
+        let totalWorkingMinutes = 0;
+        daySessions.forEach(session => {
+            if (session.checkoutTime) {
+                const sessionMinutes = Math.floor((new Date(session.checkoutTime) - new Date(session.date)) / 60000);
+                const deductibleBreaks = session.breaks
+                    ?.filter(b => ['TEA', 'LUNCH'].includes(b.breakType))
+                    .reduce((acc, b) => acc + (b.duration || 0), 0) || 0;
+                totalWorkingMinutes += Math.max(0, sessionMinutes - deductibleBreaks);
+            }
+        });
+
+        return {
+            loginTime: firstSession.date,
+            logoutTime: lastSession.checkoutTime,
+            breaks: allBreaks,
+            biometricIn,
+            biometricOut,
+            totalWorkingMinutes,
+            sessionsCount: daySessions.length
+        };
+    };
+
     const displayDates = cycleRange.startDate ? getDatesInRange(cycleRange.startDate, cycleRange.endDate) : [];
 
     return (
@@ -118,6 +155,8 @@ const EmployeeAttendanceDetail = () => {
                                         <th className="p-4 font-semibold text-slate-700 text-sm w-32 border-r border-gray-100 text-center">Date</th>
                                         <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-blue-50/50">Login</th>
                                         <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-orange-50/50">Log Out</th>
+                                        <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-indigo-50/50 text-indigo-700">Bio In</th>
+                                        <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-purple-50/50 text-purple-700">Bio Out</th>
                                         <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Coffee size={14} /> Tea Break</div></th>
                                         <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Coffee size={14} /> Lunch</div></th>
                                         <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Users size={14} /> Client Meet</div></th>
@@ -128,14 +167,14 @@ const EmployeeAttendanceDetail = () => {
                                 <tbody>
                                     {displayDates.length === 0 ? (
                                         <tr>
-                                            <td colSpan="8" className="p-8 text-center text-gray-500">
+                                            <td colSpan="10" className="p-8 text-center text-gray-500">
                                                 Select a valid cycle range to view attendance history.
                                             </td>
                                         </tr>
                                     ) : (
                                         displayDates.map((dateObj) => {
                                             const dateString = dateObj.toISOString().split('T')[0];
-                                            const record = employeeAttendance?.find(a => a.date.startsWith(dateString));
+                                            const dayData = aggregateDayData(dateString);
 
                                             return (
                                                 <tr key={dateString} className="border-b border-gray-100 hover:bg-slate-50 transition-colors">
@@ -148,32 +187,41 @@ const EmployeeAttendanceDetail = () => {
                                                         </div>
                                                     </td>
 
-                                                    {record ? (
+                                                    {dayData ? (
                                                         <>
-                                                            <td className="p-4 text-center font-medium text-blue-700 bg-blue-50/10 border-r border-gray-100">
-                                                                {formatTime(record.date)}
+                                                            <td className="p-4 text-center font-medium text-blue-700 bg-blue-50/10 border-r border-gray-100 relative group">
+                                                                {formatTime(dayData.loginTime)}
+                                                                {dayData.sessionsCount > 1 && (
+                                                                    <span className="absolute -top-1 -right-1 bg-blue-500 text-white text-[10px] px-1 rounded-full">{dayData.sessionsCount}</span>
+                                                                )}
                                                             </td>
                                                             <td className="p-4 text-center font-medium text-orange-700 bg-orange-50/10 border-r border-gray-100">
-                                                                {formatTime(record.checkoutTime)}
+                                                                {dayData.logoutTime ? formatTime(dayData.logoutTime) : '--:--'}
+                                                            </td>
+                                                            <td className="p-4 text-center font-medium text-indigo-700 bg-indigo-50/10 border-r border-gray-100">
+                                                                {dayData.biometricIn ? formatTime(dayData.biometricIn) : '--:--'}
+                                                            </td>
+                                                            <td className="p-4 text-center font-medium text-purple-700 bg-purple-50/10 border-r border-gray-100">
+                                                                {dayData.biometricOut ? formatTime(dayData.biometricOut) : '--:--'}
                                                             </td>
                                                             <td className="p-4 text-center text-gray-600 font-medium border-r border-gray-100">
-                                                                {formatMinutes(calculateBreakDuration(record.breaks, ['TEA']))}
+                                                                {formatMinutes(calculateBreakDuration(dayData.breaks, ['TEA']))}
                                                             </td>
                                                             <td className="p-4 text-center text-gray-600 font-medium border-r border-gray-100">
-                                                                {formatMinutes(calculateBreakDuration(record.breaks, ['LUNCH']))}
+                                                                {formatMinutes(calculateBreakDuration(dayData.breaks, ['LUNCH']))}
                                                             </td>
                                                             <td className="p-4 text-center text-gray-600 font-medium border-r border-gray-100">
-                                                                {formatMinutes(calculateBreakDuration(record.breaks, ['CLIENT_MEETING']))}
+                                                                {formatMinutes(calculateBreakDuration(dayData.breaks, ['CLIENT_MEETING']))}
                                                             </td>
                                                             <td className="p-4 text-center text-gray-600 font-medium border-r border-gray-100">
-                                                                {formatMinutes(calculateBreakDuration(record.breaks, ['ONLINE_DISCUSSION']))}
+                                                                {formatMinutes(calculateBreakDuration(dayData.breaks, ['ONLINE_DISCUSSION']))}
                                                             </td>
                                                             <td className="p-4 text-center font-bold text-green-700 bg-green-50/30">
-                                                                {calculateTotalHours(record)}
+                                                                {formatMinutes(dayData.totalWorkingMinutes)}
                                                             </td>
                                                         </>
                                                     ) : (
-                                                        <td colSpan="7" className="p-4 text-center text-gray-400 font-medium bg-gray-50/50">
+                                                        <td colSpan="9" className="p-4 text-center text-gray-400 font-medium bg-gray-50/50">
                                                             Absent / No Data
                                                         </td>
                                                     )}
@@ -184,8 +232,8 @@ const EmployeeAttendanceDetail = () => {
                                 </tbody>
                             </table>
                         </div>
-                    )}
-                </div>
+                    )
+                }</div>
             </div>
         </div>
     );

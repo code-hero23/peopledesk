@@ -1270,7 +1270,36 @@ const getEmployeeAttendance = async (req, res) => {
             }
         });
 
-        res.json(history);
+        // 3. Fetch biometric logs for the same range
+        let biometricFilter = { userId };
+        if (startDate && endDate) {
+            const end = new Date(endDate);
+            end.setHours(23, 59, 59, 999);
+            biometricFilter.punchTime = {
+                gte: new Date(startDate),
+                lte: end
+            };
+        }
+
+        const biometricLogs = await prisma.biometricLog.findMany({
+            where: biometricFilter,
+            orderBy: { punchTime: 'asc' }
+        });
+
+        // Attach biometric logs to attendance records based on date
+        const historyWithBiometrics = history.map(record => ({
+            ...record,
+            biometricLogs: biometricLogs.filter(log => {
+                const toISTDateString = (date) => {
+                    const d = new Date(date);
+                    const istDate = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+                    return istDate.toISOString().split('T')[0];
+                };
+                return toISTDateString(log.punchTime) === toISTDateString(record.date);
+            })
+        }));
+
+        res.json(historyWithBiometrics);
     } catch (error) {
         console.error("getEmployeeAttendance Error:", error);
         res.status(500).json({ message: 'Server Error', error: error.message });
