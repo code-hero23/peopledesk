@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
-import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils } from 'lucide-react';
+import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils, Upload } from 'lucide-react';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -229,6 +229,34 @@ const Attendance = () => {
         }
     };
 
+    const handleBiometricUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            const config = {
+                headers: {
+                    Authorization: `Bearer ${user.token}`,
+                    'Content-Type': 'multipart/form-data',
+                },
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.post(`${baseUrl}/admin/attendance/biometric/import`, formData, config);
+
+            alert(`Success! Imported ${response.data.importedCount} records. ${response.data.unmatchedNames.length > 0 ? `Unmatched: ${response.data.unmatchedNames.join(', ')}` : ''}`);
+            dispatch(getDailyAttendance(startDate));
+        } catch (error) {
+            console.error("Biometric import failed:", error);
+            alert(error.response?.data?.message || "Failed to import biometric data.");
+        }
+        // Reset file input
+        e.target.value = '';
+    };
+
     return (
         <div className="space-y-6 animate-fade-in">
             <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
@@ -270,6 +298,15 @@ const Attendance = () => {
                     <button onClick={onDownloadMonthly} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                         <Calendar size={16} /> Monthly
                     </button>
+                    <label className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95 cursor-pointer">
+                        <Upload size={16} /> Import Biometric
+                        <input
+                            type="file"
+                            className="hidden"
+                            accept=".xlsx, .xls"
+                            onChange={handleBiometricUpload}
+                        />
+                    </label>
                     {(user?.role === 'ADMIN' || user?.role === 'HR') && (
                         <button onClick={onGeneratePayrollReport} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                             <Zap size={16} /> Payroll Report
