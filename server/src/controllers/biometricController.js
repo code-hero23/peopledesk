@@ -85,29 +85,37 @@ const importBiometricData = async (req, res) => {
                 continue;
             }
 
-            // Parse Date
+            // Robust Date Parsing
             let day, month, year;
-            if (typeof dateVal === 'number' && !isNaN(dateVal)) {
-                const serial = xlsx.SSF.parse_date_code(dateVal);
-                day = serial.d;
-                month = serial.m - 1;
-                year = serial.y;
-            } else if (dateVal instanceof Date) {
-                day = dateVal.getDate();
-                month = dateVal.getMonth();
-                year = dateVal.getFullYear();
-            } else {
-                const dateStr = dateVal.toString().trim();
-                const dateParts = dateStr.split(/[-/]/);
-                if (dateParts.length !== 3) {
-                    results.failed++;
-                    results.errors.push(`Row ${index + 2}: Invalid date format "${dateStr}"`);
-                    continue;
+            const parseDate = (val) => {
+                if (typeof val === 'number') {
+                    const s = xlsx.SSF.parse_date_code(val);
+                    return { d: s.d, m: s.m - 1, y: s.y };
                 }
-                day = parseInt(dateParts[0]);
-                month = parseInt(dateParts[1]) - 1;
-                year = parseInt(dateParts[2]);
+                if (val instanceof Date) {
+                    return { d: val.getDate(), m: val.getMonth(), y: val.getFullYear() };
+                }
+                const s = val.toString().trim();
+                // Try DD-MM-YYYY or DD/MM/YYYY
+                const parts = s.split(/[-/]/);
+                if (parts.length === 3 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
+                    return { d: parseInt(parts[0]), m: parseInt(parts[1]) - 1, y: parseInt(parts[2]) };
+                }
+                // Fallback to JS native parsing (e.g. "1-Mar-2026")
+                const d = new Date(s);
+                if (!isNaN(d.getTime())) {
+                    return { d: d.getDate(), m: d.getMonth(), y: d.getFullYear() };
+                }
+                return null;
+            };
+
+            const parsedDate = parseDate(dateVal);
+            if (!parsedDate) {
+                results.failed++;
+                results.errors.push(`Row ${index + 2}: Unrecognized date format "${dateVal}"`);
+                continue;
             }
+            ({ d: day, m: month, y: year } = parsedDate);
 
             // TOTAL REFRESH: Delete all biometric data for this user for the months being imported
             // Expanding range significantly to catch any "shifted" legacy data
