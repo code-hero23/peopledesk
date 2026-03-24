@@ -1,5 +1,5 @@
 -- Catch-up Migration for VPS (Syncing DRIFTED columns)
--- Generated on: 2026-02-27T06:15:21.784Z
+-- Generated on: 2026-03-24T07:39:19.964Z
 
 -- 1. Missing Enums
 DO $$ BEGIN
@@ -63,6 +63,12 @@ ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryViewEnabled" BOOLEAN NOT NULL
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryDeductions" DOUBLE PRECISION DEFAULT 0;
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "salaryDeductionBreakdown" JSONB DEFAULT '[]';
 ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "timeShortageDeductionEnabled" BOOLEAN DEFAULT true;
+ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "biometricId" TEXT;
+
+-- Unique constraint for biometricId
+DO $$ BEGIN
+    CREATE UNIQUE INDEX IF NOT EXISTS "User_biometricId_key" ON "User"("biometricId");
+EXCEPTION WHEN duplicate_table THEN null; END $$;
 
 -- Foreign Key for User reportingBhId
 DO $$ BEGIN
@@ -247,4 +253,16 @@ CREATE TABLE IF NOT EXISTS "GlobalSetting" (
     "value" TEXT NOT NULL
 );
 
+-- 9. Biometric Log Table
+CREATE TABLE IF NOT EXISTS "BiometricLog" (
+    "id" SERIAL PRIMARY KEY,
+    "userId" INTEGER NOT NULL,
+    "punchTime" TIMESTAMP(3) NOT NULL,
+    "punchType" TEXT,
+    "deviceId" TEXT,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT "BiometricLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS "BiometricLog_userId_punchTime_idx" ON "BiometricLog"("userId", "punchTime");
 
