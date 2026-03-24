@@ -19,6 +19,7 @@ const {
     testWhatsApp,
     getEmployeeAttendance
 } = require('../controllers/adminController');
+const { importBiometricData } = require('../controllers/biometricController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
 
@@ -27,6 +28,7 @@ router.get('/employees/:id/attendance', protect, authorize('ADMIN', 'BUSINESS_HE
 router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllEmployees);
 router.post('/employees', protect, authorize('ADMIN', 'AE_MANAGER'), createEmployee);
 router.post('/employees/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importEmployees);
+router.post('/attendance/biometric/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importBiometricData);
 
 // Work Logs & Attendance - Accessible by Admin, BH, HR
 router.get('/worklogs', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllWorkLogs);

@@ -454,7 +454,7 @@ const updateUserStatus = async (req, res) => {
 // @route   POST /api/admin/employees
 // @access  Private (Admin)
 const createEmployee = async (req, res) => {
-    const { name, email, password, designation, phone } = req.body;
+    const { name, email, password, designation, phone, biometricId } = req.body;
 
     if (!name || !email || !password) {
         return res.status(400).json({ message: 'Please add all fields' });
@@ -501,7 +501,8 @@ const createEmployee = async (req, res) => {
                 timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : true,
                 salaryDeductions: req.body.salaryDeductions ? parseFloat(req.body.salaryDeductions) : 0,
                 salaryDeductionBreakdown: req.body.salaryDeductionBreakdown || [],
-                walkinViewEnabled: req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true'
+                walkinViewEnabled: req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true',
+                biometricId: biometricId || undefined
             },
             select: {
                 id: true, name: true, email: true, phone: true, role: true, status: true, designation: true, lastWorkLogDate: true,
@@ -514,6 +515,7 @@ const createEmployee = async (req, res) => {
                 walkinViewEnabled: true,
                 salaryDeductions: true,
                 salaryDeductionBreakdown: true,
+                biometricId: true,
                 reportingBh: { select: { name: true } }
             },
         });
@@ -855,7 +857,7 @@ const getActiveStatuses = async (req, res) => {
 // @access  Private (Admin)
 const updateEmployee = async (req, res) => {
     const { id } = req.params;
-    const { name, email, designation, role, password, phone } = req.body;
+    const { name, email, designation, role, password, phone, biometricId } = req.body;
     const requesterRole = req.user.role;
     const requesterId = req.user.id;
 
@@ -905,7 +907,8 @@ const updateEmployee = async (req, res) => {
                 salaryDeductionBreakdown: req.body.salaryDeductionBreakdown !== undefined ? req.body.salaryDeductionBreakdown : undefined,
                 timeShortageDeductionEnabled: req.body.timeShortageDeductionEnabled !== undefined ? (req.body.timeShortageDeductionEnabled === true || req.body.timeShortageDeductionEnabled === 'true') : undefined,
                 wfhViewEnabled: req.body.wfhViewEnabled !== undefined ? (req.body.wfhViewEnabled === true || req.body.wfhViewEnabled === 'true') : undefined,
-                walkinViewEnabled: req.body.walkinViewEnabled !== undefined ? (req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true') : undefined
+                walkinViewEnabled: req.body.walkinViewEnabled !== undefined ? (req.body.walkinViewEnabled === true || req.body.walkinViewEnabled === 'true') : undefined,
+                biometricId: biometricId !== undefined ? biometricId : undefined
             };
 
             // If password is provided, hash it and add to update data
@@ -918,7 +921,7 @@ const updateEmployee = async (req, res) => {
         const user = await prisma.user.update({
             where: { id: parseInt(id) },
             data: updateData,
-            select: { id: true, name: true, email: true, phone: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, walkinViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true }
+            select: { id: true, name: true, email: true, phone: true, role: true, designation: true, status: true, reportingBhId: true, isGlobalAccess: true, allocatedSalary: true, salaryViewEnabled: true, timeShortageDeductionEnabled: true, wfhViewEnabled: true, walkinViewEnabled: true, salaryDeductions: true, salaryDeductionBreakdown: true, biometricId: true }
         });
         res.json(user);
     } catch (error) {
@@ -1023,6 +1026,7 @@ const importEmployees = async (req, res) => {
             const designation = (row['Designation'] || row['designation'] || 'LA').toUpperCase();
             const phone = row['Phone'] || row['phone'] || row['WhatsApp'] || row['whatsapp'] || '';
             const ctc = parseFloat(row['CTC'] || row['Salary'] || row['salary'] || 0);
+            const biometricId = (row['Biometric ID'] || row['biometric id'] || row['BiometricID'] || '').toString();
 
             // Check for Time Shortage Deduction flag (YES/NO)
             const tsdVal = (row['Time Shortage Deduction'] || row['time shortage deduction'])?.toString().trim().toUpperCase();
@@ -1061,7 +1065,8 @@ const importEmployees = async (req, res) => {
                     allocatedSalary: ctc > 0 ? ctc : undefined,
                     salaryDeductionBreakdown: deductionBreakdown.length > 0 ? deductionBreakdown : undefined,
                     salaryViewEnabled: true,
-                    timeShortageDeductionEnabled: timeShortageDeductionEnabled
+                    timeShortageDeductionEnabled: timeShortageDeductionEnabled,
+                    biometricId: biometricId || undefined
                 };
 
                 if (user) {

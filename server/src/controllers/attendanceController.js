@@ -312,7 +312,10 @@ const getMyAttendanceHistory = async (req, res) => {
                 ...dateFilter
             },
             include: {
-                breaks: true // Include breaks to calculate durations
+                breaks: true, // Include breaks to calculate durations
+                biometricLogs: {
+                    orderBy: { punchTime: 'asc' }
+                }
             },
             orderBy: {
                 date: 'desc'

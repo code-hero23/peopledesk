@@ -47,6 +47,8 @@ model User {
   pushSubscriptions            PushSubscription[]
   walkinEntries                WalkinEntry[]          @relation("CreatedBy")
   assignedWalkins              WalkinEntry[]          @relation("AssignedBh")
+  biometricId                  String?                @unique
+  biometricLogs                BiometricLog[]
 }
 
 model PushSubscription {
@@ -110,6 +112,18 @@ model Attendance {
   breaks             BreakLog[]
 
   @@unique([userId, date])
+}
+
+model BiometricLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  punchTime DateTime
+  punchType String? // IN, OUT, or null
+  deviceId  String?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, punchTime])
 }
 
 model BreakLog {
