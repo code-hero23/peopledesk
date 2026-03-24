@@ -84,7 +84,7 @@ const generatePayrollReport = async (req, res) => {
             const absentDaysBio = Math.max(0, totalDaysInPeriod - workingDaysBio);
 
             // 3. Leaves & Permissions
-            const leavesFullArr = leaves.filter(l => l.type === 'FULL_DAY');
+            const leavesFullArr = leaves.filter(l => l.type !== 'HALF_DAY');
             const leavesHalfArr = leaves.filter(l => l.type === 'HALF_DAY');
             
             const fullAppr = leavesFullArr.filter(l => l.status === 'APPROVED').length;

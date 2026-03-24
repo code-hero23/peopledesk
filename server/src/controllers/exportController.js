@@ -419,48 +419,61 @@ const exportAttendance = async (req, res) => {
 
         const targetYear = startDate.getFullYear();
         const groupedMap = new Map();
-        const uniqueDates = new Set();
         const host = req.get('host');
         const baseUrl = `${req.protocol}://${host}`;
+
+        // Get all dates in range
+        const allDates = [];
+        let curr = new Date(startDate);
+        while (curr <= endDate) {
+            allDates.push(new Date(curr));
+            curr.setDate(curr.getDate() + 1);
+        }
+
+        // Initialize with ALL users and ALL dates
+        activeUsers.forEach(user => {
+            allDates.forEach(d => {
+                const dateStr = d.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                const key = `${user.id}_${dateStr}`;
+                groupedMap.set(key, {
+                    Employee: user.name, Email: user.email, Designation: user.designation || 'N/A', Date: dateStr,
+                    firstLogin: null, lastLogout: null, bioIn: null, bioOut: null,
+                    totalGrossMs: 0, totalBreakMinutes: 0, status: 'ABSENT',
+                    sessionCount: 0, sessionLogs: [], approvedPermissionCount: 0, pendingPermissionCount: 0,
+                    approvedLeaveCount: 0, pendingLeaveCount: 0
+                });
+            });
+        });
 
         // Process PeopleDesk Records
         records.forEach(record => {
             const dateObj = new Date(record.date);
             const dateStr = dateObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
-            uniqueDates.add(dateStr);
             const key = `${record.userId}_${dateStr}`;
 
-            if (!groupedMap.has(key)) {
-                groupedMap.set(key, {
-                    Employee: record.user.name, Email: record.user.email, Designation: record.user.designation || 'N/A', Date: dateStr,
-                    firstLogin: dateObj, lastLogout: null, bioIn: null, bioOut: null,
-                    totalGrossMs: 0, totalBreakMinutes: 0, status: record.status,
-                    hasActiveSession: false, sessionCount: 0, sessionLogs: [], sessionPhotos: [], approvedPermissionCount: 0, pendingPermissionCount: 0,
-                    approvedLeaveCount: 0, pendingLeaveCount: 0
-                });
-            }
+            if (groupedMap.has(key)) {
+                const group = groupedMap.get(key);
+                group.status = record.status; // Override ABSENT if record exists
+                group.sessionCount++;
+                if (!group.firstLogin || dateObj < group.firstLogin) group.firstLogin = dateObj;
+                
+                if (record.checkoutTime) {
+                    const checkoutObj = new Date(record.checkoutTime);
+                    group.totalGrossMs += (checkoutObj - dateObj);
+                    if (!group.lastLogout || checkoutObj > group.lastLogout) group.lastLogout = checkoutObj;
+                }
 
-            const group = groupedMap.get(key);
-            group.sessionCount++;
-            if (dateObj < group.firstLogin) group.firstLogin = dateObj;
-            if (record.checkoutTime) {
-                const checkoutObj = new Date(record.checkoutTime);
-                group.totalGrossMs += (checkoutObj - dateObj);
-                if (!group.lastLogout || checkoutObj > group.lastLogout) group.lastLogout = checkoutObj;
-            } else {
-                group.hasActiveSession = true;
-            }
+                if (record.breaks) {
+                    record.breaks.forEach(b => {
+                        if (['TEA', 'LUNCH'].includes(b.breakType)) group.totalBreakMinutes += (b.duration || 0);
+                    });
+                }
 
-            if (record.breaks) {
-                record.breaks.forEach(b => {
-                    if (['TEA', 'LUNCH'].includes(b.breakType)) group.totalBreakMinutes += (b.duration || 0);
-                });
-            }
-
-            if (record.status !== 'ABSENT') {
-                const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
-                const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
-                group.sessionLogs.push(`${inTime} - ${outTime}`);
+                if (record.status !== 'ABSENT') {
+                    const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
+                    const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
+                    group.sessionLogs.push(`${inTime} - ${outTime}`);
+                }
             }
         });
 
