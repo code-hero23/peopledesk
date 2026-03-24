@@ -2,7 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const XLSX = require('xlsx');
 const ExcelJS = require('exceljs');
 const prisma = new PrismaClient();
-const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
+const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST, normalizeBiometricDate } = require('../utils/dateHelpers');
 const { sendEmail } = require('../utils/emailService');
 
 // Helper to safely parse JSON
@@ -363,16 +363,13 @@ const exportAttendance = async (req, res) => {
             const d = new Date(date);
             attendanceWhere.date = { gte: new Date(d.setHours(0, 0, 0, 0)), lte: new Date(d.setHours(23, 59, 59, 999)) };
         } else if (month && year) {
-            // Payroll Cycle: 26th of (month-1) to 25th of month
             startDate = new Date(year, month - 2, 26, 0, 0, 0);
             endDate = new Date(year, month - 1, 25, 23, 59, 59);
             attendanceWhere.date = { gte: startDate, lte: endDate };
         } else {
-            // Default to current cycle
-            attendanceWhere.date = {
-                gte: getCycleStartDateIST(),
-                lte: getCycleEndDateIST()
-            };
+            startDate = getCycleStartDateIST();
+            endDate = getCycleEndDateIST();
+            attendanceWhere.date = { gte: startDate, lte: endDate };
         }
 
         if (userId) {
@@ -389,7 +386,7 @@ const exportAttendance = async (req, res) => {
             userWhere.name = { contains: search, mode: 'insensitive' };
         }
 
-        const [records, activeUsers] = await Promise.all([
+        const [records, biometricLogs, activeUsers, permissions] = await Promise.all([
             prisma.attendance.findMany({
                 where: attendanceWhere,
                 include: {
@@ -398,29 +395,32 @@ const exportAttendance = async (req, res) => {
                 },
                 orderBy: { date: 'asc' },
             }),
+            prisma.biometricLog.findMany({
+                where: { timestamp: { gte: new Date(startDate.getFullYear() - 1, 0, 1), lte: new Date(startDate.getFullYear() + 1, 11, 31) } }, // Wide range to catch 1926/2026
+            }),
             prisma.user.findMany({
                 where: userWhere,
                 select: { id: true, name: true, email: true, designation: true }
+            }),
+            prisma.permissionRequest.findMany({
+                where: { status: 'APPROVED', date: { gte: startDate, lte: endDate } }
             })
         ]);
 
-        // Helper to format minutes into readable string
         const formatDuration = (totalMinutes) => {
             if (!totalMinutes || totalMinutes <= 0) return '0m';
             const h = Math.floor(totalMinutes / 60);
             const m = Math.round(totalMinutes % 60);
-            if (h > 0) return `${h}h ${m}m`;
-            return `${m}m`;
+            return h > 0 ? `${h}h ${m}m` : `${m}m`;
         };
 
-        // Group by User + Date
+        const targetYear = startDate.getFullYear();
         const groupedMap = new Map();
         const uniqueDates = new Set();
-
         const host = req.get('host');
-        const protocol = req.protocol;
-        const baseUrl = `${protocol}://${host}`;
+        const baseUrl = `${req.protocol}://${host}`;
 
+        // Process PeopleDesk Records
         records.forEach(record => {
             const dateObj = new Date(record.date);
             const dateStr = dateObj.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
@@ -429,128 +429,106 @@ const exportAttendance = async (req, res) => {
 
             if (!groupedMap.has(key)) {
                 groupedMap.set(key, {
-                    Employee: record.user.name,
-                    Email: record.user.email,
-                    Designation: record.user.designation || 'N/A',
-                    Date: dateStr,
-                    firstLogin: dateObj,
-                    lastLogout: null,
-                    totalGrossMs: 0,
-                    totalBreakMinutes: 0,
-                    totalMeetingMinutes: 0,
-                    status: record.status,
-                    hasActiveSession: false,
-                    sessionCount: 0,
-                    sessionLogs: [],
-                    sessionPhotos: []
+                    Employee: record.user.name, Email: record.user.email, Designation: record.user.designation || 'N/A', Date: dateStr,
+                    firstLogin: dateObj, lastLogout: null, bioIn: null, bioOut: null,
+                    totalGrossMs: 0, totalBreakMinutes: 0, status: record.status,
+                    hasActiveSession: false, sessionCount: 0, sessionLogs: [], sessionPhotos: [], permissionCount: 0
                 });
             }
 
             const group = groupedMap.get(key);
             group.sessionCount++;
-
-            // Update Start Time (Earliest)
-            if (dateObj < group.firstLogin) {
-                group.firstLogin = dateObj;
-            }
-
-            // Calculate Duration & Update End Time
+            if (dateObj < group.firstLogin) group.firstLogin = dateObj;
             if (record.checkoutTime) {
                 const checkoutObj = new Date(record.checkoutTime);
                 group.totalGrossMs += (checkoutObj - dateObj);
-
-                if (!group.lastLogout || checkoutObj > group.lastLogout) {
-                    group.lastLogout = checkoutObj;
-                }
+                if (!group.lastLogout || checkoutObj > group.lastLogout) group.lastLogout = checkoutObj;
             } else {
                 group.hasActiveSession = true;
             }
 
-            // Calculate Breaks within this session
             if (record.breaks) {
                 record.breaks.forEach(b => {
-                    const duration = b.duration || 0;
-                    if (['TEA', 'LUNCH'].includes(b.breakType)) {
-                        group.totalBreakMinutes += duration;
-                    } else if (['CLIENT_MEETING', 'BH_MEETING'].includes(b.breakType)) {
-                        group.totalMeetingMinutes += duration;
-                    }
+                    if (['TEA', 'LUNCH'].includes(b.breakType)) group.totalBreakMinutes += (b.duration || 0);
                 });
             }
 
             if (record.status !== 'ABSENT') {
                 const inTime = dateObj.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true });
                 const outTime = record.checkoutTime ? new Date(record.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Active';
-
-                const inPhoto = record.checkInPhoto ? `${baseUrl}${record.checkInPhoto}` : 'No Photo';
-                const outPhoto = record.checkoutPhoto ? `${baseUrl}${record.checkoutPhoto}` : 'No Photo';
-
                 group.sessionLogs.push(`${inTime} - ${outTime}`);
-                group.sessionPhotos.push(`In: ${inPhoto} | Out: ${outPhoto}`);
             }
         });
 
-        // Fill in ABSENT records
-        uniqueDates.forEach(dateStr => {
-            activeUsers.forEach(user => {
-                const key = `${user.id}_${dateStr}`;
-                if (!groupedMap.has(key)) {
-                    groupedMap.set(key, {
-                        Employee: user.name,
-                        Email: user.email,
-                        Designation: user.designation || 'N/A',
-                        Date: dateStr,
-                        firstLogin: null,
-                        lastLogout: null,
-                        totalGrossMs: 0,
-                        totalBreakMinutes: 0,
-                        totalMeetingMinutes: 0,
-                        status: 'ABSENT',
-                        hasActiveSession: false,
-                        sessionCount: 0,
-                        sessionLogs: [],
-                        sessionPhotos: []
-                    });
-                }
-            });
+        // Process Biometric Logs (Normalized)
+        biometricLogs.forEach(log => {
+            const normalizedTime = normalizeBiometricDate(log.timestamp, targetYear);
+            if (!normalizedTime) return;
+            const dateStr = normalizedTime.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+            const key = `${log.userId}_${dateStr}`;
+
+            if (groupedMap.has(key)) {
+                const group = groupedMap.get(key);
+                if (!group.bioIn || normalizedTime < group.bioIn) group.bioIn = normalizedTime;
+                if (!group.bioOut || normalizedTime > group.bioOut) group.bioOut = normalizedTime;
+            }
         });
 
+        // Process Permissions
+        permissions.forEach(p => {
+            const dateStr = new Date(p.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+            const key = `${p.userId}_${dateStr}`;
+            if (groupedMap.has(key)) groupedMap.get(key).permissionCount++;
+        });
+
+        // Fill ABSENT & Logic
         const flattenedRecords = Array.from(groupedMap.values()).map(group => {
-            const grossMinutes = group.totalGrossMs / (1000 * 60);
-            const netMinutes = Math.max(0, grossMinutes - group.totalBreakMinutes);
+            const netMinutes = Math.max(0, (group.totalGrossMs / 60000) - group.totalBreakMinutes);
+            
+            // Logic Conditions
+            const parseTime = (d) => { if(!d) return null; const ist = new Date(d.getTime() + (5.5*60*60*1000)); return ist.getUTCHours() * 60 + ist.getUTCMinutes(); };
+            
+            const loginMins = parseTime(group.firstLogin);
+            const logoutMins = parseTime(group.lastLogout);
+            const bioInMins = parseTime(group.bioIn);
+            const bioOutMins = parseTime(group.bioOut);
+
+            const c1 = loginMins !== null && loginMins <= (10 * 60 + 30); // Before 10:30 AM
+            const c2 = logoutMins !== null && logoutMins >= (19 * 60);    // After 07:00 PM
+            const c3 = bioInMins !== null && bioInMins <= (10 * 60 + 30); // Before 10:30 AM
+            const c4 = bioOutMins !== null && bioOutMins >= (19 * 60 + 30); // After 07:30 PM
+
+            const result = c1 && c2 && c3 && c4;
 
             return {
                 Employee: group.Employee,
                 Email: group.Email,
                 Designation: group.Designation,
                 Date: group.Date,
-                'Log In': (group.status === 'ABSENT' || !group.firstLogin) ? '-' : group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }),
-                'Log Out': (group.status === 'ABSENT' || group.hasActiveSession) ? '-' : (group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-'),
-                'Net Working Hours': group.status === 'ABSENT' ? '-' : formatDuration(netMinutes),
-                'Total Breaks': group.status === 'ABSENT' ? '-' : formatDuration(group.totalBreakMinutes),
-                'Total Meetings': group.status === 'ABSENT' ? '-' : formatDuration(group.totalMeetingMinutes),
-                'Sessions': (group.status === 'ABSENT' || group.sessionCount === 0) ? '-' : group.sessionCount,
-                'Session Details': (group.status === 'ABSENT' || group.sessionLogs.length === 0) ? '-' : group.sessionLogs.join(' | '),
-                'Photo Evidence': (group.status === 'ABSENT' || group.sessionPhotos.length === 0) ? '-' : group.sessionPhotos.join(' || '),
+                'Login (PeopleDesk)': group.firstLogin ? group.firstLogin.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+                'Logout (PeopleDesk)': group.lastLogout ? group.lastLogout.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+                'Bio In': group.bioIn ? group.bioIn.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+                'Bio Out': group.bioOut ? group.bioOut.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
+                'No. of Permissions': group.permissionCount,
+                'C1 (Login < 10:30)': c1 ? 'TRUE' : 'FALSE',
+                'C2 (Logout > 19:00)': c2 ? 'TRUE' : 'FALSE',
+                'C3 (BioIn 10:15-10:30)': c3 ? 'TRUE' : 'FALSE',
+                'C4 (BioOut > 19:30)': c4 ? 'TRUE' : 'FALSE',
+                'Combined Result (AND)': result ? 'TRUE' : 'FALSE',
+                'Net Working Hours': formatDuration(netMinutes),
                 Status: group.status,
             };
         });
 
-        // Sort by Date Descending
-        flattenedRecords.sort((a, b) => new Date(b.Date) - new Date(a.Date));
+        flattenedRecords.sort((a, b) => new Date(b.Date.split('/').reverse().join('-')) - new Date(a.Date.split('/').reverse().join('-')));
 
-        // Initialize Workbook
         const wb = XLSX.utils.book_new();
         const ws = XLSX.utils.json_to_sheet(flattenedRecords);
         ws['!cols'] = setAutoWidth(flattenedRecords);
-        XLSX.utils.book_append_sheet(wb, ws, "Attendance");
+        XLSX.utils.book_append_sheet(wb, ws, "Monthly Attendance");
 
-        // Write and Send
         const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
-        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        const filename = date ? `attendance_report_${date}.xlsx` : 'attendance_report.xlsx';
-        res.attachment(filename);
-        res.send(buf);
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet').attachment(`Monthly_Report_${month}_${year}.xlsx`).send(buf);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error' });

@@ -155,11 +155,35 @@ const parseRobustDate = (dateStr) => {
     return isNaN(d.getTime()) ? new Date() : d;
 };
 
+/**
+ * Normalizes a biometric date that might have a 100-year offset (e.g. 1926 instead of 2026).
+ * It preserves the month, day, and time but forces the year to match the target.
+ */
+const normalizeBiometricDate = (dateInput, targetYear) => {
+    if (!dateInput) return null;
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return null;
+
+    // If years match perfectly, return as is
+    if (d.getFullYear() === targetYear) return d;
+
+    // If 100 year difference (likely offset bug), correct it
+    if (Math.abs(d.getFullYear() - targetYear) === 100) {
+        const corrected = new Date(d);
+        corrected.setFullYear(targetYear);
+        return corrected;
+    }
+
+    // Default: Just return original if it's not a common offset issue
+    return d;
+};
+
 module.exports = {
     getStartOfDayIST,
     getEndOfDayIST,
     getCycleStartDateIST,
     getCycleEndDateIST,
     getLatestCompletedCycle,
-    parseRobustDate
+    parseRobustDate,
+    normalizeBiometricDate
 };
