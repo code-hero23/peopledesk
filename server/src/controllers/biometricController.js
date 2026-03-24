@@ -28,7 +28,7 @@ const importBiometricData = async (req, res) => {
             return res.status(400).json({ message: 'Excel sheet is empty' });
         }
 
-        const results = { success: 0, failed: 0, skipped: 0, errors: [] };
+        const results = { success: 0, failed: 0, skipped: 0, deleted: 0, errors: [] };
 
         // Pre-fetch users for fuzzy matching
         const allUsers = await prisma.user.findMany({
@@ -57,6 +57,9 @@ const importBiometricData = async (req, res) => {
             
             return match;
         };
+
+        // Track user-dates to delete existing data once per combo
+        const processedCombos = new Set();
 
         for (const [index, row] of data.entries()) {
             // Updated columns based on sample: First Name, Date, First Punch, Last Punch
@@ -89,7 +92,6 @@ const importBiometricData = async (req, res) => {
             // Parse Date
             let day, month, year;
             if (typeof dateVal === 'number' && !isNaN(dateVal)) {
-                // Handle Excel Serial Date (e.g. 46025)
                 const serial = xlsx.SSF.parse_date_code(dateVal);
                 day = serial.d;
                 month = serial.m - 1;
@@ -111,12 +113,30 @@ const importBiometricData = async (req, res) => {
                 year = parseInt(dateParts[2]);
             }
 
+            // DELETE EXISTING DATA for this user on this date (Clean-Replace)
+            const comboKey = `${user.id}-${year}-${month}-${day}`;
+            if (!processedCombos.has(comboKey)) {
+                const startOfDay = new Date(Date.UTC(year, month, day, 0, 0, 0) - (5.5 * 60 * 60 * 1000));
+                const endOfDay = new Date(Date.UTC(year, month, day, 23, 59, 59) - (5.5 * 60 * 60 * 1000));
+                
+                const deleteResult = await prisma.biometricLog.deleteMany({
+                    where: {
+                        userId: user.id,
+                        punchTime: {
+                            gte: startOfDay,
+                            lte: endOfDay
+                        }
+                    }
+                });
+                results.deleted += deleteResult.count;
+                processedCombos.add(comboKey);
+            }
+
             const createLog = async (val, type) => {
                 if (!val || val === '--' || val === '00:00') return;
                 
                 let hour, min;
                 if (typeof val === 'number') {
-                    // Excel time values are decimals (e.g. 0.5 = 12:00 PM)
                     const serialTime = xlsx.SSF.parse_date_code(val);
                     hour = serialTime.H;
                     min = serialTime.M;
@@ -130,26 +150,10 @@ const importBiometricData = async (req, res) => {
                     min = parseInt(timeParts[1]);
                 }
 
-                // Adjust for IST (+5:30): 
-                // Excel values are "local" (India). 
-                // We want to store them in UTC such that they display correctly as IST.
-                // 10:16 AM IST = 04:46 AM UTC
+                // IST Correction (-5:30)
                 const punchTime = new Date(Date.UTC(year, month, day, hour, min) - (5.5 * 60 * 60 * 1000));
 
                 if (isNaN(punchTime.getTime())) return;
-
-                // DUPLICATE PREVENTION: Check if this exact punch already exists
-                const existing = await prisma.biometricLog.findFirst({
-                    where: {
-                        userId: user.id,
-                        punchTime: punchTime
-                    }
-                });
-
-                if (existing) {
-                    results.skipped++;
-                    return;
-                }
 
                 await prisma.biometricLog.create({
                     data: {
@@ -166,8 +170,17 @@ const importBiometricData = async (req, res) => {
                 // First Punch (IN)
                 await createLog(firstPunchVal, 'IN');
                 
-                // Last Punch (OUT) - Only if different and valid
-                if (lastPunchVal && lastPunchVal !== firstPunchVal) {
+                // Last Punch (OUT) - Compare HH:mm string to avoid Date instance mismatch
+                const getHHMM = (v) => {
+                    if (typeof v === 'number') {
+                        const s = xlsx.SSF.parse_date_code(v);
+                        return `${s.H}:${s.M}`;
+                    }
+                    if (v instanceof Date) return `${v.getHours()}:${v.getMinutes()}`;
+                    return v.toString().trim();
+                };
+
+                if (lastPunchVal && getHHMM(lastPunchVal) !== getHHMM(firstPunchVal)) {
                     await createLog(lastPunchVal, 'OUT');
                 }
             } catch (err) {
