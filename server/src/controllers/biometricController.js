@@ -88,7 +88,13 @@ const importBiometricData = async (req, res) => {
 
             // Parse Date
             let day, month, year;
-            if (dateVal instanceof Date) {
+            if (typeof dateVal === 'number' && !isNaN(dateVal)) {
+                // Handle Excel Serial Date (e.g. 46025)
+                const serial = xlsx.SSF.parse_date_code(dateVal);
+                day = serial.d;
+                month = serial.m - 1;
+                year = serial.y;
+            } else if (dateVal instanceof Date) {
                 day = dateVal.getDate();
                 month = dateVal.getMonth();
                 year = dateVal.getFullYear();
@@ -109,8 +115,12 @@ const importBiometricData = async (req, res) => {
                 if (!val || val === '--' || val === '00:00') return;
                 
                 let hour, min;
-                if (val instanceof Date) {
-                    // Excel time only cells become Date objects starting at 1899-12-30
+                if (typeof val === 'number') {
+                    // Excel time values are decimals (e.g. 0.5 = 12:00 PM)
+                    const serialTime = xlsx.SSF.parse_date_code(val);
+                    hour = serialTime.H;
+                    min = serialTime.M;
+                } else if (val instanceof Date) {
                     hour = val.getHours();
                     min = val.getMinutes();
                 } else {
@@ -120,7 +130,11 @@ const importBiometricData = async (req, res) => {
                     min = parseInt(timeParts[1]);
                 }
 
-                const punchTime = new Date(year, month, day, hour, min, 0);
+                // Adjust for IST (+5:30): 
+                // Excel values are "local" (India). 
+                // We want to store them in UTC such that they display correctly as IST.
+                // 10:16 AM IST = 04:46 AM UTC
+                const punchTime = new Date(Date.UTC(year, month, day, hour, min) - (5.5 * 60 * 60 * 1000));
 
                 if (isNaN(punchTime.getTime())) return;
 
