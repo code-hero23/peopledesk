@@ -58,7 +58,7 @@ const generatePayrollReport = async (req, res) => {
                     include: { breaks: true }
                 }),
                 prisma.biometricLog.findMany({
-                    where: { userId: user.id, timestamp: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
+                    where: { userId: user.id, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
                 }),
                 prisma.leaveRequest.findMany({
                     where: { userId: user.id, status: 'APPROVED', startDate: { lte: endDate }, endDate: { gte: startDate } }
@@ -75,7 +75,7 @@ const generatePayrollReport = async (req, res) => {
             // 2. Biometric Days (Normalized)
             const bioDays = new Set();
             biometricLogs.forEach(log => {
-                const norm = normalizeBiometricDate(log.timestamp, targetYear);
+                const norm = normalizeBiometricDate(log.punchTime, targetYear);
                 if (norm >= startDate && norm <= endDate) {
                     bioDays.add(norm.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }));
                 }

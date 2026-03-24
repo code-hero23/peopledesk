@@ -396,7 +396,7 @@ const exportAttendance = async (req, res) => {
                 orderBy: { date: 'asc' },
             }),
             prisma.biometricLog.findMany({
-                where: { timestamp: { gte: new Date(startDate.getFullYear() - 1, 0, 1), lte: new Date(startDate.getFullYear() + 1, 11, 31) } }, // Wide range to catch 1926/2026
+                where: { punchTime: { gte: new Date(startDate.getFullYear() - 1, 0, 1), lte: new Date(startDate.getFullYear() + 1, 11, 31) } }, // Wide range to catch 1926/2026
             }),
             prisma.user.findMany({
                 where: userWhere,
@@ -462,7 +462,7 @@ const exportAttendance = async (req, res) => {
 
         // Process Biometric Logs (Normalized)
         biometricLogs.forEach(log => {
-            const normalizedTime = normalizeBiometricDate(log.timestamp, targetYear);
+            const normalizedTime = normalizeBiometricDate(log.punchTime, targetYear);
             if (!normalizedTime) return;
             const dateStr = normalizedTime.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
             const key = `${log.userId}_${dateStr}`;
