@@ -313,16 +313,38 @@ const getMyAttendanceHistory = async (req, res) => {
             },
             include: {
                 breaks: true, // Include breaks to calculate durations
-                biometricLogs: {
-                    orderBy: { punchTime: 'asc' }
-                }
             },
             orderBy: {
                 date: 'desc'
             }
         });
 
-        res.json(history);
+        // Fetch biometric logs separately for the user in the same date range
+        let biometricFilter = { userId };
+        if (startDate && endDate) {
+            biometricFilter.punchTime = {
+                gte: new Date(startDate),
+                lte: new Date(endDate)
+            };
+        }
+
+        const biometricLogs = await prisma.biometricLog.findMany({
+            where: biometricFilter,
+            orderBy: { punchTime: 'asc' }
+        });
+
+        // Add biometric logs to the relevant attendance records or return them alongside
+        // For the frontend to group them easily, we'll attach biometricLogs to EACH attendance record 
+        // that matches that date, or just return a combined object.
+        // The current frontend expect them inside each attendance record.
+        const historyWithBiometrics = history.map(record => ({
+            ...record,
+            biometricLogs: biometricLogs.filter(log => 
+                log.punchTime.toISOString().split('T')[0] === record.date.toISOString().split('T')[0]
+            )
+        }));
+
+        res.json(historyWithBiometrics);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
