@@ -10,14 +10,20 @@ function getFlagValue(args, flag) {
     return null;
 }
 
-// Helper: Sets Hours/Minutes on a base date object
+// Helper: Sets Hours/Minutes on a base date object and adjusts for IST (-5:30)
 function setTimeOnDate(baseDate, timeStr) {
     if (!timeStr) return null;
     if (timeStr === 'null' || timeStr === 'clear') return 'CLEAR';
 
     const [hours, minutes] = timeStr.split(':').map(Number);
-    const newDate = new Date(baseDate);
-    newDate.setHours(hours, minutes, 0, 0);
+    
+    // Create UTC date for that specific time on that day
+    const year = baseDate.getFullYear();
+    const month = baseDate.getMonth();
+    const day = baseDate.getDate();
+    
+    // 10:25 AM IST = 04:55 AM UTC
+    const newDate = new Date(Date.UTC(year, month, day, hours, minutes) - (5.5 * 60 * 60 * 1000));
     return newDate;
 }
 
