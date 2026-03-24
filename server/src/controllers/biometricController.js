@@ -14,8 +14,8 @@ const importBiometricData = async (req, res) => {
 
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
-        const sheet = workbook.Sheets[sheetName];
-        const data = xlsx.utils.sheet_to_json(sheet, { cellDates: true });
+        // Use raw: false to get the formatted strings from Excel cells
+        const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
 
         // Cleanup temp file
         try {
