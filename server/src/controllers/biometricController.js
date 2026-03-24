@@ -106,6 +106,19 @@ const importBiometricData = async (req, res) => {
 
                 if (isNaN(punchTime.getTime())) return;
 
+                // DUPLICATE PREVENTION: Check if this exact punch already exists
+                const existing = await prisma.biometricLog.findFirst({
+                    where: {
+                        userId: user.id,
+                        punchTime: punchTime
+                    }
+                });
+
+                if (existing) {
+                    results.skipped++;
+                    return;
+                }
+
                 await prisma.biometricLog.create({
                     data: {
                         userId: user.id,
