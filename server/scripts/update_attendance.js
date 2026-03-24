@@ -83,8 +83,24 @@ async function updateAttendance(email, dateStr, checkInTimeStr, checkOutTimeStr)
         });
 
         if (!attendance) {
-            console.error(`❌ No attendance record found for this date.`);
-            console.log(`Cannot update time for a non-existent record.`);
+            console.log(`⚠️ No attendance record found for this date. Creating a new one...`);
+            
+            const newCheckIn = setTimeOnDate(targetDate, checkInTimeStr || '09:00');
+            const newCheckOut = checkOutTimeStr ? setTimeOnDate(targetDate, checkOutTimeStr) : null;
+
+            const createdRecord = await prisma.attendance.create({
+                data: {
+                    userId: user.id,
+                    date: newCheckIn,
+                    status: 'PRESENT',
+                    checkoutTime: newCheckOut === 'CLEAR' ? null : newCheckOut,
+                    deviceInfo: 'Manual Script Update'
+                }
+            });
+
+            console.log(`✅ Success! New attendance record created.`);
+            console.log(`Check-In:  ${createdRecord.date.toLocaleString()}`);
+            console.log(`Check-Out: ${createdRecord.checkoutTime ? createdRecord.checkoutTime.toLocaleString() : 'Not Checked Out'}`);
             return;
         }
 
@@ -94,7 +110,6 @@ async function updateAttendance(email, dateStr, checkInTimeStr, checkOutTimeStr)
         if (checkInTimeStr) {
             const newCheckIn = setTimeOnDate(targetDate, checkInTimeStr);
             if (newCheckIn !== 'CLEAR') {
-                // In schema, 'date' is usually the main timestamp. 'createdAt' is auto.
                 updateData.date = newCheckIn;
             }
         }
