@@ -146,8 +146,11 @@ const importBiometricData = async (req, res) => {
         }
 
         res.json({
-            message: `Biometric import complete. Imported ${results.success} logs. Skipped ${results.skipped} (AEs). Failed ${results.failed}.`,
-            details: results
+            message: `Biometric import complete.`,
+            importedCount: results.success,
+            skippedCount: results.skipped,
+            failedCount: results.failed,
+            unmatchedNames: results.errors // The frontend uses .length on this
         });
 
     } catch (error) {
