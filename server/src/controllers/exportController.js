@@ -386,7 +386,7 @@ const exportAttendance = async (req, res) => {
             userWhere.name = { contains: search, mode: 'insensitive' };
         }
 
-        const [records, biometricLogs, activeUsers, permissions] = await Promise.all([
+        const [records, biometricLogs, activeUsers, permissions, leaves] = await Promise.all([
             prisma.attendance.findMany({
                 where: attendanceWhere,
                 include: {
@@ -404,6 +404,9 @@ const exportAttendance = async (req, res) => {
             }),
             prisma.permissionRequest.findMany({
                 where: { date: { gte: startDate, lte: endDate } }
+            }),
+            prisma.leaveRequest.findMany({
+                where: { startDate: { lte: endDate }, endDate: { gte: startDate } }
             })
         ]);
 
@@ -432,7 +435,8 @@ const exportAttendance = async (req, res) => {
                     Employee: record.user.name, Email: record.user.email, Designation: record.user.designation || 'N/A', Date: dateStr,
                     firstLogin: dateObj, lastLogout: null, bioIn: null, bioOut: null,
                     totalGrossMs: 0, totalBreakMinutes: 0, status: record.status,
-                    hasActiveSession: false, sessionCount: 0, sessionLogs: [], sessionPhotos: [], approvedPermissionCount: 0, pendingPermissionCount: 0
+                    hasActiveSession: false, sessionCount: 0, sessionLogs: [], sessionPhotos: [], approvedPermissionCount: 0, pendingPermissionCount: 0,
+                    approvedLeaveCount: 0, pendingLeaveCount: 0
                 });
             }
 
@@ -484,11 +488,36 @@ const exportAttendance = async (req, res) => {
             }
         });
 
+        // Process Leaves (Map by userId for later)
+        const leaveMap = new Map();
+        leaves.forEach(l => {
+            if (!leaveMap.has(l.userId)) leaveMap.set(l.userId, []);
+            leaveMap.get(l.userId).push(l);
+        });
+
         // Fill ABSENT & Logic
         const flattenedRecords = Array.from(groupedMap.values()).map(group => {
             const netMinutes = Math.max(0, (group.totalGrossMs / 60000) - group.totalBreakMinutes);
             
-            // Logic Conditions
+            // Re-find userId for this group
+            const user = activeUsers.find(u => u.email === group.Email);
+            if (user && leaveMap.has(user.id)) {
+                const groupDate = new Date(group.Date.split('/').reverse().join('-'));
+                groupDate.setHours(12, 0, 0, 0); // Middle of day for comparison
+                
+                leaveMap.get(user.id).forEach(l => {
+                    const start = new Date(l.startDate);
+                    start.setHours(0,0,0,0);
+                    const end = new Date(l.endDate);
+                    end.setHours(23,59,59,999);
+                    
+                    if (groupDate >= start && groupDate <= end) {
+                        if (l.status === 'APPROVED') group.approvedLeaveCount++;
+                        else if (l.status === 'PENDING') group.pendingLeaveCount++;
+                    }
+                });
+            }
+
             const parseTime = (d) => { if(!d) return null; const ist = new Date(d.getTime() + (5.5*60*60*1000)); return ist.getUTCHours() * 60 + ist.getUTCMinutes(); };
             
             const loginMins = parseTime(group.firstLogin);
@@ -513,6 +542,7 @@ const exportAttendance = async (req, res) => {
                 'Bio In': group.bioIn ? group.bioIn.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'Bio Out': group.bioOut ? group.bioOut.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'No. of Permissions': `Approved: ${group.approvedPermissionCount} | Pending: ${group.pendingPermissionCount}`,
+                'No. of Leaves': `Approved: ${group.approvedLeaveCount} | Pending: ${group.pendingLeaveCount}`,
                 'C1 (Login < 10:30)': c1 ? 'TRUE' : 'FALSE',
                 'C2 (Logout > 19:00)': c2 ? 'TRUE' : 'FALSE',
                 'C3 (BioIn 10:15-10:30)': c3 ? 'TRUE' : 'FALSE',

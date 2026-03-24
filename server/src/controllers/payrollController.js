@@ -61,7 +61,7 @@ const generatePayrollReport = async (req, res) => {
                     where: { userId: user.id, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
                 }),
                 prisma.leaveRequest.findMany({
-                    where: { userId: user.id, status: 'APPROVED', startDate: { lte: endDate }, endDate: { gte: startDate } }
+                    where: { userId: user.id, startDate: { lte: endDate }, endDate: { gte: startDate } }
                 }),
                 prisma.permissionRequest.findMany({
                     where: { userId: user.id, date: { gte: startDate, lte: endDate } }
@@ -84,9 +84,17 @@ const generatePayrollReport = async (req, res) => {
             const absentDaysBio = Math.max(0, totalDaysInPeriod - workingDaysBio);
 
             // 3. Leaves & Permissions
-            const leavesFull = leaves.filter(l => l.type === 'FULL_DAY').length;
-            const leavesHalf = leaves.filter(l => l.type === 'HALF_DAY').length;
-            const permissionCount = permissions.length;
+            const leavesFullArr = leaves.filter(l => l.type === 'FULL_DAY');
+            const leavesHalfArr = leaves.filter(l => l.type === 'HALF_DAY');
+            
+            const fullAppr = leavesFullArr.filter(l => l.status === 'APPROVED').length;
+            const fullPend = leavesFullArr.filter(l => l.status === 'PENDING').length;
+            
+            const halfAppr = leavesHalfArr.filter(l => l.status === 'APPROVED').length;
+            const halfPend = leavesHalfArr.filter(l => l.status === 'PENDING').length;
+
+            const permissionAppr = permissions.filter(p => p.status === 'APPROVED').length;
+            const permissionPend = permissions.filter(p => p.status === 'PENDING').length;
 
             // 4. Efficiency Score
             let totalNetMinutes = 0;
@@ -110,9 +118,9 @@ const generatePayrollReport = async (req, res) => {
                 workingDaysBio,
                 absentDaysPD,
                 absentDaysBio,
-                permissions: permissionCount,
-                leavesFull,
-                leavesHalf,
+                permissions: `Appr: ${permissionAppr} | Pend: ${permissionPend}`,
+                leavesFull: `Appr: ${fullAppr} | Pend: ${fullPend}`,
+                leavesHalf: `Appr: ${halfAppr} | Pend: ${halfPend}`,
                 efficiency: `${efficiency}%`
             });
         }
