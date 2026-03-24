@@ -11,13 +11,6 @@ echo "🛠️ Updating Server..."
 cd server
 npm install
 npx prisma generate
-
-# Apply custom SQL sync migration safely
-if [ -f "prisma/migrations/vps_sync_migration.sql" ]; then
-    echo "🗄️ Applying Custom SQL Sync..."
-    npx prisma db execute --file prisma/migrations/vps_sync_migration.sql
-fi
-
 # prisma migrate deploy is safe for existing data (it doesn't reset)
 npx prisma migrate deploy 
 pm2 restart all
