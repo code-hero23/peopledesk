@@ -35,25 +35,39 @@ const importBiometricData = async (req, res) => {
             select: { id: true, name: true, role: true, designation: true }
         });
 
-        // Simple fuzzy matcher / normalizer
+        // Robust fuzzy matcher / normalizer
         const findUserByName = (name) => {
             if (!name) return null;
-            const normalizedInput = name.toLowerCase().trim().replace(/\s+/g, ' ');
+            
+            // Helper to clean names: lowercase, alphanumeric only, trimmed
+            const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
+            const cleanInput = clean(name);
+            
+            if (!cleanInput) return null;
 
-            // 1. Try exact match
-            let match = allUsers.find(u => u.name.toLowerCase().trim() === normalizedInput);
+            // 1. Try exact clean match
+            let match = allUsers.find(u => clean(u.name) === cleanInput);
             if (match) return match;
 
-            // 2. Try partial match
-            match = allUsers.find(u => 
-                u.name.toLowerCase().includes(normalizedInput) || 
-                normalizedInput.includes(u.name.toLowerCase())
-            );
+            // 2. Try matching any word in the input to the start of a user name
+            // OR matching the start of the input to any word in the user name
+            const inputWords = name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
+            
+            match = allUsers.find(u => {
+                const userWords = u.name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length > 2);
+                
+                // Cross-check: Do any significant words match?
+                return inputWords.some(iw => userWords.includes(iw)) || 
+                       userWords.some(uw => inputWords.includes(uw));
+            });
+
             if (match) return match;
 
-            // 3. Fallback: First word match
-            const inputFirst = normalizedInput.split(' ')[0];
-            match = allUsers.find(u => u.name.toLowerCase().split(' ')[0] === inputFirst);
+            // 3. Fallback: First significant word match
+            const firstWord = inputWords[0];
+            if (firstWord) {
+                match = allUsers.find(u => u.name.toLowerCase().split(/[^a-z0-9]+/)[0] === firstWord);
+            }
             
             return match;
         };
