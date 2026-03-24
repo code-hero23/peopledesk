@@ -99,12 +99,18 @@ const importBiometricData = async (req, res) => {
                 // Try DD-MM-YYYY or DD/MM/YYYY
                 const parts = s.split(/[-/]/);
                 if (parts.length === 3 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
-                    return { d: parseInt(parts[0]), m: parseInt(parts[1]) - 1, y: parseInt(parts[2]) };
+                    let d = parseInt(parts[0]);
+                    let m = parseInt(parts[1]) - 1;
+                    let y = parseInt(parts[2]);
+                    if (y < 100) y += 2000; // Handle 2-digit years like '26'
+                    return { d, m, y };
                 }
                 // Fallback to JS native parsing (e.g. "1-Mar-2026")
-                const d = new Date(s);
-                if (!isNaN(d.getTime())) {
-                    return { d: d.getDate(), m: d.getMonth(), y: d.getFullYear() };
+                const dObj = new Date(s);
+                if (!isNaN(dObj.getTime())) {
+                    let y = dObj.getFullYear();
+                    if (y < 100) y += 2000;
+                    return { d: dObj.getDate(), m: dObj.getMonth(), y };
                 }
                 return null;
             };
