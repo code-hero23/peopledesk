@@ -39,7 +39,7 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
         today.setHours(0, 0, 0, 0);
 
         const todaysEntries = entries.filter(e => {
-            if (e.visitStatus === 'CANCELLED') return false;
+            if (e.visitStatus === 'CANCELLED' || e.outTime) return false;
             const eDate = new Date(e.dateOfVisit);
             eDate.setHours(0, 0, 0, 0);
             return eDate.getTime() === today.getTime();
@@ -77,17 +77,23 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                 });
 
                 // Movement
-                x += dx * speed;
-                y += dy * speed;
+                x += dx * speed * 0.5; // Slow down for smoothness
+                y += dy * speed * 0.5;
 
-                // Bounce
-                if (x < 10 || x > 260) dx *= -1;
-                if (y < 10 || y > 110) dy *= -1;
+                // Bounce with more margin
+                if (x < 15 || x > 255) dx *= -1.02; // Add slight kick on bounce
+                if (y < 20 || y > 120) dy *= -1.02;
 
-                // Random turn
-                if (Math.random() < 0.01) {
-                    dx = Math.random() * 2 - 1;
-                    dy = Math.random() * 2 - 1;
+                // Random small adjustments instead of total random turns
+                if (Math.random() < 0.02) {
+                    dx += (Math.random() * 0.2 - 0.1);
+                    dy += (Math.random() * 0.2 - 0.1);
+                    // Cap speed
+                    const currentSpeed = Math.sqrt(dx*dx + dy*dy);
+                    if (currentSpeed > 1) {
+                        dx /= currentSpeed;
+                        dy /= currentSpeed;
+                    }
                 }
 
                 return { ...person, x, y, dx, dy };
@@ -133,10 +139,11 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                         return (
                             <div 
                                 key={p.id}
-                                className="absolute transition-all duration-100 ease-linear"
+                                className="absolute"
                                 style={{ 
                                     left: p.x, 
                                     top: p.y,
+                                    transition: 'all 0.15s linear',
                                     transform: `rotate(${angle}deg)`
                                 }}
                             >
