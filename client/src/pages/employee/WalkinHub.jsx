@@ -563,8 +563,6 @@ const WalkinHub = () => {
                                 </th>
                                 <th className="px-8 py-6">In/Out Time</th>
                                 <th className="px-8 py-6">Business Head</th>
-                                <th className="px-8 py-6">FA / LA</th>
-                                <th className="px-8 py-6">CRE / CF</th>
                                 <th className="px-8 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
                                     <div className="flex items-center gap-2">
                                         Status
@@ -642,6 +640,17 @@ const WalkinHub = () => {
                                         <span className={`inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${getVisitStatusColor(entry.visitStatus)}`}>
                                             {entry.visitStatus || 'PENDING'}
                                         </span>
+                                    </td>
+                                    <td className="px-8 py-8">
+                                        {entry.reviewSent ? (
+                                            <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-wider">
+                                                <CheckCircle size={14} /> Sent
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-1.5 text-slate-300 font-bold text-[10px] uppercase tracking-wider">
+                                                <Clock size={14} /> Pending
+                                            </div>
+                                        )}
                                     </td>
                                     <td className="px-8 py-8 text-right" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-end gap-2">
@@ -1014,7 +1023,6 @@ const WalkinHub = () => {
                                             <p className="font-bold text-slate-700">{selectedEntry.tentativeTime || 'N/A'}</p>
                                         </div>
                                     </div>
-
                                     <div className="grid grid-cols-2 gap-4">
                                         <div className="p-5 bg-emerald-50/30 rounded-3xl border border-emerald-100">
                                             <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">In Time</p>
@@ -1024,6 +1032,22 @@ const WalkinHub = () => {
                                             <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">Out Time</p>
                                             <p className="font-bold text-rose-700">{selectedEntry.outTime || 'Not Recorded'}</p>
                                         </div>
+                                    </div>
+
+                                    <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 flex items-center justify-between">
+                                        <div>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">WhatsApp Review Status</p>
+                                            <p className="font-bold text-slate-700">{selectedEntry.reviewSent ? 'Review Request Sent' : 'Queued / Pending (Sends after 2h)'}</p>
+                                        </div>
+                                        {selectedEntry.reviewSent ? (
+                                            <div className="w-10 h-10 bg-emerald-100 text-emerald-600 rounded-xl flex items-center justify-center">
+                                                <CheckCircle size={20} />
+                                            </div>
+                                        ) : (
+                                            <div className="w-10 h-10 bg-slate-100 text-slate-400 rounded-xl flex items-center justify-center animate-pulse">
+                                                <Timer size={20} />
+                                            </div>
+                                        )}
                                     </div>
                                     
                                     <div className="p-6 bg-slate-50 rounded-3xl border border-slate-100">
