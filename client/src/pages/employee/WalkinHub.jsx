@@ -31,27 +31,32 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
-const ShowroomMonitor = ({ showrooms }) => {
+const ShowroomMonitor = ({ showrooms, entries }) => {
     const [people, setPeople] = useState([]);
 
     useEffect(() => {
-        const names = ["Ravi", "Priya", "Arun", "Sneha", "Vijay", "Kiran", "Anu", "Rahul", "Deepa", "Manoj", "Sathya", "Nisha"];
-        const INITIAL_PEOPLE_PER_SHOWROOM = 4;
-        
-        const newPeople = showrooms.flatMap((showroom, sIdx) => 
-            Array.from({ length: INITIAL_PEOPLE_PER_SHOWROOM }).map((_, pIdx) => ({
-                id: `${sIdx}-${pIdx}`,
-                showroom: showroom,
-                name: names[Math.floor(Math.random() * names.length)],
-                x: Math.random() * 200 + 20,
-                y: Math.random() * 80 + 20,
-                dx: (Math.random() * 2 - 1) * 0.5,
-                dy: (Math.random() * 2 - 1) * 0.5,
-                speed: 0.15 + Math.random() * 0.25
-            }))
-        );
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+
+        const todaysEntries = entries.filter(e => {
+            if (e.visitStatus === 'CANCELLED') return false;
+            const eDate = new Date(e.dateOfVisit);
+            eDate.setHours(0, 0, 0, 0);
+            return eDate.getTime() === today.getTime();
+        });
+
+        const newPeople = todaysEntries.map((entry, idx) => ({
+            id: `${entry.id}-${idx}`,
+            showroom: entry.showroom,
+            name: entry.clientName,
+            x: Math.random() * 180 + 30,
+            y: Math.random() * 80 + 40,
+            dx: (Math.random() * 2 - 1) * 0.4,
+            dy: (Math.random() * 2 - 1) * 0.4,
+            speed: 0.15 + Math.random() * 0.25
+        }));
         setPeople(newPeople);
-    }, [showrooms]);
+    }, [entries]);
 
     useEffect(() => {
         let animationFrameId;
@@ -105,7 +110,7 @@ const ShowroomMonitor = ({ showrooms }) => {
                     </div>
                     <div>
                         <h2 className="text-xl font-black text-white tracking-tight">Showroom Live View</h2>
-                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Real-time Client Flow Monitoring</p>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Real-time Client Flow Monitoring ({new Date().toLocaleDateString(undefined, { dateStyle: 'medium' })})</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4">
@@ -116,9 +121,12 @@ const ShowroomMonitor = ({ showrooms }) => {
                 </div>
             </div>
             {showrooms.map(name => (
-                <div key={name} className="relative h-40 bg-slate-800/50 rounded-3xl border border-slate-700/50 overflow-hidden backdrop-blur-sm group hover:border-blue-500/30 transition-all">
-                    <div className="absolute top-4 left-4 z-10">
+                <div key={name} className="relative h-44 bg-slate-800/30 rounded-3xl border border-slate-700/50 overflow-hidden backdrop-blur-sm group hover:border-blue-500/30 transition-all">
+                    <div className="absolute top-4 left-4 z-10 flex flex-col gap-0.5">
                         <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{name}</p>
+                        <p className="text-[7px] font-bold text-slate-500 uppercase tracking-widest">
+                            {people.filter(p => p.showroom === name).length} Active
+                        </p>
                     </div>
                     {people.filter(p => p.showroom === name).map(p => {
                         const angle = Math.atan2(p.dy, p.dx) * 180 / Math.PI;
@@ -133,12 +141,17 @@ const ShowroomMonitor = ({ showrooms }) => {
                                 }}
                             >
                                 <div className="flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-slate-400 uppercase mb-0.5" style={{ transform: `rotate(${-angle}deg)` }}>{p.name}</span>
-                                    <span className="text-base" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>🚶</span>
+                                    <span className="text-[7px] font-black text-white/80 bg-slate-900/60 px-1 rounded-sm uppercase mb-0.5 whitespace-nowrap" style={{ transform: `rotate(${-angle}deg)` }}>{p.name}</span>
+                                    <span className="text-xl" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>🚶</span>
                                 </div>
                             </div>
                         )
                     })}
+                    {people.filter(p => p.showroom === name).length === 0 && (
+                        <div className="absolute inset-0 flex items-center justify-center opacity-10 pointer-events-none">
+                            <Users size={40} className="text-white" />
+                        </div>
+                    )}
                 </div>
             ))}
         </div>
@@ -243,6 +256,8 @@ const WalkinHub = () => {
             setSortOrder('asc');
         }
     };
+
+    const SHOWROOMS = ["MTRS", "OMR", "PORUR", "COIMBATORE"];
 
     const onSubmit = (e) => {
         e.preventDefault();
@@ -396,7 +411,7 @@ const WalkinHub = () => {
                 </div>
             )}
 
-            <ShowroomMonitor showrooms={[...new Set(entries.map(e => e.showroom).filter(Boolean))].slice(0, 4)} />
+            <ShowroomMonitor showrooms={SHOWROOMS} entries={entries} />
 
             {/* Filters Bar */}
             <div className="space-y-4">
@@ -719,12 +734,16 @@ const WalkinHub = () => {
                                         <div className="grid grid-cols-2 gap-4">
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Showroom</label>
-                                                <input
-                                                    type="text"
-                                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
+                                                <select
+                                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none"
                                                     value={formData.showroom}
                                                     onChange={(e) => setFormData({ ...formData, showroom: e.target.value })}
-                                                />
+                                                >
+                                                    <option value="">Select Showroom...</option>
+                                                    {SHOWROOMS.map(s => (
+                                                        <option key={s} value={s}>{s}</option>
+                                                    ))}
+                                                </select>
                                             </div>
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Visit Status</label>
