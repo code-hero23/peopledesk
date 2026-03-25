@@ -3,7 +3,7 @@ import { Bell, X, Info, Check, Trash2, Calendar, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-import { formatDistanceToNow } from 'date-fns';
+import { formatRelativeTime } from '../utils/dateUtils';
 
 const NotificationBell = () => {
     const { user } = useSelector((state) => state.auth);
@@ -144,7 +144,7 @@ const NotificationBell = () => {
                                                 <div className="flex items-center gap-2 pt-1">
                                                     <Clock size={10} className="text-slate-300" />
                                                     <span className="text-[10px] font-black text-slate-300 uppercase tracking-widest">
-                                                        {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
+                                                        {formatRelativeTime(notif.createdAt)}
                                                     </span>
                                                 </div>
                                             </div>

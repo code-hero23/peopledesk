@@ -71,3 +71,27 @@ export const getHHMM = (dateInput) => {
     const mm = String(date.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
 };
+
+export const formatRelativeTime = (dateString) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInSeconds = Math.floor((now - date) / 1000);
+
+    if (diffInSeconds < 0) return 'just now';
+    if (diffInSeconds < 60) return 'just now';
+    if (diffInSeconds < 3600) {
+        const m = Math.floor(diffInSeconds / 60);
+        return `${m} minute${m > 1 ? 's' : ''} ago`;
+    }
+    if (diffInSeconds < 86400) {
+        const h = Math.floor(diffInSeconds / 3600);
+        return `${h} hour${h > 1 ? 's' : ''} ago`;
+    }
+    if (diffInSeconds < 604800) {
+        const d = Math.floor(diffInSeconds / 86400);
+        return `${d} day${d > 1 ? 's' : ''} ago`;
+    }
+    
+    return formatDate(dateString);
+};
