@@ -120,7 +120,11 @@ const updateWalkinEntry = async (req, res) => {
 
         if (updateData.bhId) updateData.bhId = parseInt(updateData.bhId);
         if (updateData.dateOfVisit) updateData.dateOfVisit = parseRobustDate(updateData.dateOfVisit);
-        // inTime and outTime are handled by spread in updateData
+
+        // Remove relation objects if they exist in the body (prevents Prisma errors)
+        delete updateData.createdBy;
+        delete updateData.bh;
+        delete updateData.id; // Also safety: don't try to update the ID
 
         const entry = await prisma.walkinEntry.update({
             where: { id: parseInt(id) },
