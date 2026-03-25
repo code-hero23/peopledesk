@@ -440,7 +440,8 @@ const exportAttendance = async (req, res) => {
                     firstLogin: null, lastLogout: null, bioIn: null, bioOut: null,
                     totalGrossMs: 0, totalBreakMinutes: 0, status: 'ABSENT',
                     sessionCount: 0, sessionLogs: [], approvedPermissionCount: 0, pendingPermissionCount: 0,
-                    approvedLeaveCount: 0, pendingLeaveCount: 0
+                    approvedLeaveCount: 0, pendingLeaveCount: 0,
+                    approvedHalfLeaveCount: 0, pendingHalfLeaveCount: 0
                 });
             });
         });
@@ -525,8 +526,13 @@ const exportAttendance = async (req, res) => {
                     end.setHours(23,59,59,999);
                     
                     if (groupDate >= start && groupDate <= end) {
-                        if (l.status === 'APPROVED') group.approvedLeaveCount++;
-                        else if (l.status === 'PENDING') group.pendingLeaveCount++;
+                        if (l.type === 'HALF_DAY') {
+                            if (l.status === 'APPROVED') group.approvedHalfLeaveCount++;
+                            else if (l.status === 'PENDING') group.pendingHalfLeaveCount++;
+                        } else {
+                            if (l.status === 'APPROVED') group.approvedLeaveCount++;
+                            else if (l.status === 'PENDING') group.pendingLeaveCount++;
+                        }
                     }
                 });
             }
@@ -555,7 +561,11 @@ const exportAttendance = async (req, res) => {
                 'Bio In': group.bioIn ? group.bioIn.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'Bio Out': group.bioOut ? group.bioOut.toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : '-',
                 'No. of Permissions': `Approved: ${group.approvedPermissionCount} | Pending: ${group.pendingPermissionCount}`,
-                'No. of Leaves': `Approved: ${group.approvedLeaveCount} | Pending: ${group.pendingLeaveCount}`,
+                'Total Permissions': group.approvedPermissionCount + group.pendingPermissionCount,
+                'No. of Leaves (Full)': `Approved: ${group.approvedLeaveCount} | Pending: ${group.pendingLeaveCount}`,
+                'Total Leaves (Full)': group.approvedLeaveCount + group.pendingLeaveCount,
+                'No of Leaves (Half)': `Approved: ${group.approvedHalfLeaveCount} | Pending: ${group.pendingHalfLeaveCount}`,
+                'Total Leaves (Half)': group.approvedHalfLeaveCount + group.pendingHalfLeaveCount,
                 'C1 (Login < 10:30)': c1 ? 'TRUE' : 'FALSE',
                 'C2 (Logout > 19:00)': c2 ? 'TRUE' : 'FALSE',
                 'C3 (BioIn 10:15-10:30)': c3 ? 'TRUE' : 'FALSE',

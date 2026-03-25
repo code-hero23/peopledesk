@@ -41,8 +41,11 @@ const generatePayrollReport = async (req, res) => {
             { header: 'Absent Days (PD)', key: 'absentDaysPD', width: 18 },
             { header: 'Absent Days (Bio)', key: 'absentDaysBio', width: 18 },
             { header: 'No of Permission', key: 'permissions', width: 18 },
+            { header: 'Total Permission', key: 'totalPermissions', width: 18 },
             { header: 'No of Leaves (Full)', key: 'leavesFull', width: 18 },
+            { header: 'Total Leaves (Full)', key: 'totalLeavesFull', width: 18 },
             { header: 'No of Leaves (Half)', key: 'leavesHalf', width: 18 },
+            { header: 'Total Leaves (Half)', key: 'totalLeavesHalf', width: 18 },
             { header: 'Efficiency Score (%)', key: 'efficiency', width: 18 }
         ];
 
@@ -119,8 +122,11 @@ const generatePayrollReport = async (req, res) => {
                 absentDaysPD,
                 absentDaysBio,
                 permissions: `Appr: ${permissionAppr} | Pend: ${permissionPend}`,
+                totalPermissions: permissionAppr + permissionPend,
                 leavesFull: `Appr: ${fullAppr} | Pend: ${fullPend}`,
+                totalLeavesFull: fullAppr + fullPend,
                 leavesHalf: `Appr: ${halfAppr} | Pend: ${halfPend}`,
+                totalLeavesHalf: halfAppr + halfPend,
                 efficiency: `${efficiency}%`
             });
         }
