@@ -19,6 +19,21 @@ async function main() {
   } catch (err) {
     console.error('Error adding "outTime":', err.message);
   }
+  
+  // Adding User columns
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "walkinViewEnabled" BOOLEAN DEFAULT false`);
+    console.log('Column "walkinViewEnabled" added or already exists.');
+  } catch (err) {
+    console.error('Error adding "walkinViewEnabled":', err.message);
+  }
+
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "callAnalyticsViewEnabled" BOOLEAN DEFAULT false`);
+    console.log('Column "callAnalyticsViewEnabled" added or already exists.');
+  } catch (err) {
+    console.error('Error adding "callAnalyticsViewEnabled":', err.message);
+  }
 
   console.log('Safe update completed.');
 }
