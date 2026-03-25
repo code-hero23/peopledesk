@@ -318,6 +318,7 @@ const getMyRequests = async (req, res) => {
             end = getCycleEndDateIST();
         }
 
+        console.log('Fetching leaves...');
         const leaves = await prisma.leaveRequest.findMany({
             where: {
                 userId,
@@ -326,6 +327,7 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
+        console.log('Fetching permissions...');
         const permissions = await prisma.permissionRequest.findMany({
             where: {
                 userId,
@@ -334,6 +336,7 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
+        console.log('Fetching site visits...');
         const siteVisits = await prisma.siteVisitRequest.findMany({
             where: {
                 userId,
@@ -342,6 +345,7 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
+        console.log('Fetching showroom visits...');
         const showroomVisits = await prisma.showroomVisitRequest.findMany({
             where: {
                 userId,
@@ -350,6 +354,7 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
+        console.log('Fetching WFH...');
         const wfh = await prisma.wfhRequest.findMany({
             where: {
                 userId,
@@ -359,6 +364,7 @@ const getMyRequests = async (req, res) => {
             orderBy: { createdAt: 'desc' },
         });
 
+        console.log('Fetching attendance history...');
         const attendanceHistory = await prisma.attendance.findMany({
             where: {
                 userId,
@@ -400,7 +406,7 @@ const getMyRequests = async (req, res) => {
             stats
         });
     } catch (error) {
-        console.error(error);
+        console.error('ERROR IN getMyRequests:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
