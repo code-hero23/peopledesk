@@ -17,6 +17,6 @@ router.get('/bhs', getAllBHs);
 
 router.route('/:id')
     .put(updateWalkinEntry)
-    .delete(authorize('ADMIN'), deleteWalkinEntry);
+    .delete(authorize('ADMIN', 'BUSINESS_HEAD'), deleteWalkinEntry);
 
 module.exports = router;

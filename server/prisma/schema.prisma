@@ -587,6 +587,8 @@ model WalkinEntry {
   dayOfVisit       String?
   tentativeTime    String?
   showroom         String?
+  inTime           String?
+  outTime          String?
   visitStatus      String?
   remarks          String?
   createdById      Int

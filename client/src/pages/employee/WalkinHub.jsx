@@ -25,9 +25,125 @@ import {
     ArrowUp,
     ArrowDown,
     AlertTriangle,
-    Phone
+    Phone,
+    Timer,
+    Monitor
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+
+const ShowroomMonitor = ({ showrooms }) => {
+    const [people, setPeople] = useState([]);
+
+    useEffect(() => {
+        const names = ["Ravi", "Priya", "Arun", "Sneha", "Vijay", "Kiran", "Anu", "Rahul", "Deepa", "Manoj", "Sathya", "Nisha"];
+        const INITIAL_PEOPLE_PER_SHOWROOM = 4;
+        
+        const newPeople = showrooms.flatMap((showroom, sIdx) => 
+            Array.from({ length: INITIAL_PEOPLE_PER_SHOWROOM }).map((_, pIdx) => ({
+                id: `${sIdx}-${pIdx}`,
+                showroom: showroom,
+                name: names[Math.floor(Math.random() * names.length)],
+                x: Math.random() * 200 + 20,
+                y: Math.random() * 80 + 20,
+                dx: (Math.random() * 2 - 1) * 0.5,
+                dy: (Math.random() * 2 - 1) * 0.5,
+                speed: 0.15 + Math.random() * 0.25
+            }))
+        );
+        setPeople(newPeople);
+    }, [showrooms]);
+
+    useEffect(() => {
+        let animationFrameId;
+        const move = () => {
+            setPeople(prevPeople => prevPeople.map(person => {
+                let { x, y, dx, dy, speed } = person;
+                
+                // Repulsion logic
+                prevPeople.forEach(other => {
+                    if (other.id === person.id || other.showroom !== person.showroom) return;
+                    const distX = x - other.x;
+                    const distY = y - other.y;
+                    const dist = Math.sqrt(distX * distX + distY * distY);
+                    if (dist < 30) {
+                        dx += (distX / dist) * 0.05;
+                        dy += (distY / dist) * 0.05;
+                    }
+                });
+
+                // Movement
+                x += dx * speed;
+                y += dy * speed;
+
+                // Bounce
+                if (x < 10 || x > 260) dx *= -1;
+                if (y < 10 || y > 110) dy *= -1;
+
+                // Random turn
+                if (Math.random() < 0.01) {
+                    dx = Math.random() * 2 - 1;
+                    dy = Math.random() * 2 - 1;
+                }
+
+                return { ...person, x, y, dx, dy };
+            }));
+            animationFrameId = requestAnimationFrame(move);
+        };
+        animationFrameId = requestAnimationFrame(move);
+        return () => cancelAnimationFrame(animationFrameId);
+    }, []);
+
+    return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-900 p-8 rounded-[2.5rem] mt-8 shadow-2xl border border-slate-800 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10">
+                <Building2 size={120} className="text-white" />
+            </div>
+            <div className="lg:col-span-4 flex items-center justify-between mb-2">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-blue-500 rounded-xl flex items-center justify-center text-white shadow-lg shadow-blue-500/20">
+                        <Monitor size={20} />
+                    </div>
+                    <div>
+                        <h2 className="text-xl font-black text-white tracking-tight">Showroom Live View</h2>
+                        <p className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em]">Real-time Client Flow Monitoring</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                        <span className="text-[10px] font-black text-emerald-500 uppercase tracking-widest">System Active</span>
+                    </div>
+                </div>
+            </div>
+            {showrooms.map(name => (
+                <div key={name} className="relative h-40 bg-slate-800/50 rounded-3xl border border-slate-700/50 overflow-hidden backdrop-blur-sm group hover:border-blue-500/30 transition-all">
+                    <div className="absolute top-4 left-4 z-10">
+                        <p className="text-[9px] font-black text-blue-400 uppercase tracking-widest">{name}</p>
+                    </div>
+                    {people.filter(p => p.showroom === name).map(p => {
+                        const angle = Math.atan2(p.dy, p.dx) * 180 / Math.PI;
+                        return (
+                            <div 
+                                key={p.id}
+                                className="absolute transition-all duration-100 ease-linear"
+                                style={{ 
+                                    left: p.x, 
+                                    top: p.y,
+                                    transform: `rotate(${angle}deg)`
+                                }}
+                            >
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[7px] font-black text-slate-400 uppercase mb-0.5" style={{ transform: `rotate(${-angle}deg)` }}>{p.name}</span>
+                                    <span className="text-base" style={{ filter: 'drop-shadow(0 2px 4px rgba(0,0,0,0.3))' }}>🚶</span>
+                                </div>
+                            </div>
+                        )
+                    })}
+                </div>
+            ))}
+        </div>
+    );
+};
 
 const WalkinHub = () => {
     const dispatch = useDispatch();
@@ -59,6 +175,8 @@ const WalkinHub = () => {
         dayOfVisit: '',
         tentativeTime: '',
         showroom: '',
+        inTime: '',
+        outTime: '',
         visitStatus: 'PENDING',
         remarks: '',
         creName: ''
@@ -93,6 +211,8 @@ const WalkinHub = () => {
             dayOfVisit: '',
             tentativeTime: '',
             showroom: '',
+            inTime: '',
+            outTime: '',
             visitStatus: 'PENDING',
             remarks: '',
             creName: ''
@@ -231,7 +351,7 @@ const WalkinHub = () => {
             </div>
 
             {/* Admin Stats Grid */}
-            {user.role === 'ADMIN' && (
+            {['ADMIN', 'BUSINESS_HEAD'].includes(user.role) && (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                     <div className="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
                         <div className="flex items-center justify-between mb-4">
@@ -275,6 +395,8 @@ const WalkinHub = () => {
                     </div>
                 </div>
             )}
+
+            <ShowroomMonitor showrooms={[...new Set(entries.map(e => e.showroom).filter(Boolean))].slice(0, 4)} />
 
             {/* Filters Bar */}
             <div className="space-y-4">
@@ -393,6 +515,7 @@ const WalkinHub = () => {
                                         ) : <ArrowUpDown size={12} className="text-slate-300" />}
                                     </div>
                                 </th>
+                                <th className="px-8 py-6">In/Out Time</th>
                                 <th className="px-8 py-6">Business Head</th>
                                 <th className="px-8 py-6">CRE Name</th>
                                 <th className="px-8 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
@@ -438,6 +561,16 @@ const WalkinHub = () => {
                                         </div>
                                     </td>
                                     <td className="px-8 py-8">
+                                        <div className="flex flex-col gap-1">
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                                <Timer size={12} className="text-emerald-500" /> In: {entry.inTime || '--'}
+                                            </div>
+                                            <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
+                                                <Timer size={12} className="text-rose-500" /> Out: {entry.outTime || '--'}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-8">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 shadow-sm">
                                                 <UserCircle2 size={16} />
@@ -466,7 +599,7 @@ const WalkinHub = () => {
                                             >
                                                 <Edit2 size={18} />
                                             </button>
-                                            {user.role === 'ADMIN' && (
+                                            {['ADMIN', 'BUSINESS_HEAD'].includes(user.role) && (
                                                 <button 
                                                     onClick={() => handleDelete(entry.id)}
                                                     className="p-3 bg-white text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-2xl transition-all border border-slate-100 shadow-sm"
@@ -605,6 +738,32 @@ const WalkinHub = () => {
                                                     <option value="RESCHEDULED">Rescheduled</option>
                                                     <option value="CANCELLED">Cancelled</option>
                                                 </select>
+                                            </div>
+                                        </div>
+                                        <div className="grid grid-cols-2 gap-4">
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">In Time</label>
+                                                <div className="relative">
+                                                    <Timer className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                                                    <input
+                                                        type="text" placeholder="e.g. 10:30 AM"
+                                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
+                                                        value={formData.inTime}
+                                                        onChange={(e) => setFormData({ ...formData, inTime: e.target.value })}
+                                                    />
+                                                </div>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Out Time</label>
+                                                <div className="relative">
+                                                    <Timer className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
+                                                    <input
+                                                        type="text" placeholder="e.g. 11:45 AM"
+                                                        className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
+                                                        value={formData.outTime}
+                                                        onChange={(e) => setFormData({ ...formData, outTime: e.target.value })}
+                                                    />
+                                                </div>
                                             </div>
                                         </div>
                                         <div className="space-y-2">
@@ -774,6 +933,17 @@ const WalkinHub = () => {
                                         <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tentative Time</p>
                                             <p className="font-bold text-slate-700">{selectedEntry.tentativeTime || 'N/A'}</p>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div className="p-5 bg-emerald-50/30 rounded-3xl border border-emerald-100">
+                                            <p className="text-[10px] font-black text-emerald-600 uppercase tracking-widest mb-2">In Time</p>
+                                            <p className="font-bold text-emerald-700">{selectedEntry.inTime || 'Not Recorded'}</p>
+                                        </div>
+                                        <div className="p-5 bg-rose-50/30 rounded-3xl border border-rose-100">
+                                            <p className="text-[10px] font-black text-rose-600 uppercase tracking-widest mb-2">Out Time</p>
+                                            <p className="font-bold text-rose-700">{selectedEntry.outTime || 'Not Recorded'}</p>
                                         </div>
                                     </div>
                                     

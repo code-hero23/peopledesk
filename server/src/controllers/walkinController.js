@@ -7,11 +7,13 @@ const { parseRobustDate } = require('../utils/dateHelpers');
 // @access  Private (Admin, CRE)
 const getAllWalkinEntries = async (req, res) => {
     try {
-        const { role, designation, id } = req.user;
+        const { role, id } = req.user;
         let where = {};
 
-        // If not admin, maybe filter? For now, let's keep it open for CREs as requested
-        // But usually, CREs see all walkins to manage them.
+        // Employees only see their own walkins. Others (Admin, BH, HR) see all.
+        if (role === 'EMPLOYEE') {
+            where = { createdById: id };
+        }
 
         const entries = await prisma.walkinEntry.findMany({
             where,
@@ -45,6 +47,8 @@ const createWalkinEntry = async (req, res) => {
             dayOfVisit,
             tentativeTime,
             showroom,
+            inTime,
+            outTime,
             visitStatus,
             remarks,
             creName
@@ -67,6 +71,8 @@ const createWalkinEntry = async (req, res) => {
                 dayOfVisit,
                 tentativeTime,
                 showroom,
+                inTime,
+                outTime,
                 visitStatus,
                 remarks,
                 creName,
@@ -102,8 +108,9 @@ const updateWalkinEntry = async (req, res) => {
             return res.status(404).json({ message: 'Walkin entry not found' });
         }
 
-        // Authorization: ADMIN, Creator, or assigned BH can update
+        // Authorization: ADMIN, BUSINESS_HEAD, Creator, or assigned BH can update
         const isAuthorized = req.user.role === 'ADMIN' || 
+                           req.user.role === 'BUSINESS_HEAD' ||
                            existingEntry.createdById === req.user.id || 
                            existingEntry.bhId === req.user.id;
         
@@ -113,6 +120,7 @@ const updateWalkinEntry = async (req, res) => {
 
         if (updateData.bhId) updateData.bhId = parseInt(updateData.bhId);
         if (updateData.dateOfVisit) updateData.dateOfVisit = parseRobustDate(updateData.dateOfVisit);
+        // inTime and outTime are handled by spread in updateData
 
         const entry = await prisma.walkinEntry.update({
             where: { id: parseInt(id) },
