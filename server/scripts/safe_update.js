@@ -62,7 +62,10 @@ async function main() {
     await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "creId" INTEGER`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "reviewSent" BOOLEAN NOT NULL DEFAULT false`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "outTimeRecordedAt" TIMESTAMP(3)`);
-    console.log('Columns "faId", "creId", "reviewSent", and "outTimeRecordedAt" added to WalkinEntry or already exist.');
+
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WfhRequest" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP`);
+
+    console.log('Columns "faId", "creId", "reviewSent", "outTimeRecordedAt" added to WalkinEntry, and "createdAt" added to WfhRequest or already exist.');
   } catch (err) {
     console.error('Error adding assignment and review columns to WalkinEntry:', err.message);
   }
