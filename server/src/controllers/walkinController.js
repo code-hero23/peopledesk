@@ -19,7 +19,9 @@ const getAllWalkinEntries = async (req, res) => {
             where,
             include: {
                 createdBy: { select: { name: true } },
-                bh: { select: { name: true } }
+                bh: { select: { name: true } },
+                fa: { select: { name: true } },
+                cre: { select: { name: true } }
             },
             orderBy: { dateOfVisit: 'desc' }
         });
@@ -51,7 +53,9 @@ const createWalkinEntry = async (req, res) => {
             outTime,
             visitStatus,
             remarks,
-            creName
+            creName,
+            faId,
+            creId
         } = req.body;
 
         if (!faTeam || !bhId || !clientName || !contactNumber || !dateOfVisit) {
@@ -76,13 +80,40 @@ const createWalkinEntry = async (req, res) => {
                 visitStatus,
                 remarks,
                 creName,
+                faId: faId ? parseInt(faId) : undefined,
+                creId: creId ? parseInt(creId) : undefined,
                 createdById: req.user.id
             },
             include: {
                 createdBy: { select: { name: true } },
-                bh: { select: { name: true } }
+                bh: { select: { name: true } },
+                fa: { select: { name: true } },
+                cre: { select: { name: true } }
             }
         });
+
+        // Trigger Notifications for Assigned Staff
+        const notifyStaff = async (userId, title, message) => {
+            if (!userId) return;
+            try {
+                await prisma.notification.create({
+                    data: {
+                        userId: parseInt(userId),
+                        title,
+                        message,
+                        type: 'WALKIN_ASSIGNED',
+                        relatedId: entry.id
+                    }
+                });
+            } catch (err) {
+                console.error('Notification error:', err.message);
+            }
+        };
+
+        const msg = `New walk-in: ${clientName} for ${showroom || 'Showroom'} on ${new Date(dateOfVisit).toLocaleDateString()}`;
+        await notifyStaff(bhId, 'New Walk-in Assigned', msg);
+        await notifyStaff(faId, 'New Walk-in Assigned', msg);
+        await notifyStaff(creId, 'New Walk-in Assigned', msg);
 
         res.status(201).json(entry);
     } catch (error) {
@@ -131,9 +162,40 @@ const updateWalkinEntry = async (req, res) => {
             data: updateData,
             include: {
                 createdBy: { select: { name: true } },
-                bh: { select: { name: true } }
+                bh: { select: { name: true } },
+                fa: { select: { name: true } },
+                cre: { select: { name: true } }
             }
         });
+
+        // Trigger notification if assignment changed
+        const notifyStaffUpdate = async (userId, title, message) => {
+            if (!userId) return;
+            try {
+                await prisma.notification.create({
+                    data: {
+                        userId: parseInt(userId),
+                        title,
+                        message,
+                        type: 'WALKIN_UPDATED',
+                        relatedId: entry.id
+                    }
+                });
+            } catch (err) {
+                console.error('Notification error:', err.message);
+            }
+        };
+
+        const updateMsg = `Walk-in Updated: ${entry.clientName} | Status: ${entry.visitStatus || 'PENDING'} | In: ${entry.inTime || '--'}`;
+        if (req.body.bhId && parseInt(req.body.bhId) !== existingEntry.bhId) {
+            await notifyStaffUpdate(req.body.bhId, 'Entry Assigned to You', updateMsg);
+        }
+        if (req.body.faId && parseInt(req.body.faId) !== existingEntry.faId) {
+            await notifyStaffUpdate(req.body.faId, 'Entry Assigned to You', updateMsg);
+        }
+        if (req.body.creId && parseInt(req.body.creId) !== existingEntry.creId) {
+            await notifyStaffUpdate(req.body.creId, 'Entry Assigned to You', updateMsg);
+        }
 
         res.json(entry);
     } catch (error) {
@@ -164,10 +226,33 @@ const deleteWalkinEntry = async (req, res) => {
 const getAllBHs = async (req, res) => {
     try {
         const bhs = await prisma.user.findMany({
-            where: { role: 'BUSINESS_HEAD' },
+            where: { role: 'BUSINESS_HEAD', status: 'ACTIVE' },
             select: { id: true, name: true }
         });
         res.json(bhs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Get staff members for dropdown
+// @route   GET /api/walkin/staff
+// @access  Private
+const getStaffMembers = async (req, res) => {
+    try {
+        const { designations } = req.query; // e.g. "FA,LA" or "CRE,CLIENT-FACILITATOR"
+        if (!designations) return res.status(400).json({ message: 'Designations required' });
+
+        const designList = designations.split(',');
+        const staff = await prisma.user.findMany({
+            where: {
+                status: 'ACTIVE',
+                designation: { in: designList }
+            },
+            select: { id: true, name: true, designation: true }
+        });
+        res.json(staff);
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -179,5 +264,6 @@ module.exports = {
     createWalkinEntry,
     updateWalkinEntry,
     deleteWalkinEntry,
-    getAllBHs
+    getAllBHs,
+    getStaffMembers
 };

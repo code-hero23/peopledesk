@@ -28,6 +28,7 @@ import { formatDateTime, formatDate, formatTime, getHHMM } from '../../utils/dat
 import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
+import NotificationBell from '../../components/NotificationBell';
 
 // Helper: DataURL to Blob
 function dataURLtoBlob(dataurl) {
@@ -748,6 +749,7 @@ const Overview = () => {
                             <Sparkles size={20} />
                             <span className="font-bold">Work Log</span>
                         </motion.button>
+                        <NotificationBell />
                     </div>
                 </div>
 

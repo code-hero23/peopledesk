@@ -30,6 +30,7 @@ import {
     Monitor
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import axios from 'axios';
 
 const ShowroomMonitor = ({ showrooms, entries }) => {
     const [people, setPeople] = useState([]);
@@ -182,8 +183,11 @@ const WalkinHub = () => {
     const [sortOrder, setSortOrder] = useState('desc'); // default order
     const [fromDate, setFromDate] = useState('');
     const [toDate, setToDate] = useState('');
+    const [faStaff, setFaStaff] = useState([]);
+    const [creStaff, setCreStaff] = useState([]);
 
     const [formData, setFormData] = useState({
+        faId: '',
         faTeam: '',
         architect: '',
         bhId: '',
@@ -199,13 +203,28 @@ const WalkinHub = () => {
         outTime: '',
         visitStatus: 'PENDING',
         remarks: '',
-        creName: ''
+        creName: '',
+        creId: ''
     });
 
     useEffect(() => {
         dispatch(fetchWalkins());
         dispatch(fetchBHs());
+        fetchStaff();
     }, [dispatch]);
+
+    const fetchStaff = async () => {
+        try {
+            const config = { headers: { Authorization: `Bearer ${user.token}` } };
+            const base = import.meta.env.VITE_API_BASE_URL;
+            const resFa = await axios.get(`${base}/walkin/staff?designations=FA,LA`, config);
+            const resCre = await axios.get(`${base}/walkin/staff?designations=CRE,CLIENT-FACILITATOR`, config);
+            setFaStaff(resFa.data);
+            setCreStaff(resCre.data);
+        } catch (err) {
+            console.error("Error fetching staff:", err);
+        }
+    };
 
     useEffect(() => {
         if (isError) toast.error(message);
@@ -235,7 +254,9 @@ const WalkinHub = () => {
             outTime: '',
             visitStatus: 'PENDING',
             remarks: '',
-            creName: ''
+            creName: '',
+            creId: '',
+            faId: ''
         });
     };
 
@@ -539,7 +560,8 @@ const WalkinHub = () => {
                                 </th>
                                 <th className="px-8 py-6">In/Out Time</th>
                                 <th className="px-8 py-6">Business Head</th>
-                                <th className="px-8 py-6">CRE Name</th>
+                                <th className="px-8 py-6">FA / LA</th>
+                                <th className="px-8 py-6">CRE / CF</th>
                                 <th className="px-8 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
                                     <div className="flex items-center gap-2">
                                         Status
@@ -605,7 +627,12 @@ const WalkinHub = () => {
                                     </td>
                                     <td className="px-8 py-8">
                                         <div className="flex items-center gap-2">
-                                            <p className="font-bold text-slate-700 text-sm">{entry.creName || 'N/A'}</p>
+                                            <p className="font-bold text-slate-700 text-sm">{entry.fa?.name || entry.faTeam || 'N/A'}</p>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-8">
+                                        <div className="flex items-center gap-2">
+                                            <p className="font-bold text-slate-700 text-sm">{entry.cre?.name || entry.creName || 'N/A'}</p>
                                         </div>
                                     </td>
                                     <td className="px-8 py-8">
@@ -721,13 +748,25 @@ const WalkinHub = () => {
                                     {/* Project & Visit Details */}
                                     <div className="space-y-6">
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">FA Team Name *</label>
-                                            <input
-                                                type="text" required
-                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
-                                                value={formData.faTeam}
-                                                onChange={(e) => setFormData({ ...formData, faTeam: e.target.value })}
-                                            />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">FA / LA Representative *</label>
+                                            <select
+                                                required
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none"
+                                                value={formData.faId}
+                                                onChange={(e) => {
+                                                    const selected = faStaff.find(s => s.id === parseInt(e.target.value));
+                                                    setFormData({ 
+                                                        ...formData, 
+                                                        faId: e.target.value,
+                                                        faTeam: selected ? selected.name : '' 
+                                                    });
+                                                }}
+                                            >
+                                                <option value="">Select Representative...</option>
+                                                {faStaff.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name} ({s.designation})</option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Project Name</label>
@@ -793,13 +832,24 @@ const WalkinHub = () => {
                                             </div>
                                         </div>
                                         <div className="space-y-2">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CRE Name</label>
-                                            <input
-                                                type="text"
-                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
-                                                value={formData.creName}
-                                                onChange={(e) => setFormData({ ...formData, creName: e.target.value })}
-                                            />
+                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">CRE / Client Facilitator</label>
+                                            <select
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm appearance-none"
+                                                value={formData.creId}
+                                                onChange={(e) => {
+                                                    const selected = creStaff.find(s => s.id === parseInt(e.target.value));
+                                                    setFormData({ 
+                                                        ...formData, 
+                                                        creId: e.target.value,
+                                                        creName: selected ? selected.name : ''
+                                                    });
+                                                }}
+                                            >
+                                                <option value="">Select Staff...</option>
+                                                {creStaff.map(s => (
+                                                    <option key={s.id} value={s.id}>{s.name} ({s.designation})</option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Remarks</label>

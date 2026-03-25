@@ -1,73 +1,60 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const webpush = require('web-push');
 
-// Configure web-push
-webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
-
-// @desc    Subscribe to push notifications
-// @route   POST /api/notifications/subscribe
+// @desc    Get current user's notifications
+// @route   GET /api/notifications
 // @access  Private
-const subscribe = async (req, res) => {
+const getNotifications = async (req, res) => {
     try {
-        const { subscription } = req.body;
-        const userId = req.user.id;
-
-        if (!subscription || !subscription.endpoint) {
-            return res.status(400).json({ message: 'Invalid subscription object' });
-        }
-
-        const { endpoint, keys } = subscription;
-
-        // Save or update subscription
-        const pushSubscription = await prisma.pushSubscription.upsert({
-            where: { endpoint },
-            update: {
-                userId,
-                p256dh: keys.p256dh,
-                auth: keys.auth
-            },
-            create: {
-                userId,
-                endpoint,
-                p256dh: keys.p256dh,
-                auth: keys.auth
-            }
+        const notifications = await prisma.notification.findMany({
+            where: { userId: req.user.id },
+            orderBy: { createdAt: 'desc' },
+            take: 20
         });
-
-        res.status(201).json({ 
-            message: 'Successfully subscribed to push notifications',
-            subscriptionId: pushSubscription.id
-        });
+        res.json(notifications);
     } catch (error) {
-        console.error('Subscription error:', error);
-        res.status(500).json({ message: 'Server error during subscription' });
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
-// @desc    Unsubscribe from push notifications
-// @route   POST /api/notifications/unsubscribe
+// @desc    Mark notification as read
+// @route   PUT /api/notifications/:id/read
 // @access  Private
-const unsubscribe = async (req, res) => {
+const markAsRead = async (req, res) => {
     try {
-        const { endpoint } = req.body;
-
-        await prisma.pushSubscription.delete({
-            where: { endpoint }
+        const { id } = req.params;
+        const notification = await prisma.notification.update({
+            where: { 
+                id: parseInt(id),
+                userId: req.user.id // Security: Ensure it belongs to the user
+            },
+            data: { isRead: true }
         });
-
-        res.status(200).json({ message: 'Successfully unsubscribed' });
+        res.json(notification);
     } catch (error) {
-        console.error('Unsubscription error:', error);
-        res.status(500).json({ message: 'Server error during unsubscription' });
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Clear all notifications for user
+// @route   DELETE /api/notifications
+// @access  Private
+const clearAllNotifications = async (req, res) => {
+    try {
+        await prisma.notification.deleteMany({
+            where: { userId: req.user.id }
+        });
+        res.json({ message: 'Notifications cleared' });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
 
 module.exports = {
-    subscribe,
-    unsubscribe
+    getNotifications,
+    markAsRead,
+    clearAllNotifications
 };

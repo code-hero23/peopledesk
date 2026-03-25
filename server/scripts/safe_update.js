@@ -35,6 +35,36 @@ async function main() {
     console.error('Error adding "callAnalyticsViewEnabled":', err.message);
   }
 
+  // Adding Notification Table
+  try {
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "Notification" (
+          "id" SERIAL PRIMARY KEY,
+          "userId" INTEGER NOT NULL,
+          "title" TEXT NOT NULL,
+          "message" TEXT NOT NULL,
+          "type" TEXT NOT NULL DEFAULT 'INFO',
+          "isRead" BOOLEAN NOT NULL DEFAULT false,
+          "relatedId" INTEGER,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
+    `);
+    console.log('Table "Notification" created or already exists.');
+  } catch (err) {
+    console.error('Error creating "Notification" table:', err.message);
+  }
+
+  // Adding WalkinEntry assignment columns
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "faId" INTEGER`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "creId" INTEGER`);
+    console.log('Columns "faId" and "creId" added to WalkinEntry or already exist.');
+  } catch (err) {
+    console.error('Error adding assignment columns to WalkinEntry:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 
