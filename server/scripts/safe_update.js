@@ -60,9 +60,11 @@ async function main() {
   try {
     await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "faId" INTEGER`);
     await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "creId" INTEGER`);
-    console.log('Columns "faId" and "creId" added to WalkinEntry or already exist.');
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "reviewSent" BOOLEAN NOT NULL DEFAULT false`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "outTimeRecordedAt" TIMESTAMP(3)`);
+    console.log('Columns "faId", "creId", "reviewSent", and "outTimeRecordedAt" added to WalkinEntry or already exist.');
   } catch (err) {
-    console.error('Error adding assignment columns to WalkinEntry:', err.message);
+    console.error('Error adding assignment and review columns to WalkinEntry:', err.message);
   }
 
   console.log('Safe update completed.');

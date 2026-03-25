@@ -152,6 +152,11 @@ const updateWalkinEntry = async (req, res) => {
         if (updateData.bhId) updateData.bhId = parseInt(updateData.bhId);
         if (updateData.dateOfVisit) updateData.dateOfVisit = parseRobustDate(updateData.dateOfVisit);
 
+        // If outTime is being set for the first time or updated, record the timestamp
+        if (updateData.outTime && !existingEntry.outTime) {
+            updateData.outTimeRecordedAt = new Date();
+        }
+
         // Remove relation objects if they exist in the body (prevents Prisma errors)
         delete updateData.createdBy;
         delete updateData.bh;

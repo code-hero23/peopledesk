@@ -40,7 +40,8 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
         today.setHours(0, 0, 0, 0);
 
         const todaysEntries = entries.filter(e => {
-            if (e.visitStatus === 'CANCELLED' || e.outTime) return false;
+            // Client is gone if outTime is present or visit is CANCELLED
+            if (e.visitStatus === 'CANCELLED' || (e.outTime && e.outTime.trim() !== '')) return false;
             const eDate = new Date(e.dateOfVisit);
             eDate.setHours(0, 0, 0, 0);
             return eDate.getTime() === today.getTime();
@@ -102,7 +103,9 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
             animationFrameId = requestAnimationFrame(move);
         };
         animationFrameId = requestAnimationFrame(move);
-        return () => cancelAnimationFrame(animationFrameId);
+        return () => {
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+        };
     }, []);
 
     return (
@@ -144,7 +147,7 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                                 style={{ 
                                     left: p.x, 
                                     top: p.y,
-                                    transition: 'all 0.15s linear',
+                                    transition: 'left 0.1s linear, top 0.1s linear',
                                     transform: `rotate(${angle}deg)`
                                 }}
                             >
