@@ -202,7 +202,7 @@ const ManageEmployees = () => {
                                 <th className="px-6 py-4">Employee Details</th>
                                 <th className="px-6 py-4">Designation</th>
                                 <th className="px-6 py-4">Reporting To</th>
-                                <th className="px-6 py-4 text-center">Salary Access</th>
+                                <th className="px-6 py-4 text-center">Module Access</th>
                                 <th className="px-6 py-4">WhatsApp</th>
                                 <th className="px-6 py-4 text-center">Status</th>
                                 <th className="px-6 py-4 text-right">Actions</th>
@@ -269,6 +269,9 @@ const ManageEmployees = () => {
                                                 </span>
                                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.walkinViewEnabled ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
                                                     Walkin {emp.walkinViewEnabled ? 'ON' : 'OFF'}
+                                                </span>
+                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.callAnalyticsViewEnabled ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
+                                                    Calls {emp.callAnalyticsViewEnabled ? 'ON' : 'OFF'}
                                                 </span>
                                             </div>
                                             {emp.allocatedSalary > 0 && (

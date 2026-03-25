@@ -210,8 +210,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" indent />
                             )}
                             <NavItem to="/admin/analytics" icon={BarChart3} label="Performance Analytics" indent />
-                            <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />
-                            <NavItem to="/admin/walkin-hub" icon={Users} label="Walkin Hub" indent />
+                            {(user?.role === 'ADMIN' || user?.callAnalyticsViewEnabled) && (
+                                <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />
+                            )}
+                            {(user?.role === 'ADMIN' || user?.walkinViewEnabled) && (
+                                <NavItem to="/admin/walkin-hub" icon={Users} label="Walkin Hub" indent />
+                            )}
                         </NavGroup>
 
                         <NavGroup id="admin" label="Administration" icon={ShieldCheck}>
