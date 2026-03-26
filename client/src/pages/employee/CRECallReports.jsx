@@ -287,13 +287,14 @@ const CRECallReports = () => {
             }));
         })
         .filter(call => {
-            if (!call.date) return false;
-            const callDateStr = toIstDateString(call.date);
+            if (!call.workLogDate) return false;
+            // Use the server-assigned date string to ensure consistency with Admin/Stats
+            const callDateStr = new Date(call.workLogDate).toISOString().split('T')[0];
             const isMatch = callDateStr === selectedDate;
             
             // Helpful for debugging if anything appears missing
             if (searchTerm === 'DEBUG') {
-                console.log(`[DateCheck] Call: ${call.number} | Time: ${new Date(call.date).toLocaleTimeString()} | CallDate: ${callDateStr} | Selected: ${selectedDate} | Match: ${isMatch}`);
+                console.log(`[DateCheck] Call: ${call.number} | WorkLogDate: ${callDateStr} | Selected: ${selectedDate} | Match: ${isMatch}`);
             }
             
             return isMatch;
@@ -334,9 +335,14 @@ const CRECallReports = () => {
         if (simMap[logSimId] === targetSlot) return matchesSearch && matchesType;
         
         // 3. Partial match (for subscription IDs containing the slot index)
-        const matchesSim = logSimId.includes(targetSlot);
+        if (logSimId.includes(targetSlot)) return matchesSearch && matchesType;
+
+        // 4. LENIENT MATCH: Allow calls with no SIM ID (or "null"/"undefined" strings) 
+        // if they were synced. This prevents the "25 vs 125" discrepancy where 
+        // the sync logic allows unsourced calls but the UI filters them out.
+        const isUnknownSim = !logSimId || logSimId === "null" || logSimId === "undefined" || logSimId === "none";
         
-        return matchesSearch && matchesType && matchesSim;
+        return matchesSearch && matchesType && isUnknownSim;
     });
 
     const displayLogs = isUniqueOnly
