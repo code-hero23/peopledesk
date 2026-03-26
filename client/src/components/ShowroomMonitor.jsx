@@ -57,9 +57,9 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                 if (y < 20 || y > 120) dy *= -1.02;
 
                 // Random small adjustments instead of total random turns
-                if (Math.random() < 0.02) {
-                    dx += (Math.random() * 0.2 - 0.1);
-                    dy += (Math.random() * 0.2 - 0.1);
+                if (Math.random() < 0.01) {
+                    dx += (Math.random() * 0.1 - 0.05);
+                    dy += (Math.random() * 0.1 - 0.05);
                     // Cap speed
                     const currentSpeed = Math.sqrt(dx*dx + dy*dy);
                     if (currentSpeed > 1) {
@@ -109,7 +109,6 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                         </p>
                     </div>
                     {people.filter(p => p.showroom === name).map(p => {
-                        const angle = Math.atan2(p.dy, p.dx) * 180 / Math.PI;
                         return (
                             <div 
                                 key={p.id}
@@ -117,16 +116,19 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                                 style={{ 
                                     left: p.x, 
                                     top: p.y,
-                                    transition: 'left 0.1s linear, top 0.1s linear',
-                                    transform: `rotate(${angle}deg)`
+                                    transition: 'left 0.2s linear, top 0.2s linear'
                                 }}
                             >
                                 <div className="flex flex-col items-center">
                                     <motion.span 
-                                        animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
-                                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-                                        className="text-[8px] font-black text-white bg-blue-600/80 px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-lg" 
-                                        style={{ transform: `rotate(${-angle}deg)` }}
+                                        animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
+                                        transition={{ 
+                                            duration: 1.2, 
+                                            repeat: Infinity, 
+                                            ease: "easeInOut",
+                                            times: [0, 0.4, 1]
+                                        }}
+                                        className="text-[9px] font-black text-white bg-blue-600 px-3 py-1 rounded-full uppercase whitespace-nowrap shadow-lg border border-white/20" 
                                     >
                                         {p.name}
                                     </motion.span>
