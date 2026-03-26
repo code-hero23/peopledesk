@@ -569,6 +569,8 @@ const WalkinHub = () => {
                                 </th>
                                 <th className="px-8 py-6">In/Out Time</th>
                                 <th className="px-8 py-6">Business Head</th>
+                                <th className="px-8 py-6">Representative</th>
+                                <th className="px-8 py-6">CRE</th>
                                 <th className="px-8 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
                                     <div className="flex items-center gap-2">
                                         Status
@@ -577,6 +579,7 @@ const WalkinHub = () => {
                                         ) : <ArrowUpDown size={12} className="text-slate-300" />}
                                     </div>
                                 </th>
+                                <th className="px-8 py-6">Review</th>
                                 <th className="px-8 py-6 text-right">Actions</th>
                             </tr>
                         </thead>
