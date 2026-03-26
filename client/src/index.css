@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+html {
+  color-scheme: light dark;
+}
+
+* {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
 :root {
   --primary-color: #e00000;
   --primary-dark: #b30000;
@@ -12,6 +21,10 @@
   --text-muted: #64748b; /* Slate 500 */
   --border-light: #f1f5f9; /* Slate 100 */
   --shadow-color: rgba(0, 0, 0, 0.05);
+
+  /* Forced fallback for older Safari */
+  --fallback-bg: #f8fafc;
+  --fallback-text: #0f172a;
 }
 
 .dark {
@@ -23,6 +36,9 @@
   --border-color: #1e293b; /* Slate 800 */
   --border-light: #0f172a; /* Slate 900 */
   --shadow-color: rgba(0, 0, 0, 0.5);
+
+  --fallback-bg: #020617;
+  --fallback-text: #f8fafc;
 }
 
 /* Global Dark Scrollbar */
@@ -54,22 +70,36 @@
 }
 
 body {
+  background-color: #f8fafc; /* Hard fallback */
+  background-color: var(--fallback-bg);
   background-color: var(--bg-main);
+  color: #0f172a; /* Hard fallback */
+  color: var(--fallback-text);
   color: var(--text-main);
   transition: background-color 0.3s ease, color 0.3s ease;
+  min-height: 100vh;
 }
 
 /* Custom utility for primary color with opacity support */
 .bg-primary {
+  background-color: #e00000; /* Fallback */
   background-color: var(--primary-color);
 }
 
 .text-primary {
+  color: #e00000; /* Fallback */
   color: var(--primary-color);
 }
 
 .border-primary {
+  border-color: #e00000; /* Fallback */
   border-color: var(--primary-color);
+}
+
+/* Glassmorphism Safari Support */
+.backdrop-blur-md, .backdrop-blur-lg, .backdrop-blur-xl, .backdrop-blur-2xl, .backdrop-blur-3xl {
+  -webkit-backdrop-filter: blur(20px);
+  backdrop-filter: blur(20px);
 }
 
 /* Smooth Sidebar Transitions */
