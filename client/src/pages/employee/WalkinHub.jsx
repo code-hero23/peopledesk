@@ -450,12 +450,12 @@ const WalkinHub = () => {
 
             {/* Entries Table */}
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                <div className="overflow-x-auto scrollbar-hide">
-                    <table className="w-full text-left border-collapse min-w-[1200px]">
+                <div className="overflow-x-auto pb-4 scrollbar-thin scrollbar-track-slate-50 scrollbar-thumb-slate-200">
+                    <table className="w-full text-left border-collapse min-w-[1100px]">
                         <thead>
                             <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
-                                <th className="px-6 py-6 pl-10">Client & Project</th>
-                                <th className="px-6 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('dateOfVisit')}>
+                                <th className="px-5 py-6 pl-8">Client & Project</th>
+                                <th className="px-5 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('dateOfVisit')}>
                                     <div className="flex items-center gap-2">
                                         Visit Schedule
                                         {sortField === 'dateOfVisit' ? (
@@ -463,11 +463,11 @@ const WalkinHub = () => {
                                         ) : <ArrowUpDown size={12} className="text-slate-300" />}
                                     </div>
                                 </th>
-                                <th className="px-6 py-6">In/Out Time</th>
-                                <th className="px-6 py-6">Business Head</th>
-                                <th className="px-6 py-6">Representative</th>
-                                <th className="px-6 py-6">CRE</th>
-                                <th className="px-6 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
+                                <th className="px-5 py-6">In/Out Time</th>
+                                <th className="px-5 py-6">Business Head</th>
+                                <th className="px-5 py-6">Representative</th>
+                                <th className="px-5 py-6">CRE</th>
+                                <th className="px-5 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
                                     <div className="flex items-center gap-2">
                                         Status
                                         {sortField === 'visitStatus' ? (
@@ -475,8 +475,8 @@ const WalkinHub = () => {
                                         ) : <ArrowUpDown size={12} className="text-slate-300" />}
                                     </div>
                                 </th>
-                                <th className="px-6 py-6 text-center">Review</th>
-                                <th className="px-6 py-6 pr-10 text-right">Actions</th>
+                                <th className="px-5 py-6 text-center">Review</th>
+                                <th className="px-5 py-6 pr-8 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -486,7 +486,7 @@ const WalkinHub = () => {
                                     onClick={() => handleRowClick(entry)}
                                     className="hover:bg-slate-50/70 transition-all group cursor-pointer"
                                 >
-                                    <td className="px-6 py-8 pl-10">
+                                    <td className="px-5 py-8 pl-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform">
                                                 {entry.clientName.charAt(0)}
@@ -499,7 +499,7 @@ const WalkinHub = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-6 py-8">
+                                    <td className="px-5 py-8">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
                                                 <Calendar size={14} className="text-blue-500" />
@@ -557,7 +557,7 @@ const WalkinHub = () => {
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-6 py-8 pr-10 text-right" onClick={(e) => e.stopPropagation()}>
+                                    <td className="px-5 py-8 pr-8 text-right" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-end gap-2">
                                             <button 
                                                 onClick={() => handleEdit(entry)}
