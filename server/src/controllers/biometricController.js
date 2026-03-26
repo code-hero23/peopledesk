@@ -32,34 +32,39 @@ const importBiometricData = async (req, res) => {
 
         // Pre-fetch users for fuzzy matching
         const allUsers = await prisma.user.findMany({
-            select: { id: true, name: true, role: true, designation: true }
+            select: { id: true, name: true, role: true, designation: true, biometricId: true }
         });
 
-        // Extremely robust fuzzy matcher for names
-        const findUserByName = (name) => {
+        // Extremely robust fuzzy matcher for names and IDs
+        const findUser = (name, bioId) => {
+            // 1. Try matching by biometricId if provided
+            if (bioId) {
+                const idMatch = allUsers.find(u => u.biometricId === bioId.toString().trim());
+                if (idMatch) return idMatch;
+            }
+
             if (!name) return null;
             
             const clean = (s) => s.toLowerCase().replace(/[^a-z0-9]/g, '').trim();
             const cleanInput = clean(name);
             if (!cleanInput) return null;
 
-            // 1. Exact clean match
+            // 2. Exact clean match
             let match = allUsers.find(u => clean(u.name) === cleanInput);
             if (match) return match;
 
-            // 2. Word-based matching (Relaxed)
+            // 3. Word-based matching (Relaxed)
             const inputWords = name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
             
             match = allUsers.find(u => {
                 const userWords = u.name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
                 
                 // Does ANY input word share a 4-character prefix with ANY user word?
-                // This catches "Pugazh" vs "Pugazendhi" (Pugaz...) and "Sudarmadhi" vs "Sudharmadhi" (Sud...)
                 return inputWords.some(iw => 
                     userWords.some(uw => {
                         const min = Math.min(iw.length, uw.length, 5); // Match at least 5 chars or full word
                         return iw.substring(0, min) === uw.substring(0, min) || 
-                               uw.includes(iw) || iw.includes(uw);
+                                uw.includes(iw) || iw.includes(uw);
                     })
                 );
             });
@@ -71,21 +76,38 @@ const importBiometricData = async (req, res) => {
         const refreshedUsers = new Set();
 
         for (const [index, row] of data.entries()) {
+            // Check if row is completely empty or just has whitespace
+            const hasData = Object.values(row).some(v => v !== null && v !== undefined && v.toString().trim() !== '');
+            if (!hasData) {
+                // Skip completely empty rows silently
+                continue;
+            }
+
             const name = (row['First Name'] || row['Name'] || row['name'] || '').toString().trim();
             const dateVal = row['Date'];
             const firstPunchVal = row['First Punch'];
             const lastPunchVal = row['Last Punch'];
 
+            // Individual field validation for better error reporting
             if (!name || !dateVal || !firstPunchVal) {
+                const missing = [];
+                if (!name) missing.push('Name');
+                if (!dateVal) missing.push('Date');
+                if (!firstPunchVal) missing.push('First Punch');
+                
                 results.failed++;
-                results.errors.push(`Row ${index + 2}: Missing Name, Date, or First Punch`);
+                results.errors.push(`Row ${index + 2}: Missing ${missing.join(', ')}`);
                 continue;
             }
 
-            const user = findUserByName(name);
+            const bioId = row['Biometric ID'] || row['biometric id'] || row['BiometricID'];
+            const user = findUser(name, bioId);
             if (!user) {
                 results.failed++;
-                results.errors.push(`Row ${index + 2}: No user found for name "${name}"`);
+                const errorMsg = bioId 
+                    ? `Row ${index + 2}: No user found for name "${name}" or ID "${bioId}"`
+                    : `Row ${index + 2}: No user found for name "${name}"`;
+                results.errors.push(errorMsg);
                 continue;
             }
 

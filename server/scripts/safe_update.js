@@ -70,6 +70,41 @@ async function main() {
     console.error('Error adding assignment and review columns to WalkinEntry:', err.message);
   }
 
+  // Adding Biometric columns and table
+  try {
+    console.log('Adding Biometric columns and table...');
+    
+    // Create BiometricLog table
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "BiometricLog" (
+          "id" SERIAL PRIMARY KEY,
+          "userId" INTEGER NOT NULL,
+          "punchTime" TIMESTAMP(3) NOT NULL,
+          "punchType" TEXT,
+          "deviceId" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "BiometricLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
+    `);
+    console.log('Table "BiometricLog" created or already exists.');
+
+    // Add biometricId to User
+    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "biometricId" TEXT`);
+    console.log('Column "biometricId" added to User or already exists.');
+
+    // Create Indexes
+    try {
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "User_biometricId_key" ON "User"("biometricId")`);
+      await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "BiometricLog_userId_punchTime_idx" ON "BiometricLog"("userId", "punchTime")`);
+      console.log('Biometric indexes created or already exist.');
+    } catch (idxErr) {
+      console.warn('Note: Biometric index creation warning (may already exist):', idxErr.message);
+    }
+
+  } catch (err) {
+    console.error('Error adding Biometric components:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 

@@ -13,6 +13,7 @@ npm install
 npx prisma generate
 # prisma migrate deploy is safe for existing data (it doesn't reset)
 npx prisma migrate deploy 
+node scripts/safe_update.js
 pm2 restart all
 cd ..
 
