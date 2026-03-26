@@ -413,24 +413,24 @@ const WalkinHub = () => {
 
             {/* Entries Table */}
             <div className="bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
-                <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
+                <div className="overflow-x-auto scrollbar-hide">
+                    <table className="w-full text-left border-collapse min-w-[1000px]">
                         <thead>
                             <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] border-b border-slate-100">
-                                <th className="px-8 py-6">Client & Project</th>
-                                <th className="px-8 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('dateOfVisit')}>
+                                <th className="px-4 py-6 pl-8">Client & Project</th>
+                                <th className="px-4 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('dateOfVisit')}>
                                     <div className="flex items-center gap-2">
-                                        Visit Schedule
+                                        Schedule
                                         {sortField === 'dateOfVisit' ? (
                                             sortOrder === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
                                         ) : <ArrowUpDown size={12} className="text-slate-300" />}
                                     </div>
                                 </th>
-                                <th className="px-8 py-6">In/Out Time</th>
-                                <th className="px-8 py-6">Business Head</th>
-                                <th className="px-8 py-6">Representative</th>
-                                <th className="px-8 py-6">CRE</th>
-                                <th className="px-8 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
+                                <th className="px-4 py-6">In/Out</th>
+                                <th className="px-4 py-6">BH</th>
+                                <th className="px-4 py-6">Rep</th>
+                                <th className="px-4 py-6">CRE</th>
+                                <th className="px-4 py-6 cursor-pointer hover:bg-slate-100/50 transition-colors" onClick={() => handleSort('visitStatus')}>
                                     <div className="flex items-center gap-2">
                                         Status
                                         {sortField === 'visitStatus' ? (
@@ -438,8 +438,8 @@ const WalkinHub = () => {
                                         ) : <ArrowUpDown size={12} className="text-slate-300" />}
                                     </div>
                                 </th>
-                                <th className="px-8 py-6">Review</th>
-                                <th className="px-8 py-6 text-right">Actions</th>
+                                <th className="px-4 py-6 text-center">Review</th>
+                                <th className="px-4 py-6 pr-8 text-right">Actions</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-50">
@@ -449,7 +449,7 @@ const WalkinHub = () => {
                                     onClick={() => handleRowClick(entry)}
                                     className="hover:bg-slate-50/70 transition-all group cursor-pointer"
                                 >
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6 pl-8">
                                         <div className="flex items-center gap-4">
                                             <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 font-black shadow-sm group-hover:scale-110 transition-transform">
                                                 {entry.clientName.charAt(0)}
@@ -462,7 +462,7 @@ const WalkinHub = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6">
                                         <div className="space-y-1">
                                             <div className="flex items-center gap-2 text-slate-700 font-bold text-sm">
                                                 <Calendar size={14} className="text-blue-500" />
@@ -473,7 +473,7 @@ const WalkinHub = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6">
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center gap-2 text-xs font-bold text-slate-700">
                                                 <Timer size={12} className="text-emerald-500" /> In: {entry.inTime || '--'}
@@ -483,7 +483,7 @@ const WalkinHub = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6">
                                         <div className="flex items-center gap-3">
                                             <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 border border-slate-200 shadow-sm">
                                                 <UserCircle2 size={16} />
@@ -494,22 +494,22 @@ const WalkinHub = () => {
                                             </div>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6">
                                         <div className="flex items-center gap-2">
                                             <p className="font-bold text-slate-700 text-sm">{entry.fa?.name || entry.faTeam || 'N/A'}</p>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6">
                                         <div className="flex items-center gap-2">
                                             <p className="font-bold text-slate-700 text-sm">{entry.cre?.name || entry.creName || 'N/A'}</p>
                                         </div>
                                     </td>
-                                    <td className="px-8 py-8">
-                                        <span className={`inline-flex px-4 py-1.5 rounded-full text-[10px] font-black uppercase tracking-widest border shadow-sm ${getVisitStatusColor(entry.visitStatus)}`}>
+                                    <td className="px-3 py-6">
+                                        <span className={`inline-flex px-3 py-1.5 rounded-full text-[9px] font-black uppercase tracking-widest border shadow-sm whitespace-nowrap ${getVisitStatusColor(entry.visitStatus)}`}>
                                             {entry.visitStatus || 'PENDING'}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-8">
+                                    <td className="px-3 py-6 text-center">
                                         {entry.reviewSent ? (
                                             <div className="flex items-center gap-1.5 text-emerald-600 font-bold text-[10px] uppercase tracking-wider">
                                                 <CheckCircle size={14} /> Sent
@@ -520,7 +520,7 @@ const WalkinHub = () => {
                                             </div>
                                         )}
                                     </td>
-                                    <td className="px-8 py-8 text-right" onClick={(e) => e.stopPropagation()}>
+                                    <td className="px-3 py-6 pr-8 text-right" onClick={(e) => e.stopPropagation()}>
                                         <div className="flex items-center justify-end gap-2">
                                             <button 
                                                 onClick={() => handleEdit(entry)}
