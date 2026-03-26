@@ -112,27 +112,30 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                         return (
                             <div 
                                 key={p.id}
-                                className="absolute"
+                                className="absolute flex flex-col items-center justify-center p-4"
                                 style={{ 
                                     left: p.x, 
                                     top: p.y,
-                                    transition: 'left 0.2s linear, top 0.2s linear'
+                                    transition: 'left 0.3s linear, top 0.3s linear',
+                                    transform: 'translate(-50%, -50%)'
                                 }}
                             >
-                                <div className="flex flex-col items-center">
-                                    <motion.span 
-                                        animate={{ scale: [1, 1.05, 1], opacity: [0.8, 1, 0.8] }}
-                                        transition={{ 
-                                            duration: 1.2, 
-                                            repeat: Infinity, 
-                                            ease: "easeInOut",
-                                            times: [0, 0.4, 1]
-                                        }}
-                                        className="text-[9px] font-black text-white bg-blue-600 px-3 py-1 rounded-full uppercase whitespace-nowrap shadow-lg border border-white/20" 
-                                    >
-                                        {p.name}
-                                    </motion.span>
-                                </div>
+                                {/* Pulse Halo */}
+                                <motion.div 
+                                    animate={{ scale: [1, 2], opacity: [0.5, 0] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
+                                    className="absolute w-8 h-8 bg-blue-500/20 rounded-full"
+                                />
+                                <motion.div 
+                                    animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
+                                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.5 }}
+                                    className="absolute w-6 h-6 bg-blue-400/20 rounded-full"
+                                />
+                                
+                                {/* Name Label */}
+                                <span className="relative z-10 text-[9px] font-black text-white bg-blue-600 px-3 py-1 rounded-full uppercase whitespace-nowrap shadow-lg border border-white/20">
+                                    {p.name}
+                                </span>
                             </div>
                         )
                     })}
