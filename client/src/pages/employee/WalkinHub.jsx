@@ -34,6 +34,43 @@ import axios from 'axios';
 import ShowroomMonitor from '../../components/ShowroomMonitor';
 
 
+const format12hTo24h = (time12h) => {
+    if (!time12h || typeof time12h !== 'string') return '';
+    // Handle formats like "10:30 AM", "3.14pm", "2:00PM"
+    const cleaned = time12h.toLowerCase().replace(/\./g, ':').trim();
+    const match = cleaned.match(/(\d{1,2}):(\d{2})\s*(am|pm)?/);
+    if (!match) {
+        // Handle simple hour like "10 AM"
+        const simpleMatch = cleaned.match(/(\d{1,2})\s*(am|pm)/);
+        if (simpleMatch) {
+            let h = parseInt(simpleMatch[1]);
+            const p = simpleMatch[2];
+            if (p === 'pm' && h < 12) h += 12;
+            if (p === 'am' && h === 12) h = 0;
+            return `${h.toString().padStart(2, '0')}:00`;
+        }
+        return '';
+    }
+    
+    let hours = parseInt(match[1]);
+    const minutes = match[2];
+    const ampm = match[3];
+
+    if (ampm === 'pm' && hours < 12) hours += 12;
+    if (ampm === 'am' && hours === 12) hours = 0;
+
+    return `${hours.toString().padStart(2, '0')}:${minutes}`;
+};
+
+const format24hTo12h = (time24h) => {
+    if (!time24h) return '';
+    const [h, m] = time24h.split(':');
+    let hours = parseInt(h);
+    const suffix = hours >= 12 ? 'PM' : 'AM';
+    hours = hours % 12 || 12;
+    return `${hours}:${m} ${suffix}`;
+};
+
 const WalkinHub = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
@@ -602,10 +639,10 @@ const WalkinHub = () => {
                                             <div className="space-y-2">
                                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tentative Time</label>
                                                 <input
-                                                    type="text" placeholder="e.g. 2:00 PM"
-                                                    className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
-                                                    value={formData.tentativeTime}
-                                                    onChange={(e) => setFormData({ ...formData, tentativeTime: e.target.value })}
+                                                type="time"
+                                                className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
+                                                value={format12hTo24h(formData.tentativeTime) || ""}
+                                                onChange={(e) => setFormData({ ...formData, tentativeTime: format24hTo12h(e.target.value) })}
                                                 />
                                             </div>
                                         </div>
@@ -691,10 +728,10 @@ const WalkinHub = () => {
                                                 <div className="relative">
                                                     <Timer className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                                                     <input
-                                                        type="text" placeholder="e.g. 10:30 AM"
+                                                        type="time"
                                                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
-                                                        value={formData.inTime}
-                                                        onChange={(e) => setFormData({ ...formData, inTime: e.target.value })}
+                                                        value={format12hTo24h(formData.inTime)}
+                                                        onChange={(e) => setFormData({ ...formData, inTime: format24hTo12h(e.target.value) })}
                                                     />
                                                 </div>
                                             </div>
@@ -703,10 +740,10 @@ const WalkinHub = () => {
                                                 <div className="relative">
                                                     <Timer className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
                                                     <input
-                                                        type="text" placeholder="e.g. 11:45 AM"
+                                                        type="time"
                                                         className="w-full pl-12 pr-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
-                                                        value={formData.outTime}
-                                                        onChange={(e) => setFormData({ ...formData, outTime: e.target.value })}
+                                                        value={format12hTo24h(formData.outTime)}
+                                                        onChange={(e) => setFormData({ ...formData, outTime: format24hTo12h(e.target.value) })}
                                                     />
                                                 </div>
                                             </div>
