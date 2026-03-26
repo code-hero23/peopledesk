@@ -152,8 +152,14 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                                 }}
                             >
                                 <div className="flex flex-col items-center">
-                                    <span className="text-[7px] font-black text-white/80 bg-slate-900/60 px-1 rounded-sm uppercase mb-0.5 whitespace-nowrap" style={{ transform: `rotate(${-angle}deg)` }}>{p.name}</span>
-                                    <span className="text-xl" style={{ filter: 'drop-shadow(0 4px 8px rgba(0,0,0,0.5))' }}>🚶</span>
+                                    <motion.span 
+                                        animate={{ scale: [1, 1.1, 1], opacity: [0.8, 1, 0.8] }}
+                                        transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                                        className="text-[8px] font-black text-white bg-blue-600/80 px-2 py-0.5 rounded-full uppercase whitespace-nowrap shadow-lg" 
+                                        style={{ transform: `rotate(${-angle}deg)` }}
+                                    >
+                                        {p.name}
+                                    </motion.span>
                                 </div>
                             </div>
                         )
