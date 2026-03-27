@@ -637,7 +637,7 @@ const WalkinHub = () => {
                                                 />
                                             </div>
                                             <div className="space-y-2">
-                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Tentative Time</label>
+                                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Committed Time</label>
                                                 <input
                                                 type="time"
                                                 className="w-full px-6 py-4 bg-slate-50 border border-slate-100 rounded-2xl focus:ring-4 focus:ring-blue-50 outline-none font-bold text-sm"
