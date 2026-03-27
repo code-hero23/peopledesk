@@ -38,12 +38,13 @@ class WhatsAppService {
 
     /**
      * Send a template message to a recipient.
-     * @param {string} to - Recipient phone number (with country code, no + sign).
+     * @param {string} to - Recipient phone number.
      * @param {string} templateName - Name of the pre-approved template.
-     * @param {Array} parameters - Array of parameter objects for the template.
-     * @param {string} languageCode - Language code for the template (default 'en').
+     * @param {Array} bodyParams - Array of body parameter strings.
+     * @param {Array} headerParams - Array of header parameter objects (e.g. image link).
+     * @param {string} languageCode - Language code.
      */
-    async sendTemplateMessage(to, templateName, parameters = [], languageCode = 'en') {
+    async sendTemplateMessage(to, templateName, bodyParams = [], headerParams = [], languageCode = 'en') {
         if (!this.accessToken || !this.phoneNumberId) {
             console.warn('WhatsApp API credentials missing. Skipping notification.');
             return { success: false, error: 'WhatsApp API credentials missing' };
@@ -64,21 +65,38 @@ class WhatsAppService {
                     name: templateName,
                     language: {
                         code: languageCode
-                    }
+                    },
+                    components: []
                 }
             };
 
-            // Only add components if we have parameters
-            if (parameters && parameters.length > 0) {
-                data.template.components = [
-                    {
-                        type: 'body',
-                        parameters: parameters.map(p => ({
-                            type: 'text',
-                            text: String(p)
-                        }))
-                    }
-                ];
+            // 1. Add Header Components (Media, etc.)
+            if (headerParams && headerParams.length > 0) {
+                data.template.components.push({
+                    type: 'header',
+                    parameters: headerParams.map(p => {
+                        if (typeof p === 'string' && (p.startsWith('http') || p.includes('.jpg') || p.includes('.png'))) {
+                            return { type: 'image', image: { link: p } };
+                        }
+                        return { type: 'text', text: String(p) };
+                    })
+                });
+            }
+
+            // 2. Add Body Components
+            if (bodyParams && bodyParams.length > 0) {
+                data.template.components.push({
+                    type: 'body',
+                    parameters: bodyParams.map(p => ({
+                        type: 'text',
+                        text: String(p)
+                    }))
+                });
+            }
+
+            // Cleanup components if empty
+            if (data.template.components.length === 0) {
+                delete data.template.components;
             }
 
             const response = await axios.post(this.baseUrl, data, {
@@ -104,7 +122,7 @@ class WhatsAppService {
     async sendMissedLogoutNotification(to, userName) {
         // Template: missed_logout_alert
         // Params: {{1}} = Name
-        return this.sendTemplateMessage(to, 'missed_logout_alert', [userName], 'en');
+        return this.sendTemplateMessage(to, 'missed_logout_alert', [userName], [], 'en');
     }
 
     /**
@@ -113,7 +131,7 @@ class WhatsAppService {
     async sendMissedWorklogNotification(to, userName) {
         // Template: missed_worklog_alert
         // Params: {{1}} = Name
-        return this.sendTemplateMessage(to, 'missed_worklog_alert', [userName], 'en');
+        return this.sendTemplateMessage(to, 'missed_worklog_alert', [userName], [], 'en');
     }
 
     /**
@@ -122,7 +140,7 @@ class WhatsAppService {
     async sendLateLoginAlert(to, userName, consecutiveDays) {
         // Template: late_login_alert
         // Params: {{1}} = Name, {{2}} = Days
-        return this.sendTemplateMessage(to, 'late_login_alert', [userName, consecutiveDays], 'en');
+        return this.sendTemplateMessage(to, 'late_login_alert', [userName, consecutiveDays], [], 'en');
     }
 
     /**
@@ -131,7 +149,7 @@ class WhatsAppService {
     async sendBreakExceedanceAlert(to, userName, breakType, limitMinutes) {
         // Template: break_exceed_alert
         // Params: {{1}} = Name, {{2}} = Break Type (Tea/Lunch), {{3}} = Limit Minutes
-        return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes], 'en');
+        return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes], [], 'en');
     }
 }
 

@@ -82,7 +82,8 @@ const createWalkinEntry = async (req, res) => {
                 creName,
                 faId: faId ? parseInt(faId) : undefined,
                 creId: creId ? parseInt(creId) : undefined,
-                createdById: req.user.id
+                createdById: req.user.id,
+                outTimeRecordedAt: outTime ? new Date() : null
             },
             include: {
                 createdBy: { select: { name: true } },
@@ -152,8 +153,8 @@ const updateWalkinEntry = async (req, res) => {
         if (updateData.bhId) updateData.bhId = parseInt(updateData.bhId);
         if (updateData.dateOfVisit) updateData.dateOfVisit = parseRobustDate(updateData.dateOfVisit);
 
-        // If outTime is being set for the first time or updated, record the timestamp
-        if (updateData.outTime && !existingEntry.outTime) {
+        // If outTime is being set for the first time or updated from null, record the timestamp
+        if (updateData.outTime && (!existingEntry.outTime || !existingEntry.outTimeRecordedAt)) {
             updateData.outTimeRecordedAt = new Date();
         }
 

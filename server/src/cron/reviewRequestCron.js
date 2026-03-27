@@ -10,12 +10,16 @@ const initReviewRequestCron = () => {
         try {
             const twoHoursAgo = new Date();
             twoHoursAgo.setHours(twoHoursAgo.getHours() - 2);
+            
+            const twelveHoursAgo = new Date();
+            twelveHoursAgo.setHours(twelveHoursAgo.getHours() - 12);
 
-            // Find entries where visit is finished, 2 hours passed, and review not sent
+            // Find entries where visit is finished, 2 hours passed, but not more than 12 hours
             const pendingEntries = await prisma.walkinEntry.findMany({
                 where: {
                     outTimeRecordedAt: {
                         lte: twoHoursAgo,
+                        gte: twelveHoursAgo,
                         not: null
                     },
                     reviewSent: false,
@@ -32,6 +36,9 @@ const initReviewRequestCron = () => {
 
             console.log(`CRON: Found ${pendingEntries.length} pending review requests.`);
 
+            // Brand image for the header
+            const brandImageUrl = 'https://i.ibb.co/vzZ8jG4/cookscape-review-header.jpg';
+
             for (const entry of pendingEntries) {
                 try {
                     // Send WhatsApp Template: cookscape_review_request_media
@@ -39,7 +46,8 @@ const initReviewRequestCron = () => {
                     const result = await whatsappService.sendTemplateMessage(
                         entry.contactNumber,
                         'cookscape_review_request_media',
-                        [entry.clientName]
+                        [entry.clientName], // Body Params
+                        [brandImageUrl]     // Header Params (Image)
                     );
 
                     if (result.success) {
