@@ -30,7 +30,7 @@ async function testReviewRequest() {
         console.log(`🔍 Found Entry: ${entry.clientName} (${entry.contactNumber})`);
         
         // Brand image for the header (same as used in cron)
-        const brandImageUrl = 'https://i.ibb.co/vzZ8jG4/cookscape-review-header.jpg';
+        const brandImageUrl = 'https://i.postimg.cc/85z1zX4Y/cookscape-review-header.jpg';
 
         console.log(`📤 Sending WhatsApp Template (cookscape_review_request_media)...`);
         

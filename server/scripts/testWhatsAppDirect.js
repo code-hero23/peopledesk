@@ -18,7 +18,7 @@ async function testWhatsAppDirect() {
     console.log(`--- 🧪 WhatsApp Direct Test: ${phoneNumber} ---`);
     
     // Brand image for the header
-    const brandImageUrl = 'https://i.ibb.co/vzZ8jG4/cookscape-review-header.jpg';
+    const brandImageUrl = 'https://i.postimg.cc/85z1zX4Y/cookscape-review-header.jpg';
 
     console.log(`📤 Sending Template (cookscape_review_request_media)...`);
 

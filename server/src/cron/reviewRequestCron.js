@@ -37,7 +37,7 @@ const initReviewRequestCron = () => {
             console.log(`CRON: Found ${pendingEntries.length} pending review requests.`);
 
             // Brand image for the header
-            const brandImageUrl = 'https://i.ibb.co/vzZ8jG4/cookscape-review-header.jpg';
+            const brandImageUrl = 'https://i.postimg.cc/85z1zX4Y/cookscape-review-header.jpg';
 
             for (const entry of pendingEntries) {
                 try {
