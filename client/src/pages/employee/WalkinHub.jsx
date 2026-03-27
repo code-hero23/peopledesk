@@ -924,7 +924,7 @@ const WalkinHub = () => {
                                             <p className="font-bold text-slate-700">{selectedEntry.showroom || 'Not Specified'}</p>
                                         </div>
                                         <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Tentative Time</p>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Committed Time</p>
                                             <p className="font-bold text-slate-700">{selectedEntry.tentativeTime || 'N/A'}</p>
                                         </div>
                                     </div>
