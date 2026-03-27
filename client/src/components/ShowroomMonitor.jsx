@@ -10,7 +10,6 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
         today.setHours(0, 0, 0, 0);
 
         const todaysEntries = entries.filter(e => {
-            // Client is gone if outTime is present or visit is CANCELLED
             if (e.visitStatus === 'CANCELLED' || (e.outTime && e.outTime.trim() !== '')) return false;
             const eDate = new Date(e.dateOfVisit);
             eDate.setHours(0, 0, 0, 0);
@@ -21,62 +20,11 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
             id: `${entry.id}-${idx}`,
             showroom: entry.showroom,
             name: entry.clientName,
-            x: Math.random() * 180 + 30,
-            y: Math.random() * 80 + 40,
-            dx: (Math.random() * 2 - 1) * 0.4,
-            dy: (Math.random() * 2 - 1) * 0.4,
-            speed: 0.15 + Math.random() * 0.25
+            x: Math.random() * 180 + 30, // Random fixed position
+            y: Math.random() * 80 + 40
         }));
         setPeople(newPeople);
     }, [entries]);
-
-    useEffect(() => {
-        let animationFrameId;
-        const move = () => {
-            setPeople(prevPeople => prevPeople.map(person => {
-                let { x, y, dx, dy, speed } = person;
-                
-                // Repulsion logic
-                prevPeople.forEach(other => {
-                    if (other.id === person.id || other.showroom !== person.showroom) return;
-                    const distX = x - other.x;
-                    const distY = y - other.y;
-                    const dist = Math.sqrt(distX * distX + distY * distY);
-                    if (dist < 30) {
-                        dx += (distX / dist) * 0.05;
-                        dy += (distY / dist) * 0.05;
-                    }
-                });
-
-                // Movement
-                x += dx * speed * 0.5; // Slow down for smoothness
-                y += dy * speed * 0.5;
-
-                // Bounce with more margin
-                if (x < 15 || x > 255) dx *= -1.02; // Add slight kick on bounce
-                if (y < 20 || y > 120) dy *= -1.02;
-
-                // Random small adjustments instead of total random turns
-                if (Math.random() < 0.01) {
-                    dx += (Math.random() * 0.1 - 0.05);
-                    dy += (Math.random() * 0.1 - 0.05);
-                    // Cap speed
-                    const currentSpeed = Math.sqrt(dx*dx + dy*dy);
-                    if (currentSpeed > 1) {
-                        dx /= currentSpeed;
-                        dy /= currentSpeed;
-                    }
-                }
-
-                return { ...person, x, y, dx, dy };
-            }));
-            animationFrameId = requestAnimationFrame(move);
-        };
-        animationFrameId = requestAnimationFrame(move);
-        return () => {
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-        };
-    }, []);
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 bg-slate-900 p-8 rounded-[2.5rem] mt-8 shadow-2xl border border-slate-800 relative overflow-hidden">
@@ -116,26 +64,40 @@ const ShowroomMonitor = ({ showrooms, entries }) => {
                                 style={{ 
                                     left: p.x, 
                                     top: p.y,
-                                    transition: 'left 0.3s linear, top 0.3s linear',
                                     transform: 'translate(-50%, -50%)'
                                 }}
                             >
-                                {/* Pulse Halo */}
+                                {/* Stationary Heartbeat Pulse */}
                                 <motion.div 
-                                    animate={{ scale: [1, 2], opacity: [0.5, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut" }}
-                                    className="absolute w-8 h-8 bg-blue-500/20 rounded-full"
+                                    animate={{ 
+                                        scale: [1, 1.25, 1, 1.15, 1],
+                                        opacity: [0.3, 0.6, 0.3, 0.5, 0.3]
+                                    }}
+                                    transition={{ 
+                                        duration: 2, 
+                                        repeat: Infinity, 
+                                        ease: "easeInOut",
+                                        times: [0, 0.2, 0.4, 0.6, 1]
+                                    }}
+                                    className="absolute w-12 h-12 bg-blue-500/10 rounded-full blur-xl"
                                 />
+
                                 <motion.div 
-                                    animate={{ scale: [1, 1.5], opacity: [0.3, 0] }}
-                                    transition={{ duration: 2, repeat: Infinity, ease: "easeOut", delay: 0.5 }}
-                                    className="absolute w-6 h-6 bg-blue-400/20 rounded-full"
-                                />
-                                
-                                {/* Name Label */}
-                                <span className="relative z-10 text-[9px] font-black text-white bg-blue-600 px-3 py-1 rounded-full uppercase whitespace-nowrap shadow-lg border border-white/20">
-                                    {p.name}
-                                </span>
+                                    animate={{ 
+                                        scale: [1, 1.1, 1, 1.05, 1] 
+                                    }}
+                                    transition={{ 
+                                        duration: 2, 
+                                        repeat: Infinity, 
+                                        ease: "easeInOut",
+                                        times: [0, 0.2, 0.4, 0.6, 1]
+                                    }}
+                                    className="relative z-10"
+                                >
+                                    <span className="text-[9px] font-black text-white bg-blue-600 px-3 py-1.5 rounded-full uppercase whitespace-nowrap shadow-[0_0_15px_rgba(59,130,246,0.5)] border border-white/20 select-none cursor-default">
+                                        {p.name}
+                                    </span>
+                                </motion.div>
                             </div>
                         )
                     })}
