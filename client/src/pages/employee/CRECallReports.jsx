@@ -169,7 +169,6 @@ const CRECallReports = () => {
             const result = await CallLog.getCallLogs();
             if (result.logs && result.logs.length > 0) {
                 const allLogs = result.logs;
-                console.log(`Diagnostic: Found ${allLogs.length} total logs on device.`);
                 
                 // Diagnostic: Log all unique SIM IDs found
                 const detectedSims = [...new Set(allLogs.map(l => String(l.simSlot || l.simId || "Unknown")))].filter(s => s !== "null");
@@ -195,31 +194,18 @@ const CRECallReports = () => {
                     }
                 }
 
-                // Client-side Filter: Only send logs matching the selected official SIM (unless 'All' is selected)
-                let filteredLogs = allLogs;
-                if (officialSim !== 0) {
-                    filteredLogs = allLogs.filter(log => {
-                        const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
-                        const targetSlot = String(officialSim).toLowerCase();
-                        if (!logSlot || logSlot === "null" || logSlot === "undefined") return true; 
-                        return logSlot === targetSlot || logSlot.includes(targetSlot);
-                    });
-                    console.log(`[Diagnostic] Filter applied: ${officialSim}. Result: ${filteredLogs.length} logs.`);
-                } else {
-                    console.log(`[Diagnostic] Syncing ALL logs (Official SIM: 0). Total: ${allLogs.length} logs.`);
-                }
-
-                // FALLBACK: If specific SIM filtering fails but device HAS logs
-                if (filteredLogs.length === 0 && allLogs.length > 0) {
-                    const uniqueSims = [...new Set(allLogs.map(l => String(l.simSlot || l.simId || "")))].filter(s => s && s !== "null" && s !== "undefined");
-                    if (uniqueSims.length === 1) {
-                        filteredLogs = allLogs;
-                        console.log("Diagnostic: Single SIM auto-fallback applied.");
-                    }
-                }
+                // --- STRICT CLIENT-SIDE FILTERING ---
+                // Only send logs that match the specifically selected official SIM
+                const filteredLogs = allLogs.filter(log => {
+                    const logSimId = String(log.simSlot || log.simId || "").toLowerCase();
+                    const targetSlot = String(officialSim).toLowerCase();
+                    
+                    // Direct match or reverse mapping via simMap
+                    return logSimId === targetSlot || simMap[logSimId] === targetSlot;
+                });
 
                 if (filteredLogs.length === 0) {
-                    toast.warning(`No logs found for SIM ${officialSim}. Detected SIM IDs: ${[...new Set(allLogs.map(l => l.simSlot || l.simId))].filter(Boolean).join(", ")}`);
+                    toast.error(`No logs found for Official SIM: ${simLabels[officialSim] || officialSim}. Found IDs: ${[...new Set(allLogs.map(l => l.simSlot || l.simId))].filter(Boolean).join(", ")}`);
                     return;
                 }
 
@@ -228,6 +214,7 @@ const CRECallReports = () => {
                     simFilter: officialSim,
                     syncDate: new Date().toISOString()
                 }));
+
 
                 if (!res.error) {
                     toast.success(`${filteredLogs.length} logs successfully moved to VPS.`);

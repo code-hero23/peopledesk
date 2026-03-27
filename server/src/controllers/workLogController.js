@@ -423,9 +423,21 @@ const syncCallLogs = async (req, res) => {
         if (isNaN(userId)) {
             return res.status(400).json({ message: 'Invalid User ID' });
         }
-        let newLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
+        let rawLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
 
-        // HEARTBEAT LOGIC: If no logs, still perform an upsert for "today" to update updatedAt
+        // --- SERVER-SIDE GUARD ---
+        // Re-filter logs based on the simFilter sent in the request body
+        let newLogs = rawLogs;
+        if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
+            const target = String(simFilter).toLowerCase();
+            newLogs = rawLogs.filter(log => {
+                const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
+                return logSlot === target || logSlot.includes(target);
+            });
+            console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
+        }
+
+        // HEARTBEAT LOGIC: If no logs after filtering, still perform an upsert for "today" to update updatedAt
         const isHeartbeat = !newLogs || newLogs.length === 0;
         
         const user = await prisma.user.findUnique({ 
@@ -629,10 +641,11 @@ const getAllCallStats = async (req, res) => {
             }
 
             // 2. Filter by SIM if provided
-            if (simFilter && simFilter !== 'ALL') {
-                const slot = String(simFilter);
+            if (simFilter && String(simFilter) !== 'ALL' && String(simFilter) !== '0') {
+                const slot = String(simFilter).toLowerCase();
                 filteredCalls = filteredCalls.filter(c => {
-                    const cSlot = String(c.simSlot || c.simId || "");
+                    const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
+                    // Robust match: exact or partial (covers Subscription IDs containing the slot index)
                     return cSlot === slot || cSlot.includes(slot);
                 });
             }

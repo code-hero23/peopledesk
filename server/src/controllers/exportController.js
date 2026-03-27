@@ -1112,10 +1112,10 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
             });
         }
 
-        if (simFilter && simFilter !== 'ALL') {
-            const slot = String(simFilter);
+        if (simFilter && String(simFilter) !== 'ALL' && String(simFilter) !== '0') {
+            const slot = String(simFilter).toLowerCase();
             filteredCalls = filteredCalls.filter(c => {
-                const cSlot = String(c.simSlot || c.simId || "");
+                const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
                 return cSlot === slot || cSlot.includes(slot);
             });
         }
