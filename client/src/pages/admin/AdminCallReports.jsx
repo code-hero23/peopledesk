@@ -428,7 +428,7 @@ const AdminCallReports = () => {
                             <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-4">Global Distribution</h3>
                             <div className="flex-1 w-full min-h-[220px]">
                                 {(isMounted && globalPieData.length > 0) ? (
-                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                    <ResponsiveContainer width="100%" height={220} minWidth={0}>
                                     <PieChart>
                                         <Pie
                                             data={globalPieData}
@@ -466,7 +466,7 @@ const AdminCallReports = () => {
                             </div>
                             <div className="flex-1 w-full min-h-[220px]">
                          {barData.length > 0 ? (
-                             <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                             <ResponsiveContainer width="100%" height={220} minWidth={0}>
                                     <BarChart data={barData}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                                         <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
@@ -659,7 +659,7 @@ const AdminCallReports = () => {
                              <div className="w-full space-y-4">
                                  <div className="h-[250px] w-full">
                                      {(isMounted && selectedEmployee) && (
-                                         <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                         <ResponsiveContainer width="100%" height={250} minWidth={0}>
                                         <PieChart>
                                             <Pie
                                                 data={getPieData(selectedEmployee)}

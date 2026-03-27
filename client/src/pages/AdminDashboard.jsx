@@ -75,14 +75,18 @@ const AdminDashboard = () => {
     }, [user?.token, user?.role, user?.designation]); // Add user?.designation to ensure re-fetch if it changes
 
     useEffect(() => {
-        dispatch(getAllEmployees());
-        dispatch(getDailyAttendance(selectedDate));
-        dispatch(getDailyWorkLogs({ date: selectedDate }));
-        dispatch(getPendingRequests(selectedDate));
-        dispatch(fetchWalkins());
+        // Only fetch admin data if user has the correct role to avoid 403/429 loops
+        const adminRoles = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'];
+        if (user && adminRoles.includes(user.role)) {
+            dispatch(getAllEmployees());
+            dispatch(getDailyAttendance(selectedDate));
+            dispatch(getDailyWorkLogs({ date: selectedDate }));
+            dispatch(getPendingRequests(selectedDate));
+            dispatch(fetchWalkins());
+        }
 
         return () => { dispatch(reset()); };
-    }, [dispatch, selectedDate]);
+    }, [dispatch, selectedDate, user?.role]);
 
     // IDs of employees to include (exclude admin, business head, HR, AE manager)
     const includedEmployeeIds = employees
@@ -460,7 +464,7 @@ const AdminDashboard = () => {
                                                         <p className="text-4xl font-black text-slate-800 dark:text-white tracking-tighter transition-all">₹{displayValue.toLocaleString()}</p>
                                                     </div>
                                                     
-                                                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                                                    <ResponsiveContainer width="100%" height={400} minWidth={0}>
                                                         <PieChart>
                                                             <defs>
                                                                 <linearGradient id="gradientCash" x1="0" y1="0" x2="0" y2="1">

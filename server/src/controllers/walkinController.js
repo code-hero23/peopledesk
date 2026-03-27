@@ -151,6 +151,8 @@ const updateWalkinEntry = async (req, res) => {
         }
 
         if (updateData.bhId) updateData.bhId = parseInt(updateData.bhId);
+        if (updateData.faId) updateData.faId = parseInt(updateData.faId);
+        if (updateData.creId) updateData.creId = parseInt(updateData.creId);
         if (updateData.dateOfVisit) updateData.dateOfVisit = parseRobustDate(updateData.dateOfVisit);
 
         // If outTime is being set for the first time or updated from null, record the timestamp
@@ -158,9 +160,11 @@ const updateWalkinEntry = async (req, res) => {
             updateData.outTimeRecordedAt = new Date();
         }
 
-        // Remove relation objects if they exist in the body (prevents Prisma errors)
+        // Remove relation objects if they exist in the body (prevents Prisma errors like 'Unknown argument faId')
         delete updateData.createdBy;
         delete updateData.bh;
+        delete updateData.fa;
+        delete updateData.cre;
         delete updateData.id; // Also safety: don't try to update the ID
 
         const entry = await prisma.walkinEntry.update({

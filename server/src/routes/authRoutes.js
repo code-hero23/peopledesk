@@ -8,7 +8,7 @@ const { protect } = require('../middlewares/authMiddleware');
 // Rate limiting for login/register - increased significantly for thorough testing
 const authLimiter = rateLimit({
     windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 100, // Increased to 100
+    max: 500, // Increased to 500 for robust development testing
     message: 'Too many login/registration attempts, please try again after 5 minutes',
     standardHeaders: true,
     legacyHeaders: false,
