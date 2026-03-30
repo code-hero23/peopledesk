@@ -37,7 +37,6 @@ const loginUser = async (req, res) => {
                 reportingBhId: user.reportingBhId,
                 isGlobalAccess: user.isGlobalAccess,
                 wfhViewEnabled: user.wfhViewEnabled,
-                walkinViewEnabled: user.walkinViewEnabled,
                 token: generateToken(user.id, user.role),
             });
         } else {
@@ -83,7 +82,6 @@ const registerUser = async (req, res) => {
                 email: user.email,
                 role: user.role,
                 wfhViewEnabled: user.wfhViewEnabled,
-                walkinViewEnabled: user.walkinViewEnabled,
                 token: generateToken(user.id, user.role),
             });
         } else {
@@ -108,7 +106,6 @@ const getMe = async (req, res) => {
         reportingBhId: req.user.reportingBhId,
         isGlobalAccess: req.user.isGlobalAccess,
         wfhViewEnabled: req.user.wfhViewEnabled,
-        walkinViewEnabled: req.user.walkinViewEnabled,
     };
     res.json(user);
 };
@@ -142,7 +139,6 @@ const googleLogin = async (req, res) => {
                 designation: user.designation,
                 reportingBhId: user.reportingBhId,
                 wfhViewEnabled: user.wfhViewEnabled,
-                walkinViewEnabled: user.walkinViewEnabled,
                 token: generateToken(user.id),
             });
         } else {
