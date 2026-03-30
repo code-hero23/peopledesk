@@ -213,9 +213,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {(user?.role === 'ADMIN' || user?.callAnalyticsViewEnabled) && (
                                 <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />
                             )}
-                            {(user?.role === 'ADMIN' || user?.walkinViewEnabled) && (
-                                <NavItem to="/admin/walkin-hub" icon={Users} label="Walkin Hub" indent />
-                            )}
+
                         </NavGroup>
 
                         <NavGroup id="admin" label="Administration" icon={ShieldCheck}>
@@ -255,9 +253,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation) && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
-                            {(user?.designation === 'CRE' || user?.walkinViewEnabled) && (
-                                <NavItem to="/dashboard/walkin-hub" icon={Users} label="Walkin Hub" />
-                            )}
+
                         </div>
 
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>

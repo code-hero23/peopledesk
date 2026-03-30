@@ -4,8 +4,7 @@ import { getAllEmployees, getPendingRequests, getDailyAttendance, getDailyWorkLo
 import StatCard from '../components/StatCard';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { fetchWalkins } from '../features/walkin/walkinSlice';
-import ShowroomMonitor from '../components/ShowroomMonitor';
+
 import { Users, ClipboardList, BarChart2, Calendar, Building2, FileText, CheckCircle, UserX, Clock, Home, Phone, MapPin, IndianRupee, Monitor } from 'lucide-react';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, Legend } from 'recharts';
 import axios from 'axios';
@@ -15,7 +14,6 @@ const AdminDashboard = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { employees, pendingRequests, dailyAttendance, isLoading } = useSelector((state) => state.admin);
-    const { entries: walkinEntries } = useSelector((state) => state.walkin);
     const { user } = useSelector((state) => state.auth);
     const { mode: themeMode } = useSelector((state) => state.theme);
 
@@ -82,7 +80,7 @@ const AdminDashboard = () => {
             dispatch(getDailyAttendance(selectedDate));
             dispatch(getDailyWorkLogs({ date: selectedDate }));
             dispatch(getPendingRequests(selectedDate));
-            dispatch(fetchWalkins());
+
         }
 
         return () => { dispatch(reset()); };
@@ -306,13 +304,7 @@ const AdminDashboard = () => {
                 </div>
             </div>
 
-            {/* Live Showroom View - Integrated from Walkin Hub */}
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 delay-200">
-                <h3 className="text-sm font-bold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-                    <Monitor size={16} className="text-blue-500" /> Live Showroom Activity
-                </h3>
-                <ShowroomMonitor showrooms={SHOWROOMS} entries={walkinEntries} />
-            </div>
+
 
             {/* Attendance Snapshot + Approval Inbox */}
             {['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role) && (

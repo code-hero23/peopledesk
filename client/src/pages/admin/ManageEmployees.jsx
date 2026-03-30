@@ -267,9 +267,7 @@ const ManageEmployees = () => {
                                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.salaryViewEnabled ? 'bg-emerald-100 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
                                                     Salary {emp.salaryViewEnabled ? 'ON' : 'OFF'}
                                                 </span>
-                                                <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.walkinViewEnabled ? 'bg-blue-100 text-blue-700 border border-blue-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
-                                                    Walkin {emp.walkinViewEnabled ? 'ON' : 'OFF'}
-                                                </span>
+
                                                 <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tighter shadow-sm ${emp.callAnalyticsViewEnabled ? 'bg-indigo-100 text-indigo-700 border border-indigo-200' : 'bg-slate-100 text-slate-400 border border-slate-200'}`}>
                                                     Calls {emp.callAnalyticsViewEnabled ? 'ON' : 'OFF'}
                                                 </span>

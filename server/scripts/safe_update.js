@@ -4,29 +4,10 @@ const prisma = new PrismaClient();
 async function main() {
   console.log('Starting safe database update...');
   
-  // Adding inTime
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "inTime" TEXT`);
-    console.log('Column "inTime" added or already exists.');
-  } catch (err) {
-    console.error('Error adding "inTime":', err.message);
-  }
 
-  // Adding outTime
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "outTime" TEXT`);
-    console.log('Column "outTime" added or already exists.');
-  } catch (err) {
-    console.error('Error adding "outTime":', err.message);
-  }
   
   // Adding User columns
-  try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "walkinViewEnabled" BOOLEAN DEFAULT false`);
-    console.log('Column "walkinViewEnabled" added or already exists.');
-  } catch (err) {
-    console.error('Error adding "walkinViewEnabled":', err.message);
-  }
+
 
   try {
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "callAnalyticsViewEnabled" BOOLEAN DEFAULT false`);
@@ -56,18 +37,12 @@ async function main() {
     console.error('Error creating "Notification" table:', err.message);
   }
 
-  // Adding WalkinEntry assignment columns
+  // Adding WfhRequest createdAt
   try {
-    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "faId" INTEGER`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "creId" INTEGER`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "reviewSent" BOOLEAN NOT NULL DEFAULT false`);
-    await prisma.$executeRawUnsafe(`ALTER TABLE "WalkinEntry" ADD COLUMN IF NOT EXISTS "outTimeRecordedAt" TIMESTAMP(3)`);
-
     await prisma.$executeRawUnsafe(`ALTER TABLE "WfhRequest" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP`);
-
-    console.log('Columns "faId", "creId", "reviewSent", "outTimeRecordedAt" added to WalkinEntry, and "createdAt" added to WfhRequest or already exist.');
+    console.log('Column "createdAt" added to WfhRequest or already exist.');
   } catch (err) {
-    console.error('Error adding assignment and review columns to WalkinEntry:', err.message);
+    console.error('Error adding "createdAt" to WfhRequest:', err.message);
   }
 
   // Adding Biometric columns and table

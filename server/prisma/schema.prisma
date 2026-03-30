@@ -28,7 +28,7 @@ model User {
   salaryDeductionBreakdown     Json?                  @default("[]")
   timeShortageDeductionEnabled Boolean                @default(true)
   wfhViewEnabled               Boolean                @default(false)
-  walkinViewEnabled            Boolean                @default(false)
+
   callAnalyticsViewEnabled     Boolean                @default(false)
   announcements                Announcement[]         @relation("AuthorAnnouncements")
   attendance                   Attendance[]
@@ -46,10 +46,7 @@ model User {
   vouchers                     Voucher[]
   deposits                     Deposit[]
   pushSubscriptions            PushSubscription[]
-  walkinEntries                WalkinEntry[]          @relation("CreatedBy")
-  assignedWalkins              WalkinEntry[]          @relation("AssignedBh")
-  faWalkins                    WalkinEntry[]          @relation("AssignedFa")
-  creWalkins                   WalkinEntry[]          @relation("AssignedCre")
+
   notifications                Notification[]
   biometricId                  String?                @unique
   biometricLogs                BiometricLog[]
@@ -589,34 +586,4 @@ model CarpenterRecord {
   updatedAt       DateTime @updatedAt
 }
 
-model WalkinEntry {
-  id               Int      @id @default(autoincrement())
-  faTeam           String
-  faId             Int?
-  creName          String?
-  creId            Int?
-  architect        String?
-  bhId             Int
-  clientName       String
-  contactNumber    String
-  project          String?
-  status           String?
-  dateOfVisit      DateTime
-  dayOfVisit       String?
-  tentativeTime    String?
-  showroom         String?
-  inTime           String?
-  outTime          String?
-  visitStatus      String?
-  remarks          String?
-  reviewSent       Boolean  @default(false)
-  outTimeRecordedAt DateTime?
-  createdById      Int
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
 
-  createdBy        User     @relation("CreatedBy", fields: [createdById], references: [id])
-  bh               User     @relation("AssignedBh", fields: [bhId], references: [id])
-  fa               User?    @relation("AssignedFa", fields: [faId], references: [id])
-  cre              User?    @relation("AssignedCre", fields: [creId], references: [id])
-}

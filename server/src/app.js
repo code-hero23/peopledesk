@@ -94,7 +94,7 @@ app.use('/api/wfh', require('./routes/wfhRoutes'));
 app.use('/api/vouchers', require('./routes/voucherRoutes'));
 app.use('/api/finance', require('./routes/financeRoutes'));
 app.use('/api/carpenter', require('./routes/carpenterRoutes'));
-app.use('/api/walkin', require('./routes/walkinRoutes'));
+
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 

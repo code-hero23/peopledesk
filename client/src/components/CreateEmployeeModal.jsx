@@ -26,7 +26,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
         salaryDeductions: 0,
         salaryDeductionBreakdown: [],
         wfhViewEnabled: false,
-        walkinViewEnabled: false,
+
         callAnalyticsViewEnabled: false,
     });
 
@@ -65,7 +65,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                 salaryDeductions: selectedEmployee.salaryDeductions || 0,
                 salaryDeductionBreakdown: normalizedBreakdown,
                 wfhViewEnabled: selectedEmployee.wfhViewEnabled || false,
-                walkinViewEnabled: selectedEmployee.walkinViewEnabled || false,
+
                 callAnalyticsViewEnabled: selectedEmployee.callAnalyticsViewEnabled || false,
             });
         } else if (isAeManager) {
@@ -358,24 +358,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 </label>
                             </div>
 
-                            <div className="bg-blue-50/30 p-4 rounded-xl border border-blue-100 flex items-center justify-between">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-lg">🚶</span>
-                                    <div>
-                                        <p className="text-xs font-bold text-slate-800">Allow Walkin Hub</p>
-                                        <p className="text-[9px] text-slate-500">Enable Walkin entry management</p>
-                                    </div>
-                                </div>
-                                <label className="relative inline-flex items-center cursor-pointer">
-                                    <input
-                                        type="checkbox"
-                                        className="sr-only peer"
-                                        checked={formData.walkinViewEnabled}
-                                        onChange={(e) => setFormData({ ...formData, walkinViewEnabled: e.target.checked })}
-                                    />
-                                    <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500 shadow-sm"></div>
-                                </label>
-                            </div>
+
 
                             <div className="bg-indigo-50/30 p-4 rounded-xl border border-indigo-100 flex items-center justify-between">
                                 <div className="flex items-center gap-2">
