@@ -283,12 +283,12 @@ const exportFinanceData = async (req, res) => {
         voucherSheet.columns = [
             { header: 'Date', key: 'date', width: 20 },
             { header: 'Type', key: 'type', width: 15 },
+            { header: 'User', key: 'userName', width: 25 },
             { header: 'Purpose', key: 'purpose', width: 40 },
             { header: 'Amount', key: 'amount', width: 15 },
             { header: 'Status', key: 'status', width: 15 },
             { header: 'AM Status', key: 'amStatus', width: 15 },
             { header: 'COO Status', key: 'cooStatus', width: 15 },
-            { header: 'User', key: 'userName', width: 25 },
             { header: 'ID', key: 'id', width: 10 }
         ];
 
@@ -300,12 +300,12 @@ const exportFinanceData = async (req, res) => {
             const row = voucherSheet.addRow({
                 date: v.date.toISOString().split('T')[0],
                 type: v.type,
+                userName: v.user?.name,
                 purpose: v.purpose,
                 amount: v.amount,
                 status: v.status,
                 amStatus: v.amStatus,
                 cooStatus: v.cooStatus,
-                userName: v.user?.name,
                 id: v.id
             });
 
