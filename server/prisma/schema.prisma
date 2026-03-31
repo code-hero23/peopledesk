@@ -13,7 +13,6 @@ model User {
   email                        String                 @unique
   password                     String
   name                         String
-  phone                        String?
   role                         Role                   @default(EMPLOYEE)
   status                       Status                 @default(ACTIVE)
   lastWorkLogDate              DateTime?
@@ -21,35 +20,34 @@ model User {
   updatedAt                    DateTime               @updatedAt
   designation                  String                 @default("LA")
   reportingBhId                Int?
-  allocatedSalary              Float?                 @default(0)
   isGlobalAccess               Boolean                @default(false)
-  salaryDeductions             Float?                 @default(0)
+  allocatedSalary              Float?                 @default(0)
   salaryViewEnabled            Boolean                @default(false)
+  salaryDeductions             Float?                 @default(0)
   salaryDeductionBreakdown     Json?                  @default("[]")
   timeShortageDeductionEnabled Boolean                @default(true)
   wfhViewEnabled               Boolean                @default(false)
-
-  callAnalyticsViewEnabled     Boolean                @default(false)
+  phone                        String?
+  callAnalyticsViewEnabled     Boolean?               @default(false)
+  biometricId                  String?                @unique
   announcements                Announcement[]         @relation("AuthorAnnouncements")
   attendance                   Attendance[]
+  biometricLogs                BiometricLog[]
+  callLogs                     CallLog[]
+  deposits                     Deposit[]
   leaveRequests                LeaveRequest[]
   loginAccessRequests          LoginAccessRequest[]
+  notifications                Notification[]
   permissionRequests           PermissionRequest[]
   managedProjects              Project[]
+  pushSubscriptions            PushSubscription[]
   showroomVisitRequests        ShowroomVisitRequest[]
   siteVisitRequests            SiteVisitRequest[]
   reportingBh                  User?                  @relation("ReportingLink", fields: [reportingBhId], references: [id])
   subordinates                 User[]                 @relation("ReportingLink")
+  vouchers                     Voucher[]
   wfhRequests                  WfhRequest[]
   workLogs                     WorkLog[]
-  callLogs                     CallLog[]
-  vouchers                     Voucher[]
-  deposits                     Deposit[]
-  pushSubscriptions            PushSubscription[]
-
-  notifications                Notification[]
-  biometricId                  String?                @unique
-  biometricLogs                BiometricLog[]
 }
 
 model PushSubscription {
@@ -119,7 +117,7 @@ model BiometricLog {
   id        Int      @id @default(autoincrement())
   userId    Int
   punchTime DateTime
-  punchType String? // IN, OUT, or null
+  punchType String?
   deviceId  String?
   createdAt DateTime @default(now())
   user      User     @relation(fields: [userId], references: [id])
@@ -128,14 +126,14 @@ model BiometricLog {
 }
 
 model BreakLog {
-  id           Int        @id @default(autoincrement())
-  attendanceId Int
-  breakType    BreakType
-  startTime    DateTime   @default(now())
-  endTime      DateTime?
-  duration             Int?
-  isExceededAlertSent  Boolean    @default(false)
-  attendance           Attendance @relation(fields: [attendanceId], references: [id])
+  id                  Int        @id @default(autoincrement())
+  attendanceId        Int
+  breakType           BreakType
+  startTime           DateTime   @default(now())
+  endTime             DateTime?
+  duration            Int?
+  isExceededAlertSent Boolean    @default(false)
+  attendance          Attendance @relation(fields: [attendanceId], references: [id])
 }
 
 model WorkLog {
@@ -229,23 +227,23 @@ model WorkLog {
   la_project_reports         Json?
   ae_closing_metrics         Json?
   ae_opening_metrics         Json?
-  ae_project_reports         Json?
-  cre_synced_calls          Json?
-  notes                      String?
   fa_project_reports         Json?
+  ae_project_reports         Json?
+  notes                      String?
+  cre_synced_calls           Json?
   project                    Project?  @relation(fields: [projectId], references: [id])
   user                       User      @relation(fields: [userId], references: [id])
 }
 
 model CallLog {
-  id               Int      @id @default(autoincrement())
-  userId           Int
-  date             DateTime @default(now())
-  calls            Json?
-  totalCalls       Int?     @default(0)
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-  user             User     @relation(fields: [userId], references: [id])
+  id         Int      @id @default(autoincrement())
+  userId     Int
+  date       DateTime @default(now())
+  calls      Json?
+  totalCalls Int?     @default(0)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  user       User     @relation(fields: [userId], references: [id])
 
   @@unique([userId, date])
 }
@@ -394,7 +392,6 @@ model WfhRequest {
   department            String
   designation           String
   reportingManager      String
-  reportingManagerId    Int?
   wfhDays               Int
   startDate             DateTime
   endDate               DateTime
@@ -426,8 +423,13 @@ model WfhRequest {
   adminStatus           RequestStatus @default(PENDING)
   status                RequestStatus @default(PENDING)
   currentLevel          Int           @default(1)
+  remarks               String?
+  hrRemarks             String?
+  bhRemarks             String?
+  adminRemarks          String?
   createdAt             DateTime      @default(now())
   updatedAt             DateTime      @updatedAt
+  reportingManagerId    Int?
   user                  User          @relation(fields: [userId], references: [id])
 }
 
@@ -440,8 +442,67 @@ model Notification {
   isRead    Boolean  @default(false)
   relatedId Int?
   createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  updatedAt DateTime @default(now()) @updatedAt
   user      User     @relation(fields: [userId], references: [id])
+}
+
+model Voucher {
+  id            Int           @id @default(autoincrement())
+  userId        Int
+  type          VoucherType   @default(POSTPAID)
+  amount        Float
+  purpose       String
+  date          DateTime      @default(now())
+  status        VoucherStatus @default(PENDING)
+  amId          Int?
+  amStatus      VoucherStatus @default(PENDING)
+  amRemarks     String?
+  amApprovedAt  DateTime?
+  cooId         Int?
+  cooStatus     VoucherStatus @default(PENDING)
+  cooRemarks    String?
+  cooApprovedAt DateTime?
+  proofUrl      String?
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+  adminId       Int?
+  adminRemarks  String?
+  user          User          @relation(fields: [userId], references: [id])
+}
+
+model Finance {
+  id                     Int      @id @default(1)
+  currentCash            Float    @default(0)
+  totalSpent             Float    @default(0)
+  updatedAt              DateTime @updatedAt
+  carpenterImpactEnabled Boolean  @default(false)
+}
+
+model Deposit {
+  id        Int      @id @default(autoincrement())
+  amount    Float
+  source    String
+  addedById Int
+  addedAt   DateTime @default(now())
+  reason    String?
+  addedBy   User     @relation(fields: [addedById], references: [id])
+}
+
+model CarpenterRecord {
+  id             Int      @id @default(autoincrement())
+  aeName         String
+  clientName     String
+  siteName       String
+  carpenterName  String
+  workOrderValue Float
+  leoSirRate     Float
+  cookscapeRate  Float
+  advance        Float
+  balance        Float
+  remarks        String?
+  status         String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 }
 
 enum PopupType {
@@ -471,57 +532,6 @@ enum Role {
   AE_MANAGER
   ACCOUNTS_MANAGER
   ANALYZER
-}
-
-model Voucher {
-  id            Int           @id @default(autoincrement())
-  userId        Int
-  type          VoucherType   @default(POSTPAID)
-  amount        Float
-  purpose       String
-  date          DateTime      @default(now())
-  status        VoucherStatus @default(PENDING)
-  
-  // Level 1: Accounts Manager
-  amId          Int?
-  amStatus      VoucherStatus @default(PENDING)
-  amRemarks     String?
-  amApprovedAt  DateTime?
-  
-  // Level 2: COO
-  cooId         Int?
-  cooStatus     VoucherStatus @default(PENDING)
-  cooRemarks    String?
-  cooApprovedAt DateTime?
-  
-  // Admin Notes
-  adminId       Int?
-  adminRemarks  String?
-
-  proofUrl      String?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-
-  user          User          @relation(fields: [userId], references: [id])
-}
-
-model Finance {
-  id                     Int      @id @default(1)
-  currentCash            Float    @default(0)
-  totalSpent             Float    @default(0)
-  carpenterImpactEnabled Boolean  @default(false)
-  updatedAt              DateTime @updatedAt
-}
-
-model Deposit {
-  id        Int      @id @default(autoincrement())
-  amount    Float
-  source    String
-  addedById Int
-  reason    String?
-  addedAt   DateTime @default(now())
-
-  addedBy   User     @relation(fields: [addedById], references: [id])
 }
 
 enum VoucherType {
@@ -568,22 +578,3 @@ enum BreakType {
   CLIENT_MEETING
   BH_MEETING
 }
-
-model CarpenterRecord {
-  id              Int      @id @default(autoincrement())
-  aeName          String
-  clientName      String
-  siteName        String
-  carpenterName   String
-  workOrderValue  Float
-  leoSirRate      Float
-  cookscapeRate   Float
-  advance         Float
-  balance         Float
-  remarks         String?
-  status          String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
-}
-
-

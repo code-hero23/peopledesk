@@ -91,7 +91,14 @@ const SalarySettings = () => {
             };
 
             const response = await axios.post(`${baseUrl}/payroll/import-manual`, formData, config);
-            setMessage(response.data.message);
+            
+            let successMsg = response.data.message;
+            if (response.data.failedCount > 0) {
+                successMsg += ` Warning: ${response.data.failedCount} emails were not found in the system and were skipped.`;
+                console.warn('Failed Emails:', response.data.failedEmails);
+            }
+            
+            setMessage(successMsg);
             setSelectedFile(null);
             // Clear input
             const fileInput = document.getElementById('manual-payroll-upload');
@@ -105,14 +112,25 @@ const SalarySettings = () => {
     };
 
     const handleDownloadTemplate = () => {
-        // Simple template logic - in real world this would be a static file or generated blob
-        const headers = ["Email", "AllocatedSalary", "AbsenteeismDeduction", "ShortageDeduction", "ManualDeductions", "NetPayout"];
-        const csvContent = headers.join(",") + "\n" + "employee@example.com,50000,0,0,0,50000";
+        const headers = [
+            "Email (Required)", 
+            "Allocated Monthly CTC", 
+            "Absenteeism Deduction", 
+            "Shortage Deduction", 
+            "Other Deductions", 
+            "Final Net Payout",
+            "Deduction Remarks"
+        ];
+        const rows = [
+            "employee@example.com,50000,0,0,500,49500,Adjustment for half-day travel",
+            "admin@example.com,75000,1500,200,0,73300,Late attendance penalty"
+        ];
+        const csvContent = headers.join(",") + "\n" + rows.join("\n");
         const blob = new Blob([csvContent], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = 'manual_payroll_template.csv';
+        a.download = 'PeopleDesk_Manual_Payroll_Template.csv';
         a.click();
     };
 

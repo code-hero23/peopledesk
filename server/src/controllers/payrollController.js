@@ -168,53 +168,76 @@ const importManualPayroll = async (req, res) => {
             return res.status(400).json({ message: 'Unsupported file format. Please upload .xlsx or .csv' });
         }
 
+        const cleanNumber = (val) => {
+            if (val === undefined || val === null || val === '') return 0;
+            if (typeof val === 'number') return val;
+            // Remove currency symbols, commas, and other non-numeric chars (except decimal)
+            const cleaned = val.toString().replace(/[^\d.-]/g, '');
+            const parsed = parseFloat(cleaned);
+            return isNaN(parsed) ? 0 : parsed;
+        };
+
         const worksheet = workbook.getWorksheet(1) || workbook.worksheets[0];
         if (!worksheet) {
             return res.status(400).json({ message: 'No worksheet found in file' });
         }
 
+        // Get all valid employee emails first for validation
+        const validUsers = await prisma.user.findMany({
+            where: { status: 'ACTIVE' },
+            select: { email: true }
+        });
+        const validEmailSet = new Set(validUsers.map(u => u.email.toLowerCase()));
+
         const payrollData = [];
+        const failedEmails = [];
+
         worksheet.eachRow((row, rowNumber) => {
             if (rowNumber === 1) return; // Skip header
 
-            // Standardize cell access (CSV rows might be simple arrays vs XLSX cell objects)
             const getVal = (idx) => {
                 const cell = row.getCell(idx);
-                // For CSV, value might be direct, for XLSX it might be { result, formula } or simple value
                 if (cell.value && typeof cell.value === 'object' && 'result' in cell.value) {
                     return cell.value.result;
                 }
                 return cell.value;
             };
 
-            const email = getVal(1)?.toString().trim();
-            const allocatedSalary = parseFloat(getVal(2)) || 0;
-            const absenteeismDeduction = parseFloat(getVal(3)) || 0;
-            const shortageDeduction = parseFloat(getVal(4)) || 0;
-            const manualDeductions = parseFloat(getVal(5)) || 0;
-            const netPayout = parseFloat(getVal(6)) || 0;
+            const rawEmail = getVal(1)?.toString().trim();
+            if (!rawEmail) return;
+            const email = rawEmail.toLowerCase();
 
-            if (email && email.includes('@')) {
-                payrollData.push({
-                    email,
-                    month: parseInt(month),
-                    year: parseInt(year),
-                    allocatedSalary,
-                    absenteeismDeduction,
-                    shortageDeduction,
-                    manualDeductions,
-                    netPayout
-                });
+            // Validate email exists in system
+            if (!validEmailSet.has(email)) {
+                failedEmails.push(rawEmail);
+                return;
             }
+
+            const allocatedSalary = cleanNumber(getVal(2));
+            const absenteeismDeduction = cleanNumber(getVal(3));
+            const shortageDeduction = cleanNumber(getVal(4));
+            const manualDeductions = cleanNumber(getVal(5));
+            const netPayout = cleanNumber(getVal(6));
+            const remarks = getVal(7)?.toString().trim() || null;
+
+            payrollData.push({
+                email,
+                month: parseInt(month),
+                year: parseInt(year),
+                allocatedSalary,
+                absenteeismDeduction,
+                shortageDeduction,
+                manualDeductions,
+                netPayout,
+                remarks
+            });
         });
 
-        if (payrollData.length === 0) {
-            return res.status(400).json({ message: 'No valid payroll data found in Excel/CSV. Ensure the email column is correct.' });
+        if (payrollData.length === 0 && failedEmails.length === 0) {
+            return res.status(400).json({ message: 'No payroll data found in file.' });
         }
 
-        // Upsert data to ManualPayroll model
-        // We do this in a loop, but for large files a transaction or createMany (if supported by upsert logic) would be better.
-        // Prisma doesn't have upsertMany, so we loop or delete/createMany.
+        // Upsert logic
         for (const data of payrollData) {
             await prisma.manualPayroll.upsert({
                 where: {
@@ -239,13 +262,17 @@ const importManualPayroll = async (req, res) => {
             console.error('File cleanup error:', err);
         }
 
-        res.json({ message: `Successfully imported ${payrollData.length} records for ${month}/${year}` });
+        res.json({ 
+            message: `Successfully processed ${payrollData.length} records for ${month}/${year}.`,
+            successCount: payrollData.length,
+            failedCount: failedEmails.length,
+            failedEmails: failedEmails
+        });
     } catch (error) {
         console.error('Manual Payroll Import Error:', error);
         res.status(500).json({
             message: 'Internal Server Error during import',
-            error: error.message,
-            stack: process.env.NODE_ENV === 'development' ? error.stack : undefined
+            error: error.message
         });
     }
 };

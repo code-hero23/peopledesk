@@ -23,6 +23,13 @@ const createWfhRequest = async (req, res) => {
             return res.status(403).json({ message: 'WFH requests are currently disabled for your account. Contact Admin.' });
         }
 
+        const startDate = req.body.startDate ? parseRobustDate(req.body.startDate) : new Date();
+        const endDate = req.body.endDate ? parseRobustDate(req.body.endDate) : new Date();
+
+        if (endDate < startDate) {
+            return res.status(400).json({ message: 'End date cannot be before start date' });
+        }
+
         const requestData = {
             userId,
             employeeName: user.name || "",
@@ -32,8 +39,8 @@ const createWfhRequest = async (req, res) => {
             reportingManager: req.body.reportingManagerName || "",
             reportingManagerId: req.body.reportingManagerId ? parseInt(req.body.reportingManagerId) : null,
             wfhDays: parseInt(req.body.wfhDays) || 0,
-            startDate: req.body.startDate ? parseRobustDate(req.body.startDate) : new Date(),
-            endDate: req.body.endDate ? parseRobustDate(req.body.endDate) : new Date(),
+            startDate,
+            endDate,
 
             realReason: req.body.realReason || "",
             necessityReason: req.body.necessityReason || "",
@@ -159,6 +166,11 @@ const approveWfhRequest = async (req, res) => {
         }
 
         let updateData = { remarks: remarks || request.remarks };
+
+        // Save remarks in role-specific fields to prevent data loss
+        if (role === 'HR') updateData.hrRemarks = remarks || request.hrRemarks;
+        if (role === 'BUSINESS_HEAD') updateData.bhRemarks = remarks || request.bhRemarks;
+        if (role === 'ADMIN') updateData.adminRemarks = remarks || request.adminRemarks;
 
         if (status === 'REJECTED') {
             updateData.status = 'REJECTED';

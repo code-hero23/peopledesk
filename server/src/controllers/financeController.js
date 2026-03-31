@@ -281,15 +281,15 @@ const exportFinanceData = async (req, res) => {
         // 2. Vouchers Sheet
         const voucherSheet = workbook.addWorksheet('Vouchers List');
         voucherSheet.columns = [
-            { header: 'ID', key: 'id', width: 10 },
-            { header: 'User', key: 'userName', width: 25 },
-            { header: 'Type', key: 'type', width: 15 },
-            { header: 'Amount', key: 'amount', width: 15 },
-            { header: 'Purpose', key: 'purpose', width: 40 },
-            { header: 'Status', key: 'status', width: 15 },
             { header: 'Date', key: 'date', width: 20 },
+            { header: 'Type', key: 'type', width: 15 },
+            { header: 'Purpose', key: 'purpose', width: 40 },
+            { header: 'Amount', key: 'amount', width: 15 },
+            { header: 'Status', key: 'status', width: 15 },
             { header: 'AM Status', key: 'amStatus', width: 15 },
-            { header: 'COO Status', key: 'cooStatus', width: 15 }
+            { header: 'COO Status', key: 'cooStatus', width: 15 },
+            { header: 'User', key: 'userName', width: 25 },
+            { header: 'ID', key: 'id', width: 10 }
         ];
 
         // Format Header
@@ -298,15 +298,15 @@ const exportFinanceData = async (req, res) => {
 
         vouchers.forEach(v => {
             const row = voucherSheet.addRow({
-                id: v.id,
-                userName: v.user?.name,
-                type: v.type,
-                amount: v.amount,
-                purpose: v.purpose,
-                status: v.status,
                 date: v.date.toISOString().split('T')[0],
+                type: v.type,
+                purpose: v.purpose,
+                amount: v.amount,
+                status: v.status,
                 amStatus: v.amStatus,
-                cooStatus: v.cooStatus
+                cooStatus: v.cooStatus,
+                userName: v.user?.name,
+                id: v.id
             });
 
             // Conditional Coloring for Status

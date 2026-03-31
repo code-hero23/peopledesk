@@ -406,8 +406,16 @@ const CRECallReports = () => {
                             <h1 className="text-4xl font-black text-slate-800 tracking-tighter">
                                 {user?.name?.split(' ')[0]}'s Call Analytics
                             </h1>
-                            <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${Capacitor.isNativePlatform() ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
-                                <Zap size={12} /> {Capacitor.isNativePlatform() ? "Sync Active" : "Web Preview"}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${Capacitor.isNativePlatform() ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
+                                    <Zap size={12} /> {Capacitor.isNativePlatform() ? "Sync Active" : "Web Preview"}
+                                </div>
+                                {lastSyncTime && (
+                                    <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${(new Date() - lastSyncTime) < 30 * 60 * 1000 ? 'bg-blue-50 text-blue-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
+                                        <div className={`w-1 h-1 rounded-full ${(new Date() - lastSyncTime) < 30 * 60 * 1000 ? 'bg-blue-500' : 'bg-slate-300'}`} />
+                                        SYNCED: {lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] ml-1">Universal Call Intelligence Ledger</p>

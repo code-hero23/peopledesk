@@ -188,6 +188,7 @@ const getMySalarySummary = async (req, res) => {
                             absenteeismDeduction: manualData.absenteeismDeduction,
                             shortageDeduction: manualData.shortageDeduction,
                             manualDeductions: manualData.manualDeductions,
+                            remarks: manualData.remarks,
                             onHandSalary: Math.round(manualData.netPayout)
                         }
                     });

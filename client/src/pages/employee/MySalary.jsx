@@ -434,6 +434,23 @@ const MySalary = () => {
                                 </div>
                             </motion.div>
                         </div>
+
+                        {/* Manual Remarks Alert */}
+                        {summary.isManual && summary.financials.remarks && (
+                            <motion.div
+                                initial={{ opacity: 0, y: 10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                className="p-6 bg-amber-50 border border-amber-100 rounded-3xl flex items-start gap-4 shadow-sm"
+                            >
+                                <div className="p-2 bg-amber-100 text-amber-600 rounded-xl">
+                                    <Info size={20} />
+                                </div>
+                                <div className="flex-1">
+                                    <h4 className="text-[10px] font-black text-amber-900 uppercase tracking-widest mb-1">Deduction Remarks / Official Note</h4>
+                                    <p className="text-sm font-bold text-amber-800 leading-relaxed italic">"{summary.financials.remarks}"</p>
+                                </div>
+                            </motion.div>
+                        )}
                     </motion.div >
                 )}
             </div >

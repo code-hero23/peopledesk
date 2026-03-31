@@ -144,14 +144,17 @@ const WFHRequestForm = () => {
         if (formData.startDate && formData.endDate) {
             const start = new Date(formData.startDate);
             const end = new Date(formData.endDate);
-            const diffTime = Math.abs(end - start);
+            const diffTime = end - start; // Removed Math.abs
             const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
 
             if (diffDays > 0) {
                 setFormData(prev => ({ ...prev, wfhDays: diffDays }));
+            } else {
+                setFormData(prev => ({ ...prev, wfhDays: 0 }));
             }
         }
     }, [formData.startDate, formData.endDate]);
+    
 
     const onSubmit = (e) => {
         e.preventDefault();
@@ -185,6 +188,11 @@ const WFHRequestForm = () => {
         }
 
         // Final Validations
+        if (new Date(formData.endDate) < new Date(formData.startDate)) {
+            toast.error('End date cannot be before start date.');
+            return;
+        }
+
         if (!formData.officeVisitCommitment) {
             toast.error('You must commit to attend urgent office visits.');
             return;

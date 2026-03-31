@@ -37,12 +37,15 @@ async function main() {
     console.error('Error creating "Notification" table:', err.message);
   }
 
-  // Adding WfhRequest createdAt
+  // Adding WfhRequest remarks
   try {
     await prisma.$executeRawUnsafe(`ALTER TABLE "WfhRequest" ADD COLUMN IF NOT EXISTS "createdAt" TIMESTAMP(3) DEFAULT CURRENT_TIMESTAMP`);
-    console.log('Column "createdAt" added to WfhRequest or already exist.');
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WfhRequest" ADD COLUMN IF NOT EXISTS "hrRemarks" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WfhRequest" ADD COLUMN IF NOT EXISTS "bhRemarks" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "WfhRequest" ADD COLUMN IF NOT EXISTS "adminRemarks" TEXT`);
+    console.log('Columns "createdAt", "hrRemarks", "bhRemarks", "adminRemarks" added to WfhRequest or already exist.');
   } catch (err) {
-    console.error('Error adding "createdAt" to WfhRequest:', err.message);
+    console.error('Error adding columns to WfhRequest:', err.message);
   }
 
   // Adding Biometric columns and table
