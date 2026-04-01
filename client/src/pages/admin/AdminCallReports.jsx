@@ -532,15 +532,15 @@ const AdminCallReports = () => {
                                                             <span className="text-sm font-black text-slate-800">{metrics.name}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-[10px] text-slate-400 font-bold uppercase">{metrics.empId}</span>
-                                                                {metrics.lastSync && (new Date() - new Date(metrics.lastSync)) < 30 * 60 * 1000 ? (
+                                                                 {metrics.lastSync && (new Date() - new Date(metrics.lastSync)) < 30 * 60 * 1000 ? (
                                                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md ring-1 ring-emerald-100 animate-pulse">
                                                                         <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                                                                        <span className="text-[7px] font-black uppercase tracking-widest">LIVE</span>
+                                                                        <span className="text-[7px] font-black uppercase tracking-widest">LIVE • {new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                                     </div>
                                                                 ) : (
                                                                     <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md ring-1 ring-rose-100">
                                                                         <div className="w-1 h-1 rounded-full bg-rose-400" />
-                                                                        <span className="text-[7px] font-black uppercase tracking-widest">OFFLINE</span>
+                                                                        <span className="text-[7px] font-black uppercase tracking-widest">OFFLINE • {metrics.lastSync ? new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'NEVER'}</span>
                                                                     </div>
                                                                 )}
                                                             </div>
