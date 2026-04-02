@@ -1595,8 +1595,11 @@ const exportEmployeeTaskSummary = async (req, res) => {
         }
 
         // Use project standard cycle helpers
-        const startDate = getCycleStartDateIST(null, year, month - 1);
-        const endDate = getCycleEndDateIST(null, year, month - 1);
+        // month is 1-indexed (1-12). getCycleStartDateIST expects 0-indexed month for the 26th.
+        // For March cycle (Feb 26 - Mar 25): month=3. 
+        // Start month should be Feb (1). End month should be Mar (2).
+        const startDate = getCycleStartDateIST(null, year, parseInt(month) - 2);
+        const endDate = getCycleEndDateIST(null, year, parseInt(month) - 1);
 
         const workLogs = await prisma.workLog.findMany({
             where: {
