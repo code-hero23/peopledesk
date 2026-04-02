@@ -1575,6 +1575,129 @@ const exportEmployeeContributionReport = async (req, res) => {
     }
 };
 
+// @desc    Export Employee Task Summary (Monthly)
+// @route   GET /api/export/task-summary
+// @access  Private (Admin/HR/BH)
+const exportEmployeeTaskSummary = async (req, res) => {
+    try {
+        const { userId, month, year } = req.query;
+        if (!userId || !month || !year) {
+            return res.status(400).json({ message: 'User ID, Month, and Year are required' });
+        }
+
+        const employee = await prisma.user.findUnique({
+            where: { id: parseInt(userId) },
+            select: { id: true, name: true, designation: true }
+        });
+
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        // Use standard cycle: 26th of (month-1) to 25th of month
+        const startDate = new Date(year, month - 2, 26, 0, 0, 0);
+        const endDate = new Date(year, month - 1, 25, 23, 59, 59, 999);
+
+        const workLogs = await prisma.workLog.findMany({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: startDate, lte: endDate },
+                logStatus: 'CLOSED'
+            },
+            orderBy: { date: 'asc' }
+        });
+
+        const desig = employee.designation || 'OTHER';
+        let taskSummary = {};
+        let metricsKey = '';
+        let taskFields = [];
+
+        if (desig === 'LA') {
+            metricsKey = 'la_closing_metrics';
+            taskFields = [
+                { k: 'initial2D', l: 'Initial 2D' }, { k: 'production2D', l: 'Prod 2D' },
+                { k: 'revised2D', l: 'Revised 2D' }, { k: 'fresh3D', l: 'Fresh 3D' },
+                { k: 'revised3D', l: 'Revised 3D' }, { k: 'estimation', l: 'Estimation' },
+                { k: 'woe', l: 'WOE' }, { k: 'onlineDiscussion', l: 'Online Disc' },
+                { k: 'showroomDiscussion', l: 'Showroom Disc' }, { k: 'signFromEngineer', l: 'Sign Engr' },
+                { k: 'siteVisit', l: 'Site Visit' }, { k: 'infurnia', l: 'Infurnia' }
+            ];
+        } else if (desig === 'CRE') {
+            metricsKey = 'cre_closing_metrics';
+            taskFields = [
+                { k: 'sevenStar', l: '7 Star Calls' }, { k: 'sixStar', l: '6 Star Calls' },
+                { k: 'fiveStar', l: '5 Star Calls' }, { k: 'fourStar', l: '4 Star Calls' },
+                { k: 'threeStar', l: '3 Star Calls' }, { k: 'twoStar', l: '2 Star Calls' },
+                { k: 'showroomVisit', l: 'Showroom Visit' }, { k: 'onlineDiscussion', l: 'Online Disc' },
+                { k: 'whatsappSent', l: 'WhatsApp Sent' }, { k: 'reviewCollected', l: 'Reviews collected' },
+                { k: 'firstQuotationSent', l: 'FQ Sent' }, { k: 'orderCount', l: 'Orders' },
+                { k: 'proposalCount', l: 'Proposals' }
+            ];
+        } else if (desig === 'FA') {
+            metricsKey = 'fa_closing_metrics';
+            taskFields = [
+                { k: 'nineStar', l: '9 Star Calls' }, { k: 'eightStar', l: '8 Star Calls' },
+                { k: 'sevenStar', l: '7 Star Calls' }, { k: 'showroomVisit', l: 'Showroom Visit' },
+                { k: 'onlineDiscussion', l: 'Online Disc' }, { k: 'quotationPending', l: 'Quotation Done' }
+            ];
+        }
+
+        // Initialize
+        taskFields.forEach(f => {
+            taskSummary[f.k] = { label: f.l, count: 0 };
+        });
+
+        // Sum counts from closing metrics
+        workLogs.forEach(log => {
+            const metrics = safeParse(log[metricsKey]);
+            if (metrics) {
+                taskFields.forEach(f => {
+                    const val = metrics[f.k];
+                    if (val && typeof val.count === 'number') {
+                        taskSummary[f.k].count += val.count;
+                    } else if (typeof val === 'number') {
+                        taskSummary[f.k].count += val;
+                    }
+                });
+            }
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Monthly Task Summary');
+
+        sheet.addRow([`Employee Monthly Task Summary: ${employee.name}`]).font = { bold: true, size: 14 };
+        sheet.addRow([`Designation: ${desig}`]);
+        sheet.addRow([`Period: ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}`]);
+        sheet.addRow([]);
+
+        const headerRow = sheet.addRow(['S.No', 'Task Description', 'Total Monthly Count']);
+        headerRow.eachCell(cell => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+            cell.alignment = { horizontal: 'center' };
+        });
+
+        let rowIndex = 1;
+        Object.values(taskSummary).forEach(task => {
+            if (task.count > 0 || desig === 'LA') { // Always show all for LA, or only > 0 for others
+                sheet.addRow([rowIndex++, task.label, task.count]);
+            }
+        });
+
+        sheet.columns = [{ width: 8 }, { width: 40 }, { width: 25 }];
+        sheet.getColumn(3).alignment = { horizontal: 'center' };
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment(`Task_Summary_${employee.name.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
+        res.send(buffer);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     exportWorkLogs,
     exportAttendance,
@@ -1584,5 +1707,6 @@ module.exports = {
     exportIncentiveScorecard,
     exportCallLogs,
     emailCallLogs,
-    exportEmployeeContributionReport
+    exportEmployeeContributionReport,
+    exportEmployeeTaskSummary
 };

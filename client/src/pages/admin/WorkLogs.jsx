@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
-import { Calendar, Download, Eye, Search } from 'lucide-react';
+import { Calendar, Download, Eye, Search, BarChart3 } from 'lucide-react';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
@@ -166,6 +166,35 @@ const WorkLogs = () => {
         } catch (error) {
             console.error("Individual export failed:", error);
             alert("Failed to export individual worklogs.");
+        }
+    };
+
+    const onExportTaskSummary = async (userId, userName) => {
+        try {
+            const date = new Date(startDate);
+            const month = date.getMonth() + 1; // 1-12
+            const year = date.getFullYear();
+
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/task-summary?userId=${userId}&month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `Task_Summary_${userName.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Task summary export failed:", error);
+            alert("Failed to export task summary.");
         }
     };
 
@@ -379,6 +408,17 @@ const WorkLogs = () => {
                                                             title="Download Monthly Report"
                                                         >
                                                             <Download size={16} />
+                                                        </button>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                onExportTaskSummary(record.user.id, record.user.name);
+                                                            }}
+                                                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                            title="Download Task Summary (Full Month)"
+                                                        >
+                                                            <BarChart3 size={16} />
                                                         </button>
                                                     </div>
                                                 ) : (
