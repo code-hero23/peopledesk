@@ -1594,25 +1594,25 @@ const exportEmployeeTaskSummary = async (req, res) => {
             return res.status(404).json({ message: 'Employee not found' });
         }
 
-        // Use standard cycle: 26th of (month-1) to 25th of month
-        const startDate = new Date(year, month - 2, 26, 0, 0, 0);
-        const endDate = new Date(year, month - 1, 25, 23, 59, 59, 999);
+        // Use project standard cycle helpers
+        const startDate = getCycleStartDateIST(null, year, month - 1);
+        const endDate = getCycleEndDateIST(null, year, month - 1);
 
         const workLogs = await prisma.workLog.findMany({
             where: {
                 userId: parseInt(userId),
-                date: { gte: startDate, lte: endDate },
-                logStatus: 'CLOSED'
+                date: { gte: startDate, lte: endDate }
+                // Removed logStatus: 'CLOSED' filter to include all available data
             },
             orderBy: { date: 'asc' }
         });
 
-        const desig = employee.designation || 'OTHER';
+        const desig = employee.designation ? employee.designation.toUpperCase() : 'OTHER';
         let taskSummary = {};
         let metricsKey = '';
         let taskFields = [];
 
-        if (desig === 'LA') {
+        if (desig.includes('LA') || desig.includes('LOADING')) {
             metricsKey = 'la_closing_metrics';
             taskFields = [
                 { k: 'initial2D', l: 'Initial 2D' }, { k: 'production2D', l: 'Prod 2D' },
@@ -1622,7 +1622,7 @@ const exportEmployeeTaskSummary = async (req, res) => {
                 { k: 'showroomDiscussion', l: 'Showroom Disc' }, { k: 'signFromEngineer', l: 'Sign Engr' },
                 { k: 'siteVisit', l: 'Site Visit' }, { k: 'infurnia', l: 'Infurnia' }
             ];
-        } else if (desig === 'CRE') {
+        } else if (desig.includes('CRE') || desig.includes('RELATIONSHIP')) {
             metricsKey = 'cre_closing_metrics';
             taskFields = [
                 { k: 'sevenStar', l: '7 Star Calls' }, { k: 'sixStar', l: '6 Star Calls' },
@@ -1633,7 +1633,7 @@ const exportEmployeeTaskSummary = async (req, res) => {
                 { k: 'firstQuotationSent', l: 'FQ Sent' }, { k: 'orderCount', l: 'Orders' },
                 { k: 'proposalCount', l: 'Proposals' }
             ];
-        } else if (desig === 'FA') {
+        } else if (desig.includes('FA') || desig.includes('FEASIBILITY')) {
             metricsKey = 'fa_closing_metrics';
             taskFields = [
                 { k: 'nineStar', l: '9 Star Calls' }, { k: 'eightStar', l: '8 Star Calls' },
@@ -1652,11 +1652,15 @@ const exportEmployeeTaskSummary = async (req, res) => {
             const metrics = safeParse(log[metricsKey]);
             if (metrics) {
                 taskFields.forEach(f => {
-                    const val = metrics[f.k];
-                    if (val && typeof val.count === 'number') {
-                        taskSummary[f.k].count += val.count;
-                    } else if (typeof val === 'number') {
-                        taskSummary[f.k].count += val;
+                    const data = metrics[f.k];
+                    if (data) {
+                        if (typeof data === 'object' && typeof data.count === 'number') {
+                            taskSummary[f.k].count += data.count;
+                        } else if (typeof data === 'number') {
+                            taskSummary[f.k].count += data;
+                        } else if (typeof data === 'object' && typeof data.value === 'number') { // Fallback for various JSON structures
+                            taskSummary[f.k].count += data.value;
+                        }
                     }
                 });
             }
@@ -1679,7 +1683,7 @@ const exportEmployeeTaskSummary = async (req, res) => {
 
         let rowIndex = 1;
         Object.values(taskSummary).forEach(task => {
-            if (task.count > 0 || desig === 'LA') { // Always show all for LA, or only > 0 for others
+            if (task.count > 0 || desig.includes('LA')) { 
                 sheet.addRow([rowIndex++, task.label, task.count]);
             }
         });
