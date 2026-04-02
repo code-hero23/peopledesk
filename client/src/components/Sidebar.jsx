@@ -210,7 +210,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" indent />
                             )}
                             <NavItem to="/admin/analytics" icon={BarChart3} label="Performance Analytics" indent />
-                            {(user?.role === 'ADMIN' || user?.callAnalyticsViewEnabled) && (
+                            {(['ADMIN', 'BUSINESS_HEAD', 'HR', 'ANALYZER'].includes(user?.role) || user?.callAnalyticsViewEnabled) && (
                                 <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />
                             )}
 
