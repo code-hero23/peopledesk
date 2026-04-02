@@ -227,7 +227,7 @@ const WorkLogs = () => {
         }
     };
 
-    const onExportLAProjects = async (userId, userName) => {
+    const onExportProjectWise = async (userId, userName) => {
         try {
             const date = new Date(startDate);
             const month = date.getMonth() + 1; // 1-12
@@ -239,20 +239,20 @@ const WorkLogs = () => {
             };
 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            const apiUrl = `${baseUrl}/export/la-projects?userId=${userId}&month=${month}&year=${year}`;
+            const apiUrl = `${baseUrl}/export/project-wise?userId=${userId}&month=${month}&year=${year}`;
 
             const response = await axios.get(apiUrl, config);
 
             const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            link.setAttribute('download', `LA_Project_Reports_${userName.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
+            link.setAttribute('download', `Project_Reports_${userName.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
         } catch (error) {
-            console.error("LA projects export failed:", error);
-            alert("Failed to export LA project reports.");
+            console.error("Project reports export failed:", error);
+            alert("Failed to export project-wise reports.");
         }
     };
 
@@ -481,15 +481,15 @@ const WorkLogs = () => {
                                                         >
                                                             <BarChart3 size={16} />
                                                         </button>
-                                                        {record.user.designation?.toUpperCase().includes('LA') && (
+                                                        {['LA', 'FA'].some(role => record.user.designation?.toUpperCase().includes(role)) && (
                                                             <button
                                                                 type="button"
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    onExportLAProjects(record.user.id, record.user.name);
+                                                                    onExportProjectWise(record.user.id, record.user.name);
                                                                 }}
                                                                 className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                                                                title="Download Project Wise Reports (LA Only)"
+                                                                title="Download Project Wise Reports (LA/FA Only)"
                                                             >
                                                                 <Briefcase size={16} />
                                                             </button>

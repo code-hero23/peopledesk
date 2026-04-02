@@ -1783,10 +1783,10 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
     }
 };
 
-// @desc    Export LA Project Wise Reports (Monthly)
-// @route   GET /api/export/la-projects
+// @desc    Export Project Wise Reports (Monthly) - Supports LA & FA
+// @route   GET /api/export/project-wise
 // @access  Private (Admin/HR/BH)
-const exportLAProjectReports = async (req, res) => {
+const exportProjectWiseReports = async (req, res) => {
     try {
         const { userId, month, year } = req.query;
         if (!userId || !month || !year) {
@@ -1816,9 +1816,14 @@ const exportLAProjectReports = async (req, res) => {
         const workbook = new ExcelJS.Workbook();
         const sheet = workbook.addWorksheet('Project Wise Detailed Reports');
 
-        sheet.addRow([`LA Project Wise Detailed Report: ${employee.name}`]).font = { bold: true, size: 14 };
+        sheet.addRow([`Project Wise Detailed Report: ${employee.name}`]).font = { bold: true, size: 14 };
         sheet.addRow([`Designation: ${employee.designation}`]);
-        sheet.addRow([`Period: ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}`]);
+        
+        // Fix for IST timezone display in Excel header (26th to 25th)
+        const displayStart = new Date(startDate.getTime() + (5.5 * 60 * 60 * 1000));
+        const displayEnd = new Date(endDate.getTime() + (5.5 * 60 * 60 * 1000));
+        const periodStr = `${displayStart.getUTCDate()}/${displayStart.getUTCMonth() + 1}/${displayStart.getUTCFullYear()} to ${displayEnd.getUTCDate()}/${displayEnd.getUTCMonth() + 1}/${displayEnd.getUTCFullYear()}`;
+        sheet.addRow([`Period: ${periodStr}`]);
         sheet.addRow([]);
 
         const headers = [
@@ -1835,8 +1840,12 @@ const exportLAProjectReports = async (req, res) => {
 
         let rowIndex = 1;
         workLogs.forEach(log => {
-            const projects = safeParse(log.la_project_reports) || [];
-            if (Array.isArray(projects) && projects.length > 0) {
+            const laProjects = safeParse(log.la_project_reports) || [];
+            const faProjects = safeParse(log.fa_project_reports) || [];
+            const projects = Array.isArray(laProjects) ? [...laProjects] : [];
+            if (Array.isArray(faProjects)) projects.push(...faProjects);
+
+            if (projects.length > 0) {
                 projects.forEach(p => {
                     sheet.addRow([
                         rowIndex++,
@@ -1863,7 +1872,7 @@ const exportLAProjectReports = async (req, res) => {
 
         const buffer = await workbook.xlsx.writeBuffer();
         res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.attachment(`LA_Project_Reports_${employee.name.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
+        res.attachment(`Project_Reports_${employee.name.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
         res.send(buffer);
 
     } catch (error) {
@@ -1884,5 +1893,5 @@ module.exports = {
     exportEmployeeContributionReport,
     exportEmployeeTaskSummary,
     exportAllEmployeesTaskSummary,
-    exportLAProjectReports
+    exportProjectWiseReports
 };

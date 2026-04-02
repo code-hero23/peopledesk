@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { exportWorkLogs, exportAttendance, exportRequests, exportPerformanceAnalytics, exportEmployees, exportIncentiveScorecard, exportCallLogs, emailCallLogs, exportEmployeeContributionReport, exportEmployeeTaskSummary, exportAllEmployeesTaskSummary, exportLAProjectReports } = require('../controllers/exportController');
+const { exportWorkLogs, exportAttendance, exportRequests, exportPerformanceAnalytics, exportEmployees, exportIncentiveScorecard, exportCallLogs, emailCallLogs, exportEmployeeContributionReport, exportEmployeeTaskSummary, exportAllEmployeesTaskSummary, exportProjectWiseReports } = require('../controllers/exportController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
 
 router.get('/worklogs', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'), exportWorkLogs);
@@ -13,7 +13,7 @@ router.get('/call-stats', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'AN
 router.get('/employee-contribution', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportEmployeeContributionReport);
 router.get('/task-summary', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportEmployeeTaskSummary);
 router.get('/all-task-summary', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportAllEmployeesTaskSummary);
-router.get('/la-projects', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportLAProjectReports);
+router.get('/project-wise', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportProjectWiseReports);
 router.post('/call-stats/email', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'), emailCallLogs);
 
 module.exports = router;

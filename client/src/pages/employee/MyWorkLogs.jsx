@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getMyWorkLogs, reset } from '../../features/employee/employeeSlice';
-import { Eye } from 'lucide-react';
+import { Eye, Calendar, BarChart3, Download, Briefcase } from 'lucide-react';
+import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
 const MyWorkLogs = () => {
@@ -13,13 +14,73 @@ const MyWorkLogs = () => {
     const [selectedLog, setSelectedLog] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Date Filter State
-    const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
+    // Month Selection State (Defaults to current month)
+    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // "YYYY-MM"
 
     useEffect(() => {
-        dispatch(getMyWorkLogs({ date: selectedDate }));
+        const [year, month] = selectedMonth.split('-').map(Number);
+        
+        // Calculate 26th of previous month to 25th of current month
+        const end = new Date(year, month - 1, 25);
+        const start = new Date(year, month - 2, 26);
+        
+        dispatch(getMyWorkLogs({ 
+            startDate: start.toISOString().split('T')[0], 
+            endDate: end.toISOString().split('T')[0] 
+        }));
+        
         return () => { dispatch(reset()); };
-    }, [dispatch, selectedDate]);
+    }, [dispatch, selectedMonth]);
+
+    const onExportSummary = async () => {
+        try {
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/task-summary?userId=${user.id}&month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `My_Task_Summary_${selectedMonth}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Export failed:", error);
+            alert("Failed to export summary.");
+        }
+    };
+
+    const onExportProjectWise = async () => {
+        try {
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/project-wise?userId=${user.id}&month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `My_Project_Reports_${selectedMonth}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Project report export failed:", error);
+            alert("Failed to export project reports.");
+        }
+    };
 
     const handleViewDetails = (log) => {
         setSelectedLog(log);
@@ -40,12 +101,35 @@ const MyWorkLogs = () => {
                     <h2 className="text-3xl font-bold text-slate-800">My Work Reports</h2>
                     <p className="text-slate-500">History of your daily submitted reports.</p>
                 </div>
-                <input
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="px-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 bg-white shadow-sm font-medium"
-                />
+                <div className="flex flex-wrap items-center gap-3">
+                    <div className="flex items-center gap-2 bg-white px-4 py-2 border border-slate-200 rounded-xl shadow-sm group focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                        <Calendar size={18} className="text-slate-400 group-focus-within:text-blue-500" />
+                        <input
+                            type="month"
+                            value={selectedMonth}
+                            onChange={(e) => setSelectedMonth(e.target.value)}
+                            className="bg-transparent text-sm font-bold text-slate-700 outline-none border-none p-0 focus:ring-0"
+                        />
+                    </div>
+                    
+                    <button
+                        onClick={onExportSummary}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl shadow-lg shadow-blue-100 font-bold text-sm transition-all active:scale-95"
+                    >
+                        <BarChart3 size={18} />
+                        Download Summary
+                    </button>
+
+                    {['LA', 'FA'].some(role => user.designation?.toUpperCase().includes(role)) && (
+                        <button
+                            onClick={onExportProjectWise}
+                            className="flex items-center gap-2 px-5 py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl shadow-lg shadow-emerald-100 font-bold text-sm transition-all active:scale-95"
+                        >
+                            <Briefcase size={18} />
+                            Project Reports
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
