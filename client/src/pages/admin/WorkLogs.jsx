@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
-import { Calendar, Download, Eye, Search, BarChart3 } from 'lucide-react';
+import { Calendar, Download, Eye, Search, BarChart3, Briefcase } from 'lucide-react';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
@@ -224,6 +224,35 @@ const WorkLogs = () => {
         } catch (error) {
             console.error("Global task summary export failed:", error);
             alert("Failed to export all employees task summary.");
+        }
+    };
+
+    const onExportLAProjects = async (userId, userName) => {
+        try {
+            const date = new Date(startDate);
+            const month = date.getMonth() + 1; // 1-12
+            const year = date.getFullYear();
+
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/la-projects?userId=${userId}&month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `LA_Project_Reports_${userName.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("LA projects export failed:", error);
+            alert("Failed to export LA project reports.");
         }
     };
 
@@ -452,6 +481,19 @@ const WorkLogs = () => {
                                                         >
                                                             <BarChart3 size={16} />
                                                         </button>
+                                                        {record.user.designation?.toUpperCase().includes('LA') && (
+                                                            <button
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    onExportLAProjects(record.user.id, record.user.name);
+                                                                }}
+                                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                                title="Download Project Wise Reports (LA Only)"
+                                                            >
+                                                                <Briefcase size={16} />
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 ) : (
                                                     <span className="text-slate-300">-</span>

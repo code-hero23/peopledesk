@@ -1783,6 +1783,95 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
     }
 };
 
+// @desc    Export LA Project Wise Reports (Monthly)
+// @route   GET /api/export/la-projects
+// @access  Private (Admin/HR/BH)
+const exportLAProjectReports = async (req, res) => {
+    try {
+        const { userId, month, year } = req.query;
+        if (!userId || !month || !year) {
+            return res.status(400).json({ message: 'User ID, Month, and Year are required' });
+        }
+
+        const employee = await prisma.user.findUnique({
+            where: { id: parseInt(userId) },
+            select: { id: true, name: true, designation: true }
+        });
+
+        if (!employee) {
+            return res.status(404).json({ message: 'Employee not found' });
+        }
+
+        const startDate = getCycleStartDateIST(null, year, parseInt(month) - 2);
+        const endDate = getCycleEndDateIST(null, year, parseInt(month) - 1);
+
+        const workLogs = await prisma.workLog.findMany({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: startDate, lte: endDate }
+            },
+            orderBy: { date: 'asc' }
+        });
+
+        const workbook = new ExcelJS.Workbook();
+        const sheet = workbook.addWorksheet('Project Wise Detailed Reports');
+
+        sheet.addRow([`LA Project Wise Detailed Report: ${employee.name}`]).font = { bold: true, size: 14 };
+        sheet.addRow([`Designation: ${employee.designation}`]);
+        sheet.addRow([`Period: ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}`]);
+        sheet.addRow([]);
+
+        const headers = [
+            'Sl.No', 'Date', 'Project/Client', 'Site Location', 
+            'Process/Task', 'Target Images', 'Completed', 'Pending', 
+            'Start Time', 'End Time', 'Remarks'
+        ];
+        const headerRow = sheet.addRow(headers);
+        headerRow.eachCell(cell => {
+            cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+            cell.alignment = { horizontal: 'center' };
+        });
+
+        let rowIndex = 1;
+        workLogs.forEach(log => {
+            const projects = safeParse(log.la_project_reports) || [];
+            if (Array.isArray(projects) && projects.length > 0) {
+                projects.forEach(p => {
+                    sheet.addRow([
+                        rowIndex++,
+                        log.date.toLocaleDateString('en-IN'),
+                        p.clientName || p.projectName || '-',
+                        p.site || p.la_projectLocation || '-',
+                        p.process || '-',
+                        p.imageCount || 0,
+                        p.completedImages || 0,
+                        p.pendingImages || 0,
+                        p.startTime || '-',
+                        p.endTime || '-',
+                        p.remarks || '-'
+                    ]);
+                });
+            }
+        });
+
+        sheet.columns = [
+            { width: 8 }, { width: 15 }, { width: 30 }, { width: 25 },
+            { width: 30 }, { width: 15 }, { width: 15 }, { width: 15 },
+            { width: 12 }, { width: 12 }, { width: 40 }
+        ];
+
+        const buffer = await workbook.xlsx.writeBuffer();
+        res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.attachment(`LA_Project_Reports_${employee.name.replace(/\s+/g, '_')}_${month}_${year}.xlsx`);
+        res.send(buffer);
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error' });
+    }
+};
+
 module.exports = {
     exportWorkLogs,
     exportAttendance,
@@ -1794,5 +1883,6 @@ module.exports = {
     emailCallLogs,
     exportEmployeeContributionReport,
     exportEmployeeTaskSummary,
-    exportAllEmployeesTaskSummary
+    exportAllEmployeesTaskSummary,
+    exportLAProjectReports
 };
