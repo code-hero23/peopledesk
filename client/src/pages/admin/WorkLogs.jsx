@@ -198,6 +198,35 @@ const WorkLogs = () => {
         }
     };
 
+    const onExportAllTaskSummary = async () => {
+        try {
+            const date = new Date(startDate);
+            const month = date.getMonth() + 1; // 1-12
+            const year = date.getFullYear();
+
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/all-task-summary?month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `All_Employees_Task_Summary_${month}_${year}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Global task summary export failed:", error);
+            alert("Failed to export all employees task summary.");
+        }
+    };
+
     // Register globally for modal use
     useEffect(() => {
         window.onQuickExportIndividual = onExportIndividual;
@@ -309,6 +338,9 @@ const WorkLogs = () => {
                     </button>
                     <button onClick={onExportMonth} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                         <Calendar size={16} /> Monthly
+                    </button>
+                    <button onClick={onExportAllTaskSummary} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
+                        <BarChart3 size={16} /> Summary Report
                     </button>
                     <input
                         type="date"
