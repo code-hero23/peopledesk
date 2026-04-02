@@ -1339,7 +1339,14 @@ const calculatePunctuality = (checkInTime) => {
 const exportEmployeeContributionReport = async (req, res) => {
     try {
         const { userId, startDate, endDate } = req.query;
-        if (!userId) return res.status(400).json({ message: 'User ID is required' });
+        if (!userId) {
+            return res.status(400).json({ message: 'User ID is required' });
+        }
+
+        // Security check: Employees can only export their own reports
+        if (req.user.role === 'EMPLOYEE' && req.user.id !== parseInt(userId)) {
+            return res.status(403).json({ message: 'Forbidden: You can only export your own report' });
+        }
 
         const start = startDate ? getStartOfDayIST(startDate) : getCycleStartDateIST();
         const end = endDate ? getEndOfDayIST(endDate) : getCycleEndDateIST();
@@ -1650,6 +1657,11 @@ const exportEmployeeTaskSummary = async (req, res) => {
             return res.status(400).json({ message: 'User ID, Month, and Year are required' });
         }
 
+        // Security check: Employees can only export their own reports
+        if (req.user.role === 'EMPLOYEE' && req.user.id !== parseInt(userId)) {
+            return res.status(403).json({ message: 'Forbidden: You can only export your own report' });
+        }
+
         const employee = await prisma.user.findUnique({
             where: { id: parseInt(userId) },
             select: { id: true, name: true, designation: true }
@@ -1791,6 +1803,11 @@ const exportProjectWiseReports = async (req, res) => {
         const { userId, month, year } = req.query;
         if (!userId || !month || !year) {
             return res.status(400).json({ message: 'User ID, Month, and Year are required' });
+        }
+
+        // Security check: Employees can only export their own reports
+        if (req.user.role === 'EMPLOYEE' && req.user.id !== parseInt(userId)) {
+            return res.status(403).json({ message: 'Forbidden: You can only export your own report' });
         }
 
         const employee = await prisma.user.findUnique({

@@ -11,9 +11,9 @@ router.get('/incentives', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), ex
 router.get('/employees', protect, authorize('ADMIN'), exportEmployees);
 router.get('/call-stats', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'), exportCallLogs);
 router.get('/employee-contribution', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportEmployeeContributionReport);
-router.get('/task-summary', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportEmployeeTaskSummary);
+router.get('/task-summary', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'EMPLOYEE'), exportEmployeeTaskSummary);
 router.get('/all-task-summary', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportAllEmployeesTaskSummary);
-router.get('/project-wise', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD'), exportProjectWiseReports);
+router.get('/project-wise', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'EMPLOYEE'), exportProjectWiseReports);
 router.post('/call-stats/email', protect, authorize('ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'), emailCallLogs);
 
 module.exports = router;
