@@ -1631,7 +1631,8 @@ const getTaskMetrics = (employee, workLogs) => {
         ];
     }
 
-    // Always include Hours
+    // Always include basic metrics
+    taskSummary['totalLogs'] = { label: 'Total Work Reports Submitted', count: 0 };
     taskSummary['totalHours'] = { label: 'Total Hours Worked', count: 0 };
     
     // Initialize standard fields
@@ -1644,8 +1645,8 @@ const getTaskMetrics = (employee, workLogs) => {
 
     // Sum counts from logs
     workLogs.forEach(log => {
-        // Common: Sum Hours
-        taskSummary['totalHours'].count += Number(log.hours || 0);
+        taskSummary['totalLogs'].count++;
+        taskSummary['totalHours'].count += Number(log.hours || log.attendanceHours || 0);
 
         // A. Specialized Metrics (LA, CRE, FA)
         if (metricsKey) {
@@ -1713,15 +1714,16 @@ const getTaskMetrics = (employee, workLogs) => {
 
             // Fallback to model-level process/tasks if no specific tasks found in customFields
             if (tasksFoundCount === 0) {
-                const desc = (log.process || log.tasks || '').trim();
-                // Filter out generic status messages that don't describe work
-                if (desc && desc.length > 0 && desc.length < 150 && !desc.includes('Session Started')) {
+                const desc = (log.tasks || log.process || log.remarks || '').trim();
+                // Capture all descriptive work
+                if (desc && desc.length > 0 && desc.length < 200) {
                      const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
                      if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
                      taskSummary[key].count++;
                 }
             }
         }
+
 
     });
 
@@ -1784,8 +1786,9 @@ const exportEmployeeTaskSummary = async (req, res) => {
 
         let rowIndex = 1;
         Object.values(taskSummary).forEach(task => {
-            // Always show Hours and show other tasks only if count > 0 (unless LA which shows all fields)
-            if (task.count > 0 || task.label === 'Total Hours Worked' || desig.includes('LA')) { 
+            // Always show basic metrics (Total Logs, Hours) and show other tasks only if count > 0 (unless LA which shows all fields)
+            const isBasic = task.label === 'Total Hours Worked' || task.label === 'Total Work Reports Submitted';
+            if (task.count > 0 || isBasic || desig.includes('LA')) { 
                 sheet.addRow([rowIndex++, task.label, task.count]);
             }
         });
@@ -1853,7 +1856,8 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
             const { taskSummary, desig } = getTaskMetrics(employee, workLogs);
 
             Object.values(taskSummary).forEach(task => {
-                if (task.count > 0 || task.label === 'Total Hours Worked') {
+                const isBasic = task.label === 'Total Hours Worked' || task.label === 'Total Work Reports Submitted';
+                if (task.count > 0 || isBasic) {
                     sheet.addRow([rowIndex++, employee.name, desig, task.label, task.count]);
                 }
             });
