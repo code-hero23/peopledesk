@@ -1679,46 +1679,58 @@ const getTaskMetrics = (employee, workLogs) => {
                     if (Array.isArray(report.ae_photos) && taskSummary['totalPhotos']) taskSummary['totalPhotos'].count += report.ae_photos.length;
                 });
             }
-        }        // 2. Process Manual/Generic Tasks (UNIVERSAL & DYNAMIC - Scans all fields)
+        }
+
+        // 2. Process Manual/Generic Tasks (UNIVERSAL & DYNAMIC)
         let manualTasksFound = 0;
-        const custom = safeParse(log.customFields) || {};
+        try {
+            const custom = safeParse(log.customFields) || {};
 
-        // DYNAMIC SCAN: Iterate through all keys in customFields to find arrays of tasks
-        Object.entries(custom).forEach(([key, value]) => {
-            if (Array.isArray(value) && value.length > 0) {
-                value.forEach(t => {
-                    // Try all common task/description field names
-                    const desc = (t.description || t.task || t.taskDescription || t.workDescription || t.process || '').trim();
-                    if (desc) {
-                        const taskKey = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
-                        if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
-                        taskSummary[taskKey].count++;
-                        manualTasksFound++;
+
+            // DYNAMIC SCAN: Iterate through all keys in customFields to find arrays of tasks
+            Object.entries(custom).forEach(([key, value]) => {
+                if (Array.isArray(value) && value.length > 0) {
+                    value.forEach(t => {
+                        if (!t || typeof t !== 'object') return;
+                        // Try all common task/description field names
+                        const desc = (t.description || t.task || t.taskDescription || t.workDescription || t.process || '').trim();
+                        if (desc) {
+                            const taskKey = `gen_${desc.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+                            if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
+                            taskSummary[taskKey].count++;
+                            manualTasksFound++;
+                        }
+                    });
+                } else if (typeof value === 'string' && value.trim().length > 0) {
+                    // Filter out administrative/system fields
+                    const lowerKey = key.toLowerCase();
+                    if (!lowerKey.includes('link') && !['_id', 'starttime', 'endtime', 'date', 'id'].includes(lowerKey)) {
+                         const taskKey = `gen_${key.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+                         if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: key, count: 0 };
+                         const val = Number(value);
+                         taskSummary[taskKey].count += isNaN(val) ? 1 : val;
+                         manualTasksFound++;
                     }
-                });
-            } else if (typeof value === 'string' && value.trim().length > 0 && !key.toLowerCase().includes('link') && !['_id', 'startTime', 'endTime'].includes(key)) {
-                // Process single-value string fields as individual metrics
-                const taskKey = `gen_${key.toLowerCase().replace(/\s+/g, '_')}`;
-                if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: key, count: 0 };
-                const val = Number(value);
-                taskSummary[taskKey].count += isNaN(val) ? 1 : val;
-                manualTasksFound++;
-            }
-        });
+                }
+            });
 
-        // Fallback to top-level fields (process, tasks, remarks) ONLY if nothing was found in customFields
-        if (manualTasksFound === 0) {
-            const desc = (log.tasks || log.process || log.remarks || '').trim();
-            if (desc && desc.length > 0 && desc.length < 200 && !desc.includes('Session Started')) {
-                 const taskKey = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
-                 if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
-                 taskSummary[taskKey].count++;
+            // Fallback to top-level fields only if no custom tasks were found
+            if (manualTasksFound === 0) {
+                const desc = (log.tasks || log.process || log.remarks || '').trim();
+                if (desc && desc.length > 0 && desc.length < 200 && !desc.includes('Session Started')) {
+                     const taskKey = `gen_${desc.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+                     if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
+                     taskSummary[taskKey].count++;
+                }
             }
+        } catch (taskErr) {
+            console.error('Error extracting manual tasks for log:', log.id, taskErr);
         }
     });
 
     return { taskSummary, desig, taskFields };
 };
+
 
 
 // @desc    Export Employee Task Summary (Monthly)
