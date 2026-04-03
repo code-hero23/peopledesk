@@ -1648,7 +1648,7 @@ const getTaskMetrics = (employee, workLogs) => {
         taskSummary['totalLogs'].count++;
         taskSummary['totalHours'].count += Number(log.hours || log.attendanceHours || 0);
 
-        // A. Specialized Metrics (LA, CRE, FA)
+        // 1. Process Structured Metrics (Specialized Roles)
         if (metricsKey) {
             const metrics = safeParse(log[metricsKey]);
             if (metrics) {
@@ -1665,72 +1665,63 @@ const getTaskMetrics = (employee, workLogs) => {
                 });
             }
         } 
-        // B. AE Metrics (Special logic for array of site reports)
-        else if (desig.includes('AE') || desig.includes('APPLICATION')) {
+        
+        if (desig.includes('AE') || desig.includes('APPLICATION')) {
             const reports = safeParse(log.ae_project_reports) || [];
             if (Array.isArray(reports)) {
-                taskSummary['siteVisits'].count += reports.length;
+                if (taskSummary['siteVisits']) taskSummary['siteVisits'].count += reports.length;
                 reports.forEach(r => {
                     const report = typeof r === 'string' ? safeParse(r) : r;
-                    if (report.ae_measurements) taskSummary['measurements'].count++;
-                    if (report.ae_itemsInstalled) taskSummary['installations'].count += Number(report.ae_itemsInstalled || 0);
-                    if (report.ae_hasIssues) taskSummary['issuesIdentified'].count++;
-                    if (report.ae_clientFeedback === '😊') taskSummary['clientFeedbackGood'].count++;
-                    if (Array.isArray(report.ae_photos)) taskSummary['totalPhotos'].count += report.ae_photos.length;
+                    if (report.ae_measurements && taskSummary['measurements']) taskSummary['measurements'].count++;
+                    if (report.ae_itemsInstalled && taskSummary['installations']) taskSummary['installations'].count += Number(report.ae_itemsInstalled || 0);
+                    if (report.ae_hasIssues && taskSummary['issuesIdentified']) taskSummary['issuesIdentified'].count++;
+                    if (report.ae_clientFeedback === '😊' && taskSummary['clientFeedbackGood']) taskSummary['clientFeedbackGood'].count++;
+                    if (Array.isArray(report.ae_photos) && taskSummary['totalPhotos']) taskSummary['totalPhotos'].count += report.ae_photos.length;
                 });
             }
         }
-        // C. Generic (OFFICE-ADMIN, ACCOUNT, DM etc.)
-        else if (isOther) {
-            let tasksFoundCount = 0;
-            const custom = safeParse(log.customFields);
 
-            // 1. Check for arrays of tasks (handles 'tasks', 'Task Entries', etc.)
-            const taskList = custom ? (custom.tasks || custom['Task Entries'] || custom.taskEntries) : null;
-            
-            if (Array.isArray(taskList) && taskList.length > 0) {
-                taskList.forEach(t => {
-                    // Try all common task field names
-                    const desc = (t.task || t.description || t.taskDescription || t.workDescription || '').trim();
-                    if (desc) {
-                        const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
-                        if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
-                        taskSummary[key].count++;
-                        tasksFoundCount++;
-                    }
-                });
-            } 
-            
-            // 2. Check direct customFields (Object style / Single fields)
-            if (custom && typeof custom === 'object') {
-                Object.entries(custom).forEach(([k, v]) => {
-                    // Skip if it's the array we already processed or an administrative field
-                    if (['tasks', 'Task Entries', 'taskEntries', '_id'].includes(k)) return;
-                    
-                    if (typeof v === 'string' && v.trim().length > 0 && !k.toLowerCase().includes('link')) {
-                        const key = `gen_${k.toLowerCase().replace(/\s+/g, '_')}`;
-                        if (!taskSummary[key]) taskSummary[key] = { label: k, count: 0 };
-                        const val = Number(v);
-                        taskSummary[key].count += isNaN(val) ? 1 : val;
-                        tasksFoundCount++;
-                    }
-                });
-            }
+        // 2. Process Manual/Generic Tasks (UNIVERSAL - Run for all roles)
+        let manualTasksFound = 0;
+        const custom = safeParse(log.customFields);
 
-
-            // Fallback to model-level process/tasks if no specific tasks found in customFields
-            if (tasksFoundCount === 0) {
-                const desc = (log.tasks || log.process || log.remarks || '').trim();
-                // Capture all descriptive work
-                if (desc && desc.length > 0 && desc.length < 200) {
-                     const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
-                     if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
-                     taskSummary[key].count++;
+        // Check for arrays of tasks (handles 'tasks', 'Task Entries', etc.)
+        const taskList = custom ? (custom.tasks || custom['Task Entries'] || custom.taskEntries) : null;
+        if (Array.isArray(taskList) && taskList.length > 0) {
+            taskList.forEach(t => {
+                const desc = (t.task || t.description || t.taskDescription || t.workDescription || '').trim();
+                if (desc) {
+                    const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
+                    if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
+                    taskSummary[key].count++;
+                    manualTasksFound++;
                 }
-            }
+            });
+        } 
+        
+        // Check direct customFields (Object style / Single fields)
+        if (custom && typeof custom === 'object') {
+            Object.entries(custom).forEach(([k, v]) => {
+                if (['tasks', 'Task Entries', 'taskEntries', '_id'].includes(k)) return;
+                if (typeof v === 'string' && v.trim().length > 0 && !k.toLowerCase().includes('link')) {
+                    const key = `gen_${k.toLowerCase().replace(/\s+/g, '_')}`;
+                    if (!taskSummary[key]) taskSummary[key] = { label: k, count: 0 };
+                    const val = Number(v);
+                    taskSummary[key].count += isNaN(val) ? 1 : val;
+                    manualTasksFound++;
+                }
+            });
         }
 
-
+        // Fallback to top-level fields (process, tasks, remarks) if no tasks found in customFields
+        if (manualTasksFound === 0) {
+            const desc = (log.tasks || log.process || log.remarks || '').trim();
+            if (desc && desc.length > 0 && desc.length < 200 && !desc.includes('Session Started')) {
+                 const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
+                 if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
+                 taskSummary[key].count++;
+            }
+        }
     });
 
     return { taskSummary, desig, taskFields };
