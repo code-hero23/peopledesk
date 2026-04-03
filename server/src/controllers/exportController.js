@@ -1681,38 +1681,48 @@ const getTaskMetrics = (employee, workLogs) => {
         }
         // C. Generic (OFFICE-ADMIN, ACCOUNT, DM etc.)
         else if (isOther) {
-            // Check customFields.tasks (Form Array)
+            let tasksFoundCount = 0;
             const custom = safeParse(log.customFields);
-            if (custom && Array.isArray(custom.tasks)) {
+
+            // Check customFields.tasks (Array style)
+            if (custom && Array.isArray(custom.tasks) && custom.tasks.length > 0) {
                 custom.tasks.forEach(t => {
                     const desc = (t.description || t.task || '').trim();
                     if (desc) {
                         const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
                         if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
                         taskSummary[key].count++;
+                        tasksFoundCount++;
                     }
                 });
-            } else if (custom) {
-                // Check direct customFields (Object)
+            } 
+            
+            // Check direct customFields (Object style)
+            if (custom && typeof custom === 'object' && Object.keys(custom).length > 0) {
                 Object.entries(custom).forEach(([k, v]) => {
+                    if (k === 'tasks') return; // Handled above
                     if (typeof v === 'string' && v.trim().length > 0 && !k.toLowerCase().includes('link')) {
                         const key = `gen_${k.toLowerCase().replace(/\s+/g, '_')}`;
                         if (!taskSummary[key]) taskSummary[key] = { label: k, count: 0 };
-                        // If it's a number-like string, sum it, otherwise just count the occurrence
                         const val = Number(v);
                         taskSummary[key].count += isNaN(val) ? 1 : val;
+                        tasksFoundCount++;
                     }
                 });
-            } else {
-                // Fallback to model fields
-                const desc = (log.tasks || log.process || log.remarks || '').trim();
-                if (desc && desc.length > 0 && desc.length < 100) { // Avoid long remarks here
+            }
+
+            // Fallback to model-level process/tasks if no specific tasks found in customFields
+            if (tasksFoundCount === 0) {
+                const desc = (log.process || log.tasks || '').trim();
+                // Filter out generic status messages that don't describe work
+                if (desc && desc.length > 0 && desc.length < 150 && !desc.includes('Session Started')) {
                      const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
                      if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
                      taskSummary[key].count++;
                 }
             }
         }
+
     });
 
     return { taskSummary, desig, taskFields };
@@ -1774,7 +1784,8 @@ const exportEmployeeTaskSummary = async (req, res) => {
 
         let rowIndex = 1;
         Object.values(taskSummary).forEach(task => {
-            if (task.count > 0 || desig.includes('LA')) { 
+            // Always show Hours and show other tasks only if count > 0 (unless LA which shows all fields)
+            if (task.count > 0 || task.label === 'Total Hours Worked' || desig.includes('LA')) { 
                 sheet.addRow([rowIndex++, task.label, task.count]);
             }
         });
@@ -1842,7 +1853,7 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
             const { taskSummary, desig } = getTaskMetrics(employee, workLogs);
 
             Object.values(taskSummary).forEach(task => {
-                if (task.count > 0) {
+                if (task.count > 0 || task.label === 'Total Hours Worked') {
                     sheet.addRow([rowIndex++, employee.name, desig, task.label, task.count]);
                 }
             });
