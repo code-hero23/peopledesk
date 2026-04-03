@@ -1692,16 +1692,23 @@ const getTaskMetrics = (employee, workLogs) => {
                 if (Array.isArray(value) && value.length > 0) {
                     value.forEach(t => {
                         if (!t || typeof t !== 'object') return;
-                        // Try all common task/description field names
-                        const desc = (t.description || t.task || t.taskDescription || t.workDescription || t.process || '').trim();
+                        // Try all common task/description field names (including 'work' for DM)
+                        const desc = (t.description || t.task || t.work || t.taskDescription || t.workDescription || t.process || '').trim();
                         if (desc) {
                             const taskKey = `gen_${desc.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
                             if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
                             taskSummary[taskKey].count++;
                             manualTasksFound++;
+
+                            // Also try to capture sub-task hours (e.g., hours_spent in DM)
+                            const subHours = Number(t.hours_spent || t.hours || t.time_spent || 0);
+                            if (!isNaN(subHours) && subHours > 0) {
+                                taskSummary['totalHours'].count += subHours;
+                            }
                         }
                     });
                 } else if (typeof value === 'string' && value.trim().length > 0) {
+
                     // Filter out administrative/system fields
                     const lowerKey = key.toLowerCase();
                     if (!lowerKey.includes('link') && !['_id', 'starttime', 'endtime', 'date', 'id'].includes(lowerKey)) {
