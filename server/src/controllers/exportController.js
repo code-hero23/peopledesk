@@ -1589,6 +1589,7 @@ const getTaskMetrics = (employee, workLogs) => {
     let metricsKey = '';
     let taskFields = [];
 
+    // 1. Define structured task fields for specialized roles
     if (desig.includes('LA') || desig.includes('LOADING')) {
         metricsKey = 'la_closing_metrics';
         taskFields = [
@@ -1618,34 +1619,105 @@ const getTaskMetrics = (employee, workLogs) => {
             { k: 'sevenStar', l: '7 Star Calls' }, { k: 'showroomVisit', l: 'Showroom Visit' },
             { k: 'onlineDiscussion', l: 'Online Disc' }, { k: 'quotationPending', l: 'Quotation Done' }
         ];
+    } else if (desig.includes('AE') || desig.includes('APPLICATION')) {
+        // Application Engineer (Structured metrics from project reports)
+        taskFields = [
+            { k: 'siteVisits', l: 'Total Site Visits' },
+            { k: 'measurements', l: 'Measurements Taken' },
+            { k: 'installations', l: 'Installations' },
+            { k: 'issuesIdentified', l: 'Issues Identified' },
+            { k: 'clientFeedbackGood', l: 'Client Fed. (Good)' },
+            { k: 'totalPhotos', l: 'Photos Uploaded' }
+        ];
     }
 
-    // Initialize
+    // Always include Hours
+    taskSummary['totalHours'] = { label: 'Total Hours Worked', count: 0 };
+    
+    // Initialize standard fields
     taskFields.forEach(f => {
         taskSummary[f.k] = { label: f.l, count: 0 };
     });
 
-    // Sum counts from closing metrics
+    // Special grouping for generic/other roles
+    const isOther = taskFields.length === 0;
+
+    // Sum counts from logs
     workLogs.forEach(log => {
-        const metrics = safeParse(log[metricsKey]);
-        if (metrics) {
-            taskFields.forEach(f => {
-                const data = metrics[f.k];
-                if (data !== undefined && data !== null) {
-                    // Fix: Forms often send numbers as Strings ("5"). Cast them to Number.
-                    if (typeof data === 'object') {
-                        const count = data.count !== undefined ? data.count : (data.value !== undefined ? data.value : 0);
-                        taskSummary[f.k].count += Number(count || 0);
-                    } else {
-                        taskSummary[f.k].count += Number(data || 0);
+        // Common: Sum Hours
+        taskSummary['totalHours'].count += Number(log.hours || 0);
+
+        // A. Specialized Metrics (LA, CRE, FA)
+        if (metricsKey) {
+            const metrics = safeParse(log[metricsKey]);
+            if (metrics) {
+                taskFields.forEach(f => {
+                    const data = metrics[f.k];
+                    if (data !== undefined && data !== null) {
+                        if (typeof data === 'object') {
+                            const count = data.count !== undefined ? data.count : (data.value !== undefined ? data.value : 0);
+                            taskSummary[f.k].count += Number(count || 0);
+                        } else {
+                            taskSummary[f.k].count += Number(data || 0);
+                        }
                     }
+                });
+            }
+        } 
+        // B. AE Metrics (Special logic for array of site reports)
+        else if (desig.includes('AE') || desig.includes('APPLICATION')) {
+            const reports = safeParse(log.ae_project_reports) || [];
+            if (Array.isArray(reports)) {
+                taskSummary['siteVisits'].count += reports.length;
+                reports.forEach(r => {
+                    const report = typeof r === 'string' ? safeParse(r) : r;
+                    if (report.ae_measurements) taskSummary['measurements'].count++;
+                    if (report.ae_itemsInstalled) taskSummary['installations'].count += Number(report.ae_itemsInstalled || 0);
+                    if (report.ae_hasIssues) taskSummary['issuesIdentified'].count++;
+                    if (report.ae_clientFeedback === '😊') taskSummary['clientFeedbackGood'].count++;
+                    if (Array.isArray(report.ae_photos)) taskSummary['totalPhotos'].count += report.ae_photos.length;
+                });
+            }
+        }
+        // C. Generic (OFFICE-ADMIN, ACCOUNT, DM etc.)
+        else if (isOther) {
+            // Check customFields.tasks (Form Array)
+            const custom = safeParse(log.customFields);
+            if (custom && Array.isArray(custom.tasks)) {
+                custom.tasks.forEach(t => {
+                    const desc = (t.description || t.task || '').trim();
+                    if (desc) {
+                        const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
+                        if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
+                        taskSummary[key].count++;
+                    }
+                });
+            } else if (custom) {
+                // Check direct customFields (Object)
+                Object.entries(custom).forEach(([k, v]) => {
+                    if (typeof v === 'string' && v.trim().length > 0 && !k.toLowerCase().includes('link')) {
+                        const key = `gen_${k.toLowerCase().replace(/\s+/g, '_')}`;
+                        if (!taskSummary[key]) taskSummary[key] = { label: k, count: 0 };
+                        // If it's a number-like string, sum it, otherwise just count the occurrence
+                        const val = Number(v);
+                        taskSummary[key].count += isNaN(val) ? 1 : val;
+                    }
+                });
+            } else {
+                // Fallback to model fields
+                const desc = (log.tasks || log.process || log.remarks || '').trim();
+                if (desc && desc.length > 0 && desc.length < 100) { // Avoid long remarks here
+                     const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
+                     if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
+                     taskSummary[key].count++;
                 }
-            });
+            }
         }
     });
 
     return { taskSummary, desig, taskFields };
 };
+
 
 // @desc    Export Employee Task Summary (Monthly)
 // @route   GET /api/export/task-summary
