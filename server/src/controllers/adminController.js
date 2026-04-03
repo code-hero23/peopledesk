@@ -973,6 +973,11 @@ const deleteEmployee = async (req, res) => {
             prisma.loginAccessRequest.deleteMany({ where: { userId } }),
             prisma.announcement.deleteMany({ where: { authorId: userId } }),
             prisma.wfhRequest.deleteMany({ where: { userId } }),
+            prisma.biometricLog.deleteMany({ where: { userId } }),
+            prisma.pushSubscription.deleteMany({ where: { userId } }),
+            prisma.voucher.deleteMany({ where: { userId } }),
+            prisma.notification.deleteMany({ where: { userId } }),
+            prisma.deposit.deleteMany({ where: { addedById: userId } }),
 
             // 6. Delete attendance records
             prisma.attendance.deleteMany({ where: { userId } }),
