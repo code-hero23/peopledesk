@@ -1685,10 +1685,13 @@ const getTaskMetrics = (employee, workLogs) => {
             let tasksFoundCount = 0;
             const custom = safeParse(log.customFields);
 
-            // Check customFields.tasks (Array style)
-            if (custom && Array.isArray(custom.tasks) && custom.tasks.length > 0) {
-                custom.tasks.forEach(t => {
-                    const desc = (t.description || t.task || '').trim();
+            // 1. Check for arrays of tasks (handles 'tasks', 'Task Entries', etc.)
+            const taskList = custom ? (custom.tasks || custom['Task Entries'] || custom.taskEntries) : null;
+            
+            if (Array.isArray(taskList) && taskList.length > 0) {
+                taskList.forEach(t => {
+                    // Try all common task field names
+                    const desc = (t.task || t.description || t.taskDescription || t.workDescription || '').trim();
                     if (desc) {
                         const key = `gen_${desc.toLowerCase().replace(/\s+/g, '_')}`;
                         if (!taskSummary[key]) taskSummary[key] = { label: desc, count: 0 };
@@ -1698,10 +1701,12 @@ const getTaskMetrics = (employee, workLogs) => {
                 });
             } 
             
-            // Check direct customFields (Object style)
-            if (custom && typeof custom === 'object' && Object.keys(custom).length > 0) {
+            // 2. Check direct customFields (Object style / Single fields)
+            if (custom && typeof custom === 'object') {
                 Object.entries(custom).forEach(([k, v]) => {
-                    if (k === 'tasks') return; // Handled above
+                    // Skip if it's the array we already processed or an administrative field
+                    if (['tasks', 'Task Entries', 'taskEntries', '_id'].includes(k)) return;
+                    
                     if (typeof v === 'string' && v.trim().length > 0 && !k.toLowerCase().includes('link')) {
                         const key = `gen_${k.toLowerCase().replace(/\s+/g, '_')}`;
                         if (!taskSummary[key]) taskSummary[key] = { label: k, count: 0 };
@@ -1711,6 +1716,7 @@ const getTaskMetrics = (employee, workLogs) => {
                     }
                 });
             }
+
 
             // Fallback to model-level process/tasks if no specific tasks found in customFields
             if (tasksFoundCount === 0) {
