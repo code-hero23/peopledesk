@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { 
@@ -117,6 +117,9 @@ const VoucherManagement = () => {
         status: 'On process-90%'
     });
 
+    // Lightbox for proof
+    const [showLightbox, setShowLightbox] = useState(false);
+
     // Helper to check for COO designation if role is BUSINESS_HEAD
     const isCOO = (user) => {
         if (!user) return false;
@@ -134,6 +137,45 @@ const VoucherManagement = () => {
             dispatch(getCarpenterRecords());
         }
     }, [dispatch, user]);
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            // Escape Key Logic
+            if (e.key === 'Escape') {
+                if (showLightbox) {
+                    setShowLightbox(false);
+                    return;
+                }
+                
+                if (selectedVoucher) setSelectedVoucher(null);
+                if (showAddCash) setShowAddCash(false);
+                if (showWipeModal) setShowWipeModal(false);
+                if (showRaiseModal) setShowRaiseModal(false);
+                if (showCarpenterModal) setShowCarpenterModal(false);
+            }
+
+            // Enter to Approve (only if Review Modal is open and view is 'pending')
+            if (e.key === 'Enter' && selectedVoucher && view === 'pending' && !showLightbox) {
+                // If user is in textarea, allow Enter unless Ctrl/Cmd is pressed
+                if (document.activeElement.tagName === 'TEXTAREA') {
+                    if (e.ctrlKey || e.metaKey) {
+                        e.preventDefault();
+                        handleAction('APPROVED');
+                    }
+                    return;
+                }
+                
+                // Don't trigger if other interactive elements are focused (unless it's the body)
+                if (document.activeElement === document.body || !['INPUT', 'SELECT'].includes(document.activeElement.tagName)) {
+                    e.preventDefault();
+                    handleAction('APPROVED');
+                }
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [selectedVoucher, view, showAddCash, showWipeModal, showRaiseModal, showCarpenterModal, handleAction, showLightbox]);
 
     useEffect(() => {
         if (isError) toast.error(message);
@@ -223,7 +265,7 @@ const VoucherManagement = () => {
         return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
     });
 
-    const handleAction = async (status) => {
+    const handleAction = useCallback(async (status) => {
         const payload = { id: selectedVoucher.id, status, remarks };
         
         try {
@@ -248,7 +290,7 @@ const VoucherManagement = () => {
         } catch (err) {
             toast.error(err);
         }
-    };
+    }, [dispatch, isCOO, remarks, selectedVoucher, user.role]);
 
     const getFullProofUrl = (url) => {
         if (!url) return '';
@@ -1084,16 +1126,19 @@ const VoucherManagement = () => {
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Attachment / Proof</p>
                                                 <div className="rounded-2xl overflow-hidden border border-slate-200 bg-white">
                                                     {selectedVoucher.proofUrl.match(/\.(jpeg|jpg|gif|png|webp)$/i) ? (
-                                                        <a href={getFullProofUrl(selectedVoucher.proofUrl)} target="_blank" rel="noopener noreferrer" className="block group relative">
+                                                        <div 
+                                                            onClick={() => setShowLightbox(true)} 
+                                                            className="block group relative cursor-zoom-in"
+                                                        >
                                                             <img 
                                                                 src={getFullProofUrl(selectedVoucher.proofUrl)} 
                                                                 alt="Proof" 
                                                                 className="w-full h-32 object-cover transition-all group-hover:scale-105" 
                                                             />
                                                             <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                                                                <span className="bg-white/90 text-slate-900 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">View Full Image</span>
+                                                                <span className="bg-white/90 text-slate-900 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">View Full Image (Esc to close)</span>
                                                             </div>
-                                                        </a>
+                                                        </div>
                                                     ) : (
                                                         <a 
                                                             href={getFullProofUrl(selectedVoucher.proofUrl)} 
@@ -1556,6 +1601,40 @@ const VoucherManagement = () => {
                                     {editingCarpenterRecord ? 'Update Record' : 'Create Record'}
                                 </button>
                             </form>
+                        </motion.div>
+                    </div>
+                )}
+            </AnimatePresence>
+
+            {/* Lightbox for Fullscreen Proof */}
+            <AnimatePresence>
+                {showLightbox && selectedVoucher?.proofUrl && (
+                    <div className="fixed inset-0 z-[120] flex items-center justify-center p-8 lg:p-20">
+                        <motion.div
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            exit={{ opacity: 0 }}
+                            onClick={() => setShowLightbox(false)}
+                            className="absolute inset-0 bg-slate-900/90 backdrop-blur-md cursor-zoom-out"
+                        />
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="relative w-full h-full flex items-center justify-center z-10 pointer-events-none"
+                        >
+                            <img 
+                                src={getFullProofUrl(selectedVoucher.proofUrl)} 
+                                alt="Full Proof" 
+                                className="max-w-full max-h-full object-contain shadow-2xl rounded-lg pointer-events-auto"
+                            />
+                            <button 
+                                onClick={() => setShowLightbox(false)}
+                                className="absolute top-0 right-0 lg:-right-12 lg:-top-12 p-3 bg-white/10 hover:bg-white/20 text-white rounded-full transition-all pointer-events-auto"
+                                title="Close (Esc)"
+                            >
+                                <X size={32} />
+                            </button>
                         </motion.div>
                     </div>
                 )}
