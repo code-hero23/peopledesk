@@ -85,7 +85,7 @@ async function main() {
 
   // Adding PerformanceScore Table
   try {
-    console.log('Adding PerformanceScore table...');
+    console.log('Checking PerformanceScore table...');
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "PerformanceScore" (
           "id" SERIAL PRIMARY KEY,
@@ -105,6 +105,15 @@ async function main() {
           CONSTRAINT "PerformanceScore_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
       )
     `);
+
+    // Ensure new column names exist (in case table was created with old names)
+    try {
+        await prisma.$executeRawUnsafe(`ALTER TABLE "PerformanceScore" ADD COLUMN IF NOT EXISTS "efficiency" DOUBLE PRECISION NOT NULL DEFAULT 0`);
+        await prisma.$executeRawUnsafe(`ALTER TABLE "PerformanceScore" ADD COLUMN IF NOT EXISTS "consistency" DOUBLE PRECISION NOT NULL DEFAULT 0`);
+        console.log('Columns "efficiency" and "consistency" ensured.');
+    } catch (colErr) {
+        console.warn('Note: Column update warning:', colErr.message);
+    }
     
     // Create Unique Index for userId_month_year
     try {
