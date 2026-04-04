@@ -202,7 +202,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" indent />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Daily Attendance" indent />
                             <NavItem to="/admin/attendance-verification" icon={Camera} label="Photo Verification" indent />
-                            {['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) && (
+                            {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || (user?.role === 'BUSINESS_HEAD' && ['COO', 'Chief Operational Officer'].includes(user?.designation))) && (
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />

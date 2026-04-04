@@ -6,14 +6,16 @@ async function main() {
         select: {
             id: true,
             email: true,
+            name: true,
             role: true,
+            designation: true,
             password: true // Just check if it's there
         }
     });
 
     console.log(`Total users: ${users.length}`);
     users.forEach(u => {
-        console.log(`- ${u.email} (${u.role}) | Password set: ${!!u.password}`);
+        console.log(`- ${u.name} | ${u.email} (${u.role} - ${u.designation}) | Password set: ${!!u.password}`);
     });
 }
 
