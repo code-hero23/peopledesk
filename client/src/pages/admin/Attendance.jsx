@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useLocation } from 'react-router-dom';
 import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
-import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils, Upload } from 'lucide-react';
+import { Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils, Upload, Mail } from 'lucide-react';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { motion, AnimatePresence } from 'framer-motion';
 import axios from 'axios';
@@ -20,6 +20,7 @@ const Attendance = () => {
     // Live Status State
     const [activeStatuses, setActiveStatuses] = useState([]);
     const [liveTime, setLiveTime] = useState(new Date());
+    const [isSendingReport, setIsSendingReport] = useState(false);
 
     // Helper to format minutes into readable string
     const formatDuration = (totalMinutes) => {
@@ -256,6 +257,24 @@ const Attendance = () => {
         // Reset file input
         e.target.value = '';
     };
+    
+    const onSendHRSummary = async () => {
+        try {
+            setIsSendingReport(true);
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+            };
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.post(`${baseUrl}/admin/trigger-hr-report`, { date: startDate }, config);
+            
+            alert(response.data.message || "Summary report sent to HR successfully!");
+        } catch (error) {
+            console.error("Failed to send HR summary:", error);
+            alert(error.response?.data?.message || "Failed to send summary report to HR.");
+        } finally {
+            setIsSendingReport(false);
+        }
+    };
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -310,6 +329,15 @@ const Attendance = () => {
                     {(user?.role === 'ADMIN' || user?.role === 'HR') && (
                         <button onClick={onGeneratePayrollReport} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                             <Zap size={16} /> Payroll Report
+                        </button>
+                    )}
+                    {(user?.role === 'ADMIN') && (
+                        <button 
+                            onClick={onSendHRSummary} 
+                            disabled={isSendingReport}
+                            className={`${isSendingReport ? 'bg-slate-400' : 'bg-slate-900 hover:bg-black'} text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95`}
+                        >
+                            <Mail size={16} /> {isSendingReport ? 'Sending...' : 'Send HR Summary'}
                         </button>
                     )}
                     <MonthCycleSelector onCycleChange={handleCycleChange} />

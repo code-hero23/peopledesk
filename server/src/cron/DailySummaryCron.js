@@ -19,14 +19,15 @@ const initDailySummaryCron = () => {
 /**
  * Core logic to aggregate data and send email
  * Separated for manual trigger support
+ * @param {Date} targetDate Optional date to generate report for
  */
-const generateAndSendDailySummary = async () => {
+const generateAndSendDailySummary = async (targetDate = new Date()) => {
     console.log('--------------------------------');
-    console.log('Generating Daily HR Summary Report');
+    console.log(`Generating Daily HR Summary Report for ${targetDate.toLocaleDateString()}`);
     console.log(new Date().toLocaleString());
 
     try {
-        const today = new Date();
+        const today = new Date(targetDate);
         today.setHours(0, 0, 0, 0);
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);

@@ -1344,9 +1344,10 @@ const deleteRequest = async (req, res) => {
 
 const triggerDailySummaryReport = async (req, res) => {
     try {
-        const result = await generateAndSendDailySummary();
+        const targetDate = req.body.date ? new Date(req.body.date) : new Date();
+        const result = await generateAndSendDailySummary(targetDate);
         if (result) {
-            res.json({ message: 'Daily Summary Report sent successfully to HR' });
+            res.json({ message: `Daily Summary Report for ${targetDate.toLocaleDateString()} sent successfully to HR` });
         } else {
             res.status(500).json({ message: 'Failed to send report. Check server logs.' });
         }
