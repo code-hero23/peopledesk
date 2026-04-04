@@ -25,6 +25,8 @@ import ExpenseHub from './pages/employee/ExpenseHub';
 import VoucherManagement from './pages/admin/VoucherManagement';
 import CRECallReports from './pages/employee/CRECallReports';
 import AdminCallReports from './pages/admin/AdminCallReports';
+import PerformanceManagement from './pages/admin/PerformanceManagement';
+import MyScoreBoard from './pages/employee/MyScoreBoard';
 
 import OSCDirectory from './pages/OSCDirectory';
 import DecoraAI from './pages/DecoraAI';
@@ -58,7 +60,7 @@ function App() {
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
                 <Route path="/dashboard/expenses" element={<ExpenseHub />} />
                 <Route path="/dashboard/call-reports" element={<CRECallReports />} />
-
+                <Route path="/dashboard/scoreboard" element={<MyScoreBoard />} />
               </Route>
 
               {/* Admin Routes */}
@@ -77,6 +79,7 @@ function App() {
               <Route path="/admin/salary-settings" element={<SalarySettings />} />
               <Route path="/admin/wfh" element={<WFHManagement />} />
               <Route path="/admin/call-reports" element={<AdminCallReports />} />
+              <Route path="/admin/performance" element={<PerformanceManagement />} />
 
               <Route path="/osc-directory" element={<OSCDirectory />} />
               <Route path="/decora-ai" element={<DecoraAI />} />

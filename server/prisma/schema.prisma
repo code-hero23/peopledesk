@@ -48,6 +48,7 @@ model User {
   vouchers                     Voucher[]
   wfhRequests                  WfhRequest[]
   workLogs                     WorkLog[]
+  performanceScores            PerformanceScore[]
 }
 
 model PushSubscription {
@@ -577,4 +578,24 @@ enum BreakType {
   LUNCH
   CLIENT_MEETING
   BH_MEETING
+}
+
+model PerformanceScore {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  month        Int
+  year         Int
+  attendance   Float    @default(0) // Weight: 20
+  productivity Float    @default(0) // Weight: 30
+  quality      Float    @default(0) // Weight: 20
+  system       Float    @default(0) // Weight: 15
+  behaviour    Float    @default(0) // Weight: 15
+  totalScore   Float    @default(0) // (A+P+Q+S+B) / 100
+  remarks      String?
+  updatedById  Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  user         User     @relation(fields: [userId], references: [id])
+
+  @@unique([userId, month, year])
 }

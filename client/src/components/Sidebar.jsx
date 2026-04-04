@@ -28,7 +28,8 @@ import {
     ChevronDown,
     Settings,
     ShieldCheck,
-    Boxes
+    Boxes,
+    Award
 } from 'lucide-react';
 import ThemeSelector from './common/ThemeSelector';
 
@@ -229,6 +230,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {['ADMIN', 'HR'].includes(user?.role) && (
                                 <NavItem to="/admin/announcements" icon={Megaphone} label="Announcements" indent />
                             )}
+                            {['ADMIN', 'HR'].includes(user?.role) && (
+                                <NavItem to="/admin/performance" icon={Award} label="Performance Scoring" indent />
+                            )}
                         </NavGroup>
 
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>
@@ -253,7 +257,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation) && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
-
+                            <NavItem to="/dashboard/scoreboard" icon={BarChart3} label="My ScoreBoard" />
                         </div>
 
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>

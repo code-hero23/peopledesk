@@ -83,6 +83,40 @@ async function main() {
     console.error('Error adding Biometric components:', err.message);
   }
 
+  // Adding PerformanceScore Table
+  try {
+    console.log('Adding PerformanceScore table...');
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "PerformanceScore" (
+          "id" SERIAL PRIMARY KEY,
+          "userId" INTEGER NOT NULL,
+          "month" INTEGER NOT NULL,
+          "year" INTEGER NOT NULL,
+          "attendance" DOUBLE PRECISION NOT NULL DEFAULT 0,
+          "productivity" DOUBLE PRECISION NOT NULL DEFAULT 0,
+          "quality" DOUBLE PRECISION NOT NULL DEFAULT 0,
+          "system" DOUBLE PRECISION NOT NULL DEFAULT 0,
+          "behaviour" DOUBLE PRECISION NOT NULL DEFAULT 0,
+          "totalScore" DOUBLE PRECISION NOT NULL DEFAULT 0,
+          "remarks" TEXT,
+          "updatedById" INTEGER NOT NULL,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "PerformanceScore_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
+    `);
+    
+    // Create Unique Index for userId_month_year
+    try {
+      await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "PerformanceScore_userId_month_year_key" ON "PerformanceScore"("userId", "month", "year")`);
+      console.log('PerformanceScore table and unique index created or already exist.');
+    } catch (idxErr) {
+      console.warn('Note: PerformanceScore index creation warning:', idxErr.message);
+    }
+  } catch (err) {
+    console.error('Error adding PerformanceScore table:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 
