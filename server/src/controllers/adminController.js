@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const xlsx = require('xlsx');
 const prisma = new PrismaClient();
+const { generateAndSendDailySummary } = require('../cron/DailySummaryCron');
 
 // @desc    Get all employees
 // @route   GET /api/admin/employees
@@ -1341,6 +1342,20 @@ const deleteRequest = async (req, res) => {
     }
 };
 
+const triggerDailySummaryReport = async (req, res) => {
+    try {
+        const result = await generateAndSendDailySummary();
+        if (result) {
+            res.json({ message: 'Daily Summary Report sent successfully to HR' });
+        } else {
+            res.status(500).json({ message: 'Failed to send report. Check server logs.' });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error triggering report', error: error.message });
+    }
+};
+
 module.exports = {
     getAllEmployees,
     getAllPendingRequests,
@@ -1358,5 +1373,6 @@ module.exports = {
     importEmployees,
     deleteRequest,
     testWhatsApp,
-    getEmployeeAttendance
+    getEmployeeAttendance,
+    triggerDailySummaryReport
 };

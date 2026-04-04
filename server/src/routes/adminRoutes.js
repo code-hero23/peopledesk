@@ -17,7 +17,8 @@ const {
     importEmployees,
     deleteRequest,
     testWhatsApp,
-    getEmployeeAttendance
+    getEmployeeAttendance,
+    triggerDailySummaryReport
 } = require('../controllers/adminController');
 const { importBiometricData } = require('../controllers/biometricController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
@@ -48,5 +49,6 @@ router.put('/users/:id/status', protect, authorize('ADMIN'), updateUserStatus);
 router.put('/users/:id', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER'), updateEmployee);
 router.delete('/users/:id', protect, authorize('ADMIN'), deleteEmployee);
 router.post('/employees/:id/test-whatsapp', protect, authorize('ADMIN'), testWhatsApp);
+router.post('/trigger-hr-report', protect, authorize('ADMIN'), triggerDailySummaryReport);
 
 module.exports = router;
