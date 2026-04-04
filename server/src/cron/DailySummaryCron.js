@@ -83,11 +83,16 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
             breakdown[d] = { total: totalInDept, present: presentInDept, absent: totalInDept - presentInDept };
         });
 
-        // Mobile Logins
-        const mobileLogins = attendanceRecs.filter(a => 
-            (a.deviceInfo && /mobile|android|iphone|ios/i.test(a.deviceInfo)) ||
-            (a.checkoutDeviceInfo && /mobile|android|iphone|ios/i.test(a.checkoutDeviceInfo))
-        ).length;
+        // Mobile Logins (Exclude AE users from this count as they are expected to use mobile)
+        const mobileLogins = attendanceRecs.filter(a => {
+            const user = staff.find(s => s.id === a.userId);
+            const isAE = user && user.designation && user.designation.toUpperCase().includes('AE');
+            if (isAE) return false;
+
+            const hasMobileIn = (a.deviceInfo && /mobile|android|iphone|ios/i.test(a.deviceInfo));
+            const hasMobileOut = (a.checkoutDeviceInfo && /mobile|android|iphone|ios/i.test(a.checkoutDeviceInfo));
+            return hasMobileIn || hasMobileOut;
+        }).length;
 
         // Improper Logouts (Check-in exists, but checkoutTime is null)
         const improperLogouts = attendanceRecs.filter(a => !a.checkoutTime).length;
@@ -142,7 +147,7 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
                     <ul style="padding-left: 20px; margin: 0;">
                         <li><strong>AE Sessions Completed:</strong> ${aeSessions}</li>
                         <li><strong>WorkLogs Submitted:</strong> ${workLogs.length}</li>
-                        <li><strong>Mobile Logins:</strong> ${mobileLogins}</li>
+                        <li><strong>Mobile Logins (Office Staff):</strong> ${mobileLogins}</li>
                         <li style="color: #e03131;"><strong>Improper Logouts (Missing Checkout):</strong> ${improperLogouts}</li>
                     </ul>
                 </div>
