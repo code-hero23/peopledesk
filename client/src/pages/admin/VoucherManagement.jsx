@@ -127,6 +127,32 @@ const VoucherManagement = () => {
         if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) return true;
         return false;
     };
+    const handleAction = useCallback(async (status) => {
+        const payload = { id: selectedVoucher.id, status, remarks };
+        
+        try {
+            if (user.role === 'ACCOUNTS_MANAGER') {
+                await dispatch(approveVoucherAM(payload)).unwrap();
+            } else if (user.role === 'BUSINESS_HEAD' && isCOO(user)) {
+                await dispatch(approveVoucherCOO(payload)).unwrap();
+            } else if (user.role === 'ADMIN') {
+                // Admin can act as either AM or COO depending on current status
+                if (selectedVoucher.amStatus === 'PENDING') {
+                    await dispatch(approveVoucherAM(payload)).unwrap();
+                } else {
+                    await dispatch(approveVoucherCOO(payload)).unwrap();
+                }
+            }
+            
+            toast.success(`Voucher ${status.toLowerCase()} successfully`);
+            setSelectedVoucher(null);
+            setRemarks('');
+            dispatch(getFinanceSummary());
+            dispatch(getSpentHistory());
+        } catch (err) {
+            toast.error(err);
+        }
+    }, [dispatch, isCOO, remarks, selectedVoucher, user.role]);
 
     useEffect(() => {
         if (isCOO(user)) {
@@ -265,32 +291,6 @@ const VoucherManagement = () => {
         return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
     });
 
-    const handleAction = useCallback(async (status) => {
-        const payload = { id: selectedVoucher.id, status, remarks };
-        
-        try {
-            if (user.role === 'ACCOUNTS_MANAGER') {
-                await dispatch(approveVoucherAM(payload)).unwrap();
-            } else if (user.role === 'BUSINESS_HEAD' && isCOO(user)) {
-                await dispatch(approveVoucherCOO(payload)).unwrap();
-            } else if (user.role === 'ADMIN') {
-                // Admin can act as either AM or COO depending on current status
-                if (selectedVoucher.amStatus === 'PENDING') {
-                    await dispatch(approveVoucherAM(payload)).unwrap();
-                } else {
-                    await dispatch(approveVoucherCOO(payload)).unwrap();
-                }
-            }
-            
-            toast.success(`Voucher ${status.toLowerCase()} successfully`);
-            setSelectedVoucher(null);
-            setRemarks('');
-            dispatch(getFinanceSummary());
-            dispatch(getSpentHistory());
-        } catch (err) {
-            toast.error(err);
-        }
-    }, [dispatch, isCOO, remarks, selectedVoucher, user.role]);
 
     const getFullProofUrl = (url) => {
         if (!url) return '';
