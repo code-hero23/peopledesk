@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
-import { Award, Target, Zap, ShieldCheck, Heart, Info, Calendar } from 'lucide-react';
+import { Award, Target, Zap, ShieldCheck, Heart, Info, Calendar, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const MyScoreBoard = () => {
@@ -39,18 +39,18 @@ const MyScoreBoard = () => {
                 <div className="w-16 h-16 bg-slate-50 dark:bg-slate-950 rounded-2xl flex items-center justify-center mb-4 text-slate-300">
                     <Award size={32} />
                 </div>
-                <h2 className="text-xl font-bold dark:text-white">No Scores Yet</h2>
-                <p className="text-slate-500 text-sm max-w-xs mt-2">Your performance scores for this month haven't been published yet. Check back soon!</p>
+                <h2 className="text-xl font-bold dark:text-white">Performance Score Not Available</h2>
+                <p className="text-slate-500 text-sm max-w-xs mt-2">Your performance metrics for this period haven't been published by HR yet. Stay consistent!</p>
             </div>
         );
     }
 
     const categories = [
-        { label: 'Attendance', value: currentScore.attendance, max: 20, icon: Calendar, color: 'text-blue-500', bg: 'bg-blue-50' },
-        { label: 'Productivity', value: currentScore.productivity, max: 30, icon: Target, color: 'text-purple-500', bg: 'bg-purple-50' },
-        { label: 'Quality', value: currentScore.quality, max: 20, icon: Zap, color: 'text-amber-500', bg: 'bg-amber-50' },
-        { label: 'System Usage', value: currentScore.system, max: 15, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50' },
-        { label: 'Behaviour', value: currentScore.behaviour, max: 15, icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50' },
+        { label: 'Efficiency', value: currentScore.efficiency, max: 20, icon: Zap, color: 'text-blue-500', bg: 'bg-blue-50', desc: 'Calculated based on your monthly attendance percentage.' },
+        { label: 'Consistency', value: currentScore.consistency, max: 30, icon: RefreshCw, color: 'text-purple-500', bg: 'bg-purple-50', desc: 'Measured by the regularity of your daily worklog submissions.' },
+        { label: 'Quality', value: currentScore.quality, max: 20, icon: Target, color: 'text-amber-500', bg: 'bg-amber-50', desc: 'Subjective score based on accuracy and minimal rework.' },
+        { label: 'System Usage', value: currentScore.system, max: 15, icon: ShieldCheck, color: 'text-emerald-500', bg: 'bg-emerald-50', desc: 'Proper use of PeopleDesk tools and process compliance.' },
+        { label: 'Behaviour', value: currentScore.behaviour, max: 15, icon: Heart, color: 'text-rose-500', bg: 'bg-rose-50', desc: 'Professional conduct, discipline, and teamwork.' },
     ];
 
     return (
@@ -95,10 +95,10 @@ const MyScoreBoard = () => {
 
                     <div className="relative z-10 mt-12 bg-white/5 backdrop-blur-md rounded-3xl p-5 border border-white/10">
                         <p className="text-slate-400 text-xs font-semibold mb-2 flex items-center gap-2">
-                             <Info size={14} className="text-primary" /> HR Remarks
+                             <Info size={14} className="text-primary" /> Management Feedback
                         </p>
                         <p className="text-sm font-medium italic leading-relaxed text-slate-200">
-                            "{currentScore.remarks || "Keep up the consistent effort. Great focus on system discipline this month."}"
+                            "{currentScore.remarks || "Your commitment to process compliance is appreciated. Keep it up!"}"
                         </p>
                     </div>
                 </div>
@@ -127,6 +127,7 @@ const MyScoreBoard = () => {
                                     </div>
                                 </div>
                                 <div className="mt-8 space-y-2">
+                                    <p className="text-[10px] text-slate-400 font-medium group-hover:text-slate-600 dark:group-hover:text-slate-300 transition-colors line-clamp-1">{cat.desc}</p>
                                     <div className="h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
                                         <motion.div 
                                             initial={{ width: 0 }}
@@ -149,26 +150,29 @@ const MyScoreBoard = () => {
             {/* Performance Definitions Footer */}
             <div className="bg-slate-50 dark:bg-slate-950 p-8 rounded-[40px] border border-slate-100 dark:border-slate-900 grid grid-cols-1 md:grid-cols-3 gap-8">
                 <div className="space-y-2">
-                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">How it's Calculated</h4>
-                    <p className="text-[12px] text-slate-500 leading-relaxed font-medium">Your total performance is a weighted sum of five key pillars defined by HR management to ensure continuous professional growth.</p>
+                    <h4 className="text-xs font-black uppercase tracking-widest text-slate-800 dark:text-white">About Metrics</h4>
+                    <p className="text-[12px] text-slate-500 leading-relaxed font-medium">Your performance score is a combination of automated data tracking (Efficiency & Consistency) and manual HR evaluation (Quality, System, & Behaviour).</p>
                 </div>
-                <div className="space-y-1">
-                    <div className="flex gap-2 items-center text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                <div className="space-y-1 text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    <div className="flex gap-2 items-center">
                         <div className="w-1.5 h-1.5 rounded-full bg-emerald-500"></div>
-                        <span>80-100%: Excellent / Exceeding</span>
+                        <span>80%+ : Excellent</span>
                     </div>
-                    <div className="flex gap-2 items-center text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    <div className="flex gap-2 items-center">
                         <div className="w-1.5 h-1.5 rounded-full bg-amber-500"></div>
-                        <span>60-79%: Satisfactory / Meeting</span>
+                        <span>60-79% : Satisfactory</span>
                     </div>
-                    <div className="flex gap-2 items-center text-[11px] font-bold text-slate-600 dark:text-slate-400">
+                    <div className="flex gap-2 items-center">
                         <div className="w-1.5 h-1.5 rounded-full bg-rose-500"></div>
-                        <span>Below 60%: Needs Improvement</span>
+                        <span>Below 60% : Improvement Needed</span>
                     </div>
                 </div>
                 <div className="flex items-start gap-3 bg-white dark:bg-slate-900 p-4 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
                      <Info className="text-primary flex-shrink-0" size={16} />
-                     <p className="text-[10px] text-slate-500 italic font-medium leading-relaxed">System usage score tracks your daily worklogs, biometric accuracy, and response time on PeopleDesk.</p>
+                     <p className="text-[10px] text-slate-500 italic font-medium leading-relaxed">
+                        <b>Efficiency</b> is based on (Present Days / 26) * 20.<br/>
+                        <b>Consistency</b> is based on (Worklog Days / 26) * 30.
+                     </p>
                 </div>
             </div>
         </div>

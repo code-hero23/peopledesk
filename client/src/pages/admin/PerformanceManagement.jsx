@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
-import { User, Award, History, Save, X, Search, ChevronRight, BarChart3 } from 'lucide-react';
+import { User, Award, History, Save, X, Search, ChevronRight, BarChart3, Zap, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 
@@ -13,12 +13,13 @@ const PerformanceManagement = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isHistoryLoading, setIsHistoryLoading] = useState(false);
+    const [isCalculating, setIsCalculating] = useState(false);
     const [showModal, setShowModal] = useState(false);
 
     // Score State
     const [scores, setScores] = useState({
-        attendance: 0,
-        productivity: 0,
+        efficiency: 0,
+        consistency: 0,
         quality: 0,
         system: 0,
         behaviour: 0,
@@ -62,13 +63,36 @@ const PerformanceManagement = () => {
         }
     };
 
+    const handleFetchAutomatedMetrics = async () => {
+        if (!selectedEmployee) return;
+        try {
+            setIsCalculating(true);
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await axios.get(`${baseUrl}/performance/calculate/${selectedEmployee.id}?month=${month}&year=${year}`, {
+                headers: { Authorization: `Bearer ${user.token}` }
+            });
+            
+            const { efficiency, consistency } = response.data;
+            setScores(prev => ({
+                ...prev,
+                efficiency,
+                consistency
+            }));
+            toast.success(`Fetched: ${response.data.counts.presentDays} days present, ${response.data.counts.worklogDays} worklogs.`);
+        } catch (error) {
+            toast.error("Failed to calculate automated metrics");
+        } finally {
+            setIsCalculating(false);
+        }
+    };
+
     const handleSelectEmployee = (emp) => {
         setSelectedEmployee(emp);
         fetchHistory(emp.id);
         // Reset scores for modal
         setScores({
-            attendance: 0,
-            productivity: 0,
+            efficiency: 0,
+            consistency: 0,
             quality: 0,
             system: 0,
             behaviour: 0,
@@ -100,7 +124,13 @@ const PerformanceManagement = () => {
         emp.designation.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    const totalScorePreview = Object.values(scores).reduce((a, b) => (typeof b === 'number' ? a + b : a), 0);
+    const totalScorePreview = (
+        (scores.efficiency || 0) + 
+        (scores.consistency || 0) + 
+        (scores.quality || 0) + 
+        (scores.system || 0) + 
+        (scores.behaviour || 0)
+    ).toFixed(1);
 
     return (
         <div className="space-y-6 animate-fade-in">
@@ -186,8 +216,8 @@ const PerformanceManagement = () => {
                                         <thead className="bg-slate-50 dark:bg-slate-950 text-slate-500 text-[10px] uppercase font-bold">
                                             <tr>
                                                 <th className="px-6 py-4">Month/Year</th>
-                                                <th className="px-4 py-4 text-center">Attn (20)</th>
-                                                <th className="px-4 py-4 text-center">Prod (30)</th>
+                                                <th className="px-4 py-4 text-center">Effci (20)</th>
+                                                <th className="px-4 py-4 text-center">Consis (30)</th>
                                                 <th className="px-4 py-4 text-center">Qual (20)</th>
                                                 <th className="px-4 py-4 text-center">Sys (15)</th>
                                                 <th className="px-4 py-4 text-center">Beh (15)</th>
@@ -204,8 +234,8 @@ const PerformanceManagement = () => {
                                                     <td className="px-6 py-4 font-bold text-slate-700 dark:text-slate-300">
                                                         {new Date(0, item.month-1).toLocaleString('default', { month: 'long' })} {item.year}
                                                     </td>
-                                                    <td className="px-4 py-4 text-center">{item.attendance}</td>
-                                                    <td className="px-4 py-4 text-center">{item.productivity}</td>
+                                                    <td className="px-4 py-4 text-center">{item.efficiency}</td>
+                                                    <td className="px-4 py-4 text-center">{item.consistency}</td>
                                                     <td className="px-4 py-4 text-center">{item.quality}</td>
                                                     <td className="px-4 py-4 text-center">{item.system}</td>
                                                     <td className="px-4 py-4 text-center">{item.behaviour}</td>
@@ -250,15 +280,15 @@ const PerformanceManagement = () => {
                                 </button>
                             </div>
 
-                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                                {/* Date Selection */}
-                                <div className="space-y-4 md:col-span-2 grid grid-cols-2 gap-4 bg-primary/5 p-4 rounded-2xl">
+                            <div className="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+                                {/* Date Selection & Auto-Fetch */}
+                                <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-4 bg-primary/5 p-4 rounded-2xl items-end">
                                     <div className="space-y-1">
                                         <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Month</label>
                                         <select 
                                             value={month}
                                             onChange={(e) => setMonth(e.target.value)}
-                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 font-bold text-sm outline-none focus:ring-2 focus:ring-primary"
+                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 font-bold outline-none focus:ring-2 focus:ring-primary"
                                         >
                                             {Array.from({ length: 12 }, (_, i) => (
                                                 <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('default', { month: 'long' })}</option>
@@ -270,38 +300,52 @@ const PerformanceManagement = () => {
                                         <select 
                                             value={year}
                                             onChange={(e) => setYear(e.target.value)}
-                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 font-bold text-sm outline-none focus:ring-2 focus:ring-primary"
+                                            className="w-full bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2 font-bold outline-none focus:ring-2 focus:ring-primary"
                                         >
                                             <option value={2026}>2026</option>
                                             <option value={2025}>2025</option>
                                         </select>
                                     </div>
+                                    <button 
+                                        onClick={handleFetchAutomatedMetrics}
+                                        disabled={isCalculating}
+                                        className="w-full bg-slate-900 border border-slate-800 hover:bg-black text-white px-4 py-2 rounded-xl font-bold transition-all flex items-center justify-center gap-2 shadow-lg h-[38px]"
+                                    >
+                                        <RefreshCw size={16} className={isCalculating ? 'animate-spin' : ''} />
+                                        {isCalculating ? 'Fetching...' : 'Auto-Fetch'}
+                                    </button>
                                 </div>
 
                                 {/* Scoring Inputs */}
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
-                                        Attendance <span>max 20</span>
+                                        Efficiency <span>max 20</span>
                                     </label>
-                                    <input 
-                                        type="number" 
-                                        max={20}
-                                        value={scores.attendance}
-                                        onChange={(e) => setScores({ ...scores, attendance: parseFloat(e.target.value) || 0 })}
-                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
-                                    />
+                                    <div className="relative">
+                                        <input 
+                                            type="number" 
+                                            max={20}
+                                            value={scores.efficiency}
+                                            onChange={(e) => setScores({ ...scores, efficiency: parseFloat(e.target.value) || 0 })}
+                                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
+                                        />
+                                        <Zap size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/30" />
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
-                                        Productivity <span>max 30</span>
+                                        Consistency <span>max 30</span>
                                     </label>
-                                    <input 
-                                        type="number" 
-                                        max={30}
-                                        value={scores.productivity}
-                                        onChange={(e) => setScores({ ...scores, productivity: parseFloat(e.target.value) || 0 })}
-                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
-                                    />
+                                    <div className="relative">
+                                        <input 
+                                            type="number" 
+                                            max={30}
+                                            value={scores.consistency}
+                                            onChange={(e) => setScores({ ...scores, consistency: parseFloat(e.target.value) || 0 })}
+                                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
+                                        />
+                                        <RefreshCw size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/30" />
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
@@ -340,14 +384,14 @@ const PerformanceManagement = () => {
                                     />
                                 </div>
                                 <div className="space-y-1">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Total Preview</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Total Score</label>
                                     <div className="w-full bg-slate-100 dark:bg-slate-800 border-none rounded-xl px-4 py-2.5 font-black text-primary text-xl shadow-inner">
                                         {totalScorePreview}%
                                     </div>
                                 </div>
 
                                 <div className="space-y-1 md:col-span-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Remarks</label>
+                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Remarks / Feedback</label>
                                     <textarea 
                                         rows={2}
                                         value={scores.remarks}

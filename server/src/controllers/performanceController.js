@@ -2,10 +2,10 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 // @desc    Upsert performance score for an employee
-// @route   POST /api/performance
+// @route   POST /api/performance/set
 // @access  Private (Admin, HR)
 const setEmployeeScore = async (req, res) => {
-    const { userId, month, year, attendance, productivity, quality, system, behaviour, remarks } = req.body;
+    const { userId, month, year, efficiency, consistency, quality, system, behaviour, remarks } = req.body;
 
     if (!userId || !month || !year) {
         return res.status(400).json({ message: 'UserId, month, and year are required' });
@@ -13,12 +13,12 @@ const setEmployeeScore = async (req, res) => {
 
     try {
         // Validation: Scores cannot exceed their maximums
-        // Weights: Attendance (20), Productivity (30), Quality (20), System (15), Behaviour (15)
-        if (attendance > 20 || productivity > 30 || quality > 20 || system > 15 || behaviour > 15) {
+        // Weights: Efficiency (20), Consistency (30), Quality (20), System (15), Behaviour (15)
+        if (efficiency > 20 || consistency > 30 || quality > 20 || system > 15 || behaviour > 15) {
             return res.status(400).json({ message: 'One or more scores exceed their weighted maximum' });
         }
 
-        const totalScore = (attendance || 0) + (productivity || 0) + (quality || 0) + (system || 0) + (behaviour || 0);
+        const totalScore = (efficiency || 0) + (consistency || 0) + (quality || 0) + (system || 0) + (behaviour || 0);
 
         const score = await prisma.performanceScore.upsert({
             where: {
@@ -29,8 +29,8 @@ const setEmployeeScore = async (req, res) => {
                 }
             },
             update: {
-                attendance: parseFloat(attendance),
-                productivity: parseFloat(productivity),
+                efficiency: parseFloat(efficiency),
+                consistency: parseFloat(consistency),
                 quality: parseFloat(quality),
                 system: parseFloat(system),
                 behaviour: parseFloat(behaviour),
@@ -42,8 +42,8 @@ const setEmployeeScore = async (req, res) => {
                 userId: parseInt(userId),
                 month: parseInt(month),
                 year: parseInt(year),
-                attendance: parseFloat(attendance),
-                productivity: parseFloat(productivity),
+                efficiency: parseFloat(efficiency),
+                consistency: parseFloat(consistency),
                 quality: parseFloat(quality),
                 system: parseFloat(system),
                 behaviour: parseFloat(behaviour),
@@ -56,6 +56,58 @@ const setEmployeeScore = async (req, res) => {
         res.status(201).json(score);
     } catch (error) {
         console.error('Error setting performance score:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
+// @desc    Calculate automated metrics for an employee
+// @route   GET /api/performance/calculate/:userId
+// @access  Private (Admin, HR)
+const calculateAutomatedMetrics = async (req, res) => {
+    const { userId } = req.params;
+    const { month, year } = req.query;
+
+    if (!userId || !month || !year) {
+        return res.status(400).json({ message: 'UserId, month, and year are required' });
+    }
+
+    try {
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
+
+        // 1. Efficiency: (Present Days / 26) * 20
+        const presentDays = await prisma.attendance.count({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: startDate, lte: endDate },
+                status: 'PRESENT'
+            }
+        });
+
+        const efficiencyScore = Math.min(20, (presentDays / 26) * 20);
+
+        // 2. Consistency: (Days with Worklogs / 26) * 30
+        // Use groupBy to get unique dates
+        const worklogDates = await prisma.workLog.groupBy({
+            by: ['date'],
+            where: {
+                userId: parseInt(userId),
+                date: { gte: startDate, lte: endDate }
+            }
+        });
+
+        const consistencyScore = Math.min(30, (worklogDates.length / 26) * 30);
+
+        res.json({
+            efficiency: parseFloat(efficiencyScore.toFixed(2)),
+            consistency: parseFloat(consistencyScore.toFixed(2)),
+            counts: {
+                presentDays,
+                worklogDays: worklogDates.length
+            }
+        });
+    } catch (error) {
+        console.error('Error calculating metrics:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
@@ -107,6 +159,7 @@ const getMyPerformance = async (req, res) => {
 
 module.exports = {
     setEmployeeScore,
+    calculateAutomatedMetrics,
     getPerformanceHistory,
     getMyPerformance
 };
