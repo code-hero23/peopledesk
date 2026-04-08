@@ -68,7 +68,7 @@ const generatePayrollReport = async (req, res) => {
         const actualMinsMap = new Map();
 
         userIds.forEach(id => {
-            attendanceMap.set(id, 0);
+            attendanceMap.set(id, new Set());
             bioMap.set(id, new Set());
             leaveHalfMap.set(id, 0);
             leaveFullMap.set(id, 0);
@@ -78,7 +78,8 @@ const generatePayrollReport = async (req, res) => {
 
         // Populate Maps
         allAttendance.forEach(a => {
-            attendanceMap.set(a.userId, (attendanceMap.get(a.userId) || 0) + 1);
+            const dateStr = new Date(a.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+            attendanceMap.get(a.userId)?.add(dateStr);
             
             // Calculate Net Work Minutes for this session
             if (a.checkoutTime) {
@@ -137,7 +138,7 @@ const generatePayrollReport = async (req, res) => {
         sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
 
         users.forEach(user => {
-            const presentDays = attendanceMap.get(user.id) || 0;
+            const presentDays = attendanceMap.get(user.id)?.size || 0;
             const expectedMinutes = presentDays * 520; // 8h 40m = 520 mins
             
             sheet.addRow({
