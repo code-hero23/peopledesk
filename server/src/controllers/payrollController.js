@@ -127,18 +127,6 @@ const generatePayrollReport = async (req, res) => {
     }
 };
 
-        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=Payroll_Summary_${month}_${year}.xlsx`);
-
-        await workbook.xlsx.write(res);
-        res.end();
-
-    } catch (error) {
-        console.error('Payroll Report Error:', error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
-    }
-};
-
 // @desc    Import Manual Payroll Excel
 // @route   POST /api/payroll/import-manual
 // @access  Private (Admin)
