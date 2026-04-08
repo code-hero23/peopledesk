@@ -83,8 +83,8 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
             breakdown[d] = { total: totalInDept, present: presentInDept, absent: totalInDept - presentInDept };
         });
 
-        // Mobile Logins (Exclude AE users from this count as they are expected to use mobile)
-        const mobileLogins = attendanceRecs.filter(a => {
+        // Mobile Logins
+        const mobileLoginStaffRecs = attendanceRecs.filter(a => {
             const user = staff.find(s => s.id === a.userId);
             const isAE = user && user.designation && user.designation.toUpperCase().includes('AE');
             if (isAE) return false;
@@ -92,10 +92,12 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
             const hasMobileIn = (a.deviceInfo && /mobile|android|iphone|ios/i.test(a.deviceInfo));
             const hasMobileOut = (a.checkoutDeviceInfo && /mobile|android|iphone|ios/i.test(a.checkoutDeviceInfo));
             return hasMobileIn || hasMobileOut;
-        }).length;
+        });
+        const mobileLoginNames = mobileLoginStaffRecs.map(a => staff.find(s => s.id === a.userId)?.name).filter(Boolean);
 
-        // Improper Logouts (Check-in exists, but checkoutTime is null)
-        const improperLogouts = attendanceRecs.filter(a => !a.checkoutTime).length;
+        // Improper Logouts
+        const improperLogoutStaffRecs = attendanceRecs.filter(a => !a.checkoutTime);
+        const improperLogoutNames = improperLogoutStaffRecs.map(a => staff.find(s => s.id === a.userId)?.name).filter(Boolean);
 
         // AE Sessions (WorkLogs for users with AE in designation)
         const aeWorkLogs = workLogs.filter(wl => wl.user.designation && wl.user.designation.toUpperCase().includes('AE'));
@@ -142,25 +144,19 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
                     </table>
                 </div>
 
-                <div style="margin-bottom: 20px;">
-                    <div style="background-color: #e3fcef; padding: 15px; border-radius: 10px; border: 1px solid #c3e6cb; margin-bottom: 10px;">
-                        <h4 style="margin-top: 0; color: #155724; font-size: 14px;">Present Today (${presentStaff.length})</h4>
-                        <p style="font-size: 11px; color: #155724; margin-bottom: 0;">${presentStaff.map(s => s.name).join(', ') || 'None'}</p>
-                    </div>
-                
-                    <div style="background-color: #fff5f5; padding: 15px; border-radius: 10px; border: 1px solid #feb2b2;">
-                        <h4 style="margin-top: 0; color: #c53030; font-size: 14px;">Absent Today (${absentStaff.length})</h4>
-                        <p style="font-size: 11px; color: #c53030; margin-bottom: 0;">${absentStaff.map(s => s.name).join(', ') || 'None'}</p>
-                    </div>
-                </div>
-
                 <div style="background-color: #fff9db; padding: 20px; border-radius: 10px; border: 1px solid #ffe066;">
                     <h3 style="margin-top: 0; color: #f08c00;">Operational Insights</h3>
                     <ul style="padding-left: 20px; margin: 0;">
                         <li><strong>AE Sessions Completed:</strong> ${aeSessions}</li>
                         <li><strong>WorkLogs Submitted:</strong> ${workLogs.length}</li>
-                        <li><strong>Mobile Logins (Office Staff):</strong> ${mobileLogins}</li>
-                        <li style="color: #e03131;"><strong>Improper Logouts (Missing Checkout):</strong> ${improperLogouts}</li>
+                        <li>
+                            <strong>Mobile Logins (Office Staff):</strong> ${mobileLoginNames.length}
+                            ${mobileLoginNames.length > 0 ? `<br/><span style="font-size: 10px; color: #666;">(${mobileLoginNames.join(', ')})</span>` : ''}
+                        </li>
+                        <li style="color: #e03131;">
+                            <strong>Improper Logouts (Missing Checkout):</strong> ${improperLogoutNames.length}
+                            ${improperLogoutNames.length > 0 ? `<br/><span style="font-size: 10px; color: #666;">(${improperLogoutNames.join(', ')})</span>` : ''}
+                        </li>
                     </ul>
                 </div>
 
