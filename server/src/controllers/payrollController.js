@@ -37,7 +37,8 @@ const generatePayrollReport = async (req, res) => {
         // 2. Bulk fetch all data for the group
         const [allAttendance, allBioLogs, allLeaves, allPermissions] = await Promise.all([
             prisma.attendance.findMany({
-                where: { userId: { in: userIds }, date: { gte: startDate, lte: endDate } }
+                where: { userId: { in: userIds }, date: { gte: startDate, lte: endDate } },
+                include: { breaks: true }
             }),
             prisma.biometricLog.findMany({
                 where: { userId: { in: userIds }, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
@@ -50,12 +51,21 @@ const generatePayrollReport = async (req, res) => {
             })
         ]);
 
+        // Helper: Format minutes into HH:MM
+        const formatHHMM = (totalMinutes) => {
+            if (!totalMinutes || totalMinutes <= 0) return "00:00";
+            const h = Math.floor(totalMinutes / 60);
+            const m = Math.round(totalMinutes % 60);
+            return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        };
+
         // 3. Prepare Aggregation Maps
         const attendanceMap = new Map();
         const bioMap = new Map();
         const leaveHalfMap = new Map();
         const leaveFullMap = new Map();
         const permissionMap = new Map();
+        const actualMinsMap = new Map();
 
         userIds.forEach(id => {
             attendanceMap.set(id, 0);
@@ -63,10 +73,31 @@ const generatePayrollReport = async (req, res) => {
             leaveHalfMap.set(id, 0);
             leaveFullMap.set(id, 0);
             permissionMap.set(id, 0);
+            actualMinsMap.set(id, 0);
         });
 
         // Populate Maps
-        allAttendance.forEach(a => attendanceMap.set(a.userId, (attendanceMap.get(a.userId) || 0) + 1));
+        allAttendance.forEach(a => {
+            attendanceMap.set(a.userId, (attendanceMap.get(a.userId) || 0) + 1);
+            
+            // Calculate Net Work Minutes for this session
+            if (a.checkoutTime) {
+                const clockIn = new Date(a.date);
+                const clockOut = new Date(a.checkoutTime);
+                const grossMinutes = (clockOut - clockIn) / (1000 * 60);
+                
+                let breakMinutes = 0;
+                if (a.breaks) {
+                    a.breaks.forEach(b => {
+                        if (['TEA', 'LUNCH'].includes(b.breakType)) {
+                            breakMinutes += (b.duration || 0);
+                        }
+                    });
+                }
+                const netMinutes = Math.max(0, grossMinutes - breakMinutes);
+                actualMinsMap.set(a.userId, (actualMinsMap.get(a.userId) || 0) + netMinutes);
+            }
+        });
         
         allBioLogs.forEach(log => {
             const norm = normalizeBiometricDate(log.punchTime, targetYear);
@@ -95,6 +126,8 @@ const generatePayrollReport = async (req, res) => {
             { header: 'Email', key: 'email', width: 25 },
             { header: 'Working Days (PD)', key: 'workingDaysPD', width: 18 },
             { header: 'Working Days (Biometric)', key: 'workingDaysBio', width: 18 },
+            { header: 'Actual Working Hours', key: 'actualHours', width: 22 },
+            { header: 'Expected Working Hours (PD)', key: 'expectedHours', width: 25 },
             { header: 'Total Permissions', key: 'permissions', width: 18 },
             { header: 'Total Half Day Leaves', key: 'leavesHalf', width: 18 },
             { header: 'Total Full Day Leaves', key: 'leavesFull', width: 18 }
@@ -104,11 +137,16 @@ const generatePayrollReport = async (req, res) => {
         sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
 
         users.forEach(user => {
+            const presentDays = attendanceMap.get(user.id) || 0;
+            const expectedMinutes = presentDays * 520; // 8h 40m = 520 mins
+            
             sheet.addRow({
                 name: user.name,
                 email: user.email,
-                workingDaysPD: attendanceMap.get(user.id) || 0,
+                workingDaysPD: presentDays,
                 workingDaysBio: bioMap.get(user.id)?.size || 0,
+                actualHours: formatHHMM(actualMinsMap.get(user.id)),
+                expectedHours: formatHHMM(expectedMinutes),
                 permissions: permissionMap.get(user.id) || 0,
                 leavesHalf: leaveHalfMap.get(user.id) || 0,
                 leavesFull: leaveFullMap.get(user.id) || 0
