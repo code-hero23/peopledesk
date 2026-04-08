@@ -22,14 +22,14 @@ const storage = multer.diskStorage({
 
 // Check file type
 function checkFileType(file, cb) {
-    const filetypes = /jpeg|jpg|png|gif|webp|pdf/;
+    const filetypes = /jpeg|jpg|png|gif|webp|pdf|heic|heif/;
     const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
     const mimetype = filetypes.test(file.mimetype);
 
-    if (mimetype && extname) {
+    if (mimetype || extname) {
         return cb(null, true);
     } else {
-        cb(new Error('Error: Images or PDFs Only!'));
+        cb(new Error('Error: Images, PDFs, or HEIC Only!'));
     }
 }
 
