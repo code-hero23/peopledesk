@@ -16,6 +16,7 @@ const generatePayrollReport = async (req, res) => {
         const m = parseInt(month);
         const y = parseInt(year);
 
+        // Cycle: 26th of (m-1) to 25th of m
         const startDate = new Date(y, m - 2, 26, 0, 0, 0);
         const endDate = new Date(y, m - 1, 25, 23, 59, 59);
         const targetYear = y;
@@ -25,111 +26,106 @@ const generatePayrollReport = async (req, res) => {
             userWhere.designation = 'AE';
         }
 
+        // 1. Fetch all relevant users
         const users = await prisma.user.findMany({
             where: userWhere,
-            select: { id: true, name: true, email: true, designation: true, allocatedSalary: true }
+            select: { id: true, name: true, email: true, designation: true }
         });
 
+        const userIds = users.map(u => u.id);
+
+        // 2. Bulk fetch all data for the group
+        const [allAttendance, allBioLogs, allLeaves, allPermissions] = await Promise.all([
+            prisma.attendance.findMany({
+                where: { userId: { in: userIds }, date: { gte: startDate, lte: endDate } }
+            }),
+            prisma.biometricLog.findMany({
+                where: { userId: { in: userIds }, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
+            }),
+            prisma.leaveRequest.findMany({
+                where: { userId: { in: userIds }, startDate: { lte: endDate }, endDate: { gte: startDate } }
+            }),
+            prisma.permissionRequest.findMany({
+                where: { userId: { in: userIds }, date: { gte: startDate, lte: endDate } }
+            })
+        ]);
+
+        // 3. Prepare Aggregation Maps
+        const attendanceMap = new Map();
+        const bioMap = new Map();
+        const leaveHalfMap = new Map();
+        const leaveFullMap = new Map();
+        const permissionMap = new Map();
+
+        userIds.forEach(id => {
+            attendanceMap.set(id, 0);
+            bioMap.set(id, new Set());
+            leaveHalfMap.set(id, 0);
+            leaveFullMap.set(id, 0);
+            permissionMap.set(id, 0);
+        });
+
+        // Populate Maps
+        allAttendance.forEach(a => attendanceMap.set(a.userId, (attendanceMap.get(a.userId) || 0) + 1));
+        
+        allBioLogs.forEach(log => {
+            const norm = normalizeBiometricDate(log.punchTime, targetYear);
+            if (norm >= startDate && norm <= endDate) {
+                const dateStr = norm.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' });
+                bioMap.get(log.userId)?.add(dateStr);
+            }
+        });
+
+        allPermissions.forEach(p => permissionMap.set(p.userId, (permissionMap.get(p.userId) || 0) + 1));
+        
+        allLeaves.forEach(l => {
+            if (l.type === 'HALF_DAY') {
+                leaveHalfMap.set(l.userId, (leaveHalfMap.get(l.userId) || 0) + 1);
+            } else {
+                leaveFullMap.set(l.userId, (leaveFullMap.get(l.userId) || 0) + 1);
+            }
+        });
+
+        // 4. Generate Excel
         const workbook = new excelJS.Workbook();
         const sheet = workbook.addWorksheet('Payroll Summary');
 
         sheet.columns = [
             { header: 'Employee Name', key: 'name', width: 25 },
-            { header: 'Mail ID', key: 'email', width: 25 },
+            { header: 'Email', key: 'email', width: 25 },
             { header: 'Working Days (PD)', key: 'workingDaysPD', width: 18 },
-            { header: 'Working Days (Bio)', key: 'workingDaysBio', width: 18 },
-            { header: 'Absent Days (PD)', key: 'absentDaysPD', width: 18 },
-            { header: 'Absent Days (Bio)', key: 'absentDaysBio', width: 18 },
-            { header: 'No of Permission', key: 'permissions', width: 18 },
-            { header: 'Total Permission', key: 'totalPermissions', width: 18 },
-            { header: 'No of Leaves (Full)', key: 'leavesFull', width: 18 },
-            { header: 'Total Leaves (Full)', key: 'totalLeavesFull', width: 18 },
-            { header: 'No of Leaves (Half)', key: 'leavesHalf', width: 18 },
-            { header: 'Total Leaves (Half)', key: 'totalLeavesHalf', width: 18 },
-            { header: 'Efficiency Score (%)', key: 'efficiency', width: 18 }
+            { header: 'Working Days (Biometric)', key: 'workingDaysBio', width: 18 },
+            { header: 'Total Permissions', key: 'permissions', width: 18 },
+            { header: 'Total Half Day Leaves', key: 'leavesHalf', width: 18 },
+            { header: 'Total Full Day Leaves', key: 'leavesFull', width: 18 }
         ];
 
         sheet.getRow(1).font = { bold: true };
         sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
 
-        const totalDaysInPeriod = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
-
-        for (const user of users) {
-            const [attendance, biometricLogs, leaves, permissions] = await Promise.all([
-                prisma.attendance.findMany({
-                    where: { userId: user.id, date: { gte: startDate, lte: endDate } },
-                    include: { breaks: true }
-                }),
-                prisma.biometricLog.findMany({
-                    where: { userId: user.id, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
-                }),
-                prisma.leaveRequest.findMany({
-                    where: { userId: user.id, startDate: { lte: endDate }, endDate: { gte: startDate } }
-                }),
-                prisma.permissionRequest.findMany({
-                    where: { userId: user.id, date: { gte: startDate, lte: endDate } }
-                })
-            ]);
-
-            // 1. PeopleDesk Days
-            const workingDaysPD = attendance.length;
-            const absentDaysPD = Math.max(0, totalDaysInPeriod - workingDaysPD);
-
-            // 2. Biometric Days (Normalized)
-            const bioDays = new Set();
-            biometricLogs.forEach(log => {
-                const norm = normalizeBiometricDate(log.punchTime, targetYear);
-                if (norm >= startDate && norm <= endDate) {
-                    bioDays.add(norm.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' }));
-                }
-            });
-            const workingDaysBio = bioDays.size;
-            const absentDaysBio = Math.max(0, totalDaysInPeriod - workingDaysBio);
-
-            // 3. Leaves & Permissions
-            const leavesFullArr = leaves.filter(l => l.type !== 'HALF_DAY');
-            const leavesHalfArr = leaves.filter(l => l.type === 'HALF_DAY');
-            
-            const fullAppr = leavesFullArr.filter(l => l.status === 'APPROVED').length;
-            const fullPend = leavesFullArr.filter(l => l.status === 'PENDING').length;
-            
-            const halfAppr = leavesHalfArr.filter(l => l.status === 'APPROVED').length;
-            const halfPend = leavesHalfArr.filter(l => l.status === 'PENDING').length;
-
-            const permissionAppr = permissions.filter(p => p.status === 'APPROVED').length;
-            const permissionPend = permissions.filter(p => p.status === 'PENDING').length;
-
-            // 4. Efficiency Score
-            let totalNetMinutes = 0;
-            attendance.forEach(record => {
-                if (record.checkoutTime && record.date) {
-                    const gross = (new Date(record.checkoutTime) - new Date(record.date)) / (1000 * 60);
-                    let breakMins = 0;
-                    record.breaks.forEach(b => {
-                        if (['TEA', 'LUNCH'].includes(b.breakType)) breakMins += (b.duration || 0);
-                    });
-                    totalNetMinutes += Math.max(0, gross - breakMins);
-                }
-            });
-            const expectedMinutes = workingDaysPD * 520; // 8h 40m = 520 mins
-            const efficiency = expectedMinutes > 0 ? Math.round((totalNetMinutes / expectedMinutes) * 100) : 0;
-
+        users.forEach(user => {
             sheet.addRow({
                 name: user.name,
                 email: user.email,
-                workingDaysPD,
-                workingDaysBio,
-                absentDaysPD,
-                absentDaysBio,
-                permissions: `Appr: ${permissionAppr} | Pend: ${permissionPend}`,
-                totalPermissions: permissionAppr + permissionPend,
-                leavesFull: `Appr: ${fullAppr} | Pend: ${fullPend}`,
-                totalLeavesFull: fullAppr + fullPend,
-                leavesHalf: `Appr: ${halfAppr} | Pend: ${halfPend}`,
-                totalLeavesHalf: halfAppr + halfPend,
-                efficiency: `${efficiency}%`
+                workingDaysPD: attendanceMap.get(user.id) || 0,
+                workingDaysBio: bioMap.get(user.id)?.size || 0,
+                permissions: permissionMap.get(user.id) || 0,
+                leavesHalf: leaveHalfMap.get(user.id) || 0,
+                leavesFull: leaveFullMap.get(user.id) || 0
             });
-        }
+        });
+
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename=Payroll_Summary_${month}_${year}.xlsx`);
+
+        await workbook.xlsx.write(res);
+        res.end();
+
+    } catch (error) {
+        console.error('Payroll Report Error:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=Payroll_Summary_${month}_${year}.xlsx`);
