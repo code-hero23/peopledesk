@@ -157,9 +157,96 @@ const getMyPerformance = async (req, res) => {
     }
 };
 
+// @desc    Bulk import performance scores
+// @route   POST /api/performance/import
+// @access  Private (Admin, HR)
+const importPerformanceScores = async (req, res) => {
+    const { scores } = req.body; // Expecting an array of score objects
+
+    if (!scores || !Array.isArray(scores)) {
+        return res.status(400).json({ message: 'Invalid data format. Expected an array of scores.' });
+    }
+
+    try {
+        const results = {
+            success: 0,
+            failed: 0,
+            errors: []
+        };
+
+        for (const data of scores) {
+            const { email, month, year, efficiency, consistency, quality, system, behaviour, remarks } = data;
+
+            try {
+                if (!email || !month || !year) {
+                    throw new Error(`Missing required fields for entry: ${email || 'unknown'}`);
+                }
+
+                // Find user by email
+                const targetUser = await prisma.user.findUnique({
+                    where: { email }
+                });
+
+                if (!targetUser) {
+                    throw new Error(`User not found for email: ${email}`);
+                }
+
+                const totalScore = (parseFloat(efficiency) || 0) + (parseFloat(consistency) || 0) + (parseFloat(quality) || 0) + (parseFloat(system) || 0) + (parseFloat(behaviour) || 0);
+
+                await prisma.performanceScore.upsert({
+                    where: {
+                        userId_month_year: {
+                            userId: targetUser.id,
+                            month: parseInt(month),
+                            year: parseInt(year)
+                        }
+                    },
+                    update: {
+                        efficiency: parseFloat(efficiency) || 0,
+                        consistency: parseFloat(consistency) || 0,
+                        quality: parseFloat(quality) || 0,
+                        system: parseFloat(system) || 0,
+                        behaviour: parseFloat(behaviour) || 0,
+                        totalScore,
+                        remarks,
+                        updatedById: req.user.id
+                    },
+                    create: {
+                        userId: targetUser.id,
+                        month: parseInt(month),
+                        year: parseInt(year),
+                        efficiency: parseFloat(efficiency) || 0,
+                        consistency: parseFloat(consistency) || 0,
+                        quality: parseFloat(quality) || 0,
+                        system: parseFloat(system) || 0,
+                        behaviour: parseFloat(behaviour) || 0,
+                        totalScore,
+                        remarks,
+                        updatedById: req.user.id
+                    }
+                });
+
+                results.success++;
+            } catch (err) {
+                results.failed++;
+                results.errors.push(err.message);
+            }
+        }
+
+        res.json({
+            message: `Import completed. Success: ${results.success}, Failed: ${results.failed}`,
+            ...results
+        });
+    } catch (error) {
+        console.error('Error importing performance scores:', error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     setEmployeeScore,
     calculateAutomatedMetrics,
     getPerformanceHistory,
-    getMyPerformance
+    getMyPerformance,
+    importPerformanceScores
 };

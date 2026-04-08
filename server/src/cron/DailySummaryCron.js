@@ -142,6 +142,18 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
                     </table>
                 </div>
 
+                <div style="margin-bottom: 20px;">
+                    <div style="background-color: #e3fcef; padding: 15px; border-radius: 10px; border: 1px solid #c3e6cb; margin-bottom: 10px;">
+                        <h4 style="margin-top: 0; color: #155724; font-size: 14px;">Present Today (${presentStaff.length})</h4>
+                        <p style="font-size: 11px; color: #155724; margin-bottom: 0;">${presentStaff.map(s => s.name).join(', ') || 'None'}</p>
+                    </div>
+                
+                    <div style="background-color: #fff5f5; padding: 15px; border-radius: 10px; border: 1px solid #feb2b2;">
+                        <h4 style="margin-top: 0; color: #c53030; font-size: 14px;">Absent Today (${absentStaff.length})</h4>
+                        <p style="font-size: 11px; color: #c53030; margin-bottom: 0;">${absentStaff.map(s => s.name).join(', ') || 'None'}</p>
+                    </div>
+                </div>
+
                 <div style="background-color: #fff9db; padding: 20px; border-radius: 10px; border: 1px solid #ffe066;">
                     <h3 style="margin-top: 0; color: #f08c00;">Operational Insights</h3>
                     <ul style="padding-left: 20px; margin: 0;">

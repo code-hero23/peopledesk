@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
-import { User, Award, History, Save, X, Search, ChevronRight, BarChart3, Zap, RefreshCw } from 'lucide-react';
+import { User, Award, History, Save, X, Search, ChevronRight, BarChart3, Zap, RefreshCw, Upload, FileDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
 
@@ -100,6 +100,62 @@ const PerformanceManagement = () => {
         });
     };
 
+    const handleImportCSV = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = async (event) => {
+            try {
+                const text = event.target.result;
+                const rows = text.split('\n').filter(row => row.trim() !== '');
+                if (rows.length < 2) {
+                    toast.error("CSV file is empty or missing data rows");
+                    return;
+                }
+
+                const headers = rows[0].split(',').map(h => h.trim().toLowerCase());
+                const dataRows = rows.slice(1);
+
+                const scores = dataRows.map(row => {
+                    const values = row.split(',').map(v => v.trim());
+                    const obj = {};
+                    headers.forEach((h, i) => {
+                        obj[h] = values[i];
+                    });
+                    return obj;
+                });
+
+                setIsLoading(true);
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const response = await axios.post(`${baseUrl}/performance/import`, { scores }, {
+                    headers: { Authorization: `Bearer ${user.token}` }
+                });
+                toast.success(response.data.message);
+                fetchEmployees();
+            } catch (error) {
+                toast.error(error.response?.data?.message || "Import failed");
+            } finally {
+                setIsLoading(false);
+                e.target.value = ''; // Reset input
+            }
+        };
+        reader.readAsText(file);
+    };
+
+    const downloadTemplate = () => {
+        const headers = "Email, Month, Year, Efficiency, Consistency, Quality, System, Behaviour, Remarks";
+        const sample = "employee@example.com, 4, 2026, 18, 25, 15, 10, 12, Excellent work";
+        const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + sample;
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", "performance_template.csv");
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
+
     const handleSaveScore = async () => {
         try {
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
@@ -141,15 +197,33 @@ const PerformanceManagement = () => {
                     </h2>
                     <p className="text-slate-500 text-sm">Evaluate employee performance based on weighted categories.</p>
                 </div>
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
-                    <input 
-                        type="text"
-                        placeholder="Search employees..."
-                        className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
+                <div className="flex items-center gap-3">
+                    <button 
+                        onClick={downloadTemplate}
+                        className="flex items-center gap-2 text-slate-500 hover:text-primary transition-colors text-xs font-bold"
+                    >
+                        <FileDown size={14} /> Template
+                    </button>
+                    <label className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 px-4 py-2 rounded-xl cursor-pointer transition-all text-sm font-bold border border-slate-200 dark:border-slate-700">
+                        <Upload size={16} className="text-primary" />
+                        <span>Import CSV</span>
+                        <input 
+                            type="file" 
+                            accept=".csv" 
+                            onChange={handleImportCSV} 
+                            className="hidden" 
+                        />
+                    </label>
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+                        <input 
+                            type="text"
+                            placeholder="Search employees..."
+                            className="pl-10 pr-4 py-2 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl focus:outline-none focus:ring-2 focus:ring-primary text-sm w-48 lg:w-64"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
                 </div>
             </div>
 
