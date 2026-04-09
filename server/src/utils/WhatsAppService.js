@@ -138,6 +138,13 @@ class WhatsAppService {
      * Send Late Login Alert
      */
     async sendLateLoginAlert(to, userName, consecutiveDays) {
+        // Bypassing latelogin module for today (April 9, 2026) as per user request
+        const today = new Date().toLocaleDateString('en-CA');
+        if (today === '2026-04-09') {
+            console.log(`WhatsApp - Skipping late_login_alert for ${userName} (Disabled for today)`);
+            return { success: true, message: 'Alerts disabled for today' };
+        }
+
         // Template: late_login_alert
         // Params: {{1}} = Name, {{2}} = Days
         return this.sendTemplateMessage(to, 'late_login_alert', [userName, consecutiveDays], [], 'en');
