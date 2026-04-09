@@ -136,6 +136,7 @@ const SalarySettings = () => {
 
     const isShortageEnabled = settings.isGlobalShortageDeductionEnabled !== 'false';
     const isDashboardEnabled = settings.isSalaryDashboardEnabled !== 'false';
+    const isLateEnforced = settings.isLateCheckInEnforced !== 'false';
     const calculationMode = settings.payrollCalculationMode || 'AUTO';
 
     const months = [
@@ -429,6 +430,27 @@ const SalarySettings = () => {
                                                 disabled={saving}
                                             />
                                             <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-indigo-600 shadow-sm"></div>
+                                        </label>
+                                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-3 bg-rose-100 rounded-2xl text-rose-600">
+                                                <AlertCircle size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-slate-800 mb-1">Late Check-In Enforcement</h4>
+                                                <p className="text-[11px] text-slate-500 font-bold max-w-sm leading-tight">Force employees to apply for permission if they check in after 10:30 AM.</p>
+                                            </div>
+                                        </div>
+
+                                        <label className="relative inline-flex items-center cursor-pointer ml-4">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={isLateEnforced}
+                                                onChange={(e) => updateSetting('isLateCheckInEnforced', e.target.checked)}
+                                                disabled={saving}
+                                            />
+                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-rose-600 shadow-sm"></div>
                                         </label>
                                     </div>
 

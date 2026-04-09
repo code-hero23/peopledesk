@@ -457,9 +457,8 @@ const Overview = () => {
     const checkLatenessAndRedirect = useCallback((checkInTimeRaw, isAuto = false) => {
         if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') return;
 
-        // Bypassing latelogin enforcement for today (April 9, 2026) as per user request
-        const todayStr = new Date().toLocaleDateString('en-CA');
-        if (todayStr === '2026-04-09') return;
+        // Dynamic bypass based on Admin Settings
+        if (requests?.isLateCheckInEnforced === false) return;
 
         const checkInTime = new Date(checkInTimeRaw);
         const hours = checkInTime.getHours();

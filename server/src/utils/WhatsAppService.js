@@ -138,11 +138,19 @@ class WhatsAppService {
      * Send Late Login Alert
      */
     async sendLateLoginAlert(to, userName, consecutiveDays) {
-        // Bypassing latelogin module for today (April 9, 2026) as per user request
-        const today = new Date().toLocaleDateString('en-CA');
-        if (today === '2026-04-09') {
-            console.log(`WhatsApp - Skipping late_login_alert for ${userName} (Disabled for today)`);
-            return { success: true, message: 'Alerts disabled for today' };
+        // Check if late enforcement is globally enabled
+        try {
+            const { PrismaClient } = require('@prisma/client');
+            const prisma = new PrismaClient();
+            const setting = await prisma.globalSetting.findUnique({
+                where: { key: 'isLateCheckInEnforced' }
+            });
+            if (setting && setting.value === 'false') {
+                console.log(`WhatsApp - Skipping late_login_alert for ${userName} (Disabled in settings)`);
+                return { success: true, message: 'Alerts disabled in settings' };
+            }
+        } catch (err) {
+            console.error('Error checking Late Login setting in WhatsAppService:', err.message);
         }
 
         // Template: late_login_alert

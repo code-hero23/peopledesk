@@ -487,6 +487,11 @@ const getMyRequests = async (req, res) => {
             permissionDays: permissions.filter(p => p.status === 'APPROVED').length
         };
 
+        const lateEnforcementSetting = await prisma.globalSetting.findUnique({
+            where: { key: 'isLateCheckInEnforced' }
+        });
+        const isLateCheckInEnforced = lateEnforcementSetting ? lateEnforcementSetting.value === 'true' : true;
+
         res.json({
             leaves,
             permissions,
@@ -495,7 +500,8 @@ const getMyRequests = async (req, res) => {
             wfh,
             attendanceHistory,
             cycleData,
-            stats
+            stats,
+            isLateCheckInEnforced
         });
     } catch (error) {
         console.error('ERROR IN getMyRequests:', error);
