@@ -641,6 +641,11 @@ const VoucherManagement = () => {
                                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{voucher.user.designation}</p>
                                                 <div className="w-1 h-1 bg-slate-300 rounded-full" />
                                                 <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{voucher.type}</p>
+                                                <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
+                                                    {new Date(voucher.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
+                                                </p>
+
                                             </div>
                                         </div>
                                     </div>
@@ -786,9 +791,13 @@ const VoucherManagement = () => {
                                 <tbody className="divide-y divide-slate-50">
                                     {filteredHistory.map((item) => (
                                         <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
-                                            <td className="px-8 py-5 text-xs font-bold text-slate-400">
-                                                {new Date(item.updatedAt).toLocaleDateString()}
+                                            <td className="px-8 py-5">
+                                                <div className="flex flex-col">
+                                                    <p className="text-xs font-black text-slate-800">{new Date(item.date).toLocaleDateString()}</p>
+                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Approved: {new Date(item.updatedAt).toLocaleDateString()}</p>
+                                                </div>
                                             </td>
+
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
@@ -1106,16 +1115,21 @@ const VoucherManagement = () => {
                                 <div className="space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-100 relative overflow-hidden">
                                     <DollarSign size={80} className="absolute -right-4 -bottom-4 text-slate-100 -rotate-12" />
                                     <div className="relative z-10 space-y-6">
-                                        <div className="grid grid-cols-2 gap-8">
+                                        <div className="grid grid-cols-3 gap-8">
                                             <div className="space-y-1">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Requested By</p>
                                                 <p className="font-black text-slate-800">{selectedVoucher.user.name}</p>
+                                            </div>
+                                            <div className="space-y-1 text-center">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Exp. Date</p>
+                                                <p className="font-black text-slate-800">{new Date(selectedVoucher.date).toLocaleDateString(undefined, { dateStyle: 'long' })}</p>
                                             </div>
                                             <div className="space-y-1 text-right">
                                                 <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Proposed Amount</p>
                                                 <p className="text-2xl font-black text-blue-600">₹{selectedVoucher.amount.toLocaleString()}</p>
                                             </div>
                                         </div>
+
                                         <div className="space-y-1">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Purpose of Expense</p>
                                             <p className="text-sm text-slate-600 font-bold leading-relaxed">{selectedVoucher.purpose}</p>
@@ -1414,20 +1428,25 @@ const VoucherManagement = () => {
                                 </button>
                             </div>
 
-                            <div className="grid grid-cols-2 gap-6">
+                            <div className="grid grid-cols-3 gap-6">
                                 <div className="space-y-3">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Request Type</label>
-                                    <select className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm cursor-pointer" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
-                                        <option value="PREPAID">Voucher (Company Pays First)</option>
-                                        <option value="POSTPAID">Bill (Company Pays After)</option>
-                                        <option value="ADVANCE">Advance (Cash)</option>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
+                                    <select className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-xs cursor-pointer" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
+                                        <option value="PREPAID">Prepaid</option>
+                                        <option value="POSTPAID">Bill</option>
+                                        <option value="ADVANCE">Advance</option>
                                     </select>
                                 </div>
                                 <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Spending Date</label>
+                                    <input type="date" required className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-black text-xs" value={raiseData.date} onChange={(e) => setRaiseData({ ...raiseData, date: e.target.value })} />
+                                </div>
+                                <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Amount</label>
-                                    <input type="number" required placeholder="₹ 0.00" className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-black text-sm" value={raiseData.amount} onChange={(e) => setRaiseData({ ...raiseData, amount: e.target.value })} />
+                                    <input type="number" required placeholder="₹ 0.00" className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-black text-xs" value={raiseData.amount} onChange={(e) => setRaiseData({ ...raiseData, amount: e.target.value })} />
                                 </div>
                             </div>
+
 
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Purpose / Reason</label>
