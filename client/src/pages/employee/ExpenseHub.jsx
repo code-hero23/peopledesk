@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyVouchers, createVoucher, uploadVoucherProof, reset } from '../../features/voucher/voucherSlice';
+import { compressImage } from '../../utils/imageUtils';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Plus, 
@@ -72,7 +73,7 @@ const ExpenseHub = () => {
         }
     }, [isError, isSuccess, message]);
 
-    const onSubmit = (e) => {
+    const onSubmit = async (e) => {
         e.preventDefault();
         
         if (!formData.amount || parseFloat(formData.amount) <= 0) {
@@ -92,18 +93,30 @@ const ExpenseHub = () => {
         data.append('purpose', formData.purpose);
         data.append('date', formData.date);
         if (formData.proofFile) {
-            data.append('proof', formData.proofFile);
+            try {
+                const compressed = await compressImage(formData.proofFile);
+                data.append('proof', compressed);
+            } catch (err) {
+                console.error('Compression error:', err);
+                data.append('proof', formData.proofFile); // Fallback to original
+            }
         }
 
         dispatch(createVoucher(data));
     };
 
-    const onProofSubmit = (e) => {
+    const onProofSubmit = async (e) => {
         e.preventDefault();
         if (!proofFile) return toast.error('Please select a proof file');
         
         const data = new FormData();
-        data.append('proof', proofFile);
+        try {
+            const compressed = await compressImage(proofFile);
+            data.append('proof', compressed);
+        } catch (err) {
+            console.error('Compression error:', err);
+            data.append('proof', proofFile); // Fallback to original
+        }
         
         dispatch(uploadVoucherProof({ id: selectedVoucher.id, formData: data }));
     };

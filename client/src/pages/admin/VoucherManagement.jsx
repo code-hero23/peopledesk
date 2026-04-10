@@ -15,6 +15,7 @@ import {
     deleteVoucher,
     reset 
 } from '../../features/voucher/voucherSlice';
+import { compressImage } from '../../utils/imageUtils';
 import {
     getCarpenterRecords,
     createCarpenterRecord,
@@ -349,7 +350,13 @@ const VoucherManagement = () => {
             data.append('purpose', raiseData.purpose);
             data.append('date', raiseData.date);
             if (raiseData.proofFile) {
-                data.append('proof', raiseData.proofFile);
+                try {
+                    const compressed = await compressImage(raiseData.proofFile);
+                    data.append('proof', compressed);
+                } catch (err) {
+                    console.error('Compression error:', err);
+                    data.append('proof', raiseData.proofFile); // Fallback
+                }
             }
 
             await dispatch(createVoucher(data)).unwrap();
