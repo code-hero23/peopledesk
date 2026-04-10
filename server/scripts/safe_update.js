@@ -126,6 +126,37 @@ async function main() {
     console.error('Error adding PerformanceScore table:', err.message);
   }
 
+  // Adding new VoucherType enum values
+  try {
+    console.log('Expanding "VoucherType" enum...');
+    const newTypes = [
+      'COMPANY_PAYS_FIRST',
+      'COMPANY_PAY_AFTER',
+      'CLIENT_REFUND',
+      'VENDOR_PAYMENT',
+      'BH_VOUCHER',
+      'OFFICE_EXPENSES',
+      'SALARY_ADVANCE',
+      'CUSTOM'
+    ];
+
+    for (const type of newTypes) {
+      try {
+        await prisma.$executeRawUnsafe(`ALTER TYPE "VoucherType" ADD VALUE '${type}'`);
+        console.log(`VoucherType "${type}" added.`);
+      } catch (err) {
+        // Error code 42710 is "duplicate_object" in Postgres for ADD VALUE
+        if (err.message.includes('already exists') || err.message.includes('42710')) {
+          console.log(`VoucherType "${type}" already exists.`);
+        } else {
+          console.error(`Error adding VoucherType "${type}":`, err.message);
+        }
+      }
+    }
+  } catch (err) {
+    console.error('Error in VoucherType expansion:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 

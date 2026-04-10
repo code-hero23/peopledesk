@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { getMyVouchers, createVoucher, uploadVoucherProof, reset } from '../../features/voucher/voucherSlice';
 import { compressImage } from '../../utils/imageUtils';
+import VoucherStatusFlow from '../../components/VoucherStatusFlow';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
     Plus, 
@@ -131,6 +132,30 @@ const ExpenseHub = () => {
         }
     };
 
+    const getTypeColor = (type) => {
+        switch (type) {
+            case 'PREPAID':
+            case 'COMPANY_PAYS_FIRST':
+                return 'bg-purple-100 text-purple-700 border-purple-200';
+            case 'POSTPAID':
+            case 'COMPANY_PAY_AFTER':
+                return 'bg-slate-100 text-slate-700 border-slate-200';
+            case 'ADVANCE':
+            case 'SALARY_ADVANCE':
+                return 'bg-amber-100 text-amber-700 border-amber-200';
+            case 'CLIENT_REFUND':
+                return 'bg-indigo-100 text-indigo-700 border-indigo-200';
+            case 'VENDOR_PAYMENT':
+                return 'bg-cyan-100 text-cyan-700 border-cyan-200';
+            case 'BH_VOUCHER':
+                return 'bg-violet-100 text-violet-700 border-violet-200';
+            case 'OFFICE_EXPENSES':
+                return 'bg-sky-100 text-sky-700 border-sky-200';
+            default:
+                return 'bg-slate-100 text-slate-700 border-slate-200';
+        }
+    };
+
     const getFullProofUrl = (url) => {
         if (!url) return '';
         if (url.startsWith('http')) return url;
@@ -246,8 +271,8 @@ const ExpenseHub = () => {
                                     <td className="px-10 py-8">
                                         <div className="flex flex-col gap-1">
                                             <div className="flex items-center gap-2">
-                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black ${['PREPAID', 'ADVANCE'].includes(voucher.type) ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'}`}>
-                                                    {voucher.type}
+                                                <span className={`px-2 py-0.5 rounded text-[9px] font-black border uppercase tracking-widest ${getTypeColor(voucher.type)}`}>
+                                                    {voucher.type.replace(/_/g, ' ')}
                                                 </span>
                                                 <p className="text-sm font-black text-slate-800 line-clamp-1 group-hover:text-blue-600 transition-colors">{voucher.purpose}</p>
                                             </div>
@@ -258,15 +283,8 @@ const ExpenseHub = () => {
                                         <p className="text-lg font-black text-slate-800 tracking-tighter">₹{voucher.amount.toLocaleString()}</p>
                                     </td>
                                     <td className="px-10 py-8">
-                                        <div className="flex flex-col gap-2">
-                                            <span className={`inline-flex px-4 py-1.5 rounded-full text-[10px] font-black border uppercase tracking-widest w-fit shadow-sm ${getStatusColor(voucher.status)}`}>
-                                                {voucher.status}
-                                            </span>
-                                             {voucher.status === 'WAITING' && ['PREPAID', 'ADVANCE'].includes(voucher.type) && (
-                                                <p className="text-[9px] font-black text-blue-500 uppercase flex items-center gap-1 animate-pulse">
-                                                    <AlertCircle size={10} /> Needs Settlement Proof
-                                                </p>
-                                            )}
+                                        <div className="w-48">
+                                            <VoucherStatusFlow voucher={voucher} />
                                         </div>
                                     </td>
                                     <td className="px-10 py-8 text-right">
@@ -299,8 +317,8 @@ const ExpenseHub = () => {
                             <div className="flex justify-between items-start">
                                 <div className="space-y-1">
                                     <div className="flex items-center gap-2">
-                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black ${['PREPAID', 'ADVANCE'].includes(voucher.type) ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-700'}`}>
-                                            {voucher.type}
+                                        <span className={`px-2 py-0.5 rounded text-[8px] font-black border uppercase tracking-widest ${getTypeColor(voucher.type)}`}>
+                                            {voucher.type.replace(/_/g, ' ')}
                                         </span>
                                         <span className="text-[10px] font-black text-slate-300">#V-{voucher.id}</span>
                                     </div>
@@ -379,9 +397,17 @@ const ExpenseHub = () => {
                                             onChange={(e) => setFormData({ ...formData, type: e.target.value })}
                                             required
                                         >
-                                            <option value="PREPAID">Voucher (Company Pays First)</option>
-                                            <option value="POSTPAID">Bill (Company Pays After)</option>
-                                            <option value="ADVANCE">Advance (Cash)</option>
+                                            <option value="COMPANY_PAYS_FIRST">1. Company Pays First</option>
+                                            <option value="COMPANY_PAY_AFTER">2. Company Pay After</option>
+                                            <option value="CLIENT_REFUND">3. Client Refund</option>
+                                            <option value="VENDOR_PAYMENT">4. Vendor Payment</option>
+                                            <option value="BH_VOUCHER">5. BH Vouchers</option>
+                                            <option value="OFFICE_EXPENSES">6. Office Expenses</option>
+                                            <option value="SALARY_ADVANCE">7. Salary Advance</option>
+                                            <option value="CUSTOM">8. Custom Field</option>
+                                            <option value="PREPAID" className="border-t">PREPAID (Legacy)</option>
+                                            <option value="POSTPAID">POSTPAID (Legacy)</option>
+                                            <option value="ADVANCE">ADVANCE (Legacy)</option>
                                         </select>
                                     </div>
                                     <div className="space-y-3">
@@ -406,12 +432,12 @@ const ExpenseHub = () => {
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
                                         <span>Proof / Bill Attachment</span>
-                                        {formData.type === 'POSTPAID' && <span className="text-rose-500 font-black">MANDATORY</span>}
+                                        {['POSTPAID', 'COMPANY_PAY_AFTER'].includes(formData.type) && <span className="text-rose-500 font-black">MANDATORY</span>}
                                     </label>
                                     <div className="relative group">
                                         <input
                                             type="file"
-                                            required={formData.type === 'POSTPAID'}
+                                            required={['POSTPAID', 'COMPANY_PAY_AFTER'].includes(formData.type)}
                                             accept="image/*,.pdf"
                                             className="hidden"
                                             id="voucher-proof"
@@ -516,12 +542,19 @@ const ExpenseHub = () => {
                                 </div>
 
                                 <div className="bg-slate-50 p-5 md:p-8 rounded-2xl md:rounded-[2.5rem] space-y-6 border border-slate-100">
-                                    <div className="grid grid-cols-2 gap-4 md:gap-8">
+                                    <VoucherStatusFlow voucher={selectedVoucher} />
+                                    
+                                    <div className="grid grid-cols-2 gap-4 md:gap-8 pt-4">
                                         <div className="space-y-1">
-                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status</p>
-                                            <span className={`inline-flex px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border ${getStatusColor(selectedVoucher.status)}`}>
-                                                {selectedVoucher.status}
-                                            </span>
+                                            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Status / Type</p>
+                                            <div className="flex flex-col gap-2">
+                                                <span className={`inline-flex px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border w-fit ${getStatusColor(selectedVoucher.status)}`}>
+                                                    {selectedVoucher.status}
+                                                </span>
+                                                <span className={`inline-flex px-3 py-1 rounded-full text-[8px] md:text-[9px] font-black uppercase tracking-widest border w-fit ${getTypeColor(selectedVoucher.type)}`}>
+                                                    {selectedVoucher.type.replace(/_/g, ' ')}
+                                                </span>
+                                            </div>
                                         </div>
                                         <div className="space-y-1 text-right">
                                             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Amount</p>

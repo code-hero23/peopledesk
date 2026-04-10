@@ -16,6 +16,7 @@ import {
     reset 
 } from '../../features/voucher/voucherSlice';
 import { compressImage } from '../../utils/imageUtils';
+import VoucherStatusFlow from '../../components/VoucherStatusFlow';
 import {
     getCarpenterRecords,
     createCarpenterRecord,
@@ -647,7 +648,7 @@ const VoucherManagement = () => {
                                             <div className="flex items-center gap-2">
                                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{voucher.user.designation}</p>
                                                 <div className="w-1 h-1 bg-slate-300 rounded-full" />
-                                                <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{voucher.type}</p>
+                                                <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{voucher.type.replace(/_/g, ' ')}</p>
                                                 <div className="w-1 h-1 bg-slate-300 rounded-full" />
                                                 <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">
                                                     {new Date(voucher.date).toLocaleDateString(undefined, { day: 'numeric', month: 'short' })}
@@ -658,8 +659,11 @@ const VoucherManagement = () => {
                                     </div>
 
                                     <div className="flex-1 w-full text-center lg:text-left border-y lg:border-y-0 lg:border-x border-slate-100 py-6 lg:py-0 lg:px-12">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Purpose of Expense</p>
-                                        <p className="text-slate-600 font-bold leading-relaxed">{voucher.purpose}</p>
+                                        <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Purpose / Workflow</p>
+                                        <p className="text-slate-600 font-bold leading-relaxed mb-4">{voucher.purpose}</p>
+                                        <div className="w-64 scale-75 origin-left">
+                                            <VoucherStatusFlow voucher={voucher} />
+                                        </div>
                                     </div>
 
                                     <div className="flex items-center justify-between lg:justify-end gap-12 w-full lg:w-1/4">
@@ -1120,7 +1124,7 @@ const VoucherManagement = () => {
                                 </div>
 
                                 <div className="space-y-4 bg-slate-50 p-8 rounded-[2rem] border border-slate-100 relative overflow-hidden">
-                                    <DollarSign size={80} className="absolute -right-4 -bottom-4 text-slate-100 -rotate-12" />
+                                    <VoucherStatusFlow voucher={selectedVoucher} />
                                     <div className="relative z-10 space-y-6">
                                         <div className="grid grid-cols-3 gap-8">
                                             <div className="space-y-1">
@@ -1438,10 +1442,22 @@ const VoucherManagement = () => {
                             <div className="grid grid-cols-3 gap-6">
                                 <div className="space-y-3">
                                     <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Type</label>
-                                    <select className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-xs cursor-pointer" value={raiseData.type} onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}>
-                                        <option value="PREPAID">Prepaid</option>
-                                        <option value="POSTPAID">Bill</option>
-                                        <option value="ADVANCE">Advance</option>
+                                    <select 
+                                        className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-xs cursor-pointer" 
+                                        value={raiseData.type} 
+                                        onChange={(e) => setRaiseData({ ...raiseData, type: e.target.value })}
+                                    >
+                                        <option value="COMPANY_PAYS_FIRST">1. Company Pays First</option>
+                                        <option value="COMPANY_PAY_AFTER">2. Company Pay After</option>
+                                        <option value="CLIENT_REFUND">3. Client Refund</option>
+                                        <option value="VENDOR_PAYMENT">4. Vendor Payment</option>
+                                        <option value="BH_VOUCHER">5. BH Vouchers</option>
+                                        <option value="OFFICE_EXPENSES">6. Office Expenses</option>
+                                        <option value="SALARY_ADVANCE">7. Salary Advance</option>
+                                        <option value="CUSTOM">8. Custom Field</option>
+                                        <option value="PREPAID">Prepaid (Legacy)</option>
+                                        <option value="POSTPAID">Bill (Legacy)</option>
+                                        <option value="ADVANCE">Advance (Legacy)</option>
                                     </select>
                                 </div>
                                 <div className="space-y-3">
@@ -1463,12 +1479,12 @@ const VoucherManagement = () => {
                             <div className="space-y-3">
                                 <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">
                                     <span>Proof / Bill Attachment</span>
-                                    {raiseData.type === 'POSTPAID' && <span className="text-rose-500 font-black">MANDATORY</span>}
+                                    {['POSTPAID', 'COMPANY_PAY_AFTER'].includes(raiseData.type) && <span className="text-rose-500 font-black">MANDATORY</span>}
                                 </label>
                                 <div className="relative group">
                                     <input 
                                         type="file" 
-                                        required={raiseData.type === 'POSTPAID'} 
+                                        required={['POSTPAID', 'COMPANY_PAY_AFTER'].includes(raiseData.type)} 
                                         accept="image/*,.pdf"
                                         className="hidden"
                                         id="am-voucher-proof"

@@ -204,7 +204,9 @@ const approveVoucherCOO = async (req, res) => {
 
         let finalStatus = voucher.status;
         if (status === 'APPROVED') {
-            finalStatus = voucher.type === 'POSTPAID' ? 'COMPLETED' : 'WAITING';
+            // Immediate completion for Postpaid types
+            const immediateTypes = ['POSTPAID', 'COMPANY_PAY_AFTER'];
+            finalStatus = immediateTypes.includes(voucher.type) ? 'COMPLETED' : 'WAITING';
         } else {
             finalStatus = 'REJECTED';
         }
