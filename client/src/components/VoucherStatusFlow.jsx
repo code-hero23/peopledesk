@@ -9,6 +9,7 @@ const VoucherStatusFlow = ({ voucher }) => {
         { id: 'SUBMITTED', label: 'Submitted', isComplete: true, isCurrent: amStatus === 'PENDING' && status !== 'REJECTED' },
         { id: 'AM_APPROVAL', label: 'AM Review', isComplete: amStatus === 'APPROVED', isCurrent: amStatus === 'PENDING' && status !== 'REJECTED' },
         { id: 'COO_APPROVAL', label: 'COO Review', isComplete: cooStatus === 'APPROVED', isCurrent: amStatus === 'APPROVED' && cooStatus === 'PENDING' && status !== 'REJECTED' },
+        { id: 'PAID', label: 'Paid', isComplete: ['COMPLETED', 'WAITING'].includes(status), isCurrent: status === 'PAID' },
         { id: 'COMPLETED', label: status === 'WAITING' ? 'Disbursed' : 'Completed', isComplete: status === 'COMPLETED', isCurrent: status === 'WAITING' }
     ];
 

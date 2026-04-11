@@ -111,7 +111,12 @@ const getManageableVouchers = async (req, res) => {
         let where = {};
 
         if (role === 'ACCOUNTS_MANAGER') {
-            where = { amStatus: 'PENDING' };
+            where = { 
+                OR: [
+                    { amStatus: 'PENDING' },
+                    { cooStatus: 'APPROVED', status: 'PAID' }
+                ]
+            };
         } else if (role === 'BUSINESS_HEAD' && (designation === 'COO' || designation === 'Chief Operational Officer')) {
             where = { amStatus: 'APPROVED', cooStatus: 'PENDING' };
         } else if (role === 'ADMIN') {
@@ -202,15 +207,6 @@ const approveVoucherCOO = async (req, res) => {
             return res.status(400).json({ message: 'Voucher not found or not yet approved by Accounts Manager' });
         }
 
-        let finalStatus = voucher.status;
-        if (status === 'APPROVED') {
-            // Immediate completion for Postpaid types
-            const immediateTypes = ['POSTPAID', 'COMPANY_PAY_AFTER'];
-            finalStatus = immediateTypes.includes(voucher.type) ? 'COMPLETED' : 'WAITING';
-        } else {
-            finalStatus = 'REJECTED';
-        }
-
         const updatedVoucher = await prisma.voucher.update({
             where: { id: parseInt(id) },
             data: {
@@ -218,28 +214,9 @@ const approveVoucherCOO = async (req, res) => {
                 cooStatus: status === 'APPROVED' ? 'APPROVED' : 'REJECTED',
                 cooRemarks: remarks || null,
                 cooApprovedAt: new Date(),
-                status: finalStatus
+                status: status === 'APPROVED' ? 'PAID' : 'REJECTED'
             }
         });
-
-        // Deduct from Finance for both COMPLETED (Postpaid) and WAITING (Prepaid Advance)
-        if (status === 'APPROVED') {
-            let finance = await prisma.finance.findFirst();
-            if (!finance) {
-                // Initialize finance if it doesn't exist
-                finance = await prisma.finance.create({
-                    data: { currentCash: 0, totalSpent: 0 }
-                });
-            }
-
-            await prisma.finance.update({
-                where: { id: finance.id },
-                data: {
-                    currentCash: finance.currentCash - updatedVoucher.amount,
-                    totalSpent: finance.totalSpent + updatedVoucher.amount
-                }
-            });
-        }
 
         res.json(updatedVoucher);
     } catch (error) {
@@ -327,6 +304,66 @@ const addAdminNote = async (req, res) => {
     }
 };
 
+// @desc    Mark Voucher as Paid (AM)
+// @route   PUT /api/vouchers/:id/pay
+// @access  Private (ACCOUNTS_MANAGER, ADMIN)
+const payVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const amId = req.user.id;
+        const isAdmin = req.user.role === 'ADMIN';
+
+        if (req.user.role !== 'ACCOUNTS_MANAGER' && !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const voucher = await prisma.voucher.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!voucher || voucher.cooStatus !== 'APPROVED') {
+            return res.status(400).json({ message: 'Voucher not found or not yet approved by COO' });
+        }
+
+        if (voucher.status !== 'PAID') {
+            return res.status(400).json({ message: 'Voucher is not in PAID state' });
+        }
+
+        // Determine final status
+        const immediateTypes = ['POSTPAID', 'COMPANY_PAY_AFTER'];
+        const finalStatus = immediateTypes.includes(voucher.type) ? 'COMPLETED' : 'WAITING';
+
+        const updatedVoucher = await prisma.voucher.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: finalStatus,
+                adminRemarks: voucher.adminRemarks ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}` : `Payment confirmed by ${req.user.name}`
+            }
+        });
+
+        // Deduct from Finance
+        let finance = await prisma.finance.findFirst();
+        if (!finance) {
+            finance = await prisma.finance.create({
+                data: { currentCash: 0, totalSpent: 0 }
+            });
+        }
+
+        await prisma.finance.update({
+            where: { id: finance.id },
+            data: {
+                currentCash: finance.currentCash - updatedVoucher.amount,
+                totalSpent: finance.totalSpent + updatedVoucher.amount
+            }
+        });
+
+        res.json(updatedVoucher);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Delete Voucher (Admin only)
 // @route   DELETE /api/vouchers/:id
 // @access  Private (ADMIN)
@@ -348,7 +385,7 @@ const deleteVoucher = async (req, res) => {
         }
 
         // Financial reversal if money was already deducted
-        // Status COMPLETED or WAITING means COO approved and cash was deducted
+        // Status COMPLETED or WAITING means money was deducted after AM marked as Paid
         if (voucher.status === 'COMPLETED' || voucher.status === 'WAITING') {
             const finance = await prisma.finance.findFirst();
             if (finance) {
@@ -381,5 +418,6 @@ module.exports = {
     approveVoucherCOO,
     uploadProof,
     addAdminNote,
+    payVoucher,
     deleteVoucher
 };

@@ -555,6 +555,7 @@ enum VoucherStatus {
   REJECTED
   COMPLETED
   WAITING
+  PAID
 }
 
 enum Status {

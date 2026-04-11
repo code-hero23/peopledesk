@@ -113,6 +113,24 @@ export const uploadVoucherProof = createAsyncThunk(
     }
 );
 
+// Pay Voucher
+export const payVoucher = createAsyncThunk(
+    'voucher/pay',
+    async (id, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const response = await axios.put(`${API_URL}/${id}/pay`, {}, config);
+            // Refresh finance summary after payment
+            thunkAPI.dispatch(getFinanceSummary());
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Get Finance Summary
 export const getFinanceSummary = createAsyncThunk(
     'voucher/getFinanceSummary',
@@ -259,6 +277,13 @@ export const voucherSlice = createSlice({
                 state.manageableVouchers = state.manageableVouchers.filter(v => v.id !== action.payload.id);
             })
             .addCase(approveVoucherCOO.fulfilled, (state, action) => {
+                state.isLoading = false;
+                const index = state.manageableVouchers.findIndex(v => v.id === action.payload.id);
+                if (index !== -1) {
+                    state.manageableVouchers[index] = action.payload;
+                }
+            })
+            .addCase(payVoucher.fulfilled, (state, action) => {
                 state.isLoading = false;
                 state.manageableVouchers = state.manageableVouchers.filter(v => v.id !== action.payload.id);
             })

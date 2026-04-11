@@ -13,6 +13,7 @@ import {
     createVoucher,
     toggleCarpenterImpact,
     deleteVoucher,
+    payVoucher,
     reset 
 } from '../../features/voucher/voucherSlice';
 import { compressImage } from '../../utils/imageUtils';
@@ -133,7 +134,10 @@ const VoucherManagement = () => {
         const payload = { id: selectedVoucher.id, status, remarks };
         
         try {
-            if (user.role === 'ACCOUNTS_MANAGER') {
+            if (status === 'PAID') {
+                await dispatch(payVoucher(selectedVoucher.id)).unwrap();
+                toast.success('Funds disbursement confirmed');
+            } else if (user.role === 'ACCOUNTS_MANAGER') {
                 await dispatch(approveVoucherAM(payload)).unwrap();
             } else if (user.role === 'BUSINESS_HEAD' && isCOO(user)) {
                 await dispatch(approveVoucherCOO(payload)).unwrap();
@@ -1254,6 +1258,16 @@ const VoucherManagement = () => {
                                                         {selectedVoucher.amStatus === 'PENDING' ? 'AM Approval' : 'COO Approval'} <ArrowUpRight size={18} />
                                                     </button>
                                                 </>
+                                            )}
+
+                                            {/* Mark as Paid Action for AM after COO Approval */}
+                                            {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                                <button
+                                                    onClick={() => handleAction('PAID')}
+                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                >
+                                                    Mark as Paid & Disburse <DollarSign size={18} />
+                                                </button>
                                             )}
                                             
                                             {/* Admin Note - Always show for Admin as an additional action or if already approved */}

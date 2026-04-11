@@ -8,6 +8,7 @@ const {
     approveVoucherCOO,
     uploadProof,
     addAdminNote,
+    payVoucher,
     deleteVoucher
 } = require('../controllers/voucherController');
 const { protect, authorize } = require('../middlewares/authMiddleware');
@@ -27,6 +28,9 @@ router.route('/:id/approve-am')
 
 router.route('/:id/approve-coo')
     .put(protect, authorize('BUSINESS_HEAD', 'ADMIN'), approveVoucherCOO);
+
+router.route('/:id/pay')
+    .put(protect, authorize('ACCOUNTS_MANAGER', 'ADMIN'), payVoucher);
 
 router.route('/:id/proof')
     .put(protect, upload.single('proof'), uploadProof);

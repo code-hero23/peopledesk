@@ -157,6 +157,24 @@ async function main() {
     console.error('Error in VoucherType expansion:', err.message);
   }
 
+  // Adding new VoucherStatus enum values
+  try {
+    console.log('Expanding "VoucherStatus" enum...');
+    const statusType = 'PAID';
+    try {
+      await prisma.$executeRawUnsafe(`ALTER TYPE "VoucherStatus" ADD VALUE '${statusType}'`);
+      console.log(`VoucherStatus "${statusType}" added.`);
+    } catch (err) {
+      if (err.message.includes('already exists') || err.message.includes('42710')) {
+        console.log(`VoucherStatus "${statusType}" already exists.`);
+      } else {
+        console.error(`Error adding VoucherStatus "${statusType}":`, err.message);
+      }
+    }
+  } catch (err) {
+    console.error('Error in VoucherStatus expansion:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 
