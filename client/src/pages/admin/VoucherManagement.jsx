@@ -50,7 +50,8 @@ import {
     Filter,
     Calendar,
     X,
-    Trash2
+    Trash2,
+    ChevronRight
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
