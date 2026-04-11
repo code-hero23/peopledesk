@@ -792,92 +792,130 @@ const VoucherManagement = () => {
                             </div>
                         </div>
                         
-                        <div className="bg-white rounded-[2.5rem] shadow-sm border border-slate-100 overflow-hidden">
-                            <table className="w-full text-left">
-                                <thead>
-                                    <tr className="bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-100">
-                                        <th className="px-8 py-6">Date</th>
-                                        <th className="px-8 py-6">Employee</th>
-                                        <th className="px-8 py-6">Type / Purpose</th>
-                                        <th className="px-8 py-6">Status</th>
-                                        <th className="px-8 py-6 text-right">Amount / Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-slate-50">
-                                    {filteredHistory.map((item) => (
-                                        <tr key={item.id} className="hover:bg-slate-50/30 transition-colors group">
-                                            <td className="px-8 py-5">
-                                                <div className="flex flex-col">
-                                                    <p className="text-xs font-black text-slate-800">{new Date(item.date).toLocaleDateString()}</p>
-                                                    <p className="text-[9px] text-slate-400 font-bold uppercase tracking-wider">Approved: {new Date(item.updatedAt).toLocaleDateString()}</p>
+                        <div className="grid grid-cols-1 gap-6">
+                            {filteredHistory.map((item) => (
+                                <motion.div 
+                                    key={item.id}
+                                    layout
+                                    onClick={() => setSelectedVoucher(item)}
+                                    className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-xl hover:shadow-slate-200/50 transition-all cursor-pointer group relative overflow-hidden"
+                                >
+                                    <div className="flex flex-col lg:flex-row items-center gap-8">
+                                        {/* Left Side: Employee & Basic Info */}
+                                        <div className="flex items-center gap-5 w-full lg:w-1/4">
+                                            <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-inner overflow-hidden">
+                                                {item.user?.profileImage ? (
+                                                    <img src={item.user.profileImage} alt="" className="w-full h-full object-cover" />
+                                                ) : (
+                                                    <span className="text-xl font-black">{item.user?.name ? item.user.name[0] : '?'}</span>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h3 className="font-black text-slate-800 text-lg">{item.user?.name}</h3>
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{item.user?.designation}</p>
+                                                    <div className="w-1 h-1 bg-slate-300 rounded-full" />
+                                                    <p className="text-[10px] text-emerald-600 font-black uppercase tracking-widest">{item.type.replace(/_/g, ' ')}</p>
                                                 </div>
-                                            </td>
-
-                                            <td className="px-8 py-5">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-                                                        {item.user?.name ? item.user.name[0] : '?'}
-                                                    </div>
-                                                    <div>
-                                                        <p className="text-sm font-black text-slate-800">{item.user?.name}</p>
-                                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.user?.designation}</p>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <div className="flex flex-col">
-                                                    <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest mb-1">{item.type}</p>
-                                                    <p className="text-sm text-slate-600 font-medium line-clamp-1">{item.purpose}</p>
-                                                </div>
-                                            </td>
-                                            <td className="px-8 py-5">
-                                                <span className={`inline-flex px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest border ${
-                                                    item.status === 'COMPLETED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
-                                                    item.status === 'WAITING' ? 'bg-amber-50 text-amber-600 border-amber-100' : 
-                                                    item.status === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
-                                                    item.status === 'PENDING' ? 'bg-blue-50 text-blue-600 border-blue-100' :
-                                                    item.status === 'APPROVED' ? 'bg-indigo-50 text-indigo-600 border-indigo-100' :
-                                                    'bg-slate-50 text-slate-600 border-slate-100'
-                                                }`}>
-                                                    {item.status === 'WAITING' ? 'Advance Issued' : item.status}
-                                                </span>
-                                            </td>
-                                            <td className="px-8 py-5 text-right flex flex-col items-end gap-2">
-                                                <p className="text-sm font-black text-slate-800 group-hover:text-rose-500 transition-colors">
-                                                    -₹{item.amount.toLocaleString()}
+                                                <p className="text-[10px] text-slate-300 font-bold uppercase tracking-widest mt-1">
+                                                    Raised: {new Date(item.date).toLocaleDateString()}
                                                 </p>
-                                                <div className="flex items-center gap-2">
-                                                    {user.role === 'ADMIN' && (
-                                                        <button
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                handleDeleteVoucher(item.id);
-                                                            }}
-                                                            className="p-2 hover:bg-rose-50 text-slate-300 hover:text-rose-500 rounded-lg transition-all"
-                                                            title="Delete Voucher"
-                                                        >
-                                                            <Trash2 size={16} />
-                                                        </button>
-                                                    )}
-                                                    <button
-                                                        onClick={() => setSelectedVoucher(item)}
-                                                        className="bg-white hover:bg-slate-900 text-slate-600 hover:text-white border border-slate-200 hover:border-slate-900 px-4 py-1.5 rounded-lg font-bold text-[10px] uppercase tracking-widest transition-all shadow-sm w-fit"
-                                                    >
-                                                        View Details
-                                                    </button>
+                                            </div>
+                                        </div>
+
+                                        {/* Center: Purpose & Workflow Detail */}
+                                        <div className="flex-1 w-full border-y lg:border-y-0 lg:border-x border-slate-50 py-6 lg:py-0 lg:px-12">
+                                            <div className="flex flex-col gap-5">
+                                                <div>
+                                                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Purpose</p>
+                                                    <p className="text-slate-600 font-bold leading-relaxed line-clamp-2">{item.purpose}</p>
                                                 </div>
-                                            </td>
-                                        </tr>
-                                    ))}
-                                    {filteredHistory.length === 0 && (
-                                        <tr>
-                                            <td colSpan="5" className="px-8 py-20 text-center text-slate-300 font-bold uppercase tracking-widest text-xs">
-                                                {spentHistory.length === 0 ? 'No spending history recorded yet' : 'No matching records found for active filters'}
-                                            </td>
-                                        </tr>
-                                    )}
-                                </tbody>
-                            </table>
+                                                
+                                                {/* Detailed Status Grid */}
+                                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">AM Status</span>
+                                                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center border ${
+                                                            item.amStatus === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                                            item.amStatus === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                            'bg-slate-50 text-slate-400 border-slate-100'
+                                                        }`}>
+                                                            {item.amStatus}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1.5">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">COO Status</span>
+                                                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center border ${
+                                                            item.cooStatus === 'APPROVED' ? 'bg-emerald-50 text-emerald-600 border-emerald-100' : 
+                                                            item.cooStatus === 'REJECTED' ? 'bg-rose-50 text-rose-600 border-rose-100' :
+                                                            'bg-slate-50 text-slate-400 border-slate-100'
+                                                        }`}>
+                                                            {item.cooStatus || 'PENDING'}
+                                                        </span>
+                                                    </div>
+                                                    <div className="flex flex-col gap-1.5 col-span-2 md:col-span-1">
+                                                        <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest">Final Stage</span>
+                                                        <span className={`px-3 py-1.5 rounded-xl text-[10px] font-black uppercase tracking-widest text-center border ${
+                                                            item.status === 'COMPLETED' ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-100' : 
+                                                            item.status === 'WAITING' ? 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-100' : 
+                                                            item.status === 'PAID' ? 'bg-blue-600 text-white border-blue-600 shadow-sm shadow-blue-100' :
+                                                            item.status === 'REJECTED' ? 'bg-rose-600 text-white border-rose-600' :
+                                                            'bg-slate-100 text-slate-500 border-slate-200'
+                                                        }`}>
+                                                            {item.status === 'COMPLETED' ? 'PAID & SETTLED' : 
+                                                             item.status === 'WAITING' ? 'PAID (Advance)' : 
+                                                             item.status === 'PAID' ? 'MARKED PAID' :
+                                                             item.status}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="w-full scale-90 lg:scale-100 origin-left">
+                                                    <VoucherStatusFlow voucher={item} />
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Right Side: Amount & Action */}
+                                        <div className="flex items-center justify-between lg:justify-end gap-12 w-full lg:w-1/4">
+                                            <div className="text-right">
+                                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Amount</p>
+                                                <p className="text-3xl font-black text-slate-800 tracking-tighter group-hover:text-emerald-600 transition-colors">₹{item.amount.toLocaleString()}</p>
+                                                <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Processed: {new Date(item.updatedAt).toLocaleDateString()}</p>
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                {user.role === 'ADMIN' && (
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteVoucher(item.id);
+                                                        }}
+                                                        className="p-4 bg-rose-50 text-rose-500 rounded-[1.25rem] hover:bg-rose-600 hover:text-white transition-all shadow-sm active:scale-90"
+                                                        title="Delete Record"
+                                                    >
+                                                        <Trash2 size={22} />
+                                                    </button>
+                                                )}
+                                                <div className="w-12 h-12 rounded-[1.25rem] bg-slate-50 flex items-center justify-center text-slate-300 group-hover:text-emerald-600 transition-all border border-transparent group-hover:border-emerald-100 shadow-inner">
+                                                    <ChevronRight size={28} />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </motion.div>
+                            ))}
+
+                            {filteredHistory.length === 0 && (
+                                <div className="bg-slate-50/50 border-2 border-dashed border-slate-200 rounded-[3.5rem] p-24 text-center flex flex-col items-center gap-4">
+                                    <div className="w-24 h-24 bg-white rounded-[2rem] flex items-center justify-center text-slate-200 shadow-sm mb-2 border border-slate-100">
+                                        <History size={48} />
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-800 font-black text-3xl tracking-tight">Empty Archive</p>
+                                        <p className="text-slate-400 font-medium max-w-xs mx-auto">No records found matching your current filters.</p>
+                                    </div>
+                                </div>
+                            )}
                         </div>
                     </motion.div>
                 ) : view === 'deposits' ? (
