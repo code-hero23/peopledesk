@@ -648,9 +648,9 @@ const VoucherManagement = () => {
                                             <User size={32} />
                                         </div>
                                         <div>
-                                            <h3 className="font-black text-slate-800 text-lg">{voucher.user.name}</h3>
+                                            <h3 className="font-black text-slate-800 text-lg">{voucher.user?.name}</h3>
                                             <div className="flex items-center gap-2">
-                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{voucher.user.designation}</p>
+                                                <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{voucher.user?.designation}</p>
                                                 <div className="w-1 h-1 bg-slate-300 rounded-full" />
                                                 <p className="text-[10px] text-blue-500 font-black uppercase tracking-widest">{voucher.type.replace(/_/g, ' ')}</p>
                                                 <div className="w-1 h-1 bg-slate-300 rounded-full" />
@@ -816,11 +816,11 @@ const VoucherManagement = () => {
                                             <td className="px-8 py-5">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-8 h-8 bg-slate-100 rounded-lg flex items-center justify-center text-slate-500 font-bold text-xs uppercase">
-                                                        {item.user.name[0]}
+                                                        {item.user?.name ? item.user.name[0] : '?'}
                                                     </div>
                                                     <div>
-                                                        <p className="text-sm font-black text-slate-800">{item.user.name}</p>
-                                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.user.designation}</p>
+                                                        <p className="text-sm font-black text-slate-800">{item.user?.name}</p>
+                                                        <p className="text-[9px] text-slate-400 font-bold uppercase">{item.user?.designation}</p>
                                                     </div>
                                                 </div>
                                             </td>

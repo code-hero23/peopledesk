@@ -215,6 +215,11 @@ const approveVoucherCOO = async (req, res) => {
                 cooRemarks: remarks || null,
                 cooApprovedAt: new Date(),
                 status: status === 'APPROVED' ? 'PAID' : 'REJECTED'
+            },
+            include: {
+                user: {
+                    select: { name: true, designation: true, email: true }
+                }
             }
         });
 
@@ -338,6 +343,11 @@ const payVoucher = async (req, res) => {
             data: {
                 status: finalStatus,
                 adminRemarks: voucher.adminRemarks ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}` : `Payment confirmed by ${req.user.name}`
+            },
+            include: {
+                user: {
+                    select: { name: true, designation: true, email: true }
+                }
             }
         });
 

@@ -280,7 +280,10 @@ export const voucherSlice = createSlice({
                 state.isLoading = false;
                 const index = state.manageableVouchers.findIndex(v => v.id === action.payload.id);
                 if (index !== -1) {
-                    state.manageableVouchers[index] = action.payload;
+                    state.manageableVouchers[index] = {
+                        ...state.manageableVouchers[index],
+                        ...action.payload
+                    };
                 }
             })
             .addCase(payVoucher.fulfilled, (state, action) => {
