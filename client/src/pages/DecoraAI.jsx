@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 
 const DecoraAI = () => {
+    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+    const [activeTab, setActiveTab] = useState(0);
     const { scrollYProgress } = useScroll();
     const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
     const orbScale = useTransform(scrollYProgress, [0, 1], [1, 1.5]);
