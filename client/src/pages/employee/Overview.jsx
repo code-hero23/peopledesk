@@ -604,7 +604,12 @@ const Overview = () => {
                         setIsCheckingOut(true);
                         setShowCheckInModal(true);
                     } else {
-                        dispatch(checkoutAttendance(formData)).then(() => dispatch(getAttendanceStatus()));
+                        dispatch(checkoutAttendance(formData)).then(() => {
+                            dispatch(getAttendanceStatus());
+                            if (user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
+                                navigate('/dashboard/attendance');
+                            }
+                        });
                     }
                 } else {
                     // Check-In
@@ -624,7 +629,32 @@ const Overview = () => {
                             dispatch(markAttendance(formData)).then((res) => {
                                 if (!res.error) {
                                     dispatch(getAttendanceStatus());
-                                    checkLatenessAndRedirect(new Date(), true);
+                                    
+                                    // Handle Lateness Check & Redirection
+                                    if (user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
+                                        const now = new Date();
+                                        const hours = now.getHours();
+                                        const mins = now.getMinutes();
+                                        const totalMins = hours * 60 + mins;
+                                        
+                                        // Threshold logic matching checkLatenessAndRedirect
+                                        const todayLocal = now.toLocaleDateString('en-CA');
+                                        const hasHalfDay = requests?.leaves?.some(l => {
+                                            if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
+                                            const lS = new Date(l.startDate).toLocaleDateString('en-CA');
+                                            const lE = new Date(l.endDate).toLocaleDateString('en-CA');
+                                            return todayLocal >= lS && todayLocal <= lE;
+                                        });
+                                        const thresholdMinutes = hasHalfDay ? 840 : 630;
+
+                                        if (totalMins > thresholdMinutes) {
+                                            // Late: Trigger Modal and don't navigate yet
+                                            checkLatenessAndRedirect(now, true);
+                                        } else {
+                                            // on Time: Redirect immediately
+                                            navigate('/dashboard/attendance');
+                                        }
+                                    }
                                 }
                             });
                         }
@@ -960,7 +990,14 @@ const Overview = () => {
                         <PermissionRequestForm
                             isMandatory={isAutoPermission}
                             initialData={permissionInitialData}
-                            onSuccess={() => { setActiveModal(null); setIsAutoPermission(false); dispatch(getMyRequests()); }}
+                            onSuccess={() => { 
+                                setActiveModal(null); 
+                                setIsAutoPermission(false); 
+                                dispatch(getMyRequests()); 
+                                if (isAutoPermission && user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
+                                    navigate('/dashboard/attendance');
+                                }
+                            }}
                             onCancel={() => !isAutoPermission && setActiveModal(null)}
                         />
                     </Modal>
@@ -981,7 +1018,28 @@ const Overview = () => {
                                     dispatch(markAttendance(formData)).then((res) => {
                                         if (!res.error) {
                                             dispatch(getAttendanceStatus());
-                                            checkLatenessAndRedirect(new Date(), true);
+                                            
+                                            if (user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
+                                                const now = new Date();
+                                                const hours = now.getHours();
+                                                const mins = now.getMinutes();
+                                                const totalMins = hours * 60 + mins;
+                                                
+                                                const todayLocal = now.toLocaleDateString('en-CA');
+                                                const hasHalfDay = requests?.leaves?.some(l => {
+                                                    if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
+                                                    const lS = new Date(l.startDate).toLocaleDateString('en-CA');
+                                                    const lE = new Date(l.endDate).toLocaleDateString('en-CA');
+                                                    return todayLocal >= lS && todayLocal <= lE;
+                                                });
+                                                const thresholdMinutes = hasHalfDay ? 840 : 630;
+
+                                                if (totalMins > thresholdMinutes) {
+                                                    checkLatenessAndRedirect(now, true);
+                                                } else {
+                                                    navigate('/dashboard/attendance');
+                                                }
+                                            }
                                         }
                                     });
                                 }
