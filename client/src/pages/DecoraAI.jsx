@@ -20,21 +20,49 @@ import {
 } from 'lucide-react';
 
 const DecoraAI = () => {
-    const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
-    const [activeTab, setActiveTab] = useState(0);
+    const { scrollYProgress } = useScroll();
+    const bgY = useTransform(scrollYProgress, [0, 1], ['0%', '20%']);
+    const orbScale = useTransform(scrollYProgress, [0, 1], [1, 1.5]);
+    const textOpacity = useTransform(scrollYProgress, [0, 0.2], [1, 0]);
+    const textScale = useTransform(scrollYProgress, [0, 0.2], [1, 0.9]);
 
     useEffect(() => {
         const handleMouseMove = (e) => {
             setMousePos({
-                x: (e.clientX / window.innerWidth - 0.5) * 20,
-                y: (e.clientY / window.innerHeight - 0.5) * 20
+                x: (e.clientX / window.innerWidth - 0.5) * 40,
+                y: (e.clientY / window.innerHeight - 0.5) * 40
             });
         };
         window.addEventListener('mousemove', handleMouseMove);
         return () => window.removeEventListener('mousemove', handleMouseMove);
     }, []);
 
+    const AnimatedText = ({ text, delay = 0 }) => {
+        const characters = Array.from(text);
+        return (
+            <motion.span className="inline-block whitespace-nowrap">
+                {characters.map((char, i) => (
+                    <motion.span
+                        key={i}
+                        initial={{ opacity: 0, y: 50, rotateX: -90 }}
+                        animate={{ opacity: 1, y: 0, rotateX: 0 }}
+                        transition={{
+                            duration: 0.8,
+                            delay: delay + i * 0.05,
+                            ease: [0.22, 1, 0.36, 1]
+                        }}
+                        className="inline-block"
+                        style={{ transformOrigin: "bottom" }}
+                    >
+                        {char === " " ? "\u00A0" : char}
+                    </motion.span>
+                ))}
+            </motion.span>
+        );
+    };
+
     const features = [
+// ... (rest of features stays same, I will use multi_replace for cleaner edits if needed, but for now focusing on Hero)
         {
             title: "Neural CRM Matrix",
             icon: Bot,
@@ -73,32 +101,53 @@ const DecoraAI = () => {
 
     return (
         <div className="min-h-screen bg-[#020617] text-white selection:bg-blue-500/30 overflow-x-hidden relative font-['Inter']">
-            {/* Dynamic Neural Background */}
-            <div className="fixed inset-0 pointer-events-none z-0">
-                <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(15,23,42,0)_0%,rgba(2,6,23,1)_100%)]" />
+            {/* Dynamic Neural Parallax Background */}
+            <div className="fixed inset-0 pointer-events-none z-0 overflow-hidden">
+                <motion.div style={{ y: bgY }} className="absolute inset-0 bg-[radial-gradient(circle_at_50%_20%,rgba(59,130,246,0.05)_0%,rgba(2,6,23,1)_100%)]" />
+                
+                {/* Neural Filament Tracers */}
+                <svg className="absolute inset-0 w-full h-full opacity-20">
+                    <motion.path
+                        d="M 100,0 Q 150,500 100,1000"
+                        stroke="url(#filament-gradient)"
+                        strokeWidth="1"
+                        fill="none"
+                        initial={{ pathLength: 0 }}
+                        style={{ pathLength: scrollYProgress }}
+                    />
+                    <defs>
+                        <linearGradient id="filament-gradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                            <stop offset="0%" stopColor="#3b82f6" stopOpacity="0" />
+                            <stop offset="50%" stopColor="#6366f1" stopOpacity="1" />
+                            <stop offset="100%" stopColor="#a855f7" stopOpacity="0" />
+                        </linearGradient>
+                    </defs>
+                </svg>
+
                 <motion.div
-                    animate={{
-                        x: mousePos.x,
-                        y: mousePos.y,
+                    style={{ 
+                        x: mousePos.x * 0.5, 
+                        y: mousePos.y * 0.5,
+                        scale: orbScale 
                     }}
-                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] contrast-150"
+                    className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.05] contrast-150 mix-blend-overlay"
                 />
 
-                {/* Pulsing Orbs */}
+                {/* Pulsing Neural Orbs */}
                 <motion.div
+                    style={{ scale: orbScale, y: useTransform(scrollYProgress, [0, 1], [0, -200]) }}
                     animate={{
-                        scale: [1, 1.2, 1],
-                        opacity: [0.15, 0.3, 0.15],
+                        opacity: [0.1, 0.2, 0.1],
                     }}
-                    transition={{ duration: 8, repeat: Infinity, ease: "easeInOut" }}
+                    transition={{ duration: 10, repeat: Infinity }}
                     className="absolute -top-[10%] -left-[10%] w-[80%] h-[80%] bg-blue-600/10 rounded-full blur-[160px]"
                 />
                 <motion.div
+                    style={{ scale: orbScale, y: useTransform(scrollYProgress, [0, 1], [0, 100]) }}
                     animate={{
-                        scale: [1.2, 1, 1.2],
-                        opacity: [0.1, 0.25, 0.1],
+                        opacity: [0.05, 0.15, 0.05],
                     }}
-                    transition={{ duration: 12, repeat: Infinity, ease: "easeInOut" }}
+                    transition={{ duration: 15, repeat: Infinity }}
                     className="absolute -bottom-[20%] -right-[10%] w-[70%] h-[70%] bg-purple-600/10 rounded-full blur-[160px]"
                 />
             </div>
@@ -161,21 +210,21 @@ const DecoraAI = () => {
                         <Sparkles size={14} className="text-yellow-400" /> Decora AI Alpha Release Phase
                     </motion.div>
 
-                    <div className="relative inline-block mb-10">
+                    <div className="relative inline-block mb-10 overflow-hidden">
                         <motion.h2
-                            initial={{ y: 40, opacity: 0 }}
-                            animate={{ y: 0, opacity: 1 }}
-                            transition={{ duration: 0.8 }}
-                            className="text-6xl md:text-[10rem] font-black leading-[0.85] tracking-tighter"
+                            style={{ opacity: textOpacity, scale: textScale }}
+                            className="text-6xl md:text-[10rem] font-black leading-[0.85] tracking-tight perspective-[1000px]"
                         >
-                            FUTURE <br />
-                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 drop-shadow-[0_10px_20px_rgba(99,102,241,0.2)]">INTELLIGENCE</span>
+                            <AnimatedText text="FUTURE" delay={0.2} /> <br />
+                            <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-indigo-500 to-purple-500 drop-shadow-[0_10px_20px_rgba(99,102,241,0.2)]">
+                                <AnimatedText text="INTELLIGENCE" delay={0.6} />
+                            </span>
                         </motion.h2>
                         <motion.div
-                            initial={{ width: 0 }}
-                            animate={{ width: '100%' }}
-                            transition={{ delay: 1, duration: 1 }}
-                            className="absolute -bottom-4 left-0 h-1 bg-gradient-to-r from-transparent via-blue-500 to-transparent opacity-50"
+                            initial={{ width: 0, opacity: 0 }}
+                            whileInView={{ width: '100%', opacity: 0.5 }}
+                            transition={{ delay: 1.5, duration: 2 }}
+                            className="absolute -bottom-4 left-0 h-px bg-gradient-to-r from-transparent via-blue-500 to-transparent"
                         />
                     </div>
 
@@ -261,8 +310,16 @@ const DecoraAI = () => {
                                 </div>
                                 <div className="space-y-6">
                                     <h4 className="text-3xl font-black tracking-tight">Active Matrix</h4>
-                                    <div className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden">
+                                    <div className="bg-slate-900/50 p-6 rounded-[2rem] border border-white/5 relative overflow-hidden group/terminal">
                                         <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent" />
+                                        
+                                        {/* Scanning Line Effect */}
+                                        <motion.div 
+                                            animate={{ top: ['-10%', '110%'] }}
+                                            transition={{ duration: 3, repeat: Infinity, ease: "linear" }}
+                                            className="absolute left-0 w-full h-1 bg-blue-500/10 blur-xl z-0"
+                                        />
+
                                         <div className="relative space-y-4">
                                             {[
                                                 "INITIALIZING NEURAL WEIGHTS...",
@@ -270,10 +327,17 @@ const DecoraAI = () => {
                                                 "OPTIMIZING QUOTATION ENGINE...",
                                                 "ORBIX FLUX READY.",
                                             ].map((line, i) => (
-                                                <div key={i} className="flex gap-4 font-mono text-xs">
+                                                <motion.div 
+                                                    key={i} 
+                                                    whileHover={{ x: 10, backgroundColor: 'rgba(59, 130, 246, 0.05)' }}
+                                                    className="flex gap-4 font-mono text-xs p-2 rounded-lg transition-colors cursor-default"
+                                                >
                                                     <span className="text-slate-600">[{100 + i * 24}]</span>
-                                                    <span className={i === 3 ? "text-emerald-400 font-black" : "text-blue-400/80"}>{line}</span>
-                                                </div>
+                                                    <span className={i === 3 ? "text-emerald-400 font-black" : "text-blue-400/80"}>
+                                                        {line}
+                                                        {i === 3 && <motion.span animate={{ opacity: [0, 1, 0] }} transition={{ duration: 0.8, repeat: Infinity }}>_</motion.span>}
+                                                    </span>
+                                                </motion.div>
                                             ))}
                                         </div>
                                     </div>
@@ -327,20 +391,29 @@ const DecoraAI = () => {
                                         visible: { y: 0, opacity: 1 }
                                     }}
                                     whileHover={{ y: -12 }}
-                                    className="group relative bg-[#0f172a]/40 backdrop-blur-2xl p-8 rounded-[3rem] border border-white/5 hover:border-blue-500/30 transition-all shadow-2xl overflow-hidden"
+                                    className="group relative bg-[#0f172a]/20 backdrop-blur-2xl p-0.5 rounded-[3rem] overflow-hidden transition-all duration-500"
                                 >
-                                    <div className={`absolute -right-8 -top-8 p-16 bg-${feature.color}-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity`} />
+                                    {/* Rotating Border Effect */}
+                                    <div className="absolute inset-x-0 top-0 h-1/2 w-full bg-gradient-to-r from-transparent via-blue-500/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity blur-md animate-pulse" />
+                                    
+                                    <div className="relative bg-slate-950/60 h-full w-full rounded-[3rem] p-8 border border-white/5 group-hover:border-blue-500/20 transition-all overflow-hidden">
+                                        <div className={`absolute -right-8 -top-8 p-16 bg-${feature.color}-500/5 rounded-full blur-3xl opacity-0 group-hover:opacity-100 transition-opacity`} />
 
-                                    <div className="relative z-10">
-                                        <div className={`p-4 bg-${feature.color}-500/10 rounded-2xl w-fit group-hover:scale-110 transition-transform mb-8 border border-${feature.color}-500/20`}>
-                                            <Icon className={`text-${feature.color}-400`} size={32} />
-                                        </div>
-                                        <h3 className="text-xl font-black mb-4 tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-blue-400">{feature.title}</h3>
-                                        <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6">
-                                            {feature.description}
-                                        </p>
-                                        <div className="pt-6 border-t border-white/5">
-                                            <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em]">{feature.tech}</span>
+                                        <div className="relative z-10">
+                                            <motion.div 
+                                                whileHover={{ rotate: [0, -10, 10, 0], scale: 1.1 }}
+                                                className={`p-4 bg-${feature.color}-500/10 rounded-2xl w-fit mb-8 border border-${feature.color}-500/20 shadow-inner`}
+                                            >
+                                                <Icon className={`text-${feature.color}-400`} size={32} />
+                                            </motion.div>
+                                            <h3 className="text-xl font-black mb-4 tracking-tight group-hover:text-transparent group-hover:bg-clip-text group-hover:bg-gradient-to-r group-hover:from-white group-hover:to-blue-400 transition-all duration-500">{feature.title}</h3>
+                                            <p className="text-slate-400 text-sm font-medium leading-relaxed mb-6 group-hover:text-slate-300 transition-colors">
+                                                {feature.description}
+                                            </p>
+                                            <div className="pt-6 border-t border-white/5 flex justify-between items-center">
+                                                <span className="text-[9px] font-black text-slate-500 uppercase tracking-[0.2em] group-hover:text-blue-400 transition-colors">{feature.tech}</span>
+                                                <Zap size={14} className="text-slate-500 group-hover:text-yellow-400 transition-colors animate-pulse" />
+                                            </div>
                                         </div>
                                     </div>
                                 </motion.div>
