@@ -214,7 +214,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {(['ADMIN', 'BUSINESS_HEAD', 'HR', 'ANALYZER'].includes(user?.role) || user?.callAnalyticsViewEnabled) && (
                                 <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />
                             )}
-
+                            {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                                <NavItem to="/admin/helpdesk" icon={LifeBuoy} label="Support Hub" indent />
+                            )}
                         </NavGroup>
 
                         <NavGroup id="admin" label="Administration" icon={ShieldCheck}>
@@ -258,6 +260,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
                             <NavItem to="/dashboard/scoreboard" icon={BarChart3} label="My ScoreBoard" />
+                            <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
                         </div>
 
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>

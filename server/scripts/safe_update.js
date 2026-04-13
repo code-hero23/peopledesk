@@ -175,6 +175,54 @@ async function main() {
     console.error('Error in VoucherStatus expansion:', err.message);
   }
 
+  // Adding Helpdesk Schema
+  try {
+    console.log('Synchronizing Helpdesk Schema...');
+
+    // 1. Create Enums
+    const enums = [
+      { name: 'TicketStatus', values: ['OPEN', 'IN_PROGRESS', 'RESOLVED', 'CLOSED'] },
+      { name: 'TicketType', values: ['ISSUE', 'SUGGESTION', 'PROBLEM'] },
+      { name: 'HelpdeskCategory', values: ['SALARY', 'TECHNICAL', 'POLICY', 'WORKPLACE', 'GROWTH', 'OTHER'] }
+    ];
+
+    for (const enumInfo of enums) {
+      try {
+        await prisma.$executeRawUnsafe(`CREATE TYPE "${enumInfo.name}" AS ENUM (${enumInfo.values.map(v => `'${v}'`).join(', ')})`);
+        console.log(`Enum "${enumInfo.name}" created.`);
+      } catch (e) {
+        if (e.message.includes('already exists')) {
+          console.log(`Enum "${enumInfo.name}" already exists.`);
+        } else {
+          console.error(`Error creating enum ${enumInfo.name}:`, e.message);
+        }
+      }
+    }
+
+    // 2. Create Table
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "HelpdeskTicket" (
+          "id" SERIAL PRIMARY KEY,
+          "userId" INTEGER NOT NULL,
+          "subject" TEXT NOT NULL,
+          "description" TEXT NOT NULL,
+          "type" "TicketType" NOT NULL DEFAULT 'ISSUE',
+          "category" "HelpdeskCategory" NOT NULL DEFAULT 'OTHER',
+          "status" "TicketStatus" NOT NULL DEFAULT 'OPEN',
+          "hrRemarks" TEXT,
+          "bhRemarks" TEXT,
+          "cooRemarks" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "HelpdeskTicket_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE
+      )
+    `);
+    console.log('Table "HelpdeskTicket" created or already exists.');
+
+  } catch (err) {
+    console.error('Error in Helpdesk Schema sync:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 

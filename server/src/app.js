@@ -100,6 +100,7 @@ app.use('/api/carpenter', require('./routes/carpenterRoutes'));
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 app.use('/api/performance', require('./routes/performanceRoutes'));
+app.use('/api/helpdesk', require('./routes/helpdeskRoutes'));
 
 app.get('/api', (req, res) => {
     res.json({ message: 'Welcome to PeopleDesk API', status: 'Running' });
