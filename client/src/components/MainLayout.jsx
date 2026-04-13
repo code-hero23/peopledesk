@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useNavigate, useLocation } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
 import { logout, reset, getMe } from '../features/auth/authSlice';
 import { Menu, RefreshCw, LogOut } from 'lucide-react';
@@ -12,9 +12,12 @@ import HourlyAlarm from './common/HourlyAlarm';
 
 const Layout = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    const isDecoraAI = location.pathname === '/decora-ai';
 
     useEffect(() => {
         if (user) {
@@ -73,8 +76,8 @@ const Layout = () => {
                     </div>
                 </header>
 
-                <main className="flex-1 p-6 md:p-8 overflow-y-auto">
-                    {!['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && <NoticeBoard />}
+                <main className={`flex-1 overflow-y-auto ${isDecoraAI ? 'p-0' : 'p-6 md:p-8'}`}>
+                    {!['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && !isDecoraAI && <NoticeBoard />}
                     <Outlet />
                 </main>
             </div>
