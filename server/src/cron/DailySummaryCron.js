@@ -75,7 +75,7 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
         const absentStaff = staff.filter(s => !presentUserIds.has(s.id));
 
         // Designation Breakdown
-        const designationsList = ['AE', 'FA', 'LA', 'OFFICE_ADMIN', 'CRE', 'HR', 'PURCHASE', 'ACCOUNTS'];
+        const designationsList = ['FA', 'LA', 'OFFICE_ADMIN', 'CRE', 'HR', 'PURCHASE', 'ACCOUNTS'];
         const breakdown = {};
         designationsList.forEach(d => {
             const totalInDept = staff.filter(s => s.designation && s.designation.toUpperCase().includes(d)).length;
@@ -87,6 +87,8 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
         const mobileLoginStaffRecs = attendanceRecs.filter(a => {
             const user = staff.find(s => s.id === a.userId);
             const isAE = user && user.designation && user.designation.toUpperCase().includes('AE');
+            // We exclude AE from mobile login alerts normally, but we keep this check to ensure 
+            // AE activity doesn't trigger "Mobile Login" if it's supposed to be restricted to office staff.
             if (isAE) return false;
 
             const hasMobileIn = (a.deviceInfo && /mobile|android|iphone|ios/i.test(a.deviceInfo));
@@ -99,9 +101,8 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
         const improperLogoutStaffRecs = attendanceRecs.filter(a => !a.checkoutTime);
         const improperLogoutNames = improperLogoutStaffRecs.map(a => staff.find(s => s.id === a.userId)?.name).filter(Boolean);
 
-        // AE Sessions (WorkLogs for users with AE in designation)
-        const aeWorkLogs = workLogs.filter(wl => wl.user.designation && wl.user.designation.toUpperCase().includes('AE'));
-        const aeSessions = aeWorkLogs.length;
+        // Operational Data
+        const totalWorkLogs = workLogs.length;
 
         // --- HTML Report Construction ---
         const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -147,8 +148,7 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
                 <div style="background-color: #fff9db; padding: 20px; border-radius: 10px; border: 1px solid #ffe066;">
                     <h3 style="margin-top: 0; color: #f08c00;">Operational Insights</h3>
                     <ul style="padding-left: 20px; margin: 0;">
-                        <li><strong>AE Sessions Completed:</strong> ${aeSessions}</li>
-                        <li><strong>WorkLogs Submitted:</strong> ${workLogs.length}</li>
+                        <li><strong>WorkLogs Submitted:</strong> ${totalWorkLogs}</li>
                         <li>
                             <strong>Mobile Logins (Office Staff):</strong> ${mobileLoginNames.length}
                             ${mobileLoginNames.length > 0 ? `<br/><span style="font-size: 10px; color: #666;">(${mobileLoginNames.join(', ')})</span>` : ''}
