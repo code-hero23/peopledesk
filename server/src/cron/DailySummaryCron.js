@@ -5,15 +5,15 @@ const { sendEmail } = require('../utils/emailService');
 
 /**
  * Generates and sends a Daily Summary Report to HR
- * Scheduled for 08:00 PM IST (14:30 UTC)
+ * Scheduled for 09:00 PM IST (15:30 UTC)
  */
 const initDailySummaryCron = () => {
-    // 20:00 IST = 14:30 UTC
-    cron.schedule('30 14 * * *', async () => {
+    // 21:00 IST = 15:30 UTC
+    cron.schedule('30 15 * * *', async () => {
         await generateAndSendDailySummary();
     });
 
-    console.log('Daily Summary Report Cron Job Initialized (08:00 PM IST Daily)');
+    console.log('Daily Summary Report Cron Job Initialized (09:00 PM IST Daily)');
 };
 
 /**
@@ -32,8 +32,8 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
         const tomorrow = new Date(today);
         tomorrow.setDate(tomorrow.getDate() + 1);
 
-        // 1. Fetch All Active Staff (Excluding ADMIN)
-        const staff = await prisma.user.findMany({
+        // 1. Fetch All Active Staff (Excluding ADMIN and AE Designation)
+        let staff = await prisma.user.findMany({
             where: {
                 status: 'ACTIVE',
                 role: { not: 'ADMIN' }
@@ -45,6 +45,9 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
                 role: true
             }
         });
+
+        // Filter out AE Designation
+        staff = staff.filter(s => !(s.designation && s.designation.toUpperCase().includes('AE')));
 
         // 2. Fetch Today's Attendance
         const attendanceRecs = await prisma.attendance.findMany({
@@ -86,10 +89,7 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
         // Mobile Logins
         const mobileLoginStaffRecs = attendanceRecs.filter(a => {
             const user = staff.find(s => s.id === a.userId);
-            const isAE = user && user.designation && user.designation.toUpperCase().includes('AE');
-            // We exclude AE from mobile login alerts normally, but we keep this check to ensure 
-            // AE activity doesn't trigger "Mobile Login" if it's supposed to be restricted to office staff.
-            if (isAE) return false;
+            if (!user) return false; // Excludes AE and Admin since they aren't in our filtered staff list
 
             const hasMobileIn = (a.deviceInfo && /mobile|android|iphone|ios/i.test(a.deviceInfo));
             const hasMobileOut = (a.checkoutDeviceInfo && /mobile|android|iphone|ios/i.test(a.checkoutDeviceInfo));
@@ -98,11 +98,14 @@ const generateAndSendDailySummary = async (targetDate = new Date()) => {
         const mobileLoginNames = mobileLoginStaffRecs.map(a => staff.find(s => s.id === a.userId)?.name).filter(Boolean);
 
         // Improper Logouts
-        const improperLogoutStaffRecs = attendanceRecs.filter(a => !a.checkoutTime);
+        const improperLogoutStaffRecs = attendanceRecs.filter(a => {
+            const user = staff.find(s => s.id === a.userId);
+            return user && !a.checkoutTime;
+        });
         const improperLogoutNames = improperLogoutStaffRecs.map(a => staff.find(s => s.id === a.userId)?.name).filter(Boolean);
 
-        // Operational Data
-        const totalWorkLogs = workLogs.length;
+        // Operational Data (Only for non-AE staff)
+        const totalWorkLogs = workLogs.filter(wl => staff.some(s => s.id === wl.userId)).length;
 
         // --- HTML Report Construction ---
         const dateStr = new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' });
