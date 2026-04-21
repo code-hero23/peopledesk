@@ -65,6 +65,24 @@ export const updateTicketStatus = createAsyncThunk(
     }
 );
 
+// Delete ticket
+export const deleteTicket = createAsyncThunk(
+    'helpdesk/delete',
+    async (id, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.delete(`${API_URL}${id}`, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 export const helpdeskSlice = createSlice({
     name: 'helpdesk',
     initialState,
@@ -115,6 +133,19 @@ export const helpdeskSlice = createSlice({
                 }
             })
             .addCase(updateTicketStatus.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            .addCase(deleteTicket.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(deleteTicket.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                state.tickets = state.tickets.filter(ticket => ticket.id !== action.payload.id);
+            })
+            .addCase(deleteTicket.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

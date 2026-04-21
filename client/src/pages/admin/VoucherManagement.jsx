@@ -289,7 +289,10 @@ const VoucherManagement = () => {
             item.type.toLowerCase().includes(historySearch.toLowerCase()) ||
             item.amount.toString().includes(historySearch);
             
-        const matchesStatus = historyStatus === 'ALL' || item.status === historyStatus;
+        const matchesStatus = historyStatus === 'ALL' ? true : 
+                              historyStatus === 'UNPAID' ? (item.status === 'PENDING' || item.status === 'APPROVED') :
+                              historyStatus === 'PAID_SETTLED' ? (item.status === 'PAID' || item.status === 'WAITING' || item.status === 'COMPLETED') :
+                              item.status === historyStatus;
         
         const itemDate = new Date(item.updatedAt);
         const matchesStartDate = !historyStartDate || itemDate >= new Date(historyStartDate);
@@ -623,6 +626,32 @@ const VoucherManagement = () => {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carpenter Hub</p>
                     <p className="text-sm font-black text-blue-600 mt-1 italic group-hover:text-blue-700 transition-colors">Manage Records</p>
                 </motion.div>
+
+                {/* Paid Vouchers Card */}
+                <motion.div 
+                    whileHover={{ y: -5 }} 
+                    onClick={() => { setView('history'); setHistoryStatus('PAID_SETTLED'); }}
+                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-emerald-200 transition-all"
+                >
+                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
+                        <CheckCircle2 size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No. of Paid Vouchers</p>
+                    <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => ['PAID', 'WAITING', 'COMPLETED'].includes(v.status)).length}</p>
+                </motion.div>
+
+                {/* Unpaid Vouchers Card */}
+                <motion.div 
+                    whileHover={{ y: -5 }} 
+                    onClick={() => { setView('history'); setHistoryStatus('UNPAID'); }}
+                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-amber-200 transition-all"
+                >
+                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-4 transition-colors group-hover:bg-amber-600 group-hover:text-white">
+                        <Clock size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No. of Unpaid Vouchers</p>
+                    <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => ['PENDING', 'APPROVED'].includes(v.status)).length}</p>
+                </motion.div>
             </div>
 
             <AnimatePresence mode="wait">
@@ -757,6 +786,8 @@ const VoucherManagement = () => {
                                         onChange={(e) => setHistoryStatus(e.target.value)}
                                     >
                                         <option value="ALL">All Status</option>
+                                        <option value="UNPAID">Unpaid (Pending/Approved)</option>
+                                        <option value="PAID_SETTLED">Paid (Paid/Waiting/Completed)</option>
                                         <option value="PENDING">Pending</option>
                                         <option value="APPROVED">Approved</option>
                                         <option value="WAITING">Waiting</option>

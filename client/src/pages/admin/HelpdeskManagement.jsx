@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getTickets, updateTicketStatus, reset } from '../../features/helpdesk/helpdeskSlice';
+import { getTickets, updateTicketStatus, deleteTicket, reset } from '../../features/helpdesk/helpdeskSlice';
 import { formatDate } from '../../utils/dateUtils';
 import { toast } from 'react-toastify';
 import { 
@@ -18,7 +18,8 @@ import {
     Check,
     Briefcase,
     Activity,
-    Layers
+    Layers,
+    Trash2
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 
@@ -76,6 +77,13 @@ const HelpdeskManagement = () => {
             status: newStatus, 
             remarks 
         }));
+    };
+
+    const handleDelete = (id) => {
+        if (window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
+            dispatch(deleteTicket(id));
+            setSelectedTicket(null);
+        }
     };
 
     const isHrOrCoo = (user) => {
@@ -336,7 +344,7 @@ const HelpdeskManagement = () => {
                                     )}
                                 </div>
 
-                                <div className="flex gap-4 pt-4">
+                                <div className="flex flex-wrap gap-4 pt-4">
                                     <button
                                         type="button"
                                         onClick={() => setSelectedTicket(null)}
@@ -344,6 +352,16 @@ const HelpdeskManagement = () => {
                                     >
                                         Cancel
                                     </button>
+                                    {currentUser.role === 'ADMIN' && (
+                                        <button
+                                            type="button"
+                                            onClick={() => handleDelete(selectedTicket.id)}
+                                            className="px-6 py-4 bg-rose-50 hover:bg-rose-100 text-rose-600 rounded-3xl font-black uppercase text-xs tracking-[0.2em] transition-all flex items-center gap-2"
+                                            title="Delete Ticket (Admin Only)"
+                                        >
+                                            <Trash2 size={18} />
+                                        </button>
+                                    )}
                                     <button
                                         type="submit"
                                         disabled={isLoading}

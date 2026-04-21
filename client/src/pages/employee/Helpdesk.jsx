@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { AnimatePresence, motion } from 'framer-motion';
-import { getTickets, createTicket, reset } from '../../features/helpdesk/helpdeskSlice';
+import { getTickets, createTicket, deleteTicket, reset } from '../../features/helpdesk/helpdeskSlice';
 import { formatDate } from '../../utils/dateUtils';
 import { toast } from 'react-toastify';
 import { 
@@ -14,7 +14,8 @@ import {
     ChevronRight,
     Search,
     Filter,
-    X
+    X,
+    Trash2
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 
@@ -61,6 +62,12 @@ const Helpdesk = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         dispatch(createTicket(formData));
+    };
+
+    const handleDelete = (id) => {
+        if (window.confirm('Are you sure you want to delete this ticket? This action cannot be undone.')) {
+            dispatch(deleteTicket(id));
+        }
     };
 
     const categories = [
@@ -209,6 +216,19 @@ const Helpdesk = () => {
                                                 <MessageSquare size={14} />
                                                 {ticket.type}
                                             </span>
+                                            {user.role === 'ADMIN' && (
+                                                <button 
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        handleDelete(ticket.id);
+                                                    }}
+                                                    className="flex items-center gap-2 bg-rose-50 dark:bg-rose-950/20 px-3 py-1.5 rounded-xl text-rose-600 hover:bg-rose-100 transition-colors"
+                                                    title="Delete Ticket (Admin Only)"
+                                                >
+                                                    <Trash2 size={14} />
+                                                    Delete
+                                                </button>
+                                            )}
                                         </div>
                                         <div 
                                             onClick={() => setSelectedTicket(ticket)}

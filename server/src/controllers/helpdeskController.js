@@ -151,8 +151,40 @@ const updateTicketStatus = async (req, res) => {
     }
 };
 
+// @desc    Delete a helpdesk ticket (Admin only)
+// @route   DELETE /api/helpdesk/:id
+// @access  Private (ADMIN)
+const deleteTicket = async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const ticket = await prisma.helpdeskTicket.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!ticket) {
+            return res.status(404).json({ message: 'Ticket not found' });
+        }
+
+        // Only Admin can delete
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Only superadmins can delete tickets' });
+        }
+
+        await prisma.helpdeskTicket.delete({
+            where: { id: parseInt(id) }
+        });
+
+        res.json({ message: 'Ticket deleted successfully', id: parseInt(id) });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 module.exports = {
     createTicket,
     getTickets,
-    updateTicketStatus
+    updateTicketStatus,
+    deleteTicket
 };
