@@ -21,6 +21,7 @@ import Modal from '../../components/Modal';
 
 const Helpdesk = () => {
     const dispatch = useDispatch();
+    const { user: currentUser } = useSelector((state) => state.auth);
     const { tickets, isLoading, isSuccess, isError, message } = useSelector((state) => state.helpdesk);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [selectedTicket, setSelectedTicket] = useState(null);
@@ -216,7 +217,7 @@ const Helpdesk = () => {
                                                 <MessageSquare size={14} />
                                                 {ticket.type}
                                             </span>
-                                            {user.role === 'ADMIN' && (
+                                            {currentUser?.role === 'ADMIN' && (
                                                 <button 
                                                     onClick={(e) => {
                                                         e.stopPropagation();

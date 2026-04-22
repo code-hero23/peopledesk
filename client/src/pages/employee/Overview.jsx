@@ -274,7 +274,7 @@ const Overview = () => {
             await Preferences.set({ key: 'apiUrl', value: baseUrl });
             
             if (user?.token) {
-                await Preferences.set({ key: 'authToken', value: user.token });
+                await Preferences.set({ key: 'authToken', value: user?.token });
             }
 
             // Trigger background sync scheduling
@@ -321,7 +321,7 @@ const Overview = () => {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${user.token}`
+                        'Authorization': `Bearer ${user?.token}`
                     },
                     body: JSON.stringify({ logs: filteredLogs, syncDate: new Date().toISOString(), simFilter: officialSim })
                 });
