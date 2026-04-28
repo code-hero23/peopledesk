@@ -28,9 +28,7 @@ const CRECallReports = () => {
     const [simFilter, setSimFilter] = useState('ALL');
     const [isUniqueOnly, setIsUniqueOnly] = useState(false);
     const getIstToday = () => {
-        const d = new Date();
-        const utc = d.getTime() + (d.getTimezoneOffset() * 60000);
-        return new Date(utc + (3600000 * 5.5)).toISOString().split('T')[0];
+        return new Date().toLocaleDateString('en-CA');
     };
     const [selectedDate, setSelectedDate] = useState(getIstToday());
     const [isFetchingLocal, setIsFetchingLocal] = useState(false);
@@ -250,14 +248,11 @@ const CRECallReports = () => {
 
 
 
-    // helper to get IST date string consistently
     const toIstDateString = (dateInput) => {
         if (!dateInput) return null;
         const d = new Date(dateInput);
         if (isNaN(d.getTime())) return null;
-        // Shift to IST for comparison
-        const ist = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
-        return ist.toISOString().split('T')[0];
+        return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     };
 
     // Extract & Merge from Decoupled State
@@ -276,7 +271,7 @@ const CRECallReports = () => {
         .filter(call => {
             if (!call.workLogDate) return false;
             // Use the server-assigned date string to ensure consistency with Admin/Stats
-            const callDateStr = new Date(call.workLogDate).toISOString().split('T')[0];
+            const callDateStr = new Date(call.workLogDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
             const isMatch = callDateStr === selectedDate;
             
             // Helpful for debugging if anything appears missing

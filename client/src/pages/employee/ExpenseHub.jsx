@@ -38,7 +38,7 @@ const ExpenseHub = () => {
         type: 'POSTPAID',
         amount: '',
         purpose: '',
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('en-CA'),
         proofFile: null
     });
 
@@ -58,7 +58,7 @@ const ExpenseHub = () => {
                     type: 'POSTPAID', 
                     amount: '', 
                     purpose: '', 
-                    date: new Date().toISOString().split('T')[0],
+                    date: new Date().toLocaleDateString('en-CA'),
                     proofFile: null
                 });
                 dispatch(getMyVouchers());

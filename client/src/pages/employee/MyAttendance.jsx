@@ -147,7 +147,7 @@ const MyAttendance = () => {
                                         displayDates.map((dateObj, index) => {
                                             // Find attendance record for this exact date
                                             // Aggregate data for this date
-                                            const dateString = dateObj.toISOString().split('T')[0];
+                                            const dateString = dateObj.toLocaleDateString('en-CA');
                                             const dayData = aggregateDayData(dateString);
 
                                             return (

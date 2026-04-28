@@ -14,23 +14,31 @@ const MyWorkLogs = () => {
     const [selectedLog, setSelectedLog] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
 
-    // Month Selection State (Defaults to current month)
-    const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7)); // "YYYY-MM"
+    // Helper to get the correct cycle month (26th shifts to next month)
+    const getCycleMonth = () => {
+        const today = new Date();
+        const day = today.getDate();
+        if (day >= 26) {
+            today.setMonth(today.getMonth() + 1);
+        }
+        return today.toLocaleDateString('en-CA').slice(0, 7);
+    };
+
+    // Month Selection State (Defaults to current cycle month)
+    const [selectedMonth, setSelectedMonth] = useState(getCycleMonth()); // "YYYY-MM"
+
+    const [year, month] = selectedMonth.split('-').map(Number);
+    const endDate = new Date(year, month - 1, 25).toLocaleDateString('en-CA');
+    const startDate = new Date(year, month - 2, 26).toLocaleDateString('en-CA');
 
     useEffect(() => {
-        const [year, month] = selectedMonth.split('-').map(Number);
-        
-        // Calculate 26th of previous month to 25th of current month
-        const end = new Date(year, month - 1, 25);
-        const start = new Date(year, month - 2, 26);
-        
         dispatch(getMyWorkLogs({ 
-            startDate: start.toISOString().split('T')[0], 
-            endDate: end.toISOString().split('T')[0] 
+            startDate, 
+            endDate 
         }));
         
         return () => { dispatch(reset()); };
-    }, [dispatch, selectedMonth]);
+    }, [dispatch, startDate, endDate]);
 
     const onExportSummary = async () => {
         try {
@@ -102,14 +110,27 @@ const MyWorkLogs = () => {
                     <p className="text-slate-500">History of your daily submitted reports.</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-3">
-                    <div className="flex items-center gap-2 bg-white px-4 py-2 border border-slate-200 rounded-xl shadow-sm group focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
-                        <Calendar size={18} className="text-slate-400 group-focus-within:text-blue-500" />
-                        <input
-                            type="month"
-                            value={selectedMonth}
-                            onChange={(e) => setSelectedMonth(e.target.value)}
-                            className="bg-transparent text-sm font-bold text-slate-700 outline-none border-none p-0 focus:ring-0"
-                        />
+                    <div className="flex flex-col">
+                        <div className="flex items-center gap-2 bg-white px-4 py-2 border border-slate-200 rounded-xl shadow-sm group focus-within:ring-2 focus-within:ring-blue-500/20 transition-all">
+                            <Calendar size={18} className="text-slate-400 group-focus-within:text-blue-500" />
+                            <input
+                                type="month"
+                                value={selectedMonth}
+                                onChange={(e) => setSelectedMonth(e.target.value)}
+                                className="bg-transparent text-sm font-bold text-slate-700 outline-none border-none p-0 focus:ring-0"
+                            />
+                            {selectedMonth !== getCycleMonth() && (
+                                <button 
+                                    onClick={() => setSelectedMonth(getCycleMonth())}
+                                    className="text-[10px] font-bold text-blue-600 hover:text-blue-700 ml-2"
+                                >
+                                    Current
+                                </button>
+                            )}
+                        </div>
+                        <p className="text-[10px] text-slate-400 mt-1 ml-1 font-medium">
+                            Cycle: <span className="text-slate-600 font-bold">{startDate}</span> → <span className="text-slate-600 font-bold">{endDate}</span>
+                        </p>
                     </div>
                     
                     <button

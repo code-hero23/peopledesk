@@ -176,7 +176,7 @@ export const getTodayLogStatus = createAsyncThunk(
             // BETTER: Add a specific check so we know if it's OPEN or CLOSED.
             const response = await axios.get(API_URL + 'worklogs', config);
             const logs = response.data;
-            const today = new Date().toISOString().split('T')[0];
+            const today = new Date().toLocaleDateString('en-CA');
             
             // Prioritize finding an OPEN log from TODAY
             const openLogToday = logs.find(log => log.logStatus === 'OPEN' && log.date.startsWith(today));
@@ -611,7 +611,7 @@ export const employeeSlice = createSlice({
                 state.isLoading = false;
                 state.workLogs = action.payload;
                 
-                const today = new Date().toISOString().split('T')[0];
+                const today = new Date().toLocaleDateString('en-CA');
                 // Prioritize finding an OPEN log from TODAY
                 const openLogToday = action.payload.find(log => log.logStatus === 'OPEN' && log.date.startsWith(today));
                 if (openLogToday) {

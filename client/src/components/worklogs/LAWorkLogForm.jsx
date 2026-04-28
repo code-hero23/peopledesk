@@ -67,7 +67,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     // Project Report State
     const [projectReport, setProjectReport] = useState({
-        date: new Date().toISOString().split('T')[0],
+        date: new Date().toLocaleDateString('en-CA'),
         projectId: '',
         clientName: '',
         site: '',
@@ -202,7 +202,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                         setShowSuccess(true);
                         // Reset form
                         setProjectReport({
-                            date: new Date().toISOString().split('T')[0],
+                            date: new Date().toLocaleDateString('en-CA'),
                             projectId: '', clientName: '', site: '', process: '',
                             imageCount: '', startTime: '', endTime: '',
                             completedImages: '', pendingImages: '', remarks: '',

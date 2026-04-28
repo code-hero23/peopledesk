@@ -123,7 +123,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
             // OPENING PHASE
             const payload = {
                 customFields,
-                date: new Date().toISOString().split('T')[0],
+                date: new Date().toLocaleDateString('en-CA'),
                 startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                 logStatus: 'OPEN'
             };
