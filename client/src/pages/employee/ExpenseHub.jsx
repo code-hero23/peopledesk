@@ -151,6 +151,16 @@ const ExpenseHub = () => {
                 return 'bg-violet-100 text-violet-700 border-violet-200';
             case 'OFFICE_EXPENSES':
                 return 'bg-sky-100 text-sky-700 border-sky-200';
+            case 'LEO_SIR_BH':
+                return 'bg-orange-100 text-orange-700 border-orange-200';
+            case 'SANGHATAMIZH_MAM_BH':
+                return 'bg-pink-100 text-pink-700 border-pink-200';
+            case 'RAJKUMAR_SIR_BH':
+                return 'bg-blue-100 text-blue-700 border-blue-200';
+            case 'PUGAZH_SIR_BH':
+                return 'bg-teal-100 text-teal-700 border-teal-200';
+            case 'RAMYA_MAM_BH':
+                return 'bg-fuchsia-100 text-fuchsia-700 border-fuchsia-200';
             default:
                 return 'bg-slate-100 text-slate-700 border-slate-200';
         }
@@ -402,9 +412,14 @@ const ExpenseHub = () => {
                                             <option value="CLIENT_REFUND">3. Client Refund</option>
                                             <option value="VENDOR_PAYMENT">4. Vendor Payment</option>
                                             <option value="BH_VOUCHER">5. BH Vouchers</option>
-                                            <option value="OFFICE_EXPENSES">6. Office Expenses</option>
-                                            <option value="SALARY_ADVANCE">7. Salary Advance</option>
-                                            <option value="CUSTOM">8. Custom Field</option>
+                                            <option value="LEO_SIR_BH">6. Leo Sir BH</option>
+                                            <option value="SANGHATAMIZH_MAM_BH">7. Sanghatamizh Mam BH</option>
+                                            <option value="RAJKUMAR_SIR_BH">8. Rajkumar Sir BH</option>
+                                            <option value="PUGAZH_SIR_BH">9. Pugazh Sir BH</option>
+                                            <option value="RAMYA_MAM_BH">10. Ramya Mam BH</option>
+                                            <option value="OFFICE_EXPENSES">11. Office Expenses</option>
+                                            <option value="SALARY_ADVANCE">12. Salary Advance</option>
+                                            <option value="CUSTOM">13. Custom Field</option>
                                             <option value="PREPAID" className="border-t">PREPAID (Legacy)</option>
                                             <option value="POSTPAID">POSTPAID (Legacy)</option>
                                             <option value="ADVANCE">ADVANCE (Legacy)</option>

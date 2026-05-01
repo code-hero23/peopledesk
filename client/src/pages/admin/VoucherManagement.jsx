@@ -615,6 +615,21 @@ const VoucherManagement = () => {
                     <p className="text-2xl font-black text-slate-800">₹{financeSummary?.pending?.toLocaleString() || '0'}</p>
                 </motion.div>
 
+                {/* New Pending Amount Card */}
+                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
+                    <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 mb-4 transition-colors group-hover:bg-rose-600 group-hover:text-white">
+                        <ShieldAlert size={24} />
+                    </div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Amount</p>
+                    <p className="text-2xl font-black text-slate-800">
+                        ₹{spentHistory
+                            .filter(v => ['PENDING', 'APPROVED', 'WAITING', 'PAID'].includes(v.status))
+                            .reduce((sum, v) => sum + v.amount, 0)
+                            .toLocaleString()
+                        }
+                    </p>
+                </motion.div>
+
                 <motion.div 
                     whileHover={{ y: -5 }} 
                     onClick={handleCarpenterHubClick}
@@ -1339,6 +1354,23 @@ const VoucherManagement = () => {
                                                     Mark as Paid & Disburse <DollarSign size={18} />
                                                 </button>
                                             )}
+
+                                            {/* Force Paid Action for AM for Immediate Vouchers (Bypassing COO) */}
+                                            {selectedVoucher.status !== 'PAID' && 
+                                             selectedVoucher.cooStatus === 'PENDING' && 
+                                             (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && 
+                                             ['POSTPAID', 'COMPANY_PAY_AFTER', 'OFFICE_EXPENSES', 'BH_VOUCHER', 'LEO_SIR_BH', 'SANGHATAMIZH_MAM_BH', 'RAJKUMAR_SIR_BH', 'PUGAZH_SIR_BH', 'RAMYA_MAM_BH'].includes(selectedVoucher.type) && (
+                                                <button
+                                                    onClick={() => {
+                                                        if (window.confirm('You are about to force-pay this immediate voucher without COO approval. Proceed?')) {
+                                                            handleAction('PAID');
+                                                        }
+                                                    }}
+                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] text-white bg-amber-500 hover:bg-black shadow-xl shadow-amber-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border-b-4 border-amber-700 active:border-b-0"
+                                                >
+                                                    Force Pay & Disburse <ShieldAlert size={18} />
+                                                </button>
+                                            )}
                                             
                                             {/* Admin Note - Always show for Admin as an additional action or if already approved */}
                                             {user.role === 'ADMIN' && (
@@ -1536,9 +1568,14 @@ const VoucherManagement = () => {
                                         <option value="CLIENT_REFUND">3. Client Refund</option>
                                         <option value="VENDOR_PAYMENT">4. Vendor Payment</option>
                                         <option value="BH_VOUCHER">5. BH Vouchers</option>
-                                        <option value="OFFICE_EXPENSES">6. Office Expenses</option>
-                                        <option value="SALARY_ADVANCE">7. Salary Advance</option>
-                                        <option value="CUSTOM">8. Custom Field</option>
+                                        <option value="LEO_SIR_BH">6. Leo Sir BH</option>
+                                        <option value="SANGHATAMIZH_MAM_BH">7. Sanghatamizh Mam BH</option>
+                                        <option value="RAJKUMAR_SIR_BH">8. Rajkumar Sir BH</option>
+                                        <option value="PUGAZH_SIR_BH">9. Pugazh Sir BH</option>
+                                        <option value="RAMYA_MAM_BH">10. Ramya Mam BH</option>
+                                        <option value="OFFICE_EXPENSES">11. Office Expenses</option>
+                                        <option value="SALARY_ADVANCE">12. Salary Advance</option>
+                                        <option value="CUSTOM">13. Custom Field</option>
                                         <option value="PREPAID">Prepaid (Legacy)</option>
                                         <option value="POSTPAID">Bill (Legacy)</option>
                                         <option value="ADVANCE">Advance (Legacy)</option>

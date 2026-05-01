@@ -326,24 +326,45 @@ const payVoucher = async (req, res) => {
             where: { id: parseInt(id) }
         });
 
-        if (!voucher || voucher.cooStatus !== 'APPROVED') {
+        if (!voucher) {
+            return res.status(404).json({ message: 'Voucher not found' });
+        }
+
+        const immediateTypes = [
+            'POSTPAID', 'COMPANY_PAY_AFTER', 'OFFICE_EXPENSES', 'BH_VOUCHER',
+            'LEO_SIR_BH', 'SANGHATAMIZH_MAM_BH', 'RAJKUMAR_SIR_BH', 'PUGAZH_SIR_BH', 'RAMYA_MAM_BH'
+        ];
+        const isImmediate = immediateTypes.includes(voucher.type);
+
+        if (voucher.cooStatus !== 'APPROVED' && !isImmediate) {
             return res.status(400).json({ message: 'Voucher not found or not yet approved by COO' });
         }
 
-        if (voucher.status !== 'PAID') {
+        if (voucher.status !== 'PAID' && !isImmediate) {
             return res.status(400).json({ message: 'Voucher is not in PAID state' });
         }
 
         // Determine final status
-        const immediateTypes = ['POSTPAID', 'COMPANY_PAY_AFTER'];
-        const finalStatus = immediateTypes.includes(voucher.type) ? 'COMPLETED' : 'WAITING';
+        const finalStatus = (voucher.type === 'POSTPAID' || voucher.type === 'COMPANY_PAY_AFTER') ? 'COMPLETED' : 'WAITING';
+
+        const updateData = {
+            status: finalStatus,
+            adminRemarks: voucher.adminRemarks 
+                ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}${voucher.cooStatus !== 'APPROVED' ? ' (FORCE PAID)' : ''}` 
+                : `Payment confirmed by ${req.user.name}${voucher.cooStatus !== 'APPROVED' ? ' (FORCE PAID)' : ''}`
+        };
+
+        // If force paid, also update COO status
+        if (voucher.cooStatus !== 'APPROVED') {
+            updateData.cooStatus = 'APPROVED';
+            updateData.cooRemarks = `Force Paid by AM: ${req.user.name}`;
+            updateData.cooApprovedAt = new Date();
+            updateData.cooId = req.user.id;
+        }
 
         const updatedVoucher = await prisma.voucher.update({
             where: { id: parseInt(id) },
-            data: {
-                status: finalStatus,
-                adminRemarks: voucher.adminRemarks ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}` : `Payment confirmed by ${req.user.name}`
-            },
+            data: updateData,
             include: {
                 user: {
                     select: { name: true, designation: true, email: true }

@@ -137,7 +137,12 @@ async function main() {
       'BH_VOUCHER',
       'OFFICE_EXPENSES',
       'SALARY_ADVANCE',
-      'CUSTOM'
+      'CUSTOM',
+      'LEO_SIR_BH',
+      'SANGHATAMIZH_MAM_BH',
+      'RAJKUMAR_SIR_BH',
+      'PUGAZH_SIR_BH',
+      'RAMYA_MAM_BH'
     ];
 
     for (const type of newTypes) {
