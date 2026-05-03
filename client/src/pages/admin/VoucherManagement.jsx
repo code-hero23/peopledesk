@@ -851,14 +851,30 @@ const VoucherManagement = () => {
                                         {/* Left Side: Employee & Basic Info */}
                                         <div className="flex items-center gap-5 w-full lg:w-1/4">
                                             <div className="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-400 group-hover:bg-emerald-600 group-hover:text-white transition-all shadow-inner overflow-hidden">
-                                                {item.user?.profileImage ? (
+                                                {['LEO_SIR_BH', 'SANGHATAMIZH_MAM_BH', 'RAJKUMAR_SIR_BH', 'PUGAZH_SIR_BH', 'RAMYA_MAM_BH', 'BH_VOUCHER'].includes(item.type) ? (
+                                                    <span className="text-xl font-black">
+                                                        {item.type === 'LEO_SIR_BH' ? 'L' :
+                                                         item.type === 'SANGHATAMIZH_MAM_BH' ? 'S' :
+                                                         item.type === 'RAJKUMAR_SIR_BH' ? 'R' :
+                                                         item.type === 'PUGAZH_SIR_BH' ? 'P' :
+                                                         item.type === 'RAMYA_MAM_BH' ? 'R' : 'B'}
+                                                    </span>
+                                                ) : item.user?.profileImage ? (
                                                     <img src={item.user.profileImage} alt="" className="w-full h-full object-cover" />
                                                 ) : (
                                                     <span className="text-xl font-black">{item.user?.name ? item.user.name[0] : '?'}</span>
                                                 )}
                                             </div>
                                             <div>
-                                                <h3 className="font-black text-slate-800 text-lg">{item.user?.name}</h3>
+                                                <h3 className="font-black text-slate-800 text-lg">
+                                                    {item.type === 'LEO_SIR_BH' ? 'LEO SIR' :
+                                                     item.type === 'SANGHATAMIZH_MAM_BH' ? 'SANGHATAMIZH MAM' :
+                                                     item.type === 'RAJKUMAR_SIR_BH' ? 'RAJKUMAR SIR' :
+                                                     item.type === 'PUGAZH_SIR_BH' ? 'PUGAZH SIR' :
+                                                     item.type === 'RAMYA_MAM_BH' ? 'RAMYA MAM' :
+                                                     item.type === 'BH_VOUCHER' ? 'BUSINESS HEAD' :
+                                                     item.user?.name}
+                                                </h3>
                                                 <div className="flex flex-wrap items-center gap-2">
                                                     <p className="text-[10px] text-slate-400 font-black uppercase tracking-widest">{item.user?.designation}</p>
                                                     <div className="w-1 h-1 bg-slate-300 rounded-full" />

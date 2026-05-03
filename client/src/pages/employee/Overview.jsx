@@ -263,7 +263,7 @@ const Overview = () => {
     };
 
     const checkSimPreference = async () => {
-        if (!['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) return;
+        if (!user?.callAnalyticsViewEnabled) return;
         try {
             const { Capacitor } = await import('@capacitor/core');
             if (!Capacitor.isNativePlatform()) return;
@@ -294,7 +294,7 @@ const Overview = () => {
     };
 
     const performFallbackSync = async () => {
-        if (['CRE', 'CLIENT-FACILITATOR'].includes(user?.designation)) {
+        if (user?.callAnalyticsViewEnabled) {
             try {
                 const { Capacitor } = await import('@capacitor/core');
                 const { Preferences } = await import('@capacitor/preferences');
