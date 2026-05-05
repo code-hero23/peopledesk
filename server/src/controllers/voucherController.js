@@ -330,18 +330,40 @@ const payVoucher = async (req, res) => {
             return res.status(404).json({ message: 'Voucher not found' });
         }
 
-        const immediateTypes = [
-            'POSTPAID', 'COMPANY_PAY_AFTER', 'OFFICE_EXPENSES', 'BH_VOUCHER',
-            'LEO_SIR_BH', 'SANGHATAMIZH_MAM_BH', 'RAJKUMAR_SIR_BH', 'PUGAZH_SIR_BH', 'RAMYA_MAM_BH'
-        ];
-        const isImmediate = immediateTypes.includes(voucher.type);
+        // Allow any voucher type to be force-paid if user is AM/Admin
+        // (Access check for AM/Admin is already done at the top)
 
-        if (voucher.cooStatus !== 'APPROVED' && !isImmediate) {
-            return res.status(400).json({ message: 'Voucher not found or not yet approved by COO' });
+        if (voucher.amStatus === 'REJECTED' || voucher.cooStatus === 'REJECTED') {
+            return res.status(400).json({ message: 'Cannot pay a rejected voucher' });
         }
 
-        if (voucher.status !== 'PAID' && !isImmediate) {
-            return res.status(400).json({ message: 'Voucher is not in PAID state' });
+        // If force paid, notify COO
+        if (voucher.cooStatus !== 'APPROVED') {
+            try {
+                const coos = await prisma.user.findMany({
+                    where: {
+                        role: 'BUSINESS_HEAD',
+                        OR: [
+                            { designation: 'COO' },
+                            { designation: 'Chief Operational Officer' }
+                        ]
+                    }
+                });
+
+                for (const coo of coos) {
+                    await prisma.notification.create({
+                        data: {
+                            userId: coo.id,
+                            title: '🚨 Voucher Force Paid',
+                            message: `Voucher #${voucher.id} for ₹${voucher.amount.toLocaleString()} was force-paid by AM (${req.user.name}) without COO approval.`,
+                            type: 'URGENT',
+                            relatedId: voucher.id
+                        }
+                    });
+                }
+            } catch (notifyError) {
+                console.error('Non-critical: Failed to send force-pay notification to COO:', notifyError);
+            }
         }
 
         // Determine final status
@@ -354,13 +376,14 @@ const payVoucher = async (req, res) => {
                 : `Payment confirmed by ${req.user.name}${voucher.cooStatus !== 'APPROVED' ? ' (FORCE PAID)' : ''}`
         };
 
-        // If force paid, also update COO status
+        // If force paid, also update COO status to maintain workflow integrity
         if (voucher.cooStatus !== 'APPROVED') {
             updateData.cooStatus = 'APPROVED';
             updateData.cooRemarks = `Force Paid by AM: ${req.user.name}`;
             updateData.cooApprovedAt = new Date();
             updateData.cooId = req.user.id;
         }
+
 
         const updatedVoucher = await prisma.voucher.update({
             where: { id: parseInt(id) },

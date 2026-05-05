@@ -1371,14 +1371,13 @@ const VoucherManagement = () => {
                                                 </button>
                                             )}
 
-                                            {/* Force Paid Action for AM for Immediate Vouchers (Bypassing COO) */}
+                                            {/* Force Paid Action for AM for Any Voucher (Bypassing COO) */}
                                             {selectedVoucher.status !== 'PAID' && 
                                              selectedVoucher.cooStatus === 'PENDING' && 
-                                             (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && 
-                                             ['POSTPAID', 'COMPANY_PAY_AFTER', 'OFFICE_EXPENSES', 'BH_VOUCHER', 'LEO_SIR_BH', 'SANGHATAMIZH_MAM_BH', 'RAJKUMAR_SIR_BH', 'PUGAZH_SIR_BH', 'RAMYA_MAM_BH'].includes(selectedVoucher.type) && (
+                                             (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                                 <button
                                                     onClick={() => {
-                                                        if (window.confirm('You are about to force-pay this immediate voucher without COO approval. Proceed?')) {
+                                                        if (window.confirm('You are about to force-pay this voucher without COO approval. This action will trigger an automated notification to the COO. Proceed?')) {
                                                             handleAction('PAID');
                                                         }
                                                     }}
