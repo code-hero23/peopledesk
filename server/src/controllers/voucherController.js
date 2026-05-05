@@ -8,7 +8,10 @@ const { parseRobustDate } = require('../utils/dateHelpers');
 const createVoucher = async (req, res) => {
     try {
         console.log('DEBUG: Full req.body:', JSON.stringify(req.body, null, 2));
-        const userId = req.user.id;
+        const userId = (req.user.role === 'ADMIN' || req.user.role === 'ACCOUNTS_MANAGER') && req.body.targetUserId 
+            ? parseInt(req.body.targetUserId) 
+            : req.user.id;
+        
         const { type, amount, purpose, date } = req.body;
         let proofUrl = req.body.proofUrl;
 

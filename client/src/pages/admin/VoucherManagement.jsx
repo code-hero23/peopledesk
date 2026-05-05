@@ -25,6 +25,7 @@ import {
     deleteCarpenterRecord,
     reset as resetCarpenter
 } from '../../features/carpenter/carpenterSlice';
+import { getAllEmployees } from '../../features/admin/adminSlice';
 import { 
     CheckCircle2, 
     XCircle, 
@@ -73,6 +74,7 @@ const VoucherManagement = () => {
         loading: carpenterLoading,
         error: carpenterError
     } = useSelector((state) => state.carpenter);
+    const { employees } = useSelector((state) => state.admin);
 
     const [selectedVoucher, setSelectedVoucher] = useState(null);
     const [remarks, setRemarks] = useState('');
@@ -90,7 +92,8 @@ const VoucherManagement = () => {
         amount: '',
         purpose: '',
         date: new Date().toISOString().split('T')[0],
-        proofFile: null
+        proofFile: null,
+        targetUserId: ''
     });
 
     // Reset Cycle Modal
@@ -156,6 +159,7 @@ const VoucherManagement = () => {
             setRemarks('');
             dispatch(getFinanceSummary());
             dispatch(getSpentHistory());
+            dispatch(getAllEmployees());
         } catch (err) {
             toast.error(err);
         }
@@ -358,6 +362,9 @@ const VoucherManagement = () => {
             data.append('amount', raiseData.amount);
             data.append('purpose', raiseData.purpose);
             data.append('date', raiseData.date);
+            if (raiseData.targetUserId) {
+                data.append('targetUserId', raiseData.targetUserId);
+            }
             if (raiseData.proofFile) {
                 try {
                     const compressed = await compressImage(raiseData.proofFile);
@@ -378,9 +385,12 @@ const VoucherManagement = () => {
                     amount: '',
                     purpose: '',
                     date: new Date().toISOString().split('T')[0],
-                    proofFile: null
+                    proofFile: null,
+                    targetUserId: ''
                 });
                 dispatch(getManageableVouchers());
+                dispatch(getSpentHistory());
+                dispatch(getFinanceSummary());
             }, 2000);
         } catch (err) {
             toast.error(err);
@@ -790,6 +800,21 @@ const VoucherManagement = () => {
                                             <X size={14} />
                                         </button>
                                     )}
+                                </div>
+
+                                {/* Employee Filter */}
+                                <div className="relative">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                                    <select 
+                                        className="pl-11 pr-8 py-2.5 bg-white border border-slate-200 rounded-2xl text-xs font-black uppercase tracking-widest focus:ring-4 focus:ring-blue-50 outline-none appearance-none cursor-pointer min-w-[160px]"
+                                        value={historySearch}
+                                        onChange={(e) => setHistorySearch(e.target.value)}
+                                    >
+                                        <option value="">All Employees</option>
+                                        {employees && employees.map(emp => (
+                                            <option key={emp.id} value={emp.name}>{emp.name}</option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {/* Status Filter */}
@@ -1568,6 +1593,22 @@ const VoucherManagement = () => {
                                 <button type="button" onClick={() => setShowRaiseModal(false)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
                                     <XCircle size={28} className="text-slate-300" />
                                 </button>
+                            </div>
+
+                            <div className="space-y-3">
+                                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">On Behalf Of (Employee)</label>
+                                <select 
+                                    className="w-full px-4 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-xs cursor-pointer" 
+                                    value={raiseData.targetUserId} 
+                                    onChange={(e) => setRaiseData({ ...raiseData, targetUserId: e.target.value })}
+                                    required
+                                >
+                                    <option value="">-- Select Employee --</option>
+                                    <option value={user.id}>Self ({user.name})</option>
+                                    {employees && employees.map(emp => (
+                                        <option key={emp.id} value={emp.id}>{emp.name} ({emp.designation})</option>
+                                    ))}
+                                </select>
                             </div>
 
                             <div className="grid grid-cols-3 gap-6">
