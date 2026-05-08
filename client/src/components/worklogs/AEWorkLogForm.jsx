@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus, addProjectReport } from '../../features/employee/employeeSlice';
-import { getProjects } from '../../features/projects/projectSlice';
+import { getProjects, createProject } from '../../features/projects/projectSlice';
 import {
     Send, MapPin, Building, Info, Calendar, Clock, Camera,
     Navigation, Briefcase, Clipboard, HardHat, UserCheck,
-    Wrench, AlertOctagon, CornerDownRight, CheckSquare, Plus, ChevronRight, CheckCircle
+    Wrench, AlertOctagon, CornerDownRight, CheckSquare, Plus, ChevronRight, CheckCircle, X
 } from 'lucide-react';
+import { toast } from 'react-toastify';
 import { formatTime } from '../../utils/dateUtils';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
@@ -21,6 +22,8 @@ const AEWorkLogForm = ({ onSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
+    const [isCreatingProject, setIsCreatingProject] = useState(false);
+    const [newProject, setNewProject] = useState({ name: '', location: '' });
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         title: '',
@@ -183,6 +186,30 @@ const AEWorkLogForm = ({ onSuccess }) => {
         // Set start time when a project is selected if not already set
         if (!projectStartTime) {
             setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+        }
+    };
+
+    const handleCreateProject = async () => {
+        if (!newProject.name) return toast.error('Project name is required');
+        try {
+            setIsSubmitting(true);
+            const result = await dispatch(createProject(newProject)).unwrap();
+            toast.success('Project created and selected');
+            setProjectReport(prev => ({
+                ...prev,
+                projectId: result.id,
+                clientName: result.name,
+                ae_siteLocation: result.location || ''
+            }));
+            setIsCreatingProject(false);
+            setNewProject({ name: '', location: '' });
+            if (!projectStartTime) {
+                setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+            }
+        } catch (error) {
+            toast.error(error || 'Failed to create project');
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -394,13 +421,51 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                 <form onSubmit={handleProjectReportSubmit} className="space-y-6">
                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                         <div className="bg-slate-50/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-4 ring-blue-500/10 transition-all">
-                                            <Label text="Project Selection" />
-                                            <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none text-lg transition-colors" required>
-                                                <option value="" className="dark:bg-slate-800">-- Select Project --</option>
-                                                {projects?.map(p => (
-                                                    <option key={p.id} value={p.id} className="dark:bg-slate-800">{p.name}</option>
-                                                ))}
-                                            </select>
+                                            <div className="flex justify-between items-center mb-2">
+                                                <Label text="Project Selection" />
+                                                <button
+                                                    type="button"
+                                                    onClick={() => setIsCreatingProject(!isCreatingProject)}
+                                                    className="text-[10px] font-black text-blue-600 dark:text-blue-400 uppercase flex items-center gap-1 hover:text-blue-700 dark:hover:text-blue-300 transition-colors"
+                                                >
+                                                    {isCreatingProject ? <X size={12} /> : <Plus size={12} />}
+                                                    {isCreatingProject ? 'Cancel' : 'Create New'}
+                                                </button>
+                                            </div>
+
+                                            {isCreatingProject ? (
+                                                <div className="space-y-3 mt-2 animate-in fade-in slide-in-from-top-2">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Project / Client Name"
+                                                        value={newProject.name}
+                                                        onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                                                        className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none border border-slate-200 dark:border-slate-800 text-sm transition-colors"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Location (optional)"
+                                                        value={newProject.location}
+                                                        onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
+                                                        className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none border border-slate-200 dark:border-slate-800 text-sm transition-colors"
+                                                    />
+                                                    <button
+                                                        type="button"
+                                                        onClick={handleCreateProject}
+                                                        disabled={isSubmitting}
+                                                        className="w-full bg-blue-600 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 dark:shadow-blue-900/20"
+                                                    >
+                                                        {isSubmitting ? 'Creating...' : 'Add Project & Select'}
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none text-lg transition-colors" required>
+                                                    <option value="" className="dark:bg-slate-800">-- Select Project --</option>
+                                                    {projects?.map(p => (
+                                                        <option key={p.id} value={p.id} className="dark:bg-slate-800">{p.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
                                         </div>
                                         <div className="bg-slate-50/80 dark:bg-slate-800/80 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 transition-all">
                                             <Label text="Site Location (Area)" />
