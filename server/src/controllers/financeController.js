@@ -345,6 +345,62 @@ const exportFinanceData = async (req, res) => {
             row.getCell('amount').numFmt = '₹#,##0.00';
         });
 
+        // 4. Employee Summary Sheet (Name Wise)
+        const employeeSummarySheet = workbook.addWorksheet('Employee Summary');
+        employeeSummarySheet.columns = [
+            { header: 'Employee Name', key: 'name', width: 30 },
+            { header: 'Vouchers Raised', key: 'count', width: 20 },
+            { header: 'Approved', key: 'approved', width: 15 },
+            { header: 'Rejected', key: 'rejected', width: 15 },
+            { header: 'Total Amount', key: 'amount', width: 20 }
+        ];
+
+        employeeSummarySheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        employeeSummarySheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+
+        const employeeStats = vouchers.reduce((acc, v) => {
+            const name = v.user?.name || 'Unknown';
+            if (!acc[name]) {
+                acc[name] = { name, count: 0, approved: 0, rejected: 0, amount: 0 };
+            }
+            acc[name].count++;
+            if (['COMPLETED', 'WAITING', 'PAID', 'APPROVED'].includes(v.status)) acc[name].approved++;
+            if (v.status === 'REJECTED') acc[name].rejected++;
+            acc[name].amount += v.amount;
+            return acc;
+        }, {});
+
+        Object.values(employeeStats).sort((a, b) => b.amount - a.amount).forEach(stat => {
+            const row = employeeSummarySheet.addRow(stat);
+            row.getCell('amount').numFmt = '₹#,##0.00';
+        });
+
+        // 5. Detailed Voucher Log (Name, Voucher, Amount)
+        const detailSheet = workbook.addWorksheet('All Vouchers Detail');
+        detailSheet.columns = [
+            { header: 'Employee Name', key: 'name', width: 30 },
+            { header: 'Voucher ID', key: 'id', width: 15 },
+            { header: 'Amount', key: 'amount', width: 20 },
+            { header: 'Date', key: 'date', width: 20 },
+            { header: 'Status', key: 'status', width: 15 },
+            { header: 'Purpose', key: 'purpose', width: 40 }
+        ];
+
+        detailSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+        detailSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+
+        vouchers.forEach(v => {
+            const row = detailSheet.addRow({
+                name: v.user?.name || 'Unknown',
+                id: v.id,
+                amount: v.amount,
+                date: v.date.toISOString().split('T')[0],
+                status: v.status,
+                purpose: v.purpose
+            });
+            row.getCell('amount').numFmt = '₹#,##0.00';
+        });
+
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
         res.setHeader('Content-Disposition', `attachment; filename=Expense_Hub_Report_${new Date().toISOString().split('T')[0]}.xlsx`);
 
