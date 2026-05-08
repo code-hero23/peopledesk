@@ -490,8 +490,12 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                         </div>
                     )}
 
-                    {/* LA & FA Project Reports Grid (NEW ADDITION) */}
-                    {((laReports && Array.isArray(laReports) && laReports.length > 0) || (faReports && Array.isArray(faReports) && faReports.length > 0)) && (
+                    {/* LA & FA Project Reports Grid (Designation based visibility) */}
+                    {(
+                        (laReports && Array.isArray(laReports) && laReports.length > 0) || 
+                        (faReports && Array.isArray(faReports) && faReports.length > 0) ||
+                        ['LA', 'FA', 'LOADING ARCHITECT', 'FEASIBILITY ARCHITECT'].some(role => log.user?.designation?.toUpperCase().includes(role))
+                    ) && (
                         <div className="mb-8 print-no-break">
                             <SectionHeader title="PROJECT WISE REPORTS (DETAILED)" colorClass="bg-indigo-600" />
                             <div className="space-y-6">

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
-import { Calendar, Download, Eye, Search, BarChart3, Briefcase } from 'lucide-react';
+import { Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle } from 'lucide-react';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 
@@ -481,18 +481,31 @@ const WorkLogs = () => {
                                                         >
                                                             <BarChart3 size={16} />
                                                         </button>
-                                                        {['LA', 'FA'].some(role => record.user.designation?.toUpperCase().includes(role)) && (
-                                                            <button
-                                                                type="button"
-                                                                onClick={(e) => {
-                                                                    e.stopPropagation();
-                                                                    onExportProjectWise(record.user.id, record.user.name);
-                                                                }}
-                                                                className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
-                                                                title="Download Project Wise Reports (LA/FA Only)"
-                                                            >
-                                                                <Briefcase size={16} />
-                                                            </button>
+                                                        {['LA', 'FA', 'LOADING ARCHITECT', 'FEASIBILITY ARCHITECT'].some(role => record.user.designation?.toUpperCase().includes(role)) && (
+                                                            <div className="flex gap-1">
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        onExportProjectWise(record.user.id, record.user.name);
+                                                                    }}
+                                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                                    title="Download Project Wise Reports (LA/FA Only)"
+                                                                >
+                                                                    <Briefcase size={16} />
+                                                                </button>
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        alert("This will allow creating a project in the CRM for " + record.user.name + ". (Integration in progress)");
+                                                                    }}
+                                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                    title="Create Project"
+                                                                >
+                                                                    <PlusCircle size={16} />
+                                                                </button>
+                                                            </div>
                                                         )}
                                                     </div>
                                                 ) : (
