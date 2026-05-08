@@ -135,15 +135,18 @@ const VoucherManagement = () => {
         if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) return true;
         return false;
     };
-    const handleAction = useCallback(async (status) => {
-        const payload = { id: selectedVoucher.id, status, remarks };
+    const handleAction = useCallback(async (status, voucherOverride = null) => {
+        const voucher = voucherOverride || selectedVoucher;
+        if (!voucher) return;
+        
+        const payload = { id: voucher.id, status, remarks: voucherOverride ? '' : remarks };
         
         try {
             if (status === 'PAID') {
-                await dispatch(payVoucher(selectedVoucher.id)).unwrap();
+                await dispatch(payVoucher(voucher.id)).unwrap();
                 toast.success('Payment confirmed at bank level');
             } else if (status === 'DISBURSE') {
-                await dispatch(disburseVoucher(selectedVoucher.id)).unwrap();
+                await dispatch(disburseVoucher(voucher.id)).unwrap();
                 toast.success('Funds disbursement confirmed');
             } else if (user.role === 'ACCOUNTS_MANAGER') {
                 await dispatch(approveVoucherAM(payload)).unwrap();
@@ -151,12 +154,12 @@ const VoucherManagement = () => {
                 await dispatch(approveVoucherCOO(payload)).unwrap();
             } else if (user.role === 'ADMIN') {
                 // Admin can act as either AM or COO depending on current status
-                if (selectedVoucher.amStatus === 'PENDING') {
+                if (voucher.amStatus === 'PENDING') {
                     await dispatch(approveVoucherAM(payload)).unwrap();
-                } else if (selectedVoucher.status === 'APPROVED') {
-                    await dispatch(payVoucher(selectedVoucher.id)).unwrap();
-                } else if (selectedVoucher.status === 'PAID') {
-                    await dispatch(disburseVoucher(selectedVoucher.id)).unwrap();
+                } else if (voucher.status === 'APPROVED') {
+                    await dispatch(payVoucher(voucher.id)).unwrap();
+                } else if (voucher.status === 'PAID') {
+                    await dispatch(disburseVoucher(voucher.id)).unwrap();
                 } else {
                     await dispatch(approveVoucherCOO(payload)).unwrap();
                 }
@@ -999,13 +1002,12 @@ const VoucherManagement = () => {
                                         </div>
 
                                         {/* Inline Quick Actions for History */}
-                                        {item.status === 'APPROVED' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                        {(item.amStatus === 'APPROVED' && (item.status === 'PENDING' || item.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                             <div className="absolute right-24 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setSelectedVoucher(item);
-                                                        handleAction('PAID');
+                                                        handleAction('PAID', item);
                                                     }}
                                                     className="bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-200 flex items-center gap-2 hover:bg-black transition-all"
                                                 >
@@ -1018,8 +1020,7 @@ const VoucherManagement = () => {
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
-                                                        setSelectedVoucher(item);
-                                                        handleAction('DISBURSE');
+                                                        handleAction('DISBURSE', item);
                                                     }}
                                                     className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-200 flex items-center gap-2 hover:bg-black transition-all"
                                                 >
@@ -1425,7 +1426,7 @@ const VoucherManagement = () => {
                                             )}
 
                                             {/* Step 1: Paid Action for AM after COO/Admin Approval */}
-                                            {selectedVoucher.status === 'APPROVED' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                            {(selectedVoucher.amStatus === 'APPROVED' && (selectedVoucher.status === 'PENDING' || selectedVoucher.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                                 <button
                                                     onClick={() => handleAction('PAID')}
                                                     className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
@@ -1458,7 +1459,7 @@ const VoucherManagement = () => {
                                 ) : (
                                     <div className="flex flex-col gap-3">
                                         {/* Mark as Paid — available from history when status is APPROVED */}
-                                        {selectedVoucher.status === 'APPROVED' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                        {(selectedVoucher.amStatus === 'APPROVED' && (selectedVoucher.status === 'PENDING' || selectedVoucher.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                             <button
                                                 onClick={() => handleAction('PAID')}
                                                 className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"

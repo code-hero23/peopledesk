@@ -117,6 +117,7 @@ const getManageableVouchers = async (req, res) => {
             where = { 
                 OR: [
                     { amStatus: 'PENDING' },
+                    { amStatus: 'APPROVED', cooStatus: 'PENDING' },
                     { cooStatus: 'APPROVED', status: 'APPROVED' },
                     { status: 'PAID' }
                 ]
