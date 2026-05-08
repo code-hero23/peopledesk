@@ -1389,97 +1389,64 @@ const VoucherManagement = () => {
                                     </div>
                                 </div>
 
-                                {view === 'pending' ? (
-                                    <>
-                                        <div className="space-y-3">
-                                            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
-                                                <MessageSquare size={12} /> Approval Remarks
-                                            </label>
-                                            <textarea
-                                                rows="3"
-                                                placeholder="Add context for your decision..."
-                                                className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm transition-all focus:bg-white focus:border-blue-200"
-                                                value={remarks}
-                                                onChange={(e) => setRemarks(e.target.value)}
-                                            />
-                                        </div>
+                                <div className="space-y-3">
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex items-center gap-2">
+                                        <MessageSquare size={12} /> Approval Remarks
+                                    </label>
+                                    <textarea
+                                        rows="3"
+                                        placeholder="Add context for your decision..."
+                                        className="w-full px-6 py-5 bg-slate-50 border border-slate-200 rounded-3xl focus:ring-8 focus:ring-blue-50 outline-none font-bold text-sm transition-all focus:bg-white focus:border-blue-200"
+                                        value={remarks}
+                                        onChange={(e) => setRemarks(e.target.value)}
+                                    />
+                                </div>
 
+                                <div className="flex flex-col gap-3">
+                                    {/* Unified Approval Buttons for AM, COO, and ADMIN */}
+                                    {((user.role === 'ACCOUNTS_MANAGER' && selectedVoucher.amStatus === 'PENDING') || 
+                                        (user.role === 'BUSINESS_HEAD' && isCOO(user) && selectedVoucher.amStatus === 'APPROVED' && selectedVoucher.cooStatus === 'PENDING') ||
+                                        (user.role === 'ADMIN' && (selectedVoucher.amStatus === 'PENDING' || selectedVoucher.cooStatus === 'PENDING'))) && (
                                         <div className="flex gap-4">
-                                            {/* Unified Approval Buttons for AM, COO, and ADMIN */}
-                                            {((user.role === 'ACCOUNTS_MANAGER' && selectedVoucher.amStatus === 'PENDING') || 
-                                              (user.role === 'BUSINESS_HEAD' && isCOO(user) && selectedVoucher.amStatus === 'APPROVED' && selectedVoucher.cooStatus === 'PENDING') ||
-                                              (user.role === 'ADMIN' && (selectedVoucher.amStatus === 'PENDING' || selectedVoucher.cooStatus === 'PENDING'))) && (
-                                                <>
-                                                    <button
-                                                        onClick={() => handleAction('REJECTED')}
-                                                        className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
-                                                    >
-                                                        Reject
-                                                    </button>
-                                                    <button
-                                                        onClick={() => handleAction('APPROVED')}
-                                                        className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                                    >
-                                                        {selectedVoucher.amStatus === 'PENDING' ? 'AM Approval' : 'COO Approval'} <ArrowUpRight size={18} />
-                                                    </button>
-                                                </>
-                                            )}
-
-                                            {/* Step 1: Paid Action for AM after COO/Admin Approval */}
-                                            {(selectedVoucher.amStatus === 'APPROVED' && (selectedVoucher.status === 'PENDING' || selectedVoucher.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
-                                                <button
-                                                    onClick={() => handleAction('PAID')}
-                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                                >
-                                                    Mark as Paid (Bank Level) <DollarSign size={18} />
-                                                </button>
-                                            )}
-
-                                            {/* Step 2: Disburse Action for AM after Payment */}
-                                            {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
-                                                <button
-                                                    onClick={() => handleAction('DISBURSE')}
-                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                                >
-                                                    Confirm Disbursement <RefreshCcw size={18} />
-                                                </button>
-                                            )}
-                                            
-                                            {/* Admin Note - Always show for Admin as an additional action or if already approved */}
-                                            {user.role === 'ADMIN' && (
-                                                <button
-                                                    onClick={handleAdminNote}
-                                                    className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                                >
-                                                    {selectedVoucher.amStatus !== 'PENDING' && selectedVoucher.cooStatus !== 'PENDING' ? 'Update Admin Note' : 'Add Note Only'}
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => handleAction('REJECTED')}
+                                                className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-rose-500 border-2 border-rose-100 hover:bg-rose-50 hover:border-rose-200 transition-all active:scale-[0.98]"
+                                            >
+                                                Reject
+                                            </button>
+                                            <button
+                                                onClick={() => handleAction('APPROVED')}
+                                                className="flex-[1.5] py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-500 hover:bg-emerald-600 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                            >
+                                                {selectedVoucher.amStatus === 'PENDING' ? 'AM Approval' : 'COO Approval'} <ArrowUpRight size={18} />
+                                            </button>
                                         </div>
-                                    </>
-                                ) : (
-                                    <div className="flex flex-col gap-3">
-                                        {/* Mark as Paid — available from history when status is APPROVED */}
-                                        {(selectedVoucher.amStatus === 'APPROVED' && (selectedVoucher.status === 'PENDING' || selectedVoucher.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
-                                            <button
-                                                onClick={() => handleAction('PAID')}
-                                                className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                            >
-                                                Mark as Paid (Bank Level) <DollarSign size={18} />
-                                            </button>
-                                        )}
+                                    )}
 
-                                        {/* Disburse — available from history when status is PAID */}
-                                        {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
-                                            <button
-                                                onClick={() => handleAction('DISBURSE')}
-                                                className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
-                                            >
-                                                Confirm Disbursement <RefreshCcw size={18} />
-                                            </button>
-                                        )}
+                                    {/* Step 1: Paid Action for AM after COO/Admin Approval (or Force-Pay after AM Approval) */}
+                                    {(selectedVoucher.amStatus === 'APPROVED' && (selectedVoucher.status === 'PENDING' || selectedVoucher.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                        <button
+                                            onClick={() => handleAction('PAID')}
+                                            className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                        >
+                                            Mark as Paid (Bank Level) <DollarSign size={18} />
+                                        </button>
+                                    )}
 
-                                        <div className="flex items-center gap-4">
-                                            {user.role === 'ADMIN' && (
+                                    {/* Step 2: Disburse Action for AM after Payment */}
+                                    {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                        <button
+                                            onClick={() => handleAction('DISBURSE')}
+                                            className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                        >
+                                            Confirm Disbursement <RefreshCcw size={18} />
+                                        </button>
+                                    )}
+                                    
+                                    <div className="flex items-center gap-4">
+                                        {/* Admin Note/Action buttons */}
+                                        {user.role === 'ADMIN' && (
+                                            <div className="flex-1 flex gap-4">
                                                 <button
                                                     onClick={() => handleDeleteVoucher(selectedVoucher.id)}
                                                     className="p-5 border-2 border-rose-100 text-rose-500 hover:bg-rose-50 rounded-[1.5rem] transition-all"
@@ -1487,16 +1454,23 @@ const VoucherManagement = () => {
                                                 >
                                                     <Trash2 size={20} />
                                                 </button>
-                                            )}
-                                            <button
-                                                onClick={() => setSelectedVoucher(null)}
-                                                className="grow py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
-                                            >
-                                                Close Details
-                                            </button>
-                                        </div>
+                                                <button
+                                                    onClick={handleAdminNote}
+                                                    className="flex-1 py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                >
+                                                    {selectedVoucher.amStatus !== 'PENDING' && selectedVoucher.cooStatus !== 'PENDING' ? 'Update Note' : 'Add Note'}
+                                                </button>
+                                            </div>
+                                        )}
+                                        
+                                        <button
+                                            onClick={() => setSelectedVoucher(null)}
+                                            className={`py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] ${user.role === 'ADMIN' ? 'flex-1' : 'w-full'}`}
+                                        >
+                                            Close Details
+                                        </button>
                                     </div>
-                                )}
+                                </div>
                             </div>
                         </motion.div>
                     </div>
