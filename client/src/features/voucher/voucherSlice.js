@@ -114,10 +114,6 @@ export const uploadVoucherProof = createAsyncThunk(
 );
 
 // Pay Voucher
-    }
-);
-
-// Pay Voucher
 export const payVoucher = createAsyncThunk(
     'voucher/pay',
     async (id, thunkAPI) => {
