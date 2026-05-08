@@ -1002,7 +1002,7 @@ const VoucherManagement = () => {
                                         </div>
 
                                         {/* Inline Quick Actions for History */}
-                                        {(item.amStatus === 'APPROVED' && (item.status === 'PENDING' || item.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                        {['PENDING', 'APPROVED'].includes(item.status) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                             <div className="absolute right-24 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
                                                 <button
                                                     onClick={(e) => {
@@ -1424,7 +1424,7 @@ const VoucherManagement = () => {
                                     )}
 
                                     {/* Step 1: Paid Action for AM after COO/Admin Approval (or Force-Pay after AM Approval) */}
-                                    {(selectedVoucher.amStatus === 'APPROVED' && (selectedVoucher.status === 'PENDING' || selectedVoucher.status === 'APPROVED')) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                    {['PENDING', 'APPROVED'].includes(selectedVoucher.status) && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                         <button
                                             onClick={() => handleAction('PAID')}
                                             className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
