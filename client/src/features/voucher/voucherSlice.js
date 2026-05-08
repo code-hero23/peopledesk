@@ -114,6 +114,10 @@ export const uploadVoucherProof = createAsyncThunk(
 );
 
 // Pay Voucher
+    }
+);
+
+// Pay Voucher
 export const payVoucher = createAsyncThunk(
     'voucher/pay',
     async (id, thunkAPI) => {
@@ -123,6 +127,22 @@ export const payVoucher = createAsyncThunk(
             const response = await axios.put(`${API_URL}/${id}/pay`, {}, config);
             // Refresh finance summary after payment
             thunkAPI.dispatch(getFinanceSummary());
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
+// Disburse Voucher
+export const disburseVoucher = createAsyncThunk(
+    'voucher/disburse',
+    async (id, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const response = await axios.put(`${API_URL}/${id}/disburse`, {}, config);
             return response.data;
         } catch (error) {
             const message = error.response?.data?.message || error.message || error.toString();
@@ -288,7 +308,26 @@ export const voucherSlice = createSlice({
             })
             .addCase(payVoucher.fulfilled, (state, action) => {
                 state.isLoading = false;
+                // Update the voucher in manageable list instead of filtering it out
+                const index = state.manageableVouchers.findIndex(v => v.id === action.payload.id);
+                if (index !== -1) {
+                    state.manageableVouchers[index] = {
+                        ...state.manageableVouchers[index],
+                        ...action.payload
+                    };
+                }
+            })
+            .addCase(disburseVoucher.fulfilled, (state, action) => {
+                state.isLoading = false;
                 state.manageableVouchers = state.manageableVouchers.filter(v => v.id !== action.payload.id);
+                // Also update spent history if it's there
+                const historyIndex = state.spentHistory.findIndex(v => v.id === action.payload.id);
+                if (historyIndex !== -1) {
+                    state.spentHistory[historyIndex] = {
+                        ...state.spentHistory[historyIndex],
+                        ...action.payload
+                    };
+                }
             })
             .addCase(getFinanceSummary.fulfilled, (state, action) => {
                 state.financeSummary = action.payload;

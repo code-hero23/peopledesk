@@ -14,6 +14,7 @@ import {
     toggleCarpenterImpact,
     deleteVoucher,
     payVoucher,
+    disburseVoucher,
     reset 
 } from '../../features/voucher/voucherSlice';
 import { compressImage } from '../../utils/imageUtils';
@@ -140,6 +141,9 @@ const VoucherManagement = () => {
         try {
             if (status === 'PAID') {
                 await dispatch(payVoucher(selectedVoucher.id)).unwrap();
+                toast.success('Payment confirmed at bank level');
+            } else if (status === 'DISBURSE') {
+                await dispatch(disburseVoucher(selectedVoucher.id)).unwrap();
                 toast.success('Funds disbursement confirmed');
             } else if (user.role === 'ACCOUNTS_MANAGER') {
                 await dispatch(approveVoucherAM(payload)).unwrap();
@@ -149,6 +153,10 @@ const VoucherManagement = () => {
                 // Admin can act as either AM or COO depending on current status
                 if (selectedVoucher.amStatus === 'PENDING') {
                     await dispatch(approveVoucherAM(payload)).unwrap();
+                } else if (selectedVoucher.status === 'APPROVED') {
+                    await dispatch(payVoucher(selectedVoucher.id)).unwrap();
+                } else if (selectedVoucher.status === 'PAID') {
+                    await dispatch(disburseVoucher(selectedVoucher.id)).unwrap();
                 } else {
                     await dispatch(approveVoucherCOO(payload)).unwrap();
                 }
@@ -989,6 +997,36 @@ const VoucherManagement = () => {
                                                 </div>
                                             </div>
                                         </div>
+
+                                        {/* Inline Quick Actions for History */}
+                                        {item.status === 'APPROVED' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                            <div className="absolute right-24 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedVoucher(item);
+                                                        handleAction('PAID');
+                                                    }}
+                                                    className="bg-emerald-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-emerald-200 flex items-center gap-2 hover:bg-black transition-all"
+                                                >
+                                                    <DollarSign size={14} /> Mark Paid
+                                                </button>
+                                            </div>
+                                        )}
+                                        {item.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                            <div className="absolute right-24 top-1/2 -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-all transform translate-x-4 group-hover:translate-x-0">
+                                                <button
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedVoucher(item);
+                                                        handleAction('DISBURSE');
+                                                    }}
+                                                    className="bg-blue-600 text-white px-5 py-3 rounded-2xl font-black text-[10px] uppercase tracking-widest shadow-xl shadow-blue-200 flex items-center gap-2 hover:bg-black transition-all"
+                                                >
+                                                    <RefreshCcw size={14} /> Disburse
+                                                </button>
+                                            </div>
+                                        )}
                                     </div>
                                 </motion.div>
                             ))}
@@ -1386,29 +1424,23 @@ const VoucherManagement = () => {
                                                 </>
                                             )}
 
-                                            {/* Mark as Paid Action for AM after COO Approval */}
-                                            {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                            {/* Step 1: Paid Action for AM after COO/Admin Approval */}
+                                            {selectedVoucher.status === 'APPROVED' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                                 <button
                                                     onClick={() => handleAction('PAID')}
-                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                                                 >
-                                                    Mark as Paid & Disburse <DollarSign size={18} />
+                                                    Mark as Paid (Bank Level) <DollarSign size={18} />
                                                 </button>
                                             )}
 
-                                            {/* Force Paid Action for AM for Any Voucher (Bypassing COO) */}
-                                            {selectedVoucher.status !== 'PAID' && 
-                                             selectedVoucher.cooStatus === 'PENDING' && 
-                                             (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                            {/* Step 2: Disburse Action for AM after Payment */}
+                                            {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                                 <button
-                                                    onClick={() => {
-                                                        if (window.confirm('You are about to force-pay this voucher without COO approval. This action will trigger an automated notification to the COO. Proceed?')) {
-                                                            handleAction('PAID');
-                                                        }
-                                                    }}
-                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-[10px] text-white bg-amber-500 hover:bg-black shadow-xl shadow-amber-100 transition-all active:scale-[0.98] flex items-center justify-center gap-2 border-b-4 border-amber-700 active:border-b-0"
+                                                    onClick={() => handleAction('DISBURSE')}
+                                                    className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                                                 >
-                                                    Force Pay & Disburse <ShieldAlert size={18} />
+                                                    Confirm Disbursement <RefreshCcw size={18} />
                                                 </button>
                                             )}
                                             

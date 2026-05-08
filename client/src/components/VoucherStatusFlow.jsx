@@ -8,9 +8,9 @@ const VoucherStatusFlow = ({ voucher }) => {
     const stages = [
         { id: 'SUBMITTED', label: 'Submitted', isComplete: true, isCurrent: amStatus === 'PENDING' && status !== 'REJECTED' },
         { id: 'AM_APPROVAL', label: 'AM Review', isComplete: amStatus === 'APPROVED', isCurrent: amStatus === 'PENDING' && status !== 'REJECTED' },
-        { id: 'COO_APPROVAL', label: 'COO Review', isComplete: cooStatus === 'APPROVED', isCurrent: amStatus === 'APPROVED' && cooStatus === 'PENDING' && status !== 'REJECTED' },
-        { id: 'PAID', label: 'Paid', isComplete: ['COMPLETED', 'WAITING'].includes(status), isCurrent: status === 'PAID' },
-        { id: 'COMPLETED', label: status === 'WAITING' ? 'Disbursed' : 'Completed', isComplete: status === 'COMPLETED', isCurrent: status === 'WAITING' }
+        { id: 'COO_APPROVAL', label: 'Approved', isComplete: cooStatus === 'APPROVED' || status === 'PAID', isCurrent: amStatus === 'APPROVED' && cooStatus === 'PENDING' && status !== 'REJECTED' },
+        { id: 'PAID', label: 'Paid', isComplete: ['PAID', 'COMPLETED', 'WAITING'].includes(status), isCurrent: status === 'APPROVED' },
+        { id: 'COMPLETED', label: status === 'WAITING' ? 'Disbursed' : 'Completed', isComplete: ['COMPLETED', 'WAITING'].includes(status), isCurrent: status === 'PAID' }
     ];
 
     const isRejected = status === 'REJECTED';

@@ -117,7 +117,8 @@ const getManageableVouchers = async (req, res) => {
             where = { 
                 OR: [
                     { amStatus: 'PENDING' },
-                    { cooStatus: 'APPROVED', status: 'PAID' }
+                    { cooStatus: 'APPROVED', status: 'APPROVED' },
+                    { status: 'PAID' }
                 ]
             };
         } else if (role === 'BUSINESS_HEAD' && (designation === 'COO' || designation === 'Chief Operational Officer')) {
@@ -217,7 +218,7 @@ const approveVoucherCOO = async (req, res) => {
                 cooStatus: status === 'APPROVED' ? 'APPROVED' : 'REJECTED',
                 cooRemarks: remarks || null,
                 cooApprovedAt: new Date(),
-                status: status === 'APPROVED' ? 'PAID' : 'REJECTED'
+                status: status === 'APPROVED' ? 'APPROVED' : 'REJECTED'
             },
             include: {
                 user: {
@@ -369,14 +370,13 @@ const payVoucher = async (req, res) => {
             }
         }
 
-        // Determine final status
-        const finalStatus = (voucher.type === 'POSTPAID' || voucher.type === 'COMPANY_PAY_AFTER') ? 'COMPLETED' : 'WAITING';
-
+        // In the new flow, payVoucher marks it as PAID (confirmed at bank level)
+        // Disbursement will be a separate step
         const updateData = {
-            status: finalStatus,
+            status: 'PAID',
             adminRemarks: voucher.adminRemarks 
-                ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}${voucher.cooStatus !== 'APPROVED' ? ' (FORCE PAID)' : ''}` 
-                : `Payment confirmed by ${req.user.name}${voucher.cooStatus !== 'APPROVED' ? ' (FORCE PAID)' : ''}`
+                ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}` 
+                : `Payment confirmed by ${req.user.name}`
         };
 
         // If force paid, also update COO status to maintain workflow integrity
@@ -421,6 +421,58 @@ const payVoucher = async (req, res) => {
     }
 };
 
+// @desc    Mark Voucher as Disbursed (AM)
+// @route   PUT /api/vouchers/:id/disburse
+// @access  Private (ACCOUNTS_MANAGER, ADMIN)
+const disburseVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const amId = req.user.id;
+        const isAdmin = req.user.role === 'ADMIN';
+
+        if (req.user.role !== 'ACCOUNTS_MANAGER' && !isAdmin) {
+            return res.status(403).json({ message: 'Not authorized' });
+        }
+
+        const voucher = await prisma.voucher.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!voucher) {
+            return res.status(404).json({ message: 'Voucher not found' });
+        }
+
+        if (voucher.status !== 'PAID') {
+            return res.status(400).json({ message: 'Voucher must be marked as PAID before disbursement' });
+        }
+
+        // Determine final status
+        // If it's a postpaid/bill-already-attached type, it's COMPLETED
+        // If it's an advance/prepaid type, it's WAITING (for proof)
+        const finalStatus = (voucher.type === 'POSTPAID' || voucher.type === 'COMPANY_PAY_AFTER') ? 'COMPLETED' : 'WAITING';
+
+        const updatedVoucher = await prisma.voucher.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: finalStatus,
+                adminRemarks: voucher.adminRemarks 
+                    ? `${voucher.adminRemarks} | Disbursed by ${req.user.name}` 
+                    : `Disbursed by ${req.user.name}`
+            },
+            include: {
+                user: {
+                    select: { name: true, designation: true, email: true }
+                }
+            }
+        });
+
+        res.json(updatedVoucher);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Delete Voucher (Admin only)
 // @route   DELETE /api/vouchers/:id
 // @access  Private (ADMIN)
@@ -443,7 +495,7 @@ const deleteVoucher = async (req, res) => {
 
         // Financial reversal if money was already deducted
         // Status COMPLETED or WAITING means money was deducted after AM marked as Paid
-        if (voucher.status === 'COMPLETED' || voucher.status === 'WAITING') {
+        if (voucher.status === 'COMPLETED' || voucher.status === 'WAITING' || voucher.status === 'PAID') {
             const finance = await prisma.finance.findFirst();
             if (finance) {
                 await prisma.finance.update({
@@ -476,5 +528,6 @@ module.exports = {
     uploadProof,
     addAdminNote,
     payVoucher,
+    disburseVoucher,
     deleteVoucher
 };
