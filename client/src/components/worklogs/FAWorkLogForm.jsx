@@ -8,9 +8,11 @@ import ConfirmationModal from '../ConfirmationModal';
 import {
     Phone, Star, Briefcase, FileText, Globe, CheckSquare,
     TrendingUp, Clock, MapPin, Layout, MessageCircle,
-    Calendar, ChevronRight, Plus, Users, PenTool, Image as ImageIcon, Box
+    Calendar, ChevronRight, Plus, Users, PenTool, Image as ImageIcon, Box, X
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
+import { createProject } from '../../features/projects/projectSlice';
 
 const FAWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
@@ -20,6 +22,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
+    const [isCreatingProject, setIsCreatingProject] = useState(false);
+    const [newProject, setNewProject] = useState({ name: '', location: '' });
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         title: '',
@@ -234,6 +238,26 @@ const FAWorkLogForm = ({ onSuccess }) => {
         }
     };
 
+    const handleCreateProject = async (e) => {
+        e.preventDefault();
+        if (!newProject.name) return toast.error("Project name is required");
+        setIsSubmitting(true);
+        try {
+            const result = await dispatch(createProject(newProject)).unwrap();
+            toast.success("Project created successfully!");
+            setProjectReport(prev => ({ ...prev, projectId: result.id, clientName: result.name, site: result.location }));
+            setIsCreatingProject(false);
+            setNewProject({ name: '', location: '' });
+            if (!projectStartTime) {
+                setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+            }
+        } catch (error) {
+            toast.error(error || "Failed to create project");
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
 
     return (
@@ -383,13 +407,51 @@ const FAWorkLogForm = ({ onSuccess }) => {
                                         <form onSubmit={handleProjectReportSubmit} className="space-y-6 relative z-10">
                                             <div className="grid grid-cols-1 gap-6">
                                                 <div className="bg-slate-50/80 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-4 ring-blue-500/10 transition-all hover:bg-white dark:hover:bg-slate-800">
-                                                    <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Project Selection</label>
-                                                    <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none text-lg">
-                                                        <option value="" className="dark:bg-slate-900 text-slate-400">-- Select Project --</option>
-                                                        {projects?.map(p => (
-                                                            <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
-                                                        ))}
-                                                    </select>
+                                                    <div className="flex justify-between items-center mb-2">
+                                                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Project Selection</label>
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setIsCreatingProject(!isCreatingProject)}
+                                                            className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 hover:text-blue-700 transition-colors"
+                                                        >
+                                                            {isCreatingProject ? <X size={12} /> : <Plus size={12} />}
+                                                            {isCreatingProject ? 'Cancel' : 'Create New'}
+                                                        </button>
+                                                    </div>
+
+                                                    {isCreatingProject ? (
+                                                        <div className="space-y-3 mt-2 animate-in fade-in slide-in-from-top-2">
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Project / Client Name"
+                                                                value={newProject.name}
+                                                                onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                                                                className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none border border-slate-200 dark:border-slate-800 text-sm"
+                                                            />
+                                                            <input
+                                                                type="text"
+                                                                placeholder="Location (optional)"
+                                                                value={newProject.location}
+                                                                onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
+                                                                className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none border border-slate-200 dark:border-slate-800 text-sm"
+                                                            />
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleCreateProject}
+                                                                disabled={isSubmitting}
+                                                                className="w-full bg-blue-600 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200/50"
+                                                            >
+                                                                {isSubmitting ? 'Creating...' : 'Add Project & Select'}
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none text-lg">
+                                                            <option value="" className="dark:bg-slate-900 text-slate-400">-- Select Project --</option>
+                                                            {projects?.map(p => (
+                                                                <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
+                                                            ))}
+                                                        </select>
+                                                    )}
                                                 </div>
                                             </div>
 

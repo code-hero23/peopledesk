@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
-import { Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle } from 'lucide-react';
+import { Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle, Plus } from 'lucide-react';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
+import CreateProjectModal from '../../components/admin/CreateProjectModal';
 
 const WorkLogs = () => {
     const dispatch = useDispatch();
@@ -49,6 +50,10 @@ const WorkLogs = () => {
     // Modal State
     const [selectedLog, setSelectedLog] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
+
+    // Create Project Modal State
+    const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+    const [projectInitialData, setProjectInitialData] = useState({});
 
     useEffect(() => {
         if (isError) {
@@ -498,7 +503,12 @@ const WorkLogs = () => {
                                                                     type="button"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
-                                                                        alert("This will allow creating a project in the CRM for " + record.user.name + ". (Integration in progress)");
+                                                                        setProjectInitialData({
+                                                                            name: log?.clientName || log?.projectName || '',
+                                                                            location: log?.site || log?.la_projectLocation || '',
+                                                                            email: record.user.email
+                                                                        });
+                                                                        setIsProjectModalOpen(true);
                                                                     }}
                                                                     className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
                                                                     title="Create Project"
@@ -527,6 +537,13 @@ const WorkLogs = () => {
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
                 log={selectedLog ? { ...selectedLog.workLog, user: selectedLog.user } : null}
+            />
+
+            {/* Create Project Modal */}
+            <CreateProjectModal
+                isOpen={isProjectModalOpen}
+                onClose={() => setIsProjectModalOpen(false)}
+                initialData={projectInitialData}
             />
         </div>
     );
