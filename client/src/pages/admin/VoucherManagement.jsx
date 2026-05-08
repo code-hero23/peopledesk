@@ -1456,22 +1456,44 @@ const VoucherManagement = () => {
                                         </div>
                                     </>
                                 ) : (
-                                    <div className="flex items-center gap-4">
-                                        {user.role === 'ADMIN' && (
+                                    <div className="flex flex-col gap-3">
+                                        {/* Mark as Paid — available from history when status is APPROVED */}
+                                        {selectedVoucher.status === 'APPROVED' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
                                             <button
-                                                onClick={() => handleDeleteVoucher(selectedVoucher.id)}
-                                                className="p-5 border-2 border-rose-100 text-rose-500 hover:bg-rose-50 rounded-[1.5rem] transition-all"
-                                                title="Delete Voucher"
+                                                onClick={() => handleAction('PAID')}
+                                                className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-emerald-600 hover:bg-emerald-700 shadow-xl shadow-emerald-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
                                             >
-                                                <Trash2 size={20} />
+                                                Mark as Paid (Bank Level) <DollarSign size={18} />
                                             </button>
                                         )}
-                                        <button
-                                            onClick={() => setSelectedVoucher(null)}
-                                            className="grow py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
-                                        >
-                                            Close Details
-                                        </button>
+
+                                        {/* Disburse — available from history when status is PAID */}
+                                        {selectedVoucher.status === 'PAID' && (user.role === 'ACCOUNTS_MANAGER' || user.role === 'ADMIN') && (
+                                            <button
+                                                onClick={() => handleAction('DISBURSE')}
+                                                className="w-full py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-blue-600 hover:bg-blue-700 shadow-xl shadow-blue-200 transition-all active:scale-[0.98] flex items-center justify-center gap-2"
+                                            >
+                                                Confirm Disbursement <RefreshCcw size={18} />
+                                            </button>
+                                        )}
+
+                                        <div className="flex items-center gap-4">
+                                            {user.role === 'ADMIN' && (
+                                                <button
+                                                    onClick={() => handleDeleteVoucher(selectedVoucher.id)}
+                                                    className="p-5 border-2 border-rose-100 text-rose-500 hover:bg-rose-50 rounded-[1.5rem] transition-all"
+                                                    title="Delete Voucher"
+                                                >
+                                                    <Trash2 size={20} />
+                                                </button>
+                                            )}
+                                            <button
+                                                onClick={() => setSelectedVoucher(null)}
+                                                className="grow py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98]"
+                                            >
+                                                Close Details
+                                            </button>
+                                        </div>
                                     </div>
                                 )}
                             </div>
