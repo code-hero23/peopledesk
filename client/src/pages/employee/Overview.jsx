@@ -24,7 +24,7 @@ import PermissionRequestForm from '../../components/PermissionRequestForm';
 import SiteVisitRequestForm from '../../components/SiteVisitRequestForm';
 import WorkLogForm from '../../components/WorkLogForm';
 import ShowroomVisitRequestForm from '../../components/ShowroomVisitRequestForm';
-import { formatDateTime, formatDate, formatTime, getHHMM } from '../../utils/dateUtils';
+import { formatDateTime, formatDate, formatTime, getHHMM, getYYYYMMDD } from '../../utils/dateUtils';
 import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
