@@ -21,7 +21,7 @@ async function main() {
         process.exit(1);
     }
 
-    const voucherId = parseInt(args[0], 10);
+    const idsArg = args[0];
     const newStatus = args[1].toUpperCase();
 
     // Validate the status
@@ -33,34 +33,31 @@ async function main() {
         process.exit(1);
     }
 
-    if (isNaN(voucherId)) {
-        console.log(`❌ Invalid voucher ID: ${args[0]}`);
+    // Parse comma-separated IDs
+    const voucherIds = idsArg.split(',')
+        .map(id => parseInt(id.trim(), 10))
+        .filter(id => !isNaN(id));
+
+    if (voucherIds.length === 0) {
+        console.log(`❌ Invalid voucher ID(s) provided: ${idsArg}`);
         process.exit(1);
     }
 
     try {
-        // Check if voucher exists first
-        const existingVoucher = await prisma.voucher.findUnique({
-            where: { id: voucherId }
-        });
+        console.log(`⏳ Updating ${voucherIds.length} Voucher(s) [${voucherIds.join(', ')}] to ${newStatus}...`);
 
-        if (!existingVoucher) {
-            console.log(`❌ Voucher with ID ${voucherId} not found in the database.`);
-            process.exit(1);
-        }
-
-        console.log(`⏳ Updating Voucher #${voucherId} from ${existingVoucher.status} to ${newStatus}...`);
-
-        // Update the voucher status
-        const updatedVoucher = await prisma.voucher.update({
-            where: { id: voucherId },
+        // Update multiple vouchers at once
+        const result = await prisma.voucher.updateMany({
+            where: { 
+                id: { in: voucherIds } 
+            },
             data: { status: newStatus }
         });
 
-        console.log(`✅ Success! Voucher #${updatedVoucher.id} is now marked as: ${updatedVoucher.status}`);
+        console.log(`✅ Success! Updated ${result.count} voucher(s) to: ${newStatus}`);
         
     } catch (error) {
-        console.error("❌ Error updating the voucher:", error.message);
+        console.error("❌ Error updating the vouchers:", error.message);
     } finally {
         await prisma.$disconnect();
     }
