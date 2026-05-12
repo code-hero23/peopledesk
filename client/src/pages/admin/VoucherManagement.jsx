@@ -961,10 +961,7 @@ const VoucherManagement = () => {
                                                             item.status === 'REJECTED' ? 'bg-rose-600 text-white border-rose-600' :
                                                             'bg-slate-100 text-slate-500 border-slate-200'
                                                         }`}>
-                                                            {item.status === 'COMPLETED' ? 'PAID & SETTLED' : 
-                                                             item.status === 'WAITING' ? 'PAID (Advance)' : 
-                                                             item.status === 'PAID' ? 'MARKED PAID' :
-                                                             item.status}
+                                                            {item.status}
                                                         </span>
                                                     </div>
                                                 </div>
