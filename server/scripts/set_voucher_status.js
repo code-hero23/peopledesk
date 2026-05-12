@@ -22,14 +22,19 @@ async function main() {
     }
 
     const idsArg = args[0];
-    const newStatus = args[1].toUpperCase();
+    let newStatus = args[1].toUpperCase();
+
+    // Map user-friendly "NOT_PAID" to the actual database status "APPROVED"
+    if (newStatus === 'NOT_PAID') {
+        newStatus = 'APPROVED';
+    }
 
     // Validate the status
     const validStatuses = ['PENDING', 'APPROVED', 'REJECTED', 'COMPLETED', 'WAITING', 'PAID'];
     
     if (!validStatuses.includes(newStatus)) {
-        console.log(`❌ Invalid status: ${newStatus}`);
-        console.log(`👉 Must be one of: ${validStatuses.join(', ')}`);
+        console.log(`❌ Invalid status: ${args[1]}`);
+        console.log(`👉 Must be one of: ${validStatuses.join(', ')} or NOT_PAID`);
         process.exit(1);
     }
 
