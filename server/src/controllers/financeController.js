@@ -289,7 +289,8 @@ const exportFinanceData = async (req, res) => {
             { header: 'Status', key: 'status', width: 15 },
             { header: 'AM Status', key: 'amStatus', width: 15 },
             { header: 'COO Status', key: 'cooStatus', width: 15 },
-            { header: 'ID', key: 'id', width: 10 }
+            { header: 'ID', key: 'id', width: 10 },
+            { header: 'Payment Status', key: 'paymentStatus', width: 15 }
         ];
 
         // Format Header
@@ -297,6 +298,8 @@ const exportFinanceData = async (req, res) => {
         voucherSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
 
         vouchers.forEach(v => {
+            const isPaid = ['PAID', 'COMPLETED', 'WAITING'].includes(v.status);
+            
             const row = voucherSheet.addRow({
                 date: v.date.toISOString().split('T')[0],
                 type: v.type,
@@ -306,7 +309,8 @@ const exportFinanceData = async (req, res) => {
                 status: v.status,
                 amStatus: v.amStatus,
                 cooStatus: v.cooStatus,
-                id: v.id
+                id: v.id,
+                paymentStatus: isPaid ? 'Paid' : 'Not Paid'
             });
 
             // Conditional Coloring for Status
@@ -315,6 +319,13 @@ const exportFinanceData = async (req, res) => {
             if (v.status === 'REJECTED') statusCell.font = { color: { argb: 'FFE11D48' }, bold: true };
             if (v.status === 'PENDING') statusCell.font = { color: { argb: 'FFD97706' }, bold: true };
             if (v.status === 'WAITING') statusCell.font = { color: { argb: 'FF2563EB' }, bold: true };
+            
+            // Conditional Coloring for Payment Status
+            const paymentStatusCell = row.getCell('paymentStatus');
+            paymentStatusCell.font = { 
+                color: { argb: isPaid ? 'FF059669' : 'FFE11D48' }, 
+                bold: true 
+            };
             
             row.getCell('amount').numFmt = '₹#,##0.00';
         });
