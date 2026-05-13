@@ -51,12 +51,21 @@ async function main() {
     try {
         console.log(`⏳ Updating ${voucherIds.length} Voucher(s) [${voucherIds.join(', ')}] to ${newStatus}...`);
 
+        const updateData = { status: newStatus };
+        
+        // If we are forcing it to a paid state, make sure the workflow statuses match
+        // so the UI timeline doesn't look broken (e.g., Paid but COO is Pending)
+        if (['PAID', 'WAITING', 'COMPLETED'].includes(newStatus)) {
+            updateData.amStatus = 'APPROVED';
+            updateData.cooStatus = 'APPROVED';
+        }
+
         // Update multiple vouchers at once
         const result = await prisma.voucher.updateMany({
             where: { 
                 id: { in: voucherIds } 
             },
-            data: { status: newStatus }
+            data: updateData
         });
 
         console.log(`✅ Success! Updated ${result.count} voucher(s) to: ${newStatus}`);

@@ -26,12 +26,12 @@ const getFinanceSummary = async (req, res) => {
 
         const completedAndWaitingVouchers = await prisma.voucher.aggregate({
             _sum: { amount: true },
-            where: { status: { in: ['COMPLETED', 'WAITING'] } }
+            where: { status: { in: ['PAID'] } }
         });
 
         const pendingVouchers = await prisma.voucher.aggregate({
             _sum: { amount: true },
-            where: { status: { in: ['PENDING', 'APPROVED', 'WAITING', 'PAID'] } }
+            where: { status: { in: ['PENDING', 'APPROVED', 'WAITING'] } }
         });
 
         // Calculate Carpenter Impact if enabled
