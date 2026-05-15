@@ -373,6 +373,7 @@ const exportFinanceData = async (req, res) => {
             { header: 'Vouchers Raised', key: 'count', width: 20 },
             { header: 'No of Approved', key: 'approved', width: 20 },
             { header: 'Rejected', key: 'rejected', width: 15 },
+            { header: 'No of Paid', key: 'paidCount', width: 15 },
             { header: 'Paid Amount', key: 'paidAmount', width: 20 },
             { header: 'Unpaid Amount', key: 'unpaidAmount', width: 20 },
             { header: 'Total Amount', key: 'amount', width: 20 }
@@ -384,13 +385,14 @@ const exportFinanceData = async (req, res) => {
         const employeeStats = vouchers.reduce((acc, v) => {
             const name = v.user?.name || 'Unknown';
             if (!acc[name]) {
-                acc[name] = { name, count: 0, approved: 0, rejected: 0, paidAmount: 0, unpaidAmount: 0, amount: 0 };
+                acc[name] = { name, count: 0, approved: 0, rejected: 0, paidCount: 0, paidAmount: 0, unpaidAmount: 0, amount: 0 };
             }
             acc[name].count++;
             if (['COMPLETED', 'WAITING', 'PAID', 'APPROVED'].includes(v.status)) acc[name].approved++;
             if (v.status === 'REJECTED') acc[name].rejected++;
             
             if (['PAID', 'WAITING', 'COMPLETED'].includes(v.status)) {
+                acc[name].paidCount++;
                 acc[name].paidAmount += v.amount;
             } else if (['PENDING', 'APPROVED'].includes(v.status)) {
                 acc[name].unpaidAmount += v.amount;
