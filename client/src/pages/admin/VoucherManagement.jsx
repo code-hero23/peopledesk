@@ -56,7 +56,8 @@ import {
     Calendar,
     X,
     Trash2,
-    ChevronRight
+    ChevronRight,
+    FileText
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
