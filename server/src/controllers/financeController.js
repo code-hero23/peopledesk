@@ -26,7 +26,7 @@ const getFinanceSummary = async (req, res) => {
 
         const completedAndWaitingVouchers = await prisma.voucher.aggregate({
             _sum: { amount: true },
-            where: { status: { in: ['PAID'] } }
+            where: { status: { in: ['PAID', 'WAITING', 'COMPLETED'] } }
         });
 
         const pendingVouchers = await prisma.voucher.aggregate({
