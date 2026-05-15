@@ -61,8 +61,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import html2pdf from 'html2pdf.js';
 
 const VoucherManagement = () => {
     const dispatch = useDispatch();
@@ -158,44 +157,26 @@ const VoucherManagement = () => {
             await new Promise(resolve => setTimeout(resolve, 500));
             
             const element = reportRef.current;
-            const canvas = await html2canvas(element, {
-                scale: 2, // High quality
-                useCORS: true,
-                logging: false,
-                backgroundColor: '#ffffff'
-            });
+            const opt = {
+                margin: 0,
+                filename: `Expense_Hub_Report_${new Date().toISOString().split('T')[0]}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { 
+                    scale: 2, 
+                    useCORS: true,
+                    letterRendering: true,
+                    scrollY: 0,
+                    scrollX: 0
+                },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+                pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            };
             
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF({
-                orientation: 'portrait',
-                unit: 'mm',
-                format: 'a4'
-            });
-            
-            const imgProps = pdf.getImageProperties(imgData);
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
-            
-            // Handle multi-page
-            let heightLeft = pdfHeight;
-            let position = 0;
-            const pageHeight = pdf.internal.pageSize.getHeight();
-            
-            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-            heightLeft -= pageHeight;
-            
-            while (heightLeft >= 0) {
-                position = heightLeft - pdfHeight;
-                pdf.addPage();
-                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
-                heightLeft -= pageHeight;
-            }
-            
-            pdf.save(`Expense_Hub_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+            await html2pdf().from(element).set(opt).save();
             toast.update(toastId, { render: 'PDF downloaded successfully!', type: 'success', isLoading: false, autoClose: 3000 });
         } catch (error) {
             console.error('PDF Generation failed:', error);
-            toast.update(toastId, { render: 'Failed to generate PDF', type: 'error', isLoading: false, autoClose: 3000 });
+            toast.update(toastId, { render: `Failed to generate PDF: ${error.message || 'Unknown error'}`, type: 'error', isLoading: false, autoClose: 3000 });
         } finally {
             setIsDownloading(false);
         }
@@ -2036,8 +2017,17 @@ const VoucherManagement = () => {
                 )}
             </AnimatePresence>
 
-            {/* Hidden Report Template for PDF Export */}
-            <div style={{ display: 'none' }}>
+            {/* Hidden Report Template for PDF Export - Must be rendered but off-screen for html2pdf */}
+            <div style={{ 
+                position: 'fixed', 
+                top: '0', 
+                left: '0', 
+                width: '210mm', // A4 width
+                opacity: '0',
+                pointerEvents: 'none',
+                zIndex: '-1000',
+                backgroundColor: 'white'
+            }}>
                 <ExpenseReportTemplate 
                     ref={reportRef} 
                     data={spentHistory} 
