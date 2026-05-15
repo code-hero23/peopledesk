@@ -58,11 +58,11 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                     <table className="w-full text-left border-collapse">
                         <thead>
                             <tr className="text-white text-[9px] font-black uppercase tracking-widest" style={{ backgroundColor: colors.slate900 }}>
-                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155' }}>Date</th>
-                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155' }}>Employee</th>
-                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155' }}>Category / Purpose</th>
-                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155' }}>Status</th>
-                                <th className="px-4 py-4 text-right">Amount</th>
+                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155', width: '12%' }}>Date</th>
+                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155', width: '23%' }}>Employee</th>
+                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155', width: '40%' }}>Category / Purpose</th>
+                                <th className="px-4 py-4 border-r" style={{ borderColor: colors.slate700 || '#334155', width: '10%' }}>Status</th>
+                                <th className="px-4 py-4 text-right" style={{ width: '15%' }}>Amount</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y border-b" style={{ borderColor: colors.slate200, divideColor: colors.slate100 }}>
@@ -75,13 +75,15 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                                         <p className="text-xs font-black" style={{ color: colors.slate800 }}>{item.user?.name}</p>
                                         <p className="text-[9px] font-bold uppercase" style={{ color: colors.slate400 }}>{item.user?.designation}</p>
                                     </td>
-                                    <td className="px-4 py-3">
-                                        <div className="flex items-center gap-2 mb-1">
-                                            <span className="text-[8px] font-black px-1.5 py-0.5 border rounded uppercase" style={{ backgroundColor: colors.slate100, borderColor: colors.slate200 }}>
+                                    <td className="px-4 py-3" style={{ width: '40%' }}>
+                                        <div style={{ marginBottom: '4px' }}>
+                                            <span className="text-[7px] font-black px-1.5 py-0.5 border rounded uppercase" style={{ backgroundColor: colors.slate100, borderColor: colors.slate200, display: 'inline-block' }}>
                                                 {item.type.replace(/_/g, ' ')}
                                             </span>
                                         </div>
-                                        <p className="text-[10px] font-medium leading-tight line-clamp-2" style={{ color: '#475569' }}>{item.purpose}</p>
+                                        <div className="text-[10px] font-medium leading-normal" style={{ color: '#475569', wordBreak: 'break-word' }}>
+                                            {item.purpose}
+                                        </div>
                                     </td>
                                     <td className="px-4 py-3">
                                         <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: ['PAID', 'WAITING', 'COMPLETED'].includes(item.status) ? colors.emerald600 : colors.slate500 }}>
