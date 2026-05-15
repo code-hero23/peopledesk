@@ -315,7 +315,7 @@ const VoucherManagement = () => {
             item.type.toLowerCase().includes(historySearch.toLowerCase()) ||
             item.amount.toString().includes(historySearch);
             
-        const matchesStatus = historyStatus === 'ALL' ? true : 
+        const matchesStatus = historyStatus === 'ALL' ? item.status !== 'PAID' : 
                               historyStatus === 'UNPAID' ? (item.status === 'PENDING' || item.status === 'APPROVED') :
                               historyStatus === 'PAID_SETTLED' ? (item.status === 'PAID' || item.status === 'WAITING' || item.status === 'COMPLETED') :
                               item.status === historyStatus;

@@ -278,7 +278,7 @@ const exportFinanceData = async (req, res) => {
             // Non-blocking, continue without chart
         }
 
-        // 2. Vouchers Sheet
+        // 2. Vouchers Sheet (Exclude PAID)
         const voucherSheet = workbook.addWorksheet('Vouchers List');
         voucherSheet.columns = [
             { header: 'Date', key: 'date', width: 20 },
@@ -293,14 +293,21 @@ const exportFinanceData = async (req, res) => {
             { header: 'Payment Status', key: 'paymentStatus', width: 15 }
         ];
 
-        // Format Header
-        voucherSheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
-        voucherSheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+        // 3. Paid List Sheet (Only PAID)
+        const paidSheet = workbook.addWorksheet('Paid List');
+        paidSheet.columns = [...voucherSheet.columns];
+
+        // Format Headers
+        [voucherSheet, paidSheet].forEach(sheet => {
+            sheet.getRow(1).font = { bold: true, color: { argb: 'FFFFFFFF' } };
+            sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
+        });
 
         vouchers.forEach(v => {
-            const isPaid = ['PAID', 'COMPLETED', 'WAITING'].includes(v.status);
+            const isPaidStatus = v.status === 'PAID';
+            const isSettled = ['PAID', 'COMPLETED', 'WAITING'].includes(v.status);
             
-            const row = voucherSheet.addRow({
+            const rowData = {
                 date: v.date.toISOString().split('T')[0],
                 type: v.type,
                 userName: v.user?.name,
@@ -310,8 +317,11 @@ const exportFinanceData = async (req, res) => {
                 amStatus: v.amStatus,
                 cooStatus: v.cooStatus,
                 id: v.id,
-                paymentStatus: isPaid ? 'Paid' : 'Not Paid'
-            });
+                paymentStatus: isSettled ? 'Paid' : 'Not Paid'
+            };
+
+            const targetSheet = isPaidStatus ? paidSheet : voucherSheet;
+            const row = targetSheet.addRow(rowData);
 
             // Conditional Coloring for Status
             const statusCell = row.getCell('status');
@@ -319,18 +329,19 @@ const exportFinanceData = async (req, res) => {
             if (v.status === 'REJECTED') statusCell.font = { color: { argb: 'FFE11D48' }, bold: true };
             if (v.status === 'PENDING') statusCell.font = { color: { argb: 'FFD97706' }, bold: true };
             if (v.status === 'WAITING') statusCell.font = { color: { argb: 'FF2563EB' }, bold: true };
+            if (v.status === 'PAID') statusCell.font = { color: { argb: 'FF059669' }, bold: true };
             
             // Conditional Coloring for Payment Status
             const paymentStatusCell = row.getCell('paymentStatus');
             paymentStatusCell.font = { 
-                color: { argb: isPaid ? 'FF059669' : 'FFE11D48' }, 
+                color: { argb: isSettled ? 'FF059669' : 'FFE11D48' }, 
                 bold: true 
             };
             
             row.getCell('amount').numFmt = '₹#,##0.00';
         });
 
-        // 3. Deposits Sheet
+        // 4. Deposits Sheet (Was sheet 3 before)
         const depositSheet = workbook.addWorksheet('Deposits List');
         depositSheet.columns = [
             { header: 'ID', key: 'id', width: 10 },
