@@ -315,7 +315,7 @@ const VoucherManagement = () => {
             item.type.toLowerCase().includes(historySearch.toLowerCase()) ||
             item.amount.toString().includes(historySearch);
             
-        const matchesStatus = historyStatus === 'ALL' ? item.status !== 'PAID' : 
+        const matchesStatus = historyStatus === 'ALL' ? !['PAID', 'WAITING', 'COMPLETED'].includes(item.status) : 
                               historyStatus === 'UNPAID' ? (item.status === 'PENDING' || item.status === 'APPROVED') :
                               historyStatus === 'PAID_SETTLED' ? (item.status === 'PAID' || item.status === 'WAITING' || item.status === 'COMPLETED') :
                               item.status === historyStatus;
@@ -1946,7 +1946,7 @@ const VoucherManagement = () => {
             <div style={{ display: 'none' }}>
                 <ExpenseReportTemplate 
                     ref={reportRef} 
-                    data={filteredHistory} 
+                    data={spentHistory} 
                     summary={financeSummary}
                     filters={{
                         search: historySearch,

@@ -7,8 +7,28 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
         year: 'numeric'
     });
 
-    const paidData = data.filter(item => item.status === 'PAID');
-    const activeData = data.filter(item => item.status !== 'PAID');
+    // Apply UI Filters to the full data passed
+    const filteredData = data.filter(item => {
+        const matchesSearch = !filters.search || 
+            item.user?.name.toLowerCase().includes(filters.search.toLowerCase()) ||
+            item.purpose.toLowerCase().includes(filters.search.toLowerCase()) ||
+            item.type.toLowerCase().includes(filters.search.toLowerCase()) ||
+            item.amount.toString().includes(filters.search);
+            
+        const matchesStatus = filters.status === 'ALL' ? true : 
+                              filters.status === 'UNPAID' ? (item.status === 'PENDING' || item.status === 'APPROVED') :
+                              filters.status === 'PAID_SETTLED' ? (['PAID', 'WAITING', 'COMPLETED'].includes(item.status)) :
+                              item.status === filters.status;
+
+        const itemDate = new Date(item.updatedAt);
+        const matchesStartDate = !filters.startDate || itemDate >= new Date(filters.startDate);
+        const matchesEndDate = !filters.endDate || itemDate <= new Date(filters.endDate + 'T23:59:59');
+
+        return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
+    });
+
+    const paidData = filteredData.filter(item => ['PAID', 'WAITING', 'COMPLETED'].includes(item.status));
+    const activeData = filteredData.filter(item => !['PAID', 'WAITING', 'COMPLETED'].includes(item.status));
 
     const renderTable = (items, title) => {
         if (items.length === 0) return null;
@@ -47,7 +67,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                                         <p className="text-[10px] text-slate-600 font-medium leading-tight line-clamp-2">{item.purpose}</p>
                                     </td>
                                     <td className="px-4 py-3">
-                                        <span className={`text-[9px] font-black uppercase tracking-widest ${item.status === 'PAID' ? 'text-emerald-600' : 'text-slate-500'}`}>
+                                        <span className={`text-[9px] font-black uppercase tracking-widest ${['PAID', 'WAITING', 'COMPLETED'].includes(item.status) ? 'text-emerald-600' : 'text-slate-500'}`}>
                                             {item.status}
                                         </span>
                                     </td>
@@ -91,7 +111,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                 </div>
                 <div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Record Count</p>
-                    <p className="text-sm font-bold text-slate-700">{data.length} Total Vouchers</p>
+                    <p className="text-sm font-bold text-slate-700">{filteredData.length} Total Vouchers</p>
                 </div>
             </div>
 
@@ -99,7 +119,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
             <div className="grid grid-cols-4 gap-4 mb-10">
                 <div className="border border-slate-200 p-4 rounded-xl">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Report Total</p>
-                    <p className="text-xl font-black text-slate-900">₹{data.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</p>
+                    <p className="text-xl font-black text-slate-900">₹{filteredData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</p>
                 </div>
                 <div className="border border-slate-200 p-4 rounded-xl bg-emerald-50/30 border-emerald-100">
                     <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Paid Total</p>
@@ -119,10 +139,10 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
             {filters.status === 'ALL' ? (
                 <>
                     {renderTable(activeData, 'Active / Pending Vouchers')}
-                    {renderTable(paidData, 'Finalized Payments (Paid)')}
+                    {renderTable(paidData, 'Finalized Payments (Settled)')}
                 </>
             ) : (
-                renderTable(data, `${filters.status} Vouchers`)
+                renderTable(filteredData, `${filters.status} Vouchers`)
             )}
 
             {/* Footer */}

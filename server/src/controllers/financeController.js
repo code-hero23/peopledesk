@@ -304,7 +304,6 @@ const exportFinanceData = async (req, res) => {
         });
 
         vouchers.forEach(v => {
-            const isPaidStatus = v.status === 'PAID';
             const isSettled = ['PAID', 'COMPLETED', 'WAITING'].includes(v.status);
             
             const rowData = {
@@ -320,7 +319,7 @@ const exportFinanceData = async (req, res) => {
                 paymentStatus: isSettled ? 'Paid' : 'Not Paid'
             };
 
-            const targetSheet = isPaidStatus ? paidSheet : voucherSheet;
+            const targetSheet = isSettled ? paidSheet : voucherSheet;
             const row = targetSheet.addRow(rowData);
 
             // Conditional Coloring for Status
