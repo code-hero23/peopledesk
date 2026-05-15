@@ -373,6 +373,8 @@ const exportFinanceData = async (req, res) => {
             { header: 'Vouchers Raised', key: 'count', width: 20 },
             { header: 'Approved', key: 'approved', width: 15 },
             { header: 'Rejected', key: 'rejected', width: 15 },
+            { header: 'Paid Amount', key: 'paidAmount', width: 20 },
+            { header: 'Unpaid Amount', key: 'unpaidAmount', width: 20 },
             { header: 'Total Amount', key: 'amount', width: 20 }
         ];
 
@@ -382,17 +384,26 @@ const exportFinanceData = async (req, res) => {
         const employeeStats = vouchers.reduce((acc, v) => {
             const name = v.user?.name || 'Unknown';
             if (!acc[name]) {
-                acc[name] = { name, count: 0, approved: 0, rejected: 0, amount: 0 };
+                acc[name] = { name, count: 0, approved: 0, rejected: 0, paidAmount: 0, unpaidAmount: 0, amount: 0 };
             }
             acc[name].count++;
             if (['COMPLETED', 'WAITING', 'PAID', 'APPROVED'].includes(v.status)) acc[name].approved++;
             if (v.status === 'REJECTED') acc[name].rejected++;
+            
+            if (['PAID', 'WAITING', 'COMPLETED'].includes(v.status)) {
+                acc[name].paidAmount += v.amount;
+            } else if (['PENDING', 'APPROVED'].includes(v.status)) {
+                acc[name].unpaidAmount += v.amount;
+            }
+            
             acc[name].amount += v.amount;
             return acc;
         }, {});
 
         Object.values(employeeStats).sort((a, b) => b.amount - a.amount).forEach(stat => {
             const row = employeeSummarySheet.addRow(stat);
+            row.getCell('paidAmount').numFmt = '₹#,##0.00';
+            row.getCell('unpaidAmount').numFmt = '₹#,##0.00';
             row.getCell('amount').numFmt = '₹#,##0.00';
         });
 
