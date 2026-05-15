@@ -61,6 +61,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { motion, AnimatePresence } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const VoucherManagement = () => {
     const dispatch = useDispatch();
@@ -138,6 +140,66 @@ const VoucherManagement = () => {
 
     // Lightbox for proof
     const [showLightbox, setShowLightbox] = useState(false);
+
+    // Downloading state
+    const [isDownloading, setIsDownloading] = useState(false);
+
+    const handleDownloadPDF = async () => {
+        if (!reportRef.current) return;
+        
+        setIsDownloading(true);
+        const toastId = toast.loading('Generating high-quality PDF...');
+        
+        try {
+            // First, make sure we are in history view so the ref is mounted and visible
+            setView('history');
+            
+            // Wait for a tick to ensure rendering
+            await new Promise(resolve => setTimeout(resolve, 500));
+            
+            const element = reportRef.current;
+            const canvas = await html2canvas(element, {
+                scale: 2, // High quality
+                useCORS: true,
+                logging: false,
+                backgroundColor: '#ffffff'
+            });
+            
+            const imgData = canvas.toDataURL('image/png');
+            const pdf = new jsPDF({
+                orientation: 'portrait',
+                unit: 'mm',
+                format: 'a4'
+            });
+            
+            const imgProps = pdf.getImageProperties(imgData);
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            
+            // Handle multi-page
+            let heightLeft = pdfHeight;
+            let position = 0;
+            const pageHeight = pdf.internal.pageSize.getHeight();
+            
+            pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+            heightLeft -= pageHeight;
+            
+            while (heightLeft >= 0) {
+                position = heightLeft - pdfHeight;
+                pdf.addPage();
+                pdf.addImage(imgData, 'PNG', 0, position, pdfWidth, pdfHeight);
+                heightLeft -= pageHeight;
+            }
+            
+            pdf.save(`Expense_Hub_Report_${new Date().toISOString().split('T')[0]}.pdf`);
+            toast.update(toastId, { render: 'PDF downloaded successfully!', type: 'success', isLoading: false, autoClose: 3000 });
+        } catch (error) {
+            console.error('PDF Generation failed:', error);
+            toast.update(toastId, { render: 'Failed to generate PDF', type: 'error', isLoading: false, autoClose: 3000 });
+        } finally {
+            setIsDownloading(false);
+        }
+    };
 
     // Helper to check for COO designation if role is BUSINESS_HEAD
     const isCOO = (user) => {
@@ -526,14 +588,12 @@ const VoucherManagement = () => {
                         </button>
 
                         <button 
-                            onClick={() => {
-                                setView('history');
-                                setTimeout(handlePrint, 100);
-                            }}
-                            className="bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-slate-200 border border-slate-900 flex items-center gap-3 active:scale-95"
+                            onClick={handleDownloadPDF}
+                            disabled={isDownloading}
+                            className="bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-slate-200 border border-slate-900 flex items-center gap-3 active:scale-95 disabled:opacity-50"
                         >
-                            <FileText size={20} className="text-blue-400" /> 
-                            <span className="hidden lg:inline">Download PDF Report</span>
+                            <FileText size={20} className={isDownloading ? 'animate-pulse text-blue-400' : 'text-blue-400'} /> 
+                            <span className="hidden lg:inline">{isDownloading ? 'Generating...' : 'Download PDF Report'}</span>
                         </button>
 
                         {user.role === 'ADMIN' && (
