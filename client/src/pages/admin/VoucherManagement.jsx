@@ -116,7 +116,7 @@ const VoucherManagement = () => {
     // PDF Print Reference
     const reportRef = useRef();
     const handlePrint = useReactToPrint({
-        content: () => reportRef.current,
+        contentRef: reportRef,
         documentTitle: `Expense_Hub_Report_${new Date().toISOString().split('T')[0]}`,
     });
 
@@ -1943,7 +1943,7 @@ const VoucherManagement = () => {
             </AnimatePresence>
 
             {/* Hidden Report Template for PDF Export */}
-            <div className="hidden">
+            <div style={{ display: 'none' }}>
                 <ExpenseReportTemplate 
                     ref={reportRef} 
                     data={filteredHistory} 
