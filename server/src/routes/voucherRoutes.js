@@ -43,6 +43,6 @@ router.route('/:id/admin-note')
     .put(protect, authorize('ADMIN'), addAdminNote);
 
 router.route('/:id')
-    .delete(protect, authorize('ADMIN'), deleteVoucher);
+    .delete(protect, authorize('ADMIN', 'ACCOUNTS_MANAGER'), deleteVoucher);
 
 module.exports = router;

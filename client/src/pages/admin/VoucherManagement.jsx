@@ -767,7 +767,7 @@ const VoucherManagement = () => {
                                             <p className="text-xl font-black text-slate-800 tracking-tight">₹{voucher.amount.toLocaleString()}</p>
                                         </div>
                                         <div className="flex items-center gap-3">
-                                            {user.role === 'ADMIN' && (
+                                            {(user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') && (
                                                 <button
                                                     onClick={(e) => {
                                                         e.stopPropagation();
@@ -1020,7 +1020,7 @@ const VoucherManagement = () => {
                                                 <p className="text-[9px] text-slate-400 font-bold uppercase tracking-widest mt-1">Processed: {new Date(item.updatedAt).toLocaleDateString()}</p>
                                             </div>
                                             <div className="flex items-center gap-3">
-                                                {user.role === 'ADMIN' && (
+                                                {(user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') && (
                                                     <button
                                                         onClick={(e) => {
                                                             e.stopPropagation();
@@ -1482,7 +1482,7 @@ const VoucherManagement = () => {
                                     
                                     <div className="flex items-center gap-4">
                                         {/* Admin Note/Action buttons */}
-                                        {user.role === 'ADMIN' && (
+                                        {(user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') && (
                                             <div className="flex-1 flex gap-4">
                                                 <button
                                                     onClick={() => handleDeleteVoucher(selectedVoucher.id)}
@@ -1502,7 +1502,7 @@ const VoucherManagement = () => {
                                         
                                         <button
                                             onClick={() => setSelectedVoucher(null)}
-                                            className={`py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] ${user.role === 'ADMIN' ? 'flex-1' : 'w-full'}`}
+                                            className={`py-5 rounded-[1.5rem] font-black uppercase tracking-widest text-xs text-white bg-slate-900 hover:bg-black shadow-xl shadow-slate-200 transition-all active:scale-[0.98] ${(user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') ? 'flex-1' : 'w-full'}`}
                                         >
                                             Close Details
                                         </button>

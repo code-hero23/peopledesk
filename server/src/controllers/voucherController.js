@@ -481,9 +481,9 @@ const deleteVoucher = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Double check it's an ADMIN
-        if (req.user.role !== 'ADMIN') {
-            return res.status(403).json({ message: 'Only superadmins can delete vouchers' });
+        // Double check it's an ADMIN or ACCOUNTS_MANAGER
+        if (req.user.role !== 'ADMIN' && req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only admins or accounts managers can delete vouchers' });
         }
 
         const voucher = await prisma.voucher.findUnique({
