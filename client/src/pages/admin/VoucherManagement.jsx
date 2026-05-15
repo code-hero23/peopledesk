@@ -666,7 +666,7 @@ const VoucherManagement = () => {
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Amount</p>
                     <p className="text-2xl font-black text-slate-800">
                         ₹{spentHistory
-                            .filter(v => ['PENDING', 'APPROVED', 'WAITING', 'COMPLETED'].includes(v.status))
+                            .filter(v => ['PENDING', 'APPROVED'].includes(v.status))
                             .reduce((sum, v) => sum + v.amount, 0)
                             .toLocaleString()
                         }
@@ -708,7 +708,7 @@ const VoucherManagement = () => {
                         <Clock size={24} />
                     </div>
                     <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No. of Unpaid Vouchers</p>
-                    <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => ['PENDING', 'APPROVED', 'WAITING', 'COMPLETED'].includes(v.status)).length}</p>
+                    <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => ['PENDING', 'APPROVED'].includes(v.status)).length}</p>
                 </motion.div>
             </div>
 

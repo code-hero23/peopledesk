@@ -16,7 +16,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
             item.amount.toString().includes(filters.search);
             
         const matchesStatus = filters.status === 'ALL' ? true : 
-                              filters.status === 'UNPAID' ? (item.status === 'PENDING' || item.status === 'APPROVED') :
+                              filters.status === 'UNPAID' ? (['PENDING', 'APPROVED'].includes(item.status)) :
                               filters.status === 'PAID_SETTLED' ? (['PAID', 'WAITING', 'COMPLETED'].includes(item.status)) :
                               item.status === filters.status;
 
@@ -116,7 +116,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
             </div>
 
             {/* Financial Summary Cards (Print Optimized) */}
-            <div className="grid grid-cols-4 gap-4 mb-10">
+            <div className="grid grid-cols-5 gap-4 mb-10">
                 <div className="border border-slate-200 p-4 rounded-xl">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Report Total</p>
                     <p className="text-xl font-black text-slate-900">₹{filteredData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</p>
@@ -125,12 +125,16 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                     <p className="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">Paid Total</p>
                     <p className="text-xl font-black text-emerald-700">₹{paidData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</p>
                 </div>
+                <div className="border border-slate-200 p-4 rounded-xl bg-amber-50/30 border-amber-100">
+                    <p className="text-[9px] font-black text-amber-600 uppercase tracking-widest mb-1">Pipeline</p>
+                    <p className="text-xl font-black text-amber-700">₹{activeData.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</p>
+                </div>
                 <div className="border border-slate-200 p-4 rounded-xl">
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Cash</p>
                     <p className="text-xl font-black text-slate-900">₹{summary?.currentCash?.toLocaleString() || '0'}</p>
                 </div>
                 <div className="border border-slate-200 p-4 rounded-xl">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Available Balance</p>
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Balance</p>
                     <p className="text-xl font-black text-blue-600">₹{summary?.balance?.toLocaleString() || '0'}</p>
                 </div>
             </div>
@@ -138,7 +142,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
             {/* Data Tables */}
             {filters.status === 'ALL' ? (
                 <>
-                    {renderTable(activeData, 'Active / Pending Vouchers')}
+                    {renderTable(activeData, 'Active / Pending Vouchers (Pipeline)')}
                     {renderTable(paidData, 'Finalized Payments (Settled)')}
                 </>
             ) : (
