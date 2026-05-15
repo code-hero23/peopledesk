@@ -1,0 +1,123 @@
+import React, { forwardRef } from 'react';
+
+const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
+    const today = new Date().toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric'
+    });
+
+    return (
+        <div ref={ref} className="p-12 bg-white text-slate-800 font-sans print:p-8">
+            {/* Header */}
+            <div className="flex justify-between items-start border-b-4 border-slate-900 pb-8 mb-8">
+                <div>
+                    <h1 className="text-4xl font-black tracking-tighter text-slate-900 uppercase">Expense Hub Report</h1>
+                    <p className="text-slate-500 font-bold tracking-widest text-xs mt-1 uppercase">PeopleDesk Financial Services</p>
+                </div>
+                <div className="text-right">
+                    <p className="font-black text-slate-900">Cookscape Interiors</p>
+                    <p className="text-xs text-slate-500 font-bold">Generated on: {today}</p>
+                </div>
+            </div>
+
+            {/* Filter Summary */}
+            <div className="grid grid-cols-3 gap-6 mb-8 bg-slate-50 p-6 rounded-2xl border border-slate-100">
+                <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Date Range</p>
+                    <p className="text-sm font-bold text-slate-700">
+                        {filters.startDate || 'Beginning'} — {filters.endDate || 'Present'}
+                    </p>
+                </div>
+                <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Status Filter</p>
+                    <p className="text-sm font-bold text-slate-700 uppercase tracking-tight">{filters.status || 'ALL RECORDS'}</p>
+                </div>
+                <div>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Search Query</p>
+                    <p className="text-sm font-bold text-slate-700">{filters.search || 'NONE'}</p>
+                </div>
+            </div>
+
+            {/* Financial Summary Cards (Print Optimized) */}
+            <div className="grid grid-cols-4 gap-4 mb-10">
+                <div className="border border-slate-200 p-4 rounded-xl">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Report Total</p>
+                    <p className="text-xl font-black text-slate-900">₹{data.reduce((sum, item) => sum + item.amount, 0).toLocaleString()}</p>
+                </div>
+                <div className="border border-slate-200 p-4 rounded-xl">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Total Records</p>
+                    <p className="text-xl font-black text-slate-900">{data.length}</p>
+                </div>
+                <div className="border border-slate-200 p-4 rounded-xl">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Cash</p>
+                    <p className="text-xl font-black text-emerald-600">₹{summary?.currentCash?.toLocaleString() || '0'}</p>
+                </div>
+                <div className="border border-slate-200 p-4 rounded-xl">
+                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Available Balance</p>
+                    <p className="text-xl font-black text-blue-600">₹{summary?.balance?.toLocaleString() || '0'}</p>
+                </div>
+            </div>
+
+            {/* Data Table */}
+            <div className="overflow-hidden">
+                <table className="w-full text-left border-collapse">
+                    <thead>
+                        <tr className="bg-slate-900 text-white text-[9px] font-black uppercase tracking-widest">
+                            <th className="px-4 py-4 border-r border-slate-700">Date</th>
+                            <th className="px-4 py-4 border-r border-slate-700">Employee</th>
+                            <th className="px-4 py-4 border-r border-slate-700">Category / Purpose</th>
+                            <th className="px-4 py-4 border-r border-slate-700">Status</th>
+                            <th className="px-4 py-4 text-right">Amount</th>
+                        </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 border-b border-slate-200">
+                        {data.map((item, index) => (
+                            <tr key={item.id} className={index % 2 === 0 ? 'bg-white' : 'bg-slate-50/30'}>
+                                <td className="px-4 py-3 text-[11px] font-bold text-slate-500 whitespace-nowrap">
+                                    {new Date(item.date).toLocaleDateString()}
+                                </td>
+                                <td className="px-4 py-3">
+                                    <p className="text-xs font-black text-slate-800">{item.user?.name}</p>
+                                    <p className="text-[9px] text-slate-400 font-bold uppercase">{item.user?.designation}</p>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <div className="flex items-center gap-2 mb-1">
+                                        <span className="text-[8px] font-black px-1.5 py-0.5 bg-slate-100 border border-slate-200 rounded uppercase">
+                                            {item.type.replace(/_/g, ' ')}
+                                        </span>
+                                    </div>
+                                    <p className="text-[10px] text-slate-600 font-medium leading-tight line-clamp-2">{item.purpose}</p>
+                                </td>
+                                <td className="px-4 py-3">
+                                    <span className="text-[9px] font-black uppercase tracking-widest text-slate-500">
+                                        {item.status}
+                                    </span>
+                                </td>
+                                <td className="px-4 py-3 text-right">
+                                    <p className="text-xs font-black text-slate-900">₹{item.amount.toLocaleString()}</p>
+                                </td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
+
+            {/* Footer */}
+            <div className="mt-12 pt-8 border-t border-slate-100 flex justify-between items-end">
+                <div>
+                    <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Authorized Signature</p>
+                    <div className="w-48 h-12 border-b border-slate-200 mt-4"></div>
+                </div>
+                <div className="text-right">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Page 1 of 1</p>
+                    <p className="text-[9px] text-slate-300 italic mt-1">This is a system generated report and does not require a physical seal.</p>
+                </div>
+            </div>
+        </div>
+    );
+});
+
+ExpenseReportTemplate.displayName = 'ExpenseReportTemplate';
+
+export default ExpenseReportTemplate;

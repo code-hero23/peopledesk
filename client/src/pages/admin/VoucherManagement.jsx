@@ -1,6 +1,9 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
+import { useReactToPrint } from 'react-to-print';
+import ExpenseReportTemplate from '../../components/admin/ExpenseReportTemplate';
+import ExpenseCharts from '../../components/admin/ExpenseCharts';
 import { 
     getManageableVouchers, 
     approveVoucherAM, 
@@ -108,6 +111,13 @@ const VoucherManagement = () => {
     const [historyStatus, setHistoryStatus] = useState('ALL');
     const [historyStartDate, setHistoryStartDate] = useState('');
     const [historyEndDate, setHistoryEndDate] = useState('');
+
+    // PDF Print Reference
+    const reportRef = useRef();
+    const handlePrint = useReactToPrint({
+        content: () => reportRef.current,
+        documentTitle: `Expense_Hub_Report_${new Date().toISOString().split('T')[0]}`,
+    });
 
     // Carpenter Hub State
     const [showCarpenterModal, setShowCarpenterModal] = useState(false);
@@ -514,6 +524,17 @@ const VoucherManagement = () => {
                             <span className="hidden lg:inline">{isExporting ? 'Exporting...' : 'Export CSV'}</span>
                         </button>
 
+                        <button 
+                            onClick={() => {
+                                setView('history');
+                                setTimeout(handlePrint, 100);
+                            }}
+                            className="bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg border border-slate-900 flex items-center gap-3"
+                        >
+                            <FileText size={20} /> 
+                            <span className="hidden lg:inline">Export PDF</span>
+                        </button>
+
                         {user.role === 'ADMIN' && (
                             <button 
                                 onClick={() => setShowWipeModal(true)}
@@ -689,6 +710,9 @@ const VoucherManagement = () => {
                     <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => ['PENDING', 'APPROVED', 'WAITING', 'COMPLETED'].includes(v.status)).length}</p>
                 </motion.div>
             </div>
+
+            {/* Analytics Section */}
+            <ExpenseCharts spentHistory={spentHistory} />
 
             <AnimatePresence mode="wait">
                 {view === 'pending' ? (
@@ -872,6 +896,21 @@ const VoucherManagement = () => {
                                         </button>
                                     )}
                                 </div>
+
+                                {/* Clear All Filters */}
+                                {(historySearch || historyStatus !== 'ALL' || historyStartDate || historyEndDate) && (
+                                    <button 
+                                        onClick={() => {
+                                            setHistorySearch('');
+                                            setHistoryStatus('ALL');
+                                            setHistoryStartDate('');
+                                            setHistoryEndDate('');
+                                        }}
+                                        className="text-rose-500 text-[10px] font-black uppercase tracking-widest hover:bg-rose-50 px-3 py-2 rounded-xl transition-all flex items-center gap-2"
+                                    >
+                                        <X size={12} /> Clear Filters
+                                    </button>
+                                )}
                             </div>
                         </div>
                         
@@ -1901,6 +1940,21 @@ const VoucherManagement = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            {/* Hidden Report Template for PDF Export */}
+            <div className="hidden">
+                <ExpenseReportTemplate 
+                    ref={reportRef} 
+                    data={filteredHistory} 
+                    summary={financeSummary}
+                    filters={{
+                        search: historySearch,
+                        status: historyStatus,
+                        startDate: historyStartDate,
+                        endDate: historyEndDate
+                    }}
+                />
+            </div>
         </div>
     );
 };
