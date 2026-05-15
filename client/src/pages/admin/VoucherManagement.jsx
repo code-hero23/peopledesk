@@ -530,10 +530,10 @@ const VoucherManagement = () => {
                                 setView('history');
                                 setTimeout(handlePrint, 100);
                             }}
-                            className="bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-lg border border-slate-900 flex items-center gap-3"
+                            className="bg-slate-900 hover:bg-black text-white px-6 py-4 rounded-3xl font-black text-xs uppercase tracking-[0.2em] transition-all shadow-xl hover:shadow-slate-200 border border-slate-900 flex items-center gap-3 active:scale-95"
                         >
-                            <FileText size={20} /> 
-                            <span className="hidden lg:inline">Export PDF</span>
+                            <FileText size={20} className="text-blue-400" /> 
+                            <span className="hidden lg:inline">Download PDF Report</span>
                         </button>
 
                         {user.role === 'ADMIN' && (
@@ -590,81 +590,103 @@ const VoucherManagement = () => {
 
             {/* Financial Summary Cards */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-600 transition-colors group-hover:bg-blue-600 group-hover:text-white">
-                            <Wallet size={24} />
+                {/* Cash / Budget Card */}
+                <motion.div 
+                    whileHover={{ y: -8, scale: 1.02 }} 
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group relative overflow-hidden transition-all duration-500"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-100/50 transition-all" />
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="w-14 h-14 bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200 group-hover:scale-110 transition-transform duration-500">
+                            <Wallet size={28} />
                         </div>
                         {isCOO(user) && (
                             <button 
-                                onClick={() => setShowAddCash(true)}
-                                className="p-2 hover:bg-slate-100 rounded-lg text-slate-400 hover:text-blue-600 transition-all"
+                                onClick={(e) => { e.stopPropagation(); setShowAddCash(true); }}
+                                className="p-3 bg-slate-50 hover:bg-blue-600 text-slate-400 hover:text-white rounded-xl transition-all shadow-sm active:scale-90"
                                 title="Add Funds"
                             >
                                 <Plus size={20} />
                             </button>
                         )}
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Cash / Budget</p>
-                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.currentCash?.toLocaleString() || '0'}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">In Cash / Budget</p>
+                    <p className="text-3xl font-black text-slate-800 tracking-tighter">₹{financeSummary?.currentCash?.toLocaleString() || '0'}</p>
                 </motion.div>
 
+                {/* Total Spent Card */}
                 <motion.div 
-                    whileHover={{ y: -5 }} 
+                    whileHover={{ y: -8, scale: 1.02 }} 
                     onClick={() => setView('history')}
-                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-rose-200 transition-all"
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group cursor-pointer relative overflow-hidden transition-all duration-500"
                 >
-                    <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 mb-4 transition-colors group-hover:bg-rose-600 group-hover:text-white">
-                        <TrendingUp size={24} />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-rose-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-rose-100/50 transition-all" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-rose-500 to-rose-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-rose-200 group-hover:scale-110 transition-transform duration-500 relative z-10">
+                        <TrendingUp size={28} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total Spent</p>
-                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.spent?.toLocaleString() || '0'}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Total Spent</p>
+                    <p className="text-3xl font-black text-slate-800 tracking-tighter">₹{financeSummary?.spent?.toLocaleString() || '0'}</p>
                 </motion.div>
 
-                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
-                    <div className="flex justify-between items-start mb-4">
-                        <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                            <PieChart size={24} />
+                {/* Available Balance Card */}
+                <motion.div 
+                    whileHover={{ y: -8, scale: 1.02 }} 
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group relative overflow-hidden transition-all duration-500"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-100/50 transition-all" />
+                    <div className="flex justify-between items-start mb-6 relative z-10">
+                        <div className="w-14 h-14 bg-gradient-to-br from-emerald-500 to-emerald-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-emerald-200 group-hover:scale-110 transition-transform duration-500">
+                            <PieChart size={28} />
                         </div>
                         {isCOO(user) && (
-                            <div className="flex items-center gap-2">
-                                <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest">Carpenter Hub Impact</span>
+                            <div className="flex items-center gap-2 bg-slate-50 p-1.5 rounded-xl border border-slate-100">
+                                <span className="text-[7px] font-black text-slate-400 uppercase tracking-widest hidden xl:inline">Impact</span>
                                 <button 
                                     onClick={() => dispatch(toggleCarpenterImpact())}
-                                    className={`w-10 h-5 rounded-full transition-all relative ${financeSummary?.carpenterImpactEnabled ? 'bg-blue-600' : 'bg-slate-200'}`}
-                                    title={financeSummary?.carpenterImpactEnabled ? 'Click to disable carpenter payments impact' : 'Click to enable carpenter payments impact'}
+                                    className={`w-8 h-4 rounded-full transition-all relative ${financeSummary?.carpenterImpactEnabled ? 'bg-emerald-500' : 'bg-slate-300'}`}
                                 >
-                                    <div className={`absolute top-1 w-3 h-3 bg-white rounded-full transition-all ${financeSummary?.carpenterImpactEnabled ? 'left-6' : 'left-1'}`} />
+                                    <div className={`absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-sm transition-all ${financeSummary?.carpenterImpactEnabled ? 'left-4.5' : 'left-0.5'}`} />
                                 </button>
                             </div>
                         )}
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available Balance</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Available Balance</p>
                     <div className="flex items-baseline gap-2">
-                        <p className="text-2xl font-black text-slate-800">₹{financeSummary?.balance?.toLocaleString() || '0'}</p>
+                        <p className={`text-3xl font-black tracking-tighter ${financeSummary?.balance < 0 ? 'text-rose-600' : 'text-slate-800'}`}>
+                            ₹{financeSummary?.balance?.toLocaleString() || '0'}
+                        </p>
                         {financeSummary?.carpenterImpactEnabled && (
-                            <span className="text-[10px] font-black text-blue-500 bg-blue-50 px-2 py-0.5 rounded-full animate-pulse">
-                                Adjusted
+                            <span className="text-[8px] font-black text-white bg-blue-600 px-2 py-0.5 rounded-full shadow-lg shadow-blue-200 animate-pulse">
+                                ADJUSTED
                             </span>
                         )}
                     </div>
                 </motion.div>
 
-                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
-                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-4 transition-colors group-hover:bg-amber-600 group-hover:text-white">
-                        <Clock size={24} />
+                {/* Pipeline Card */}
+                <motion.div 
+                    whileHover={{ y: -8, scale: 1.02 }} 
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group relative overflow-hidden transition-all duration-500"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-amber-100/50 transition-all" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-amber-500 to-amber-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-amber-200 group-hover:scale-110 transition-transform duration-500 relative z-10">
+                        <Clock size={28} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">In Pipeline</p>
-                    <p className="text-2xl font-black text-slate-800">₹{financeSummary?.pending?.toLocaleString() || '0'}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">In Pipeline</p>
+                    <p className="text-3xl font-black text-slate-800 tracking-tighter">₹{financeSummary?.pending?.toLocaleString() || '0'}</p>
                 </motion.div>
 
-                {/* New Pending Amount Card */}
-                <motion.div whileHover={{ y: -5 }} className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group">
-                    <div className="w-12 h-12 bg-rose-50 rounded-2xl flex items-center justify-center text-rose-600 mb-4 transition-colors group-hover:bg-rose-600 group-hover:text-white">
-                        <ShieldAlert size={24} />
+                {/* Pending Amount Card */}
+                <motion.div 
+                    whileHover={{ y: -8, scale: 1.02 }} 
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group relative overflow-hidden transition-all duration-500"
+                >
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-orange-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-orange-100/50 transition-all" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-orange-500 to-orange-600 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-orange-200 group-hover:scale-110 transition-transform duration-500 relative z-10">
+                        <ShieldAlert size={28} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Pending Amount</p>
-                    <p className="text-2xl font-black text-slate-800">
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Pending Amount</p>
+                    <p className="text-3xl font-black text-slate-800 tracking-tighter">
                         ₹{spentHistory
                             .filter(v => ['PENDING', 'APPROVED'].includes(v.status))
                             .reduce((sum, v) => sum + v.amount, 0)
@@ -673,42 +695,54 @@ const VoucherManagement = () => {
                     </p>
                 </motion.div>
 
+                {/* Carpenter Hub Card */}
                 <motion.div 
-                    whileHover={{ y: -5 }} 
+                    whileHover={{ y: -8, scale: 1.02 }} 
                     onClick={handleCarpenterHubClick}
-                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-blue-200 transition-all"
+                    className="bg-gradient-to-br from-slate-800 to-slate-900 p-8 rounded-[2.5rem] shadow-xl group cursor-pointer relative overflow-hidden transition-all duration-500"
                 >
-                    <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-600 mb-4 transition-colors group-hover:bg-blue-600 group-hover:text-white">
-                        <Hammer size={24} />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-blue-500/20 transition-all" />
+                    <div className="w-14 h-14 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl flex items-center justify-center text-white mb-6 group-hover:scale-110 transition-transform duration-500 relative z-10">
+                        <Hammer size={28} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Carpenter Hub</p>
-                    <p className="text-sm font-black text-blue-600 mt-1 italic group-hover:text-blue-700 transition-colors">Manage Records</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Carpenter Hub</p>
+                    <p className="text-xl font-black text-white tracking-tight flex items-center gap-2">
+                        Manage Records <ArrowUpRight size={20} className="text-blue-400 group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                    </p>
                 </motion.div>
 
                 {/* Paid Vouchers Card */}
                 <motion.div 
-                    whileHover={{ y: -5 }} 
+                    whileHover={{ y: -8, scale: 1.02 }} 
                     onClick={() => { setView('history'); setHistoryStatus('PAID_SETTLED'); }}
-                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-emerald-200 transition-all"
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group cursor-pointer relative overflow-hidden transition-all duration-500"
                 >
-                    <div className="w-12 h-12 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 mb-4 transition-colors group-hover:bg-emerald-600 group-hover:text-white">
-                        <CheckCircle2 size={24} />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-emerald-100/50 transition-all" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-emerald-400 to-emerald-500 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-emerald-100 group-hover:scale-110 transition-transform duration-500 relative z-10">
+                        <CheckCircle2 size={28} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No. of Paid Vouchers</p>
-                    <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => v.status === 'PAID').length}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Paid Vouchers</p>
+                    <div className="flex items-baseline gap-2">
+                        <p className="text-3xl font-black text-slate-800 tracking-tighter">{spentHistory.filter(v => v.status === 'PAID').length}</p>
+                        <span className="text-[9px] font-bold text-emerald-500 uppercase">Settled</span>
+                    </div>
                 </motion.div>
 
                 {/* Unpaid Vouchers Card */}
                 <motion.div 
-                    whileHover={{ y: -5 }} 
+                    whileHover={{ y: -8, scale: 1.02 }} 
                     onClick={() => { setView('history'); setHistoryStatus('UNPAID'); }}
-                    className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 group cursor-pointer hover:border-amber-200 transition-all"
+                    className="bg-white p-8 rounded-[2.5rem] shadow-[0_20px_50px_rgba(0,0,0,0.04)] border border-slate-100 group cursor-pointer relative overflow-hidden transition-all duration-500"
                 >
-                    <div className="w-12 h-12 bg-amber-50 rounded-2xl flex items-center justify-center text-amber-600 mb-4 transition-colors group-hover:bg-amber-600 group-hover:text-white">
-                        <Clock size={24} />
+                    <div className="absolute top-0 right-0 w-32 h-32 bg-amber-50/50 rounded-full blur-3xl -mr-16 -mt-16 group-hover:bg-amber-100/50 transition-all" />
+                    <div className="w-14 h-14 bg-gradient-to-br from-amber-400 to-amber-500 rounded-2xl flex items-center justify-center text-white mb-6 shadow-lg shadow-amber-100 group-hover:scale-110 transition-transform duration-500 relative z-10">
+                        <Clock size={28} />
                     </div>
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">No. of Unpaid Vouchers</p>
-                    <p className="text-2xl font-black text-slate-800">{spentHistory.filter(v => ['PENDING', 'APPROVED'].includes(v.status)).length}</p>
+                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] mb-1">Unpaid Vouchers</p>
+                    <div className="flex items-baseline gap-2">
+                        <p className="text-3xl font-black text-slate-800 tracking-tighter">{spentHistory.filter(v => ['PENDING', 'APPROVED'].includes(v.status)).length}</p>
+                        <span className="text-[9px] font-bold text-amber-500 uppercase">Active</span>
+                    </div>
                 </motion.div>
             </div>
 

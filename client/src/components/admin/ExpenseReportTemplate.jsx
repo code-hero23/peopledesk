@@ -133,10 +133,6 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                     <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Current Cash</p>
                     <p className="text-xl font-black text-slate-900">₹{summary?.currentCash?.toLocaleString() || '0'}</p>
                 </div>
-                <div className="border border-slate-200 p-4 rounded-xl">
-                    <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Balance</p>
-                    <p className="text-xl font-black text-blue-600">₹{summary?.balance?.toLocaleString() || '0'}</p>
-                </div>
             </div>
 
             {/* Data Tables */}
