@@ -371,7 +371,7 @@ const exportFinanceData = async (req, res) => {
         employeeSummarySheet.columns = [
             { header: 'Employee Name', key: 'name', width: 30 },
             { header: 'Vouchers Raised', key: 'count', width: 20 },
-            { header: 'Approved', key: 'approved', width: 15 },
+            { header: 'No of Approved', key: 'approved', width: 20 },
             { header: 'Rejected', key: 'rejected', width: 15 },
             { header: 'Paid Amount', key: 'paidAmount', width: 20 },
             { header: 'Unpaid Amount', key: 'unpaidAmount', width: 20 },
