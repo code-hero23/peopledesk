@@ -113,14 +113,24 @@ const getManageableVouchers = async (req, res) => {
         const { role, designation } = req.user;
         let where = {};
 
-        if (role === 'ACCOUNTS_MANAGER' || role === 'ADMIN') {
+        const userDesignation = (designation || '').toUpperCase();
+        const isCOOUser = userDesignation.includes('COO') || userDesignation.includes('CHIEF OPERATIONAL OFFICER');
+
+        if (role === 'ACCOUNTS_MANAGER') {
+            // Accounts Manager needs to see items needing approval AND items needing payment
             where = { 
                 status: {
                     in: ['PENDING', 'APPROVED']
                 }
             };
-        } else if (role === 'BUSINESS_HEAD' && (designation === 'COO' || designation === 'Chief Operational Officer')) {
+        } else if (role === 'BUSINESS_HEAD' && isCOOUser) {
+            // COO only needs to see items specifically waiting for COO approval
             where = { amStatus: 'APPROVED', cooStatus: 'PENDING' };
+        } else if (role === 'ADMIN') {
+            // Admin sees all items that haven't been fully approved yet
+            where = { 
+                status: 'PENDING'
+            };
         } else {
             return res.status(403).json({ message: 'Not authorized' });
         }
