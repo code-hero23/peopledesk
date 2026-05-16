@@ -304,14 +304,8 @@ export const voucherSlice = createSlice({
             })
             .addCase(payVoucher.fulfilled, (state, action) => {
                 state.isLoading = false;
-                // Update the voucher in manageable list instead of filtering it out
-                const index = state.manageableVouchers.findIndex(v => v.id === action.payload.id);
-                if (index !== -1) {
-                    state.manageableVouchers[index] = {
-                        ...state.manageableVouchers[index],
-                        ...action.payload
-                    };
-                }
+                // Filter out the paid voucher from manageable list so it disappears from 'Pending'
+                state.manageableVouchers = state.manageableVouchers.filter(v => v.id !== action.payload.id);
             })
             .addCase(disburseVoucher.fulfilled, (state, action) => {
                 state.isLoading = false;

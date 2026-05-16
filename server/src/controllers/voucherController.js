@@ -113,19 +113,14 @@ const getManageableVouchers = async (req, res) => {
         const { role, designation } = req.user;
         let where = {};
 
-        if (role === 'ACCOUNTS_MANAGER') {
+        if (role === 'ACCOUNTS_MANAGER' || role === 'ADMIN') {
             where = { 
-                OR: [
-                    { amStatus: 'PENDING' },
-                    { amStatus: 'APPROVED', cooStatus: 'PENDING' },
-                    { cooStatus: 'APPROVED', status: 'APPROVED' },
-                    { status: 'PAID' }
-                ]
+                status: {
+                    in: ['PENDING', 'APPROVED']
+                }
             };
         } else if (role === 'BUSINESS_HEAD' && (designation === 'COO' || designation === 'Chief Operational Officer')) {
             where = { amStatus: 'APPROVED', cooStatus: 'PENDING' };
-        } else if (role === 'ADMIN') {
-            where = {}; // Admin can see all for monitoring
         } else {
             return res.status(403).json({ message: 'Not authorized' });
         }
