@@ -26,17 +26,17 @@ const { upload, uploadExcel } = require('../middlewares/uploadMiddleware');
 
 router.get('/employees/:id/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getEmployeeAttendance);
 
-router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllEmployees);
+router.get('/employees', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ACCOUNT'), getAllEmployees);
 router.post('/employees', protect, authorize('ADMIN', 'AE_MANAGER'), createEmployee);
 router.post('/employees/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importEmployees);
-router.post('/attendance/biometric/import', protect, authorize('ADMIN'), uploadExcel.single('file'), importBiometricData);
+router.post('/attendance/biometric/import', protect, authorize('ADMIN', 'ACCOUNT'), uploadExcel.single('file'), importBiometricData);
 
 // Work Logs & Attendance - Accessible by Admin, BH, HR
 router.get('/worklogs', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllWorkLogs);
 router.get('/worklogs/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getDailyWorkLogs);
-router.get('/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllAttendance);
-router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getDailyAttendance);
-router.get('/active-statuses', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getActiveStatuses);
+router.get('/attendance', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ACCOUNT'), getAllAttendance);
+router.get('/attendance/daily', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ACCOUNT'), getDailyAttendance);
+router.get('/active-statuses', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ACCOUNT'), getActiveStatuses);
 
 // Requests - Accessible by Admin, BH, HR
 router.get('/requests/pending', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'), getAllPendingRequests);
@@ -49,6 +49,6 @@ router.put('/users/:id/status', protect, authorize('ADMIN'), updateUserStatus);
 router.put('/users/:id', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER'), updateEmployee);
 router.delete('/users/:id', protect, authorize('ADMIN'), deleteEmployee);
 router.post('/employees/:id/test-whatsapp', protect, authorize('ADMIN'), testWhatsApp);
-router.post('/trigger-hr-report', protect, authorize('ADMIN'), triggerDailySummaryReport);
+router.post('/trigger-hr-report', protect, authorize('ADMIN', 'ACCOUNT'), triggerDailySummaryReport);
 
 module.exports = router;

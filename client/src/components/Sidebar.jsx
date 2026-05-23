@@ -261,6 +261,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             )}
                             <NavItem to="/dashboard/scoreboard" icon={BarChart3} label="My ScoreBoard" />
                             <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
+                            {user?.designation === 'ACCOUNT' && (
+                                <NavItem to="/admin/attendance" icon={CalendarClock} label="Company Attendance" />
+                            )}
                         </div>
 
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>

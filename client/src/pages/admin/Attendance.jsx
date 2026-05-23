@@ -326,12 +326,12 @@ const Attendance = () => {
                             onChange={handleBiometricUpload}
                         />
                     </label>
-                    {(user?.role === 'ADMIN' || user?.role === 'HR') && (
+                    {(user?.role === 'ADMIN' || user?.role === 'HR' || user?.designation === 'ACCOUNT') && (
                         <button onClick={onGeneratePayrollReport} className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
                             <Zap size={16} /> Payroll Report
                         </button>
                     )}
-                    {(user?.role === 'ADMIN') && (
+                    {(user?.role === 'ADMIN' || user?.designation === 'ACCOUNT') && (
                         <button 
                             onClick={onSendHRSummary} 
                             disabled={isSendingReport}

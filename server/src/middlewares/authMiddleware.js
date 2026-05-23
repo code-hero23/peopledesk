@@ -61,14 +61,17 @@ const protect = async (req, res, next) => {
     }
 };
 
-const authorize = (...roles) => {
+const authorize = (...rolesOrDesignations) => {
     return (req, res, next) => {
         // Flatten in case an array was passed
-        const requiredRoles = roles.flat();
+        const requiredRoles = rolesOrDesignations.flat();
 
-        if (!requiredRoles.includes(req.user.role)) {
+        const hasRole = requiredRoles.includes(req.user.role);
+        const hasDesignation = requiredRoles.includes(req.user.designation);
+
+        if (!hasRole && !hasDesignation) {
             return res.status(403).json({
-                message: `User role ${req.user.role} is not authorized to access this route`,
+                message: `User role ${req.user.role} and designation ${req.user.designation} are not authorized to access this route`,
             });
         }
         next();
