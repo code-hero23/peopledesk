@@ -18,6 +18,7 @@ const MyWorkLogs = () => {
     const getCycleMonth = () => {
         const today = new Date();
         const day = today.getDate();
+        today.setDate(1); // Set to 1st of month first to prevent month overflow
         if (day >= 26) {
             today.setMonth(today.getMonth() + 1);
         }
