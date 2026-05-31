@@ -342,37 +342,53 @@ const Overview = () => {
             return;
         }
 
-        navigator.geolocation.getCurrentPosition(
-            async (pos) => {
-                const { latitude: lat, longitude: lng } = pos.coords;
-                try {
-                    // Reverse geocode using Nominatim (no key required for low volume)
-                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
-                    const data = await res.json();
+        const handleSuccess = async (pos) => {
+            const { latitude: lat, longitude: lng } = pos.coords;
+            try {
+                // Reverse geocode using Nominatim (no key required for low volume)
+                const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`);
+                const data = await res.json();
 
-                    // Construct a detailed address similar to the user's image
-                    const addr = data.address;
-                    const parts = [
-                        addr.road,
-                        addr.suburb || addr.neighbourhood,
-                        addr.city_district || addr.county,
-                        addr.city || addr.town || addr.village,
-                        addr.state_district,
-                        addr.state,
-                        addr.postcode,
-                        addr.country
-                    ].filter(Boolean);
+                // Construct a detailed address similar to the user's image
+                const addr = data.address;
+                const parts = [
+                    addr.road,
+                    addr.suburb || addr.neighbourhood,
+                    addr.city_district || addr.county,
+                    addr.city || addr.town || addr.village,
+                    addr.state_district,
+                    addr.state,
+                    addr.postcode,
+                    addr.country
+                ].filter(Boolean);
 
-                    setLocation({ lat, lng, address: parts.join(', ') || data.display_name || 'Address Found', error: false });
-                } catch (err) {
-                    console.error("Geocoding error:", err);
-                    setLocation({ lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, error: false });
-                }
-            },
-            (err) => {
-                console.error("Location error:", err);
+                setLocation({ lat, lng, address: parts.join(', ') || data.display_name || 'Address Found', error: false });
+            } catch (err) {
+                console.error("Geocoding error:", err);
+                setLocation({ lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, error: false });
+            }
+        };
+
+        const handleError = (err) => {
+            console.error("Location error:", err);
+            if (err.code === 3 || err.code === 2) {
+                console.log("Retrying geolocation with low accuracy...");
+                navigator.geolocation.getCurrentPosition(
+                    handleSuccess,
+                    (fallbackErr) => {
+                        console.error("Location fallback error:", fallbackErr);
+                        setLocation(prev => ({ ...prev, address: 'Location Access Denied. Please enable GPS.', error: true }));
+                    },
+                    { enableHighAccuracy: false, timeout: 15000 }
+                );
+            } else {
                 setLocation(prev => ({ ...prev, address: 'Location Access Denied. Please enable GPS.', error: true }));
-            },
+            }
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            handleSuccess,
+            handleError,
             { enableHighAccuracy: true, timeout: 10000 }
         );
     }, []);

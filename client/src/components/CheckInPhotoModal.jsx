@@ -55,78 +55,92 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
 
         // Get Location & Reverse Geocode
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(
-                async (position) => {
-                    const lat = position.coords.latitude;
-                    const lng = position.coords.longitude;
+            const handleSuccess = async (position) => {
+                const lat = position.coords.latitude;
+                const lng = position.coords.longitude;
 
-                    setLocation(prev => ({
-                        ...prev,
+                setLocation(prev => ({
+                    ...prev,
+                    lat: lat.toFixed(4),
+                    lng: lng.toFixed(4),
+                    areaName: 'Detecting Area...'
+                }));
+
+                try {
+                    // Reverse geocoding using OpenStreetMap Nominatim with higher zoom (18)
+                    const response = await fetch(
+                        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                        { headers: { 'User-Agent': 'PeopleDesk-App/1.0' } }
+                    );
+                    const data = await response.json();
+                    const addr = data.address;
+
+                    let formattedArea = '';
+
+                    if (isAE && data.display_name) {
+                        // AE Requirement: Full Address
+                        formattedArea = data.display_name;
+                    } else {
+                        // Default: More granular address components
+                        const primaryArea = addr.road || addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || addr.residential || addr.city_district || addr.town || 'Local Area';
+                        const secondaryArea = addr.city || addr.town || addr.state_district || addr.county || '';
+
+                        formattedArea = secondaryArea && primaryArea !== secondaryArea
+                            ? `${primaryArea}, ${secondaryArea}`
+                            : primaryArea;
+                    }
+
+                    setLocation({
                         lat: lat.toFixed(4),
                         lng: lng.toFixed(4),
-                        areaName: 'Detecting Area...'
-                    }));
+                        areaName: formattedArea
+                    });
+                    setIsLocationReady(true);
 
-                    try {
-                        // Reverse geocoding using OpenStreetMap Nominatim with higher zoom (18)
-                        const response = await fetch(
-                            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
-                            { headers: { 'User-Agent': 'PeopleDesk-App/1.0' } }
-                        );
-                        const data = await response.json();
-                        const addr = data.address;
-
-                        let formattedArea = '';
-
-                        if (isAE && data.display_name) {
-                            // AE Requirement: Full Address
-                            formattedArea = data.display_name;
-                        } else {
-                            // Default: More granular address components
-                            const primaryArea = addr.road || addr.village || addr.suburb || addr.neighbourhood || addr.hamlet || addr.residential || addr.city_district || addr.town || 'Local Area';
-                            const secondaryArea = addr.city || addr.town || addr.state_district || addr.county || '';
-
-                            formattedArea = secondaryArea && primaryArea !== secondaryArea
-                                ? `${primaryArea}, ${secondaryArea}`
-                                : primaryArea;
-                        }
-
-                        setLocation({
-                            lat: lat.toFixed(4),
-                            lng: lng.toFixed(4),
-                            areaName: formattedArea
-                        });
-                        setIsLocationReady(true);
-
-                        // If AE, start camera ONLY after location is ready
-                        if (isAE) {
-                            initCameraStream();
-                        }
-
-                    } catch (err) {
-                        console.error("Reverse geocoding failed:", err);
-                        setLocation({
-                            lat: lat.toFixed(4),
-                            lng: lng.toFixed(4),
-                            areaName: 'Location Name Unavailable'
-                        });
-                        // Even if address name fails, we have coords, so allow camera
-                        setIsLocationReady(true);
-                        if (isAE) initCameraStream();
+                    // If AE, start camera ONLY after location is ready
+                    if (isAE) {
+                        initCameraStream();
                     }
-                },
-                (err) => {
-                    console.warn("Location access denied or unavailable:", err);
-                    setLocation({ lat: null, lng: null, areaName: 'Location Access Denied' });
 
+                } catch (err) {
+                    console.error("Reverse geocoding failed:", err);
+                    setLocation({
+                        lat: lat.toFixed(4),
+                        lng: lng.toFixed(4),
+                        areaName: 'Location Name Unavailable'
+                    });
+                    // Even if address name fails, we have coords, so allow camera
+                    setIsLocationReady(true);
+                    if (isAE) initCameraStream();
+                }
+            };
+
+            const handleError = (err) => {
+                console.warn("Location access denied or unavailable:", err);
+                if (err.code === 3 || err.code === 2) {
+                    console.log("Retrying geolocation in CheckInPhotoModal with low accuracy...");
+                    navigator.geolocation.getCurrentPosition(
+                        handleSuccess,
+                        (fallbackErr) => {
+                            console.error("Location fallback error in CheckInPhotoModal:", fallbackErr);
+                            setLocation({ lat: null, lng: null, areaName: 'Location Access Denied' });
+                            if (isAE) {
+                                setError("Location access is mandatory for AE attendance. Please enable GPS and try again.");
+                            }
+                        },
+                        { enableHighAccuracy: false, timeout: 15000 }
+                    );
+                } else {
+                    setLocation({ lat: null, lng: null, areaName: 'Location Access Denied' });
                     if (isAE) {
                         setError("Location access is mandatory for AE attendance. Please enable GPS and try again.");
-                    } else {
-                        // Non-AE can proceed without location (technically, though usually we want it)
-                        // But previous logic allowed it. 
-                        // If logic was standard parallel, we invoke camera now.
                     }
-                },
+                }
+            };
+
+            navigator.geolocation.getCurrentPosition(
+                handleSuccess,
+                handleError,
                 { enableHighAccuracy: true, timeout: 10000 }
             );
         } else {
