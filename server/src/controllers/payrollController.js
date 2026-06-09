@@ -44,10 +44,10 @@ const generatePayrollReport = async (req, res) => {
                 where: { userId: { in: userIds }, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
             }),
             prisma.leaveRequest.findMany({
-                where: { userId: { in: userIds }, startDate: { lte: endDate }, endDate: { gte: startDate } }
+                where: { userId: { in: userIds }, status: 'APPROVED', startDate: { lte: endDate }, endDate: { gte: startDate } }
             }),
             prisma.permissionRequest.findMany({
-                where: { userId: { in: userIds }, date: { gte: startDate, lte: endDate } }
+                where: { userId: { in: userIds }, status: 'APPROVED', date: { gte: startDate, lte: endDate } }
             })
         ]);
 
@@ -138,18 +138,25 @@ const generatePayrollReport = async (req, res) => {
         sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
 
         users.forEach(user => {
-            const presentDays = attendanceMap.get(user.id)?.size || 0;
-            const expectedMinutes = presentDays * 520; // 8h 40m = 520 mins
+            const presentDaysRaw = attendanceMap.get(user.id)?.size || 0;
+            const leavesHalf = leaveHalfMap.get(user.id) || 0;
+            
+            // Deduct 0.5 days for each approved half-day leave
+            const workingDaysPD = Math.max(0, presentDaysRaw - (leavesHalf * 0.5));
+            const expectedMinutes = workingDaysPD * 520; // 8h 40m = 520 mins
+            
+            const bioDaysRaw = bioMap.get(user.id)?.size || 0;
+            const workingDaysBio = Math.max(0, bioDaysRaw - (leavesHalf * 0.5));
             
             sheet.addRow({
                 name: user.name,
                 email: user.email,
-                workingDaysPD: presentDays,
-                workingDaysBio: bioMap.get(user.id)?.size || 0,
+                workingDaysPD: workingDaysPD,
+                workingDaysBio: workingDaysBio,
                 actualHours: formatHHMM(actualMinsMap.get(user.id)),
                 expectedHours: formatHHMM(expectedMinutes),
                 permissions: permissionMap.get(user.id) || 0,
-                leavesHalf: leaveHalfMap.get(user.id) || 0,
+                leavesHalf: leavesHalf,
                 leavesFull: leaveFullMap.get(user.id) || 0
             });
         });
