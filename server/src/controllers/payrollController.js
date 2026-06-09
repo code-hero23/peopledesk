@@ -44,10 +44,10 @@ const generatePayrollReport = async (req, res) => {
                 where: { userId: { in: userIds }, punchTime: { gte: new Date(y - 1, 0, 1), lte: new Date(y + 1, 11, 31) } }
             }),
             prisma.leaveRequest.findMany({
-                where: { userId: { in: userIds }, status: 'APPROVED', startDate: { lte: endDate }, endDate: { gte: startDate } }
+                where: { userId: { in: userIds }, status: { in: ['APPROVED', 'PENDING'] }, startDate: { lte: endDate }, endDate: { gte: startDate } }
             }),
             prisma.permissionRequest.findMany({
-                where: { userId: { in: userIds }, status: 'APPROVED', date: { gte: startDate, lte: endDate } }
+                where: { userId: { in: userIds }, status: { in: ['APPROVED', 'PENDING'] }, date: { gte: startDate, lte: endDate } }
             })
         ]);
 
