@@ -11,6 +11,7 @@ const initFinanceCron = require('./cron/financeCron');
 const initWorklogReminderCron = require('./cron/worklogReminderCron');
 const initBreakExceedanceCron = require('./cron/breakExceedanceCron');
 const { initDailySummaryCron } = require('./cron/DailySummaryCron');
+const {initWeeklyExcessiveAbsenceCron} = require('./cron/weeklyAbsenceCron');
 
 
 
@@ -29,6 +30,7 @@ initCheckoutReminderCron();
 initNotificationCron();
 initFinanceCron();
 initDailySummaryCron();
+initWeeklyExcessiveAbsenceCron();
 // initReviewRequestCron();
 // initWorklogReminderCron();
 // initBreakExceedanceCron();

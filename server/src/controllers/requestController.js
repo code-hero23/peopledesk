@@ -137,7 +137,7 @@ const createLeaveRequest = async (req, res) => {
         });
 
         // Trigger excessive request notification check
-        await checkAndNotifyExcessiveRequests(userId, parseRobustDate(startDate));
+        // await checkAndNotifyExcessiveRequests(userId, parseRobustDate(startDate));
 
         res.status(201).json(leaveRequest);
     } catch (error) {
@@ -155,82 +155,113 @@ const checkAndNotifyExcessiveRequests = async (userId, targetDate) => {
         const cycleStart = getCycleStartDateIST(targetDate);
         const cycleEnd = getCycleEndDateIST(targetDate);
 
-        // 1. Count Permissions
+        // Permission Count
         const permCount = await prisma.permissionRequest.count({
             where: {
                 userId,
-                date: { gte: cycleStart, lte: cycleEnd },
-                status: { not: 'REJECTED' }
+                date: {
+                    gte: cycleStart,
+                    lte: cycleEnd
+                },
+                status: {
+                    not: 'REJECTED'
+                }
             }
         });
 
-        // 2. Count Leave Days
+        // Leave Requests
         const leaves = await prisma.leaveRequest.findMany({
             where: {
                 userId,
                 OR: [
-                    { startDate: { gte: cycleStart, lte: cycleEnd } },
-                    { endDate: { gte: cycleStart, lte: cycleEnd } },
-                    { AND: [{ startDate: { lte: cycleStart } }, { endDate: { gte: cycleEnd } }] }
+                    {
+                        startDate: {
+                            gte: cycleStart,
+                            lte: cycleEnd
+                        }
+                    },
+                    {
+                        endDate: {
+                            gte: cycleStart,
+                            lte: cycleEnd
+                        }
+                    },
+                    {
+                        AND: [
+                            {
+                                startDate: {
+                                    lte: cycleStart
+                                }
+                            },
+                            {
+                                endDate: {
+                                    gte: cycleEnd
+                                }
+                            }
+                        ]
+                    }
                 ],
-                status: { not: 'REJECTED' }
+                status: {
+                    not: 'REJECTED'
+                }
             }
         });
 
         const getDaysInCycle = (start, end, cStart, cEnd, type) => {
             if (type === 'HALF_DAY') return 0.5;
+
             const effectiveStart = new Date(Math.max(new Date(start), new Date(cStart)));
             const effectiveEnd = new Date(Math.min(new Date(end), new Date(cEnd)));
+
             if (effectiveStart > effectiveEnd) return 0;
-            const diffTime = Math.abs(effectiveEnd - effectiveStart);
-            return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+
+            return Math.ceil((effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)) + 1;
         };
 
-        const totalLeaveDays = leaves.reduce((sum, r) => {
-            return sum + getDaysInCycle(r.startDate, r.endDate, cycleStart, cycleEnd, r.type);
+        const totalLeaveDays = leaves.reduce((sum, leave) => {
+            return sum + getDaysInCycle(
+                leave.startDate,
+                leave.endDate,
+                cycleStart,
+                cycleEnd,
+                leave.type
+            );
         }, 0);
 
-        if (permCount >= 6 || totalLeaveDays >= 6) {
-            // Fetch User, BH and HR details
-            const user = await prisma.user.findUnique({
-                where: { id: userId },
-                include: { reportingBh: true }
-            });
-
-            if (!user) return;
-
-            const bhEmail = user.reportingBh?.email;
-            const hrEmail = 'es.cookscape@gmail.com';
-            const reason = permCount >= 6 ? `Permission count (${permCount})` : `Leave day count (${totalLeaveDays.toFixed(1)})`;
-
-            const emailHtml = `
-                <div style="font-family: sans-serif; padding: 20px; border: 1px solid #eee; border-radius: 10px;">
-                    <h2 style="color: #d32f2f;">Excessive Absence Alert</h2>
-                    <p>Employee <strong>${user.name}</strong> (${user.designation}) has reached a limit in the current attendance cycle.</p>
-                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
-                        <tr style="background: #f9f9f9;"><td style="padding: 10px;"><strong>Threshold Trigger:</strong></td><td style="padding: 10px;">${reason} reached 6+</td></tr>
-                        <tr><td style="padding: 10px;"><strong>Cycle:</strong></td><td style="padding: 10px;">${cycleStart.toLocaleDateString()} to ${cycleEnd.toLocaleDateString()}</td></tr>
-                    </table>
-                    <p style="margin-top: 20px; color: #666;">This is an automated notification from PeopleDesk.</p>
-                </div>
-            `;
-
-            const recipients = [hrEmail];
-            if (bhEmail) recipients.push(bhEmail);
-
-            await sendEmail({
-                to: recipients.join(','),
-                subject: `Alert: Excessive Absence - ${user.name}`,
-                html: emailHtml
-            });
-
-            console.log(`Sent excessive request alert for ${user.name} to ${recipients.join(',')}`);
+        if (permCount < 6 && totalLeaveDays < 6) {
+            return null;
         }
+
+        const user = await prisma.user.findUnique({
+            where: {
+                id: userId
+            }, include: {
+                reportingBh: true
+            }
+        });
+
+        if (!user) return null;
+
+        return {
+            name: user.name,
+            designation: user.designation,
+            permissionCount: permCount,
+            leaveDays: totalLeaveDays,
+            reason:
+                permCount >= 6
+                    ? `Permission Count (${permCount})`
+                    : `Leave Days (${totalLeaveDays})`,
+            cycleStart,
+            cycleEnd,
+            hrEmail: "abiyuvan4@gmail.com",
+            bhEmail: user.reportingBh?.email
+        };
+
     } catch (err) {
-        console.error('Error in checkAndNotifyExcessiveRequests:', err);
+        console.error(err);
+        return null;
     }
 };
-
 // @desc    Create a new permission request (2 hours max)
 // @route   POST /api/requests/permission
 // @access  Private (Employee)
@@ -273,7 +304,6 @@ const createPermissionRequest = async (req, res) => {
                 date: parseRobustDate(date),
                 startTime,
                 endTime,
-                reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING',
                 isExceededLimit: permCount >= 4
@@ -281,7 +311,7 @@ const createPermissionRequest = async (req, res) => {
         });
 
         // Trigger excessive request notification check
-        await checkAndNotifyExcessiveRequests(userId, parseRobustDate(date));
+        // await checkAndNotifyExcessiveRequests(userId, parseRobustDate(date));
 
         res.status(201).json(permissionRequest);
     } catch (error) {
