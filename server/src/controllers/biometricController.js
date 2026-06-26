@@ -14,8 +14,8 @@ const importBiometricData = async (req, res) => {
 
         const workbook = xlsx.readFile(req.file.path);
         const sheetName = workbook.SheetNames[0];
-        // Use raw: false to get the formatted strings from Excel cells
-        const data = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName], { raw: false });
+        const sheet = workbook.Sheets[sheetName];
+        const rawRows = xlsx.utils.sheet_to_json(sheet, { header: 1, raw: false });
 
         // Cleanup temp file
         try {
@@ -24,8 +24,66 @@ const importBiometricData = async (req, res) => {
             console.error('Failed to delete temp file:', err);
         }
 
-        if (data.length === 0) {
+        if (rawRows.length === 0) {
             return res.status(400).json({ message: 'Excel sheet is empty' });
+        }
+
+        let data = [];
+        // Detect format: Search for 'Employee Name :' in the first 20 rows of the sheet
+        let isBlockFormat = false;
+        for (let i = 0; i < Math.min(20, rawRows.length); i++) {
+            const firstCell = rawRows[i] && rawRows[i][0] ? rawRows[i][0].toString() : '';
+            if (firstCell.includes('Employee Name :')) {
+                isBlockFormat = true;
+                break;
+            }
+        }
+
+        if (isBlockFormat) {
+            let currentEmployeeName = null;
+            let currentBiometricId = null;
+            let inDataSection = false;
+
+            for (const row of rawRows) {
+                if (!row || row.length === 0) continue;
+                const firstCell = row[0] ? row[0].toString().trim() : '';
+
+                if (firstCell.includes('Employee Name :')) {
+                    const nameMatch = firstCell.match(/Employee Name\s*:\s*([^,]+)/);
+                    const idMatch = firstCell.match(/Employee ID\s*:\s*([^,]+)/);
+                    currentEmployeeName = nameMatch ? nameMatch[1].trim() : null;
+                    currentBiometricId = idMatch ? idMatch[1].trim() : null;
+                    inDataSection = false;
+                } else if (firstCell === 'No.') {
+                    inDataSection = true;
+                } else if (inDataSection) {
+                    if (firstCell === 'Total' || firstCell === '') {
+                        inDataSection = false;
+                    } else {
+                        // This is a record row
+                        const dateVal = row[1];
+                        const firstPunchVal = row[3];
+                        const lastPunchVal = row[4];
+                        
+                        if (dateVal) {
+                            data.push({
+                                'First Name': currentEmployeeName,
+                                'Biometric ID': currentBiometricId,
+                                'Date': dateVal,
+                                'First Punch': firstPunchVal,
+                                'Last Punch': lastPunchVal
+                            });
+                        }
+                    }
+                }
+            }
+        } else {
+            // Standard flat layout
+            data = xlsx.utils.sheet_to_json(sheet, { raw: false });
+        }
+
+        if (data.length === 0) {
+            return res.status(400).json({ message: 'Excel sheet is empty or contains no valid records' });
         }
 
         const results = { success: 0, failed: 0, skipped: 0, deleted: 0, errors: [] };
