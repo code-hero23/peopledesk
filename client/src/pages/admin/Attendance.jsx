@@ -247,8 +247,17 @@ const Attendance = () => {
 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
             const response = await axios.post(`${baseUrl}/admin/attendance/biometric/import`, formData, config);
-
-            alert(`Success! Imported ${response.data.importedCount} records. ${response.data.unmatchedNames.length > 0 ? `Unmatched: ${response.data.unmatchedNames.join(', ')}` : ''}`);
+            const { importedCount, unmatchedEmployees, unmatchedNames } = response.data;
+            let alertMsg = `Success! Imported ${importedCount} records.`;
+            if (unmatchedEmployees && unmatchedEmployees.length > 0) {
+                alertMsg += `\n\nMissing Employees in Database:\n` + unmatchedEmployees.map(emp => `- ${emp}`).join('\n');
+            } else if (unmatchedNames && unmatchedNames.length > 0) {
+                alertMsg += `\n\nUnmatched Details:\n` + unmatchedNames.slice(0, 10).join('\n');
+                if (unmatchedNames.length > 10) {
+                    alertMsg += `\n...and ${unmatchedNames.length - 10} more rows.`;
+                }
+            }
+            alert(alertMsg);
             dispatch(getDailyAttendance(startDate));
         } catch (error) {
             console.error("Biometric import failed:", error);

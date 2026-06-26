@@ -145,6 +145,7 @@ const importBiometricData = async (req, res) => {
 
         // Track seen users to delete their month data once
         const refreshedUsers = new Set();
+        const unmatchedEmployees = new Set();
 
         for (const [index, row] of data.entries()) {
             // Check if row is completely empty or just has whitespace
@@ -179,6 +180,7 @@ const importBiometricData = async (req, res) => {
                     ? `Row ${index + 2}: No user found for name "${name}" or ID "${bioId}"`
                     : `Row ${index + 2}: No user found for name "${name}"`;
                 results.errors.push(errorMsg);
+                unmatchedEmployees.add(bioId ? `${name} (ID: ${bioId})` : name);
                 continue;
             }
 
@@ -298,7 +300,8 @@ const importBiometricData = async (req, res) => {
             importedCount: results.success,
             skippedCount: results.skipped,
             failedCount: results.failed,
-            unmatchedNames: results.errors // The frontend uses .length on this
+            unmatchedNames: results.errors, // The frontend uses .length on this
+            unmatchedEmployees: Array.from(unmatchedEmployees)
         });
 
     } catch (error) {
