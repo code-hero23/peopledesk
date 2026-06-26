@@ -111,7 +111,20 @@ const importBiometricData = async (req, res) => {
             let match = allUsers.find(u => clean(u.name) === cleanInput);
             if (match) return match;
 
-            // 3. Word-based matching (Relaxed)
+            // 3. Exact match after removing single-letter initials/titles
+            const cleanInitials = (s) => {
+                return s.toLowerCase()
+                    .split(/[^a-z0-9]+/)
+                    .filter(w => w.length > 1)
+                    .join('');
+            };
+            const cleanInputInitials = cleanInitials(name);
+            if (cleanInputInitials) {
+                match = allUsers.find(u => cleanInitials(u.name) === cleanInputInitials);
+                if (match) return match;
+            }
+
+            // 4. Word-based matching (Relaxed)
             const inputWords = name.toLowerCase().split(/[^a-z0-9]+/).filter(w => w.length >= 3);
             
             match = allUsers.find(u => {
