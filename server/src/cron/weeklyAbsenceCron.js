@@ -180,8 +180,8 @@ const initWeeklyExcessiveAbsenceCron = () => {
                 // HR + All BH Emails
                 // -----------------------------
                 const recipients = [
-                    // "es.cookscape@gmail.com",
-                    'abiyuavn4@gmail.com',
+                    "es.cookscape@gmail.com",
+                    // 'abiyuvan4@gmail.com',
                     ...new Set(
                         report
                             .map(emp => emp.bhEmail)
