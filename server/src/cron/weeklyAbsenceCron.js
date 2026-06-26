@@ -27,7 +27,7 @@ const initWeeklyExcessiveAbsenceCron = () => {
                         role: "EMPLOYEE"
                     },
                     select: {
-                        id: true
+                        id: true     
                     }
                 });
 
