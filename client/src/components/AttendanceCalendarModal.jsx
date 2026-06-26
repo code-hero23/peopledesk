@@ -51,6 +51,38 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         return Array.from(leaveDates).sort();
     }, [leaves, cycleData]);
 
+    // Map of leave dates to their types
+    const leaveDatesMap = useMemo(() => {
+        if (!leaves || !cycleData) return {};
+
+        const approvedLeaves = leaves.filter(l => l.status === 'APPROVED');
+        const datesMap = {};
+
+        const cycleStart = new Date(cycleData.startDate);
+        const cycleEnd = new Date(cycleData.endDate);
+
+        approvedLeaves.forEach(leave => {
+            let curr = new Date(leave.startDate);
+            const end = new Date(leave.endDate);
+
+            while (curr <= end) {
+                if (curr >= cycleStart && curr <= cycleEnd) {
+                    const dateStr = getYYYYMMDD(curr);
+                    if (leave.type === 'HALF_DAY') {
+                        if (!datesMap[dateStr]) {
+                            datesMap[dateStr] = 'HALF_DAY';
+                        }
+                    } else {
+                        datesMap[dateStr] = 'FULL_DAY';
+                    }
+                }
+                curr.setDate(curr.getDate() + 1);
+            }
+        });
+
+        return datesMap;
+    }, [leaves, cycleData]);
+
     // Calculate all approved permission dates
     const approvedPermissionDates = useMemo(() => {
         if (!permissions || !cycleData) return new Set();
@@ -76,22 +108,27 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         const checkDate = new Date(date);
         checkDate.setHours(0, 0, 0, 0);
 
-        // 1. Check Attendance (Green)
+        // 1. Check Half Day Leaves (Orange)
+        if (leaveDatesMap[dateStr] === 'HALF_DAY') {
+            return 'LEAVE_ORANGE';
+        }
+
+        // 2. Check Attendance (Green)
         const isPresent = attendanceHistory?.some(a => getYYYYMMDD(a.date) === dateStr);
         if (isPresent) return 'PRESENT';
 
-        // 2. Check Leaves (Blue/Orange)
-        if (sortedLeaveDates.includes(dateStr)) {
+        // 3. Check Full Day Leaves (Blue/Orange)
+        if (leaveDatesMap[dateStr] === 'FULL_DAY') {
             const leaveIndex = sortedLeaveDates.indexOf(dateStr);
             return leaveIndex < 4 ? 'LEAVE_BLUE' : 'LEAVE_ORANGE';
         }
 
-        // 3. Check Permissions (Purple)
+        // 4. Check Permissions (Purple)
         if (approvedPermissionDates.has(dateStr)) {
             return 'PERMISSION';
         }
 
-        // 4. Past days without data are ABSENT
+        // 5. Past days without data are ABSENT
         if (checkDate < today) {
             return 'ABSENT';
         }
@@ -252,10 +289,10 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                                         {/* Tooltip */}
                                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-1.5 bg-slate-900/90 text-white text-[9px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-all scale-75 group-hover:scale-100 whitespace-nowrap z-50 pointer-events-none backdrop-blur-sm border border-white/10 shadow-xl">
                                             {status === 'PRESENT' ? '✓ Present' :
-                                                status === 'LEAVE_NORMAL' ? '✈ Leave (Standard)' :
-                                                    status === 'LEAVE_EXCESS' ? '⚠ Leave (Excess)' :
-                                                        status === 'PERMISSION' ? '🕒 Permission' :
-                                                            status === 'ABSENT' ? '✖ Absent' : '○ Pending'}
+                                                status === 'LEAVE_BLUE' ? '✈ Leave (Standard)' :
+                                                status === 'LEAVE_ORANGE' ? (leaveDatesMap[dateStr] === 'HALF_DAY' ? '✈ Leave (Half Day)' : '⚠ Leave (Excess)') :
+                                                    status === 'PERMISSION' ? '🕒 Permission' :
+                                                        status === 'ABSENT' ? '✖ Absent' : '○ Pending'}
                                         </div>
                                     </div>
                                 );
