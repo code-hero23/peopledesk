@@ -8,11 +8,11 @@ const {
 } = require("../controllers/requestController");
 
 const initWeeklyExcessiveAbsenceCron = () => {
-    cron.schedule("*/2 * * * *", async () => {
+    // cron.schedule("*/2 * * * *", async () => {
 
-    // cron.schedule(
-    //     "30 23 * * 0",
-    //     async () => {
+    cron.schedule(
+        "30 23 * * 0",
+        async () => {
 
             console.log("Running Weekly Excessive Absence Report...");
 
@@ -180,7 +180,8 @@ const initWeeklyExcessiveAbsenceCron = () => {
                 // HR + All BH Emails
                 // -----------------------------
                 const recipients = [
-                    "es.cookscape@gmail.com",
+                    // "es.cookscape@gmail.com",
+                    'abiyuavn4@gmail.com',
                     ...new Set(
                         report
                             .map(emp => emp.bhEmail)
@@ -207,7 +208,7 @@ const initWeeklyExcessiveAbsenceCron = () => {
 
             }
 
-        },
+        }, 
         {
             timezone: "Asia/Kolkata"
         }

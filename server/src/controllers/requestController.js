@@ -22,7 +22,7 @@ const getBusinessHeads = async (req, res) => {
     }
 };
 
-// @desc    Create a new leave request
+// @desc    Create a new leave request 
 // @route   POST /api/requests/leave
 // @access  Private (Employee)
 const createLeaveRequest = async (req, res) => {
@@ -150,117 +150,177 @@ const createLeaveRequest = async (req, res) => {
  * Helper to check if user has exceeded 6 permissions or leaves this cycle
  * and send email alert to BH and HR
  */
+// Move this outside checkAndNotifyExcessiveRequests()
+
+const getDaysInCycle = (start, end, cycleStart, cycleEnd, type) => {
+
+    if (type === "HALF_DAY") return 0.5;
+
+    const effectiveStart = new Date(
+        Math.max(new Date(start), new Date(cycleStart))
+    );
+
+    const effectiveEnd = new Date(
+        Math.min(new Date(end), new Date(cycleEnd))
+    );
+
+    if (effectiveStart > effectiveEnd) return 0;
+
+    return (
+        Math.ceil(
+            (effectiveEnd - effectiveStart) /
+            (1000 * 60 * 60 * 24)
+        ) + 1
+    );
+
+};
+
 const checkAndNotifyExcessiveRequests = async (userId, targetDate) => {
+
     try {
+
         const cycleStart = getCycleStartDateIST(targetDate);
         const cycleEnd = getCycleEndDateIST(targetDate);
 
+        // -----------------------------
         // Permission Count
-        const permCount = await prisma.permissionRequest.count({
-            where: {
-                userId,
-                date: {
-                    gte: cycleStart,
-                    lte: cycleEnd
-                },
-                status: {
-                    not: 'REJECTED'
-                }
-            }
-        });
-
-        // Leave Requests
-        const leaves = await prisma.leaveRequest.findMany({
-            where: {
-                userId,
-                OR: [
-                    {
-                        startDate: {
-                            gte: cycleStart,
-                            lte: cycleEnd
-                        }
+        // -----------------------------
+        const permissionCount =
+            await prisma.permissionRequest.count({
+                where: {
+                    userId,
+                    date: {
+                        gte: cycleStart,
+                        lte: cycleEnd
                     },
-                    {
-                        endDate: {
-                            gte: cycleStart,
-                            lte: cycleEnd
-                        }
-                    },
-                    {
-                        AND: [
-                            {
-                                startDate: {
-                                    lte: cycleStart
-                                }
-                            },
-                            {
-                                endDate: {
-                                    gte: cycleEnd
-                                }
-                            }
-                        ]
+                    status: {
+                        not: "REJECTED"
                     }
-                ],
-                status: {
-                    not: 'REJECTED'
                 }
-            }
-        });
+            });
 
-        const getDaysInCycle = (start, end, cStart, cEnd, type) => {
-            if (type === 'HALF_DAY') return 0.5;
+        // -----------------------------
+        // Leave Requests
+        // -----------------------------
+        const leaveRequests =
+            await prisma.leaveRequest.findMany({
+                where: {
+                    userId,
+                    status: {
+                        not: "REJECTED"
+                    },
+                    OR: [
+                        {
+                            startDate: {
+                                gte: cycleStart,
+                                lte: cycleEnd
+                            }
+                        },
+                        {
+                            endDate: {
+                                gte: cycleStart,
+                                lte: cycleEnd
+                            }
+                        },
+                        {
+                            AND: [
+                                {
+                                    startDate: {
+                                        lte: cycleStart
+                                    }
+                                },
+                                {
+                                    endDate: {
+                                        gte: cycleEnd
+                                    }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                select: {
+                    startDate: true,
+                    endDate: true,
+                    type: true
+                }
+            });
 
-            const effectiveStart = new Date(Math.max(new Date(start), new Date(cStart)));
-            const effectiveEnd = new Date(Math.min(new Date(end), new Date(cEnd)));
+        const leaveDays = leaveRequests.reduce(
+            (total, leave) =>
+                total +
+                getDaysInCycle(
+                    leave.startDate,
+                    leave.endDate,
+                    cycleStart,
+                    cycleEnd,
+                    leave.type
+                ),
+            0
+        );
 
-            if (effectiveStart > effectiveEnd) return 0;
-
-            return Math.ceil((effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)) + 1;
-        };
-
-        const totalLeaveDays = leaves.reduce((sum, leave) => {
-            return sum + getDaysInCycle(
-                leave.startDate,
-                leave.endDate,
-                cycleStart,
-                cycleEnd,
-                leave.type
-            );
-        }, 0);
-
-        if (permCount < 6 && totalLeaveDays < 6) {
+        // -----------------------------
+        // Threshold Check
+        // -----------------------------
+        if (permissionCount < 6 && leaveDays < 6) {
             return null;
         }
 
+        // -----------------------------
+        // Employee Details
+        // -----------------------------
         const user = await prisma.user.findUnique({
             where: {
                 id: userId
-            }, include: {
-                reportingBh: true
+            },
+            select: {
+                name: true,
+                designation: true,
+                reportingBh: {
+                    select: {
+                        email: true
+                    }
+                }
             }
         });
 
         if (!user) return null;
 
+
+
         return {
+
             name: user.name,
+
             designation: user.designation,
-            permissionCount: permCount,
-            leaveDays: totalLeaveDays,
-            reason:
-                permCount >= 6
-                    ? `Permission Count (${permCount})`
-                    : `Leave Days (${totalLeaveDays})`,
+
+            permissionCount,
+
+            leaveDays,
+
             cycleStart,
+
             cycleEnd,
-            hrEmail: "abiyuvan4@gmail.com",
-            bhEmail: user.reportingBh?.email
+
+            bhEmail:
+                user.reportingBh?.email || null
+
         };
 
     } catch (err) {
-        console.error(err);
+
+        console.error(
+            "checkAndNotifyExcessiveRequests:",
+            err
+        );
+
         return null;
+
     }
+
+};
+
+module.exports = {
+    checkAndNotifyExcessiveRequests
 };
 // @desc    Create a new permission request (2 hours max)
 // @route   POST /api/requests/permission
