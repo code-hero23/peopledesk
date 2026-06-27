@@ -364,6 +364,7 @@ const createPermissionRequest = async (req, res) => {
                 date: parseRobustDate(date),
                 startTime,
                 endTime,
+                reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
                 status: 'PENDING',
                 isExceededLimit: permCount >= 4
