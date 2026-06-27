@@ -110,11 +110,21 @@ const generatePayrollReport = async (req, res) => {
 
         allPermissions.forEach(p => permissionMap.set(p.userId, (permissionMap.get(p.userId) || 0) + 1));
         
+        const getOverlappingDays = (reqStart, reqEnd, cycleStart, cycleEnd) => {
+            const start = new Date(Math.max(new Date(reqStart).setHours(0, 0, 0, 0), new Date(cycleStart).setHours(0, 0, 0, 0)));
+            const end = new Date(Math.min(new Date(reqEnd).setHours(23, 59, 59, 999), new Date(cycleEnd).setHours(23, 59, 59, 999)));
+            if (start > end) return 0;
+            return Math.ceil((end - start) / (1000 * 60 * 60 * 24));
+        };
+
         allLeaves.forEach(l => {
+            const days = getOverlappingDays(l.startDate, l.endDate, startDate, endDate);
+            if (days <= 0) return;
+
             if (l.type === 'HALF_DAY') {
-                leaveHalfMap.set(l.userId, (leaveHalfMap.get(l.userId) || 0) + 1);
+                leaveHalfMap.set(l.userId, (leaveHalfMap.get(l.userId) || 0) + days);
             } else {
-                leaveFullMap.set(l.userId, (leaveFullMap.get(l.userId) || 0) + 1);
+                leaveFullMap.set(l.userId, (leaveFullMap.get(l.userId) || 0) + days);
             }
         });
 
