@@ -147,6 +147,8 @@ const generatePayrollReport = async (req, res) => {
         sheet.getRow(1).font = { bold: true };
         sheet.getRow(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE0E0E0' } };
 
+        const totalCycleDays = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24));
+
         users.forEach(user => {
             const presentDaysRaw = attendanceMap.get(user.id)?.size || 0;
             const leavesHalf = leaveHalfMap.get(user.id) || 0;
@@ -158,6 +160,9 @@ const generatePayrollReport = async (req, res) => {
             const bioDaysRaw = bioMap.get(user.id)?.size || 0;
             const workingDaysBio = Math.max(0, bioDaysRaw - (leavesHalf * 0.5));
             
+            // Calculate total full day leaves including unapplied absences
+            const leavesFull = Math.max(0, totalCycleDays - workingDaysPD - (leavesHalf * 0.5));
+            
             sheet.addRow({
                 name: user.name,
                 email: user.email,
@@ -167,7 +172,7 @@ const generatePayrollReport = async (req, res) => {
                 expectedHours: formatHHMM(expectedMinutes),
                 permissions: permissionMap.get(user.id) || 0,
                 leavesHalf: leavesHalf,
-                leavesFull: leaveFullMap.get(user.id) || 0
+                leavesFull: leavesFull
             });
         });
 
