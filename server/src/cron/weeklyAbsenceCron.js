@@ -7,12 +7,19 @@ const {
     checkAndNotifyExcessiveRequests
 } = require("../controllers/requestController");
 
-const initWeeklyExcessiveAbsenceCron = () => {
-    // cron.schedule("*/2 * * * *", async () => {
+const NOTIFICATION_EMAIL = process.env.NOTIFICATION_EMAIL;
 
-    cron.schedule(
-        "30 23 * * 0",
-        async () => {
+
+const initWeeklyExcessiveAbsenceCron = () => {
+
+    // Schedule the cron job to run every 2 minutes for testing purposes
+    cron.schedule("*/2 * * * *", async () => {
+
+
+    //   Schedule the cron job to run every Sunday at 11:30 PM IST
+    // cron.schedule(
+    //     "30 23 * * 0",
+    //     async () => {
 
             console.log("Running Weekly Excessive Absence Report...");
 
@@ -27,7 +34,7 @@ const initWeeklyExcessiveAbsenceCron = () => {
                         role: "EMPLOYEE"
                     },
                     select: {
-                        id: true     
+                        id: true
                     }
                 });
 
@@ -180,8 +187,9 @@ const initWeeklyExcessiveAbsenceCron = () => {
                 // HR + All BH Emails
                 // -----------------------------
                 const recipients = [
-                    "es.cookscape@gmail.com",
-                    // 'abiyuvan4@gmail.com',
+                    process.env.NODE_ENV === "production"
+                        ? process.env.EMAIL_FROM
+                        : "abiyuvan4@gmail.com",
                     ...new Set(
                         report
                             .map(emp => emp.bhEmail)
@@ -208,7 +216,7 @@ const initWeeklyExcessiveAbsenceCron = () => {
 
             }
 
-        }, 
+        },
         {
             timezone: "Asia/Kolkata"
         }
