@@ -91,6 +91,31 @@ const MyWorkLogs = () => {
         }
     };
 
+    const onExportDetailedReport = async () => {
+        try {
+            const [year, month] = selectedMonth.split('-').map(Number);
+            const config = {
+                headers: { Authorization: `Bearer ${user.token}` },
+                responseType: 'blob',
+            };
+
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const apiUrl = `${baseUrl}/export/worklogs?userId=${user.id}&month=${month}&year=${year}`;
+
+            const response = await axios.get(apiUrl, config);
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `My_Detailed_Logs_${selectedMonth}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        } catch (error) {
+            console.error("Detailed export failed:", error);
+            alert("Failed to export detailed logs.");
+        }
+    };
+
     const handleViewDetails = (log) => {
         setSelectedLog(log);
         setIsModalOpen(true);
@@ -140,6 +165,14 @@ const MyWorkLogs = () => {
                     >
                         <BarChart3 size={18} />
                         Download Summary
+                    </button>
+
+                    <button
+                        onClick={onExportDetailedReport}
+                        className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl shadow-lg shadow-indigo-100 font-bold text-sm transition-all active:scale-95"
+                    >
+                        <Download size={18} />
+                        Detailed Logs
                     </button>
 
                     {['LA', 'FA'].some(role => user.designation?.toUpperCase().includes(role)) && (
