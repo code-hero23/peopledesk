@@ -19,6 +19,7 @@ const NotificationBell = () => {
                 headers: { Authorization: `Bearer ${user.token}` }
             };
             const { data } = await axios.get('/api/notifications', config);
+            console.log(data);
             setNotifications(data);
             setUnreadCount(data.filter(n => !n.isRead).length);
         } catch (error) {
@@ -156,7 +157,7 @@ const NotificationBell = () => {
                     </motion.div>
                 )}
             </AnimatePresence>
-            <style jsx>{`
+            <style>{`
                 @keyframes ring {
                     0% { transform: rotate(0); }
                     10% { transform: rotate(15deg); }

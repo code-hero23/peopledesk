@@ -9,7 +9,7 @@ const {
 
 const initWeeklyExcessiveAbsenceCron = () => {
     // Schedule the cron job to run every 2 minutes for testing purposes
-    //  cron.schedule("*/2 * * * *", async () => {
+    //  cron.schedule("*/1 * * * *", async () => {
     // Runs every Sunday at 11:30 PM IST
     cron.schedule(
         "30 23 * * 0",
@@ -43,6 +43,16 @@ const initWeeklyExcessiveAbsenceCron = () => {
                         )
                     )
                 ).filter(Boolean);
+
+                const recipients = [
+                    process.env.EMAIL_FROM,
+                    'elakkiya.sakthivelu@gmail.com',
+                    ...new Set(
+                        report
+                            .map(emp => emp.bhEmail)
+                            .filter(Boolean)
+                    )
+                ].filter(Boolean);
 
                 // ----------------------------------------
                 // Calculate Reporting Week (Monday-Sunday)
@@ -91,9 +101,10 @@ const initWeeklyExcessiveAbsenceCron = () => {
 
                     </div>
                     `;
+
                     await sendEmail({
-                        to:
-                            process.env.EMAIL_FROM,
+                        to: recipients.join(","),
+
 
                         subject: "Weekly Excessive Absence Report - No Excessive Requests",
                         html
@@ -195,17 +206,6 @@ const initWeeklyExcessiveAbsenceCron = () => {
                 </div>
                 `;
 
-                // ----------------------------------------
-                // Recipients
-                // ----------------------------------------
-                const recipients = [
-                    process.env.EMAIL_FROM,
-                    ...new Set(
-                        report
-                            .map(emp => emp.bhEmail)
-                            .filter(Boolean)
-                    )
-                ];
 
                 await sendEmail({
                     to: recipients.join(","),

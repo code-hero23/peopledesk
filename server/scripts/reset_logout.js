@@ -1,7 +1,12 @@
+const path = require("path");
+require("dotenv").config({
+    path: path.resolve(__dirname, "../.env")
+});
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
 async function resetLogout(email, dateStr) {
+    console.log(process.env.DATABASE_URL);
     try {
         // Find user
         const user = await prisma.user.findUnique({

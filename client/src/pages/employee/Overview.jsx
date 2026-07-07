@@ -798,7 +798,7 @@ const Overview = () => {
                             <Sparkles size={20} />
                             <span className="font-bold">Work Log</span>
                         </motion.button>
-                        <NotificationBell />
+                        {/* <NotificationBell /> */}
                     </div>
                 </div>
 
