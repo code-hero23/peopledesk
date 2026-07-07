@@ -90,7 +90,10 @@ const exportWorkLogs = async (req, res) => {
             where.date = { gte: startDate, lte: endDate };
         }
 
-        if (userId) {
+        if (req.user.role === 'EMPLOYEE') {
+            where.userId = req.user.id;
+            userWhere.id = req.user.id;
+        } else if (userId) {
             where.userId = parseInt(userId);
             userWhere.id = parseInt(userId);
         }
@@ -305,6 +308,16 @@ const exportWorkLogs = async (req, res) => {
         let datesToShow = [];
         if (date) {
             datesToShow = [new Date(date).toISOString().split('T')[0]];
+        } else if (startDate && endDate) {
+            // Generate all dates in the range from startDate to endDate
+            const current = new Date(startDate);
+            const end = new Date(endDate);
+            while (current <= end) {
+                datesToShow.push(current.toISOString().split('T')[0]);
+                current.setDate(current.getDate() + 1);
+            }
+            // Sort descending to show latest first
+            datesToShow.sort((a, b) => new Date(b) - new Date(a));
         } else {
             // Unique dates from logs or the range
             const logDates = new Set(logs.map(l => l.date ? new Date(l.date).toISOString().split('T')[0] : null).filter(Boolean));
