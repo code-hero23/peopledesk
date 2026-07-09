@@ -2,13 +2,13 @@ import { useEffect, useState, useRef } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import axios from 'axios';
 import { UserPlus, Download } from 'lucide-react';
-import { useNavigate, Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import { getAllEmployees, deleteEmployee, updateUserStatus, reset } from '../../features/admin/adminSlice';
 import CreateEmployeeModal from '../../components/CreateEmployeeModal';
 
 const ManageEmployees = () => {
     const dispatch = useDispatch();
-    const { employees, isLoading, isSuccess, message } = useSelector((state) => state.admin);
+    const { employees } = useSelector((state) => state.admin);
     const [searchTerm, setSearchTerm] = useState('');
     const [showModal, setShowModal] = useState(false);
     const [selectedEmployee, setSelectedEmployee] = useState(null);
@@ -120,11 +120,14 @@ const ManageEmployees = () => {
         }
     };
 
+    const normalizedSearchTerm = searchTerm.toLowerCase();
+    const matchesSearch = (value) => String(value ?? '').toLowerCase().includes(normalizedSearchTerm);
+
     const filteredEmployees = employees.filter(emp =>
-        emp.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.designation.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.role.toLowerCase().includes(searchTerm.toLowerCase())
+        matchesSearch(emp.name) ||
+        matchesSearch(emp.email) ||
+        matchesSearch(emp.designation) ||
+        matchesSearch(emp.role)
     );
 
     return (
