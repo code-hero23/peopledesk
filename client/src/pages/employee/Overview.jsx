@@ -144,7 +144,7 @@ const Overview = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const { user } = useSelector((state) => state.auth);
-    const { attendance, requests, loading, isRequestsFetched, activeBreak } = useSelector((state) => state.employee);
+    const { attendance, requests, loading, activeBreak } = useSelector((state) => state.employee);
 
     // States
     const [activeModal, setActiveModal] = useState(null);
@@ -153,7 +153,10 @@ const Overview = () => {
     const [photo, setPhoto] = useState(null);
     const [isAutoPermission, setIsAutoPermission] = useState(false);
     const [permissionInitialData, setPermissionInitialData] = useState(null);
-    const [hasCheckedLateness, setHasCheckedLateness] = useState(false);
+    // Holds the attendance payload while a mandatory late permission is being submitted.
+    // No attendance record is created until the permission form succeeds.
+    const [pendingLateCheckIn, setPendingLateCheckIn] = useState(null);
+    const [isCompletingLateCheckIn, setIsCompletingLateCheckIn] = useState(false);
     const [isAttendanceCalendarOpen, setIsAttendanceCalendarOpen] = useState(false);
     const [isSiteLogin, setIsSiteLogin] = useState(false);
     const [isMandatorySiteVisit, setIsMandatorySiteVisit] = useState(false);
@@ -470,96 +473,181 @@ const Overview = () => {
         return () => { if (logoutTimerRef.current) clearTimeout(logoutTimerRef.current); };
     }, [isCheckedIn, logoutAlert, showBrowserNotif]);
 
-    const checkLatenessAndRedirect = useCallback((checkInTimeRaw, isAuto = false) => {
-        if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') return;
+    const checkLatenessAndRedirect = useCallback(
+        (checkInTimeRaw, isAuto = false) => {
+            // AE roles follow the photo-based attendance flow and bypass this rule.
+            if (
+                user?.designation === 'AE' ||
+                user?.designation === 'AE MANAGER'
+            ) {
+                return false;
+            }
 
-        // Dynamic bypass based on Admin Settings
-        if (requests?.isLateCheckInEnforced === false) return;
+            // Admin can disable mandatory late permission from settings.
+            if (requests?.isLateCheckInEnforced === false) {
+                return false;
+            }
 
-        const checkInTime = new Date(checkInTimeRaw);
-        const hours = checkInTime.getHours();
-        const minutes = checkInTime.getMinutes();
-        const totalMinutes = hours * 60 + minutes;
+            const checkInTime = new Date(checkInTimeRaw);
+            const totalMinutes =
+                checkInTime.getHours() * 60 + checkInTime.getMinutes();
+            const todayLocal = checkInTime.toLocaleDateString('en-CA');
 
-        const todayLocal = checkInTime.toLocaleDateString('en-CA');
+            // Approved full-day leave bypasses late permission enforcement.
+            const hasApprovedLeave = requests?.leaves?.some((leave) => {
+                const leaveStart = new Date(
+                    leave.startDate
+                ).toLocaleDateString('en-CA');
+                const leaveEnd = new Date(
+                    leave.endDate
+                ).toLocaleDateString('en-CA');
 
-        // Check for ANY approved leave for today
-        const hasApprovedLeave = requests?.leaves?.some(l => {
-            const lStart = new Date(l.startDate).toLocaleDateString('en-CA');
-            const lEnd = new Date(l.endDate).toLocaleDateString('en-CA');
-            return l.status === 'APPROVED' && todayLocal >= lStart && todayLocal <= lEnd;
-        });
+                return (
+                    leave.type !== 'HALF_DAY' &&
+                    leave.status === 'APPROVED' &&
+                    todayLocal >= leaveStart &&
+                    todayLocal <= leaveEnd
+                );
+            });
 
-        if (hasApprovedLeave) return;
+            if (hasApprovedLeave) {
+                return false;
+            }
 
-        // Check for ANY half-day leave for today
-        const hasHalfDay = requests?.leaves?.some(l => {
-            if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
-            const lS = new Date(l.startDate).toLocaleDateString('en-CA');
-            const lE = new Date(l.endDate).toLocaleDateString('en-CA');
-            return todayLocal >= lS && todayLocal <= lE;
-        });
+            const hasHalfDay = requests?.leaves?.some((leave) => {
+                if (
+                    leave.type !== 'HALF_DAY' ||
+                    leave.status === 'REJECTED'
+                ) {
+                    return false;
+                }
 
-        let thresholdMinutes = hasHalfDay ? 840 : 630; // 2:00 PM or 10:30 AM (Strict 10:30 AM trigger)
+                const leaveStart = new Date(
+                    leave.startDate
+                ).toLocaleDateString('en-CA');
+                const leaveEnd = new Date(
+                    leave.endDate
+                ).toLocaleDateString('en-CA');
 
-        const hasPermission = requests?.permissions?.some(p => {
-            const pDate = new Date(p.date).toLocaleDateString('en-CA');
-            return pDate === todayLocal && p.status !== 'REJECTED';
-        });
+                return (
+                    todayLocal >= leaveStart &&
+                    todayLocal <= leaveEnd
+                );
+            });
 
-        // Deadlock Fix: If permission already exists and this is auto-redirect, skip
-        if (isAuto && hasPermission) return;
+            let thresholdMinutes = hasHalfDay ? 840 : 630; // 2:00 PM / 10:30 AM
 
-        // Add 2 hour grace only if they have permission AND it's NOT a mandatory check-in check
-        if (hasPermission && !isAuto) {
-            thresholdMinutes += 120;
-        }
+            const hasPermission = requests?.permissions?.some(
+                (permission) => {
+                    const permissionDate = new Date(
+                        permission.date
+                    ).toLocaleDateString('en-CA');
 
-        if (totalMinutes > thresholdMinutes) {
-            const date = todayLocal;
-            const formatTimeLocal = (dateObj) => {
-                let h = dateObj.getHours();
-                const m = dateObj.getMinutes().toString().padStart(2, '0');
-                const ampm = h >= 12 ? 'PM' : 'AM';
-                h = h % 12 || 12;
-                return `${h.toString().padStart(2, '0')}:${m} ${ampm}`;
-            };
+                    return (
+                        permissionDate === todayLocal &&
+                        permission.status !== 'REJECTED'
+                    );
+                }
+            );
 
-            const startTime = formatTimeLocal(checkInTime);
-            const endTimeObj = new Date(checkInTime.getTime() + 2 * 60 * 60 * 1000);
-            const endTime = formatTimeLocal(endTimeObj);
+            // A permission already exists for today, so automatic check-in
+            // does not need to open another mandatory permission modal.
+            if (isAuto && hasPermission) {
+                return false;
+            }
+
+            // Manual checks retain the existing two-hour grace behaviour.
+            if (hasPermission && !isAuto) {
+                thresholdMinutes += 120;
+            }
+
+            if (totalMinutes <= thresholdMinutes) {
+                return false;
+            }
 
             const labelTime = hasPermission
-                ? (hasHalfDay ? '4:00 PM' : '12:30 PM')
-                : (hasHalfDay ? '2:00 PM' : '10:30 AM');
+                ? hasHalfDay
+                    ? '4:00 PM'
+                    : '12:30 PM'
+                : hasHalfDay
+                  ? '2:00 PM'
+                  : '10:30 AM';
 
             setPermissionInitialData({
-                date,
-                startTime,
-                endTime,
+                date: todayLocal,
+                // Do not prefill the attendance click time. The employee can
+                // enter the permission details, and attendance starts only
+                // after the permission request is successfully submitted.
+                startTime: '',
+                endTime: '',
                 reason: `Late Check-In (After ${labelTime})`
             });
             setIsAutoPermission(isAuto);
             setActiveModal('permission');
-        }
-    }, [user, requests]);
 
-    // Lateness Effect
-    useEffect(() => {
-        if (isCheckedIn && isRequestsFetched && !hasCheckedLateness && user?.id) {
-            const today = new Date().toLocaleDateString('en-CA');
-            const attendanceDay = new Date(attendance?.date).toLocaleDateString('en-CA');
+            return true;
+        },
+        [user, requests]
+    );
 
-            // Only check lateness for today's attendance
-            if (attendanceDay === today) {
-                if (activeModal !== 'permission') {
-                    checkLatenessAndRedirect(attendance?.date || new Date(), true);
-                }
-                setHasCheckedLateness(true);
+    const completeAttendanceCheckIn = useCallback(
+        async (pendingData) => {
+            if (!pendingData?.deviceInfo) {
+                toast.error('Unable to start attendance. Check-in information is missing.');
+                return false;
             }
-        }
-    }, [isCheckedIn, isRequestsFetched, hasCheckedLateness, activeModal, attendance, checkLatenessAndRedirect, user?.id]);
 
+            const formData = new FormData();
+            formData.append('deviceInfo', pendingData.deviceInfo);
+
+            const result = await dispatch(markAttendance(formData));
+
+            if (result.error) {
+                toast.error(
+                    result.payload?.message ||
+                    result.payload ||
+                    'Attendance check-in failed. Please try again.'
+                );
+                return false;
+            }
+
+            await dispatch(getAttendanceStatus());
+            navigate('/dashboard/attendance');
+            return true;
+        },
+        [dispatch, navigate]
+    );
+
+    const beginAttendanceCheckIn = useCallback(
+        async (isSiteLoginAction = false) => {
+            const deviceType = getDeviceType();
+            const deviceInfo = `${deviceType.toUpperCase()} | ${
+                isSiteLoginAction ? 'SITE_LOGIN | ' : ''
+            }${navigator.userAgent}`;
+
+            const permissionRequired = checkLatenessAndRedirect(
+                new Date(),
+                true
+            );
+
+            if (permissionRequired) {
+                // Save only the data needed to perform attendance later.
+                // The actual attendance timestamp will be generated by the
+                // backend when markAttendance runs after permission success.
+                setPendingLateCheckIn({
+                    deviceInfo,
+                    isSiteLoginAction
+                });
+                return false;
+            }
+
+            return completeAttendanceCheckIn({
+                deviceInfo,
+                isSiteLoginAction
+            });
+        },
+        [checkLatenessAndRedirect, completeAttendanceCheckIn]
+    );
 
     // Camera Effect for AE
     useEffect(() => {
@@ -602,80 +690,75 @@ const Overview = () => {
     const handleMarkAttendance = (isSiteLoginAction = false) => {
         setConfirmationConfig({
             isOpen: true,
-            title: isCheckedIn ? 'Confirm Sign-Out' : (isSiteLoginAction ? 'Confirm Site Sign-In' : 'Confirm Office Sign-In'),
+            title: isCheckedIn
+                ? 'Confirm Sign-Out'
+                : isSiteLoginAction
+                  ? 'Confirm Site Sign-In'
+                  : 'Confirm Office Sign-In',
             message: isCheckedIn
                 ? 'Are you sure you want to finish your session for today?'
-                : `Are you ready to start your session via ${isSiteLoginAction ? 'Site' : 'Office'}?`,
+                : `Are you ready to start your session via ${
+                      isSiteLoginAction ? 'Site' : 'Office'
+                  }?`,
             type: isCheckedIn ? 'warning' : 'info',
-            onConfirm: () => {
+            onConfirm: async () => {
+                setConfirmationConfig((previous) => ({
+                    ...previous,
+                    isOpen: false
+                }));
                 setIsSiteLogin(isSiteLoginAction);
-                const deviceInfo = navigator.userAgent;
-                const deviceType = getDeviceType();
-                const formData = new FormData();
-                formData.append('deviceInfo', `${deviceType.toUpperCase()} | ${isSiteLoginAction ? 'SITE_LOGIN | ' : ''}${deviceInfo}`);
 
                 if (isCheckedIn) {
-                    // Check-Out
-                    if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
+                    if (
+                        user?.designation === 'AE' ||
+                        user?.designation === 'AE MANAGER'
+                    ) {
                         setIsCheckingOut(true);
                         setShowCheckInModal(true);
-                    } else {
-                        dispatch(checkoutAttendance(formData)).then(() => {
-                            dispatch(getAttendanceStatus());
-                            if (user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
-                                navigate('/dashboard/attendance');
-                            }
-                        });
+                        return;
                     }
-                } else {
-                    // Check-In
-                    if (user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
-                        setIsCheckingOut(false);
-                        setShowCheckInModal(true);
-                    } else {
-                        if (isSiteLoginAction) {
-                            setIsMandatorySiteVisit(true);
-                            setVisitInitialData({
-                                date: new Date().toLocaleDateString('en-CA'),
-                                startTime: getHHMM(new Date()),
-                                isCheckInTrigger: true
-                            });
-                            setActiveModal('site-visit');
-                        } else {
-                            dispatch(markAttendance(formData)).then((res) => {
-                                if (!res.error) {
-                                    dispatch(getAttendanceStatus());
-                                    
-                                    // Handle Lateness Check & Redirection
-                                    if (user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
-                                        const now = new Date();
-                                        const hours = now.getHours();
-                                        const mins = now.getMinutes();
-                                        const totalMins = hours * 60 + mins;
-                                        
-                                        // Threshold logic matching checkLatenessAndRedirect
-                                        const todayLocal = now.toLocaleDateString('en-CA');
-                                        const hasHalfDay = requests?.leaves?.some(l => {
-                                            if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
-                                            const lS = new Date(l.startDate).toLocaleDateString('en-CA');
-                                            const lE = new Date(l.endDate).toLocaleDateString('en-CA');
-                                            return todayLocal >= lS && todayLocal <= lE;
-                                        });
-                                        const thresholdMinutes = hasHalfDay ? 840 : 630;
 
-                                        if (totalMins > thresholdMinutes) {
-                                            // Late: Trigger Modal and don't navigate yet
-                                            checkLatenessAndRedirect(now, true);
-                                        } else {
-                                            // on Time: Redirect immediately
-                                            navigate('/dashboard/attendance');
-                                        }
-                                    }
-                                }
-                            });
-                        }
+                    const formData = new FormData();
+                    formData.append(
+                        'deviceInfo',
+                        `${getDeviceType().toUpperCase()} | ${navigator.userAgent}`
+                    );
+
+                    const result = await dispatch(
+                        checkoutAttendance(formData)
+                    );
+
+                    if (!result.error) {
+                        await dispatch(getAttendanceStatus());
+                        navigate('/dashboard/attendance');
                     }
+                    return;
                 }
+
+                // AE roles continue through photo verification.
+                if (
+                    user?.designation === 'AE' ||
+                    user?.designation === 'AE MANAGER'
+                ) {
+                    setIsCheckingOut(false);
+                    setShowCheckInModal(true);
+                    return;
+                }
+
+                // Site attendance first requires the mandatory site-visit form.
+                if (isSiteLoginAction) {
+                    setIsMandatorySiteVisit(true);
+                    setVisitInitialData({
+                        date: new Date().toLocaleDateString('en-CA'),
+                        startTime: getHHMM(new Date()),
+                        isCheckInTrigger: true
+                    });
+                    setActiveModal('site-visit');
+                    return;
+                }
+
+                // Office attendance checks lateness BEFORE creating attendance.
+                await beginAttendanceCheckIn(false);
             }
         });
     };
@@ -1006,15 +1089,36 @@ const Overview = () => {
                         <PermissionRequestForm
                             isMandatory={isAutoPermission}
                             initialData={permissionInitialData}
-                            onSuccess={() => { 
-                                setActiveModal(null); 
-                                setIsAutoPermission(false); 
-                                dispatch(getMyRequests()); 
-                                if (isAutoPermission && user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
-                                    navigate('/dashboard/attendance');
+                            onSuccess={async () => {
+                                const shouldCompleteLateCheckIn =
+                                    isAutoPermission && !!pendingLateCheckIn;
+
+                                // Refresh permission data immediately after the
+                                // permission request has been created.
+                                dispatch(getMyRequests());
+
+                                if (shouldCompleteLateCheckIn) {
+                                    setIsCompletingLateCheckIn(true);
+                                    const completed = await completeAttendanceCheckIn(
+                                        pendingLateCheckIn
+                                    );
+                                    setIsCompletingLateCheckIn(false);
+
+                                    if (completed) {
+                                        setPendingLateCheckIn(null);
+                                    }
+                                }
+
+                                setActiveModal(null);
+                                setIsAutoPermission(false);
+                                setPermissionInitialData(null);
+                            }}
+                            onCancel={() => {
+                                if (!isAutoPermission && !isCompletingLateCheckIn) {
+                                    setActiveModal(null);
+                                    setPermissionInitialData(null);
                                 }
                             }}
-                            onCancel={() => !isAutoPermission && setActiveModal(null)}
                         />
                     </Modal>
                 )}
@@ -1023,41 +1127,20 @@ const Overview = () => {
                         <SiteVisitRequestForm
                             isMandatory={isMandatorySiteVisit}
                             initialData={visitInitialData}
-                            onSuccess={() => {
+                            onSuccess={async () => {
+                                const shouldStartAttendance =
+                                    visitInitialData?.isCheckInTrigger;
+
                                 setActiveModal(null);
                                 setIsMandatorySiteVisit(false);
+                                setVisitInitialData(null);
                                 dispatch(getMyRequests());
-                                if (visitInitialData?.isCheckInTrigger) {
-                                    const formData = new FormData();
-                                    const deviceType = getDeviceType();
-                                    formData.append('deviceInfo', `${deviceType.toUpperCase()} | SITE_LOGIN | ${navigator.userAgent}`);
-                                    dispatch(markAttendance(formData)).then((res) => {
-                                        if (!res.error) {
-                                            dispatch(getAttendanceStatus());
-                                            
-                                            if (user?.designation !== 'AE' && user?.designation !== 'AE MANAGER') {
-                                                const now = new Date();
-                                                const hours = now.getHours();
-                                                const mins = now.getMinutes();
-                                                const totalMins = hours * 60 + mins;
-                                                
-                                                const todayLocal = now.toLocaleDateString('en-CA');
-                                                const hasHalfDay = requests?.leaves?.some(l => {
-                                                    if (l.type !== 'HALF_DAY' || l.status === 'REJECTED') return false;
-                                                    const lS = new Date(l.startDate).toLocaleDateString('en-CA');
-                                                    const lE = new Date(l.endDate).toLocaleDateString('en-CA');
-                                                    return todayLocal >= lS && todayLocal <= lE;
-                                                });
-                                                const thresholdMinutes = hasHalfDay ? 840 : 630;
 
-                                                if (totalMins > thresholdMinutes) {
-                                                    checkLatenessAndRedirect(now, true);
-                                                } else {
-                                                    navigate('/dashboard/attendance');
-                                                }
-                                            }
-                                        }
-                                    });
+                                if (shouldStartAttendance) {
+                                    // Lateness is checked here before attendance
+                                    // is created. If late, the permission modal
+                                    // opens and attendance remains unstarted.
+                                    await beginAttendanceCheckIn(true);
                                 }
                             }}
                             onCancel={() => !isMandatorySiteVisit && setActiveModal(null)}
@@ -1395,7 +1478,6 @@ const Overview = () => {
                                                     if (!res.error) {
                                                         dispatch(getAttendanceStatus());
                                                         setPhoto(null); setShowCheckInModal(false);
-                                                        if (!isCheckingOut) checkLatenessAndRedirect(new Date(), true);
                                                     }
                                                 });
                                             }} 

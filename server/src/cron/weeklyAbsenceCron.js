@@ -9,7 +9,7 @@ const {
 
 const initWeeklyExcessiveAbsenceCron = () => {
     // Schedule the cron job to run every 2 minutes for testing purposes
-    //  cron.schedule("*/1 * * * *", async () => {
+    // cron.schedule("*/1 * * * *", async () => {
     // Runs every Sunday at 11:30 PM IST
     cron.schedule(
         "30 23 * * 0",
@@ -46,7 +46,7 @@ const initWeeklyExcessiveAbsenceCron = () => {
 
                 const recipients = [
                     process.env.EMAIL_FROM,
-                    'elakkiya.sakthivelu@gmail.com',
+                    'elakkiya.sakthivelu3089@gmail.com',
                     ...new Set(
                         report
                             .map(emp => emp.bhEmail)
