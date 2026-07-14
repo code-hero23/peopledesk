@@ -46,7 +46,6 @@ const initWeeklyExcessiveAbsenceCron = () => {
 
                 const recipients = [
                     process.env.EMAIL_FROM,
-                    'elakkiya.sakthivelu3089@gmail.com',
                     ...new Set(
                         report
                             .map(emp => emp.bhEmail)

@@ -319,9 +319,8 @@ const checkAndNotifyExcessiveRequests = async (userId, targetDate) => {
 
 };
 
-module.exports = {
-    checkAndNotifyExcessiveRequests
-};
+
+
 // @desc    Create a new permission request (2 hours max)
 // @route   POST /api/requests/permission
 // @access  Private (Employee)
@@ -600,4 +599,10 @@ const getMyRequests = async (req, res) => {
     }
 };
 
-module.exports = { createLeaveRequest, createPermissionRequest, createSiteVisitRequest, createShowroomVisitRequest, getMyRequests, getBusinessHeads, checkAndNotifyExcessiveRequests };
+module.exports = {
+    createLeaveRequest,
+    createPermissionRequest,
+    createSiteVisitRequest,
+    createShowroomVisitRequest, checkAndNotifyExcessiveRequests,
+    getMyRequests, getBusinessHeads
+};
