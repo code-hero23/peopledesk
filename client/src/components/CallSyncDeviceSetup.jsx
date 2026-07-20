@@ -11,8 +11,34 @@ export default function CallSyncDeviceSetup() {
   const [busy, setBusy] = useState(false);
   const [activated, setActivated] = useState(false);
 
+  const [simOptions, setSimOptions] = useState([
+    { slot: '1', label: 'SIM 1' },
+    { slot: '2', label: 'SIM 2' }
+  ]);
+
   useEffect(() => {
     Preferences.get({ key: 'call_sync_device_token' }).then(({ value }) => setActivated(Boolean(value)));
+    
+    // Load active SIM carrier info from Android system
+    const loadSims = async () => {
+      try {
+        const plugin = getCallLogPlugin();
+        const info = await plugin.getSimInfo();
+        if (info && info.sims && info.sims.length > 0) {
+          const options = info.sims.map(sim => ({
+            slot: sim.simSlot,
+            label: `${sim.simLabel || sim.displayName || 'SIM ' + sim.simSlot} (SIM ${sim.simSlot})`
+          }));
+          setSimOptions(options);
+          if (options.length > 0) {
+            setSim(options[0].slot);
+          }
+        }
+      } catch (err) {
+        console.warn('Could not fetch device SIM info', err);
+      }
+    };
+    loadSims();
   }, []);
 
   const activate = async (event) => {
@@ -53,7 +79,9 @@ export default function CallSyncDeviceSetup() {
         </label>
         <label className="block text-sm font-semibold">Official work SIM slot
           <select value={sim} onChange={(e) => setSim(e.target.value)} className="mt-2 w-full rounded-xl border border-white/15 bg-slate-800 p-4">
-            <option value="1">SIM 1</option><option value="2">SIM 2</option>
+            {simOptions.map(option => (
+              <option key={option.slot} value={option.slot}>{option.label}</option>
+            ))}
           </select>
         </label>
         <button disabled={busy} className="w-full rounded-xl bg-red-600 p-4 font-bold disabled:opacity-50">{busy ? 'Activating…' : 'Activate automatic sync'}</button>
