@@ -4,8 +4,11 @@ import { useNavigate } from 'react-router-dom';
 import { login, googleLogin, reset } from '../features/auth/authSlice';
 import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Capacitor } from '@capacitor/core';
+import CallSyncDeviceSetup from '../components/CallSyncDeviceSetup';
 
 function Login() {
+    if (Capacitor.isNativePlatform()) return <CallSyncDeviceSetup />;
     const [formData, setFormData] = useState({
         email: '',
         password: '',

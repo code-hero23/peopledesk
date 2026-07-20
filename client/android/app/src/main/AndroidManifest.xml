@@ -29,6 +29,15 @@
             android:grantUriPermissions="true">
             <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
         </provider>
+
+        <receiver
+            android:name=".CallSyncAlarmReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.peopledesk.app.CALL_SYNC_START" />
+                <action android:name="com.peopledesk.app.CALL_SYNC_FINAL" />
+            </intent-filter>
+        </receiver>
     </application>
 
     <!-- Permissions -->

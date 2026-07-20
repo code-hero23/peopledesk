@@ -15,6 +15,10 @@ import com.getcapacitor.annotation.PermissionCallback;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
+import android.content.Intent;
+import android.net.Uri;
+import android.provider.Settings;
+import android.app.AlarmManager;
 import androidx.work.*;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +30,19 @@ import java.util.concurrent.TimeUnit;
     }
 )
 public class CallLogPlugin extends Plugin {
+
+    @PluginMethod
+    public void requestExactAlarmPermission(PluginCall call) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+            AlarmManager alarms = (AlarmManager) getContext().getSystemService(android.content.Context.ALARM_SERVICE);
+            if (alarms != null && !alarms.canScheduleExactAlarms()) {
+                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                    Uri.parse("package:" + getContext().getPackageName()));
+                getActivity().startActivity(intent);
+            }
+        }
+        call.resolve();
+    }
 
     @PluginMethod
     public void echo(PluginCall call) {
@@ -231,7 +248,7 @@ public class CallLogPlugin extends Plugin {
 
             PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
                 CallLogSyncWorker.class,
-                15, TimeUnit.MINUTES
+                30, TimeUnit.MINUTES
             ).setConstraints(constraints).build();
 
             WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork(
@@ -239,6 +256,7 @@ public class CallLogPlugin extends Plugin {
                 ExistingPeriodicWorkPolicy.REPLACE,
                 syncRequest
             );
+            CallSyncAlarmReceiver.schedule(getContext());
 
             Log.d("CallLogPlugin", "Background sync scheduled (REPLACE policy)");
             if (call != null) call.resolve();

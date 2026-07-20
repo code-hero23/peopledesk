@@ -85,6 +85,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', authRoutes);
 app.use('/api/attendance', attendanceRoutes);
 app.use('/api/worklogs', workLogRoutes);
+app.use('/api/call-sync', require('./routes/callSyncRoutes'));
 app.use('/api/requests', requestRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/projects', require('./routes/projectRoutes'));
