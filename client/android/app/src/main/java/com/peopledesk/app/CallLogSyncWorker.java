@@ -19,6 +19,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Calendar;
+import java.util.TimeZone;
+import androidx.core.content.ContextCompat;
+import android.content.pm.PackageManager;
 
 public class CallLogSyncWorker extends Worker {
     private static final String TAG = "CallLogSyncWorker";
@@ -36,7 +40,7 @@ public class CallLogSyncWorker extends Worker {
         try {
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
             String apiUrl = prefs.getString("apiUrl", null);
-            String authToken = prefs.getString("authToken", null);
+            String deviceToken = prefs.getString("call_sync_device_token", null);
             String officialSim = prefs.getString("cre_official_sim", null);
             String simLabelsJson = prefs.getString("sim_labels", "{}");
 
@@ -45,8 +49,8 @@ public class CallLogSyncWorker extends Worker {
                 return Result.failure();
             }
 
-            if (authToken == null) {
-                Log.e(TAG, "Sync failed: authToken not found in Preferences");
+            if (deviceToken == null) {
+                Log.e(TAG, "Sync skipped: APK has not been activated");
                 return Result.failure();
             }
 
@@ -55,13 +59,24 @@ public class CallLogSyncWorker extends Worker {
                 return Result.success();
             }
 
-            Log.d(TAG, "Syncing with API: " + apiUrl + " | Official SIM: " + officialSim);
+            boolean forceSync = getInputData().getBoolean("forceSync", false);
+            if (!forceSync && !isWithinWorkWindow()) {
+                Log.d(TAG, "Sync skipped outside 10:30-19:00 IST work window");
+                return Result.success();
+            }
+
+            if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+                Log.e(TAG, "Sync skipped: READ_CALL_LOG permission is not granted");
+                return Result.failure();
+            }
+
+            Log.d(TAG, "Syncing device call logs for official SIM: " + officialSim);
 
             // Fetch logs
             JSONArray logs = fetchLogs(officialSim, simLabelsJson);
 
             // Send to server
-            boolean success = sendLogs(apiUrl, authToken, logs);
+            boolean success = sendLogs(apiUrl, deviceToken, officialSim, logs);
             if (success) {
                 Log.d(TAG, "Successfully synced " + logs.length() + " logs");
                 return Result.success();
@@ -74,6 +89,12 @@ public class CallLogSyncWorker extends Worker {
             Log.e(TAG, "Critical error during sync", e);
             return Result.failure();
         }
+    }
+
+    private boolean isWithinWorkWindow() {
+        Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
+        int minutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
+        return minutes >= (10 * 60 + 30) && minutes <= (19 * 60);
     }
 
     private JSONArray fetchLogs(String officialSim, String simLabelsJson) {
@@ -172,21 +193,24 @@ public class CallLogSyncWorker extends Worker {
         }
     }
 
-    private boolean sendLogs(String baseUrl, String authToken, JSONArray logs) {
+    private boolean sendLogs(String baseUrl, String deviceToken, String officialSim, JSONArray logs) {
         try {
             String fullUrl = baseUrl;
             if (!fullUrl.endsWith("/")) fullUrl += "/";
-            fullUrl += "worklogs/sync-calls";
+            fullUrl += "call-sync/sync";
 
             URL url = new URL(fullUrl);
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("PUT");
             conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("Authorization", "Bearer " + authToken);
+            conn.setRequestProperty("Authorization", "Device " + deviceToken);
+            conn.setConnectTimeout(30000);
+            conn.setReadTimeout(30000);
             conn.setDoOutput(true);
 
             JSONObject payload = new JSONObject();
             payload.put("logs", logs);
+            payload.put("simFilter", officialSim);
 
             try (OutputStream os = conn.getOutputStream()) {
                 byte[] input = payload.toString().getBytes("utf-8");

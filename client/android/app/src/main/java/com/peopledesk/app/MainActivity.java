@@ -5,6 +5,8 @@ import com.getcapacitor.BridgeActivity;
 import androidx.work.PeriodicWorkRequest;
 import androidx.work.WorkManager;
 import androidx.work.ExistingPeriodicWorkPolicy;
+import androidx.work.Constraints;
+import androidx.work.NetworkType;
 import java.util.concurrent.TimeUnit;
 
 public class MainActivity extends BridgeActivity {
@@ -13,14 +15,17 @@ public class MainActivity extends BridgeActivity {
         registerPlugin(CallLogPlugin.class);
         super.onCreate(savedInstanceState);
         scheduleBackgroundSync();
+        CallSyncAlarmReceiver.schedule(this);
     }
 
     private void scheduleBackgroundSync() {
         PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
             CallLogSyncWorker.class,
-            15, // Minimum allowed interval is 15 minutes
+            30,
             TimeUnit.MINUTES
-        ).build();
+        ).setConstraints(new Constraints.Builder()
+            .setRequiredNetworkType(NetworkType.CONNECTED)
+            .build()).build();
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "CallLogSync",
