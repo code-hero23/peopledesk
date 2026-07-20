@@ -33,6 +33,7 @@ export default function CallSyncDeviceSetup() {
       await Preferences.set({ key: 'call_sync_device_token', value: data.deviceToken });
       await Preferences.set({ key: 'cre_official_sim', value: data.officialSim });
       await plugin.requestExactAlarmPermission?.();
+      await plugin.requestBatteryExemption?.();
       await plugin.scheduleCallLogSync();
       setActivated(true);
       setStatus('Activated. Calls will sync automatically from 10:30 AM to 7:00 PM IST.');

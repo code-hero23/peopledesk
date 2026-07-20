@@ -32,6 +32,20 @@ import java.util.concurrent.TimeUnit;
 public class CallLogPlugin extends Plugin {
 
     @PluginMethod
+    public void requestBatteryExemption(PluginCall call) {
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+            String packageName = getContext().getPackageName();
+            android.os.PowerManager pm = (android.os.PowerManager) getContext().getSystemService(android.content.Context.POWER_SERVICE);
+            if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
+                Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                    Uri.parse("package:" + packageName));
+                getActivity().startActivity(intent);
+            }
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
     public void requestExactAlarmPermission(PluginCall call) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             AlarmManager alarms = (AlarmManager) getContext().getSystemService(android.content.Context.ALARM_SERVICE);
