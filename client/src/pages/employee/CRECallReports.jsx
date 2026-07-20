@@ -35,6 +35,22 @@ const CRECallReports = () => {
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [activationCode, setActivationCode] = useState(null);
     const [isCreatingActivationCode, setIsCreatingActivationCode] = useState(false);
+    const [deviceStatus, setDeviceStatus] = useState(null);
+
+    const fetchDeviceStatus = async () => {
+        try {
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
+            const response = await fetch(`${API_BASE}/call-sync/status`, {
+                headers: { 'Authorization': `Bearer ${user.token}` }
+            });
+            const data = await response.json();
+            if (response.ok && data.enrolled) {
+                setDeviceStatus(data.device);
+            }
+        } catch (error) {
+            console.error('Could not load device status', error);
+        }
+    };
 
     // Persisted SIM slot preference — default SIM 2
     const [officialSim, setOfficialSim] = useState(() =>
@@ -129,6 +145,9 @@ const CRECallReports = () => {
             endDate: selectedDate 
         }));
         
+        // Fetch last sync status from database
+        fetchDeviceStatus();
+        
         // Auto-sync on mount for native devices
         if (Capacitor.isNativePlatform() && selectedDate === getIstToday()) {
             syncDeviceLogs();
@@ -219,6 +238,7 @@ const CRECallReports = () => {
                 if (!res.error) {
                     toast.success(`${filteredLogs.length} logs successfully moved to VPS.`);
                     setLastSyncTime(new Date());
+                    fetchDeviceStatus();
                     
                     // Update last sync time in local storage/Preferences
                     if (Capacitor.isNativePlatform()) {
@@ -425,10 +445,10 @@ const CRECallReports = () => {
                                 <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${Capacitor.isNativePlatform() ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                                     <Zap size={12} /> {Capacitor.isNativePlatform() ? "Sync Active" : "Web Preview"}
                                 </div>
-                                {lastSyncTime && (
-                                    <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 ${(new Date() - lastSyncTime) < 30 * 60 * 1000 ? 'bg-blue-50 text-blue-600 animate-pulse' : 'bg-slate-50 text-slate-400'}`}>
-                                        <div className={`w-1 h-1 rounded-full ${(new Date() - lastSyncTime) < 30 * 60 * 1000 ? 'bg-blue-500' : 'bg-slate-300'}`} />
-                                        SYNCED: {lastSyncTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                {(lastSyncTime || (deviceStatus && deviceStatus.lastSuccessAt)) && (
+                                    <div className={`px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 bg-blue-50 text-blue-600`}>
+                                        <div className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-pulse" />
+                                        SYNCED: {new Date(lastSyncTime || deviceStatus.lastSuccessAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                                     </div>
                                 )}
                             </div>
