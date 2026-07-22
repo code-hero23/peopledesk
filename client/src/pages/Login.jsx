@@ -26,7 +26,7 @@ function Login() {
     useEffect(() => {
         if (isSuccess || user) {
             if (['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
-                navigate('/admin-dashboard');
+                navigate('/admin-dashboard', { replace: true });
             } else if (user.role === 'ACCOUNTS_MANAGER') {
                 navigate('/admin/vouchers');
             } else {

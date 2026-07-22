@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Save, AlertCircle, Info, CheckCircle2, DollarSign,
     Clock, RefreshCw, FileText, Upload, Download,
-    ChevronRight, Calendar, Calculator
+    ChevronRight, Calendar, Calculator, Phone
 } from 'lucide-react';
 
 const SalarySettings = () => {
@@ -137,6 +137,7 @@ const SalarySettings = () => {
     const isShortageEnabled = settings.isGlobalShortageDeductionEnabled !== 'false';
     const isDashboardEnabled = settings.isSalaryDashboardEnabled !== 'false';
     const isLateEnforced = settings.isLateCheckInEnforced !== 'false';
+    const isCallAnalyticsEnabled = settings.isGlobalCallAnalyticsEnabled === 'true';
     const calculationMode = settings.payrollCalculationMode || 'AUTO';
 
     const months = [
@@ -453,6 +454,29 @@ const SalarySettings = () => {
                                                 disabled={saving}
                                             />
                                             <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-rose-600 shadow-sm"></div>
+                                        </label>
+                                    </div>
+
+                                    <div className="flex items-center justify-between p-6 bg-slate-50 rounded-3xl border border-slate-100">
+                                        <div className="flex items-start gap-4">
+                                            <div className="p-3 bg-emerald-100 rounded-2xl text-emerald-600">
+                                                <Phone size={24} />
+                                            </div>
+                                            <div>
+                                                <h4 className="text-sm font-black text-slate-800 mb-1">Enable Call Analytics</h4>
+                                                <p className="text-[11px] text-slate-500 font-bold max-w-sm leading-tight">Turn call analytics ON or OFF for all employees together. This updates each employee call analytics access automatically.</p>
+                                            </div>
+                                        </div>
+
+                                        <label className="relative inline-flex items-center cursor-pointer ml-4">
+                                            <input
+                                                type="checkbox"
+                                                className="sr-only peer"
+                                                checked={isCallAnalyticsEnabled}
+                                                onChange={(e) => updateSetting('isGlobalCallAnalyticsEnabled', e.target.checked)}
+                                                disabled={saving}
+                                            />
+                                            <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-emerald-600 shadow-sm"></div>
                                         </label>
                                     </div>
 

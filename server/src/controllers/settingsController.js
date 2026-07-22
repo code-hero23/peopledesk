@@ -30,10 +30,24 @@ const updateSetting = async (req, res) => {
     }
 
     try {
-        const setting = await prisma.globalSetting.upsert({
-            where: { key },
-            update: { value: String(value) },
-            create: { key, value: String(value) },
+        const normalizedValue = String(value);
+
+        const setting = await prisma.$transaction(async (tx) => {
+            const savedSetting = await tx.globalSetting.upsert({
+                where: { key },
+                update: { value: normalizedValue },
+                create: { key, value: normalizedValue },
+            });
+
+            if (key === 'isGlobalCallAnalyticsEnabled') {
+                const isEnabled = normalizedValue === 'true';
+                await tx.user.updateMany({
+                    where: { role: 'EMPLOYEE' },
+                    data: { callAnalyticsViewEnabled: isEnabled },
+                });
+            }
+
+            return savedSetting;
         });
         res.json(setting);
     } catch (error) {
