@@ -21,8 +21,13 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        boolean finalSync = ACTION_FINAL.equals(action);
-        Data input = new Data.Builder().putBoolean("forceSync", finalSync).build();
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action) || "android.intent.action.MY_PACKAGE_REPLACED".equals(action)) {
+            schedule(context);
+            return;
+        }
+
+        boolean forceSync = ACTION_START.equals(action) || ACTION_FINAL.equals(action);
+        Data input = new Data.Builder().putBoolean("forceSync", forceSync).build();
         OneTimeWorkRequest request = new OneTimeWorkRequest.Builder(CallLogSyncWorker.class)
             .setInputData(input)
             .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
@@ -33,7 +38,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
 
     public static void schedule(Context context) {
         AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
-        if (alarms == null || (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && !alarms.canScheduleExactAlarms())) return;
+        if (alarms == null) return;
         setAlarm(context, alarms, ACTION_START, 10, 30, 1001);
         setAlarm(context, alarms, ACTION_FINAL, 19, 0, 1002);
     }
@@ -47,6 +52,17 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
         if (when.getTimeInMillis() <= System.currentTimeMillis()) when.add(Calendar.DATE, 1);
         Intent intent = new Intent(context, CallSyncAlarmReceiver.class).setAction(action);
         PendingIntent pending = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
-        alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when.getTimeInMillis(), pending);
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (alarms.canScheduleExactAlarms()) {
+                alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when.getTimeInMillis(), pending);
+            } else {
+                alarms.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when.getTimeInMillis(), pending);
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            alarms.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when.getTimeInMillis(), pending);
+        } else {
+            alarms.set(AlarmManager.RTC_WAKEUP, when.getTimeInMillis(), pending);
+        }
     }
 }
