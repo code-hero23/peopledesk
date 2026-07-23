@@ -119,7 +119,9 @@ export default function CallSyncDeviceSetup() {
       });
 
       if (response.ok) {
-        setStatus(`Successfully synced ${logsResult.logs.length} call logs! Refresh desktop to view.`);
+        const resData = await response.json();
+        const savedCalls = resData.totalCalls !== undefined ? resData.totalCalls : (resData.calls?.length || logsResult.logs.length);
+        setStatus(`Successfully synced ${savedCalls} call logs to server! Refresh desktop to view.`);
       } else {
         const errData = await response.json();
         throw new Error(errData.message || 'Sync failed');

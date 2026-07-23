@@ -432,8 +432,16 @@ const syncCallLogs = async (req, res) => {
             const target = String(simFilter).toLowerCase();
             newLogs = rawLogs.filter(log => {
                 const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
-                return logSlot === target || logSlot.includes(target);
+                return logSlot === target || logSlot.includes(target) || !logSlot || logSlot === "0" || logSlot === "null" || logSlot === "undefined";
             });
+            
+            // FALLBACK GUARD: If strict SIM filtering results in 0 logs while rawLogs > 0
+            // (e.g., phone ROM tagged logs as SIM 1/Slot 0 but user selected SIM 2),
+            // fallback to rawLogs so call logs are NEVER silently dropped.
+            if (newLogs.length === 0 && rawLogs.length > 0) {
+                console.warn(`[Sync Guard] User ${userId}: SIM ${simFilter} filter resulted in 0 logs. Falling back to all ${rawLogs.length} raw logs.`);
+                newLogs = rawLogs;
+            }
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
 
