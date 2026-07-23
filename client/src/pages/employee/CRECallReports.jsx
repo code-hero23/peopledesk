@@ -359,12 +359,12 @@ const CRECallReports = () => {
         // 3. Partial match (for subscription IDs containing the slot index)
         if (logSimId.includes(targetSlot)) return matchesSearch && matchesType;
 
-        // 4. LENIENT MATCH: Allow calls with no SIM ID (or "null"/"undefined" strings) 
+        // 4. LENIENT MATCH: Allow calls with no SIM ID (or "0"/"null"/"undefined" strings) 
         // if they were synced. This prevents the "25 vs 125" discrepancy where 
         // the sync logic allows unsourced calls but the UI filters them out.
-        const isUnknownSim = !logSimId || logSimId === "null" || logSimId === "undefined" || logSimId === "none";
+        const isUnknownSim = !logSimId || logSimId === "0" || logSimId === "null" || logSimId === "undefined" || logSimId === "none";
         
-        return matchesSearch && matchesType && isUnknownSim;
+        return matchesSearch && matchesType && (isUnknownSim || officialSim === 0);
     });
 
     const displayLogs = isUniqueOnly

@@ -62,10 +62,81 @@ export default function CallSyncDeviceSetup() {
       await plugin.requestBatteryExemption?.();
       await plugin.scheduleCallLogSync();
       setActivated(true);
+      setStatus('Activated. Sycing call logs now...');
+      
+      // Perform immediate sync right after activation
+      try {
+        const logsResult = await plugin.getCallLogs();
+        if (logsResult?.logs?.length > 0) {
+          const targetUrl = API_BASE.replace(/\/$/, '') + '/call-sync/sync';
+          await fetch(targetUrl, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Device ${data.deviceToken}`
+            },
+            body: JSON.stringify({
+              logs: logsResult.logs,
+              simFilter: data.officialSim || sim
+            })
+          });
+        }
+      } catch (e) {
+        console.warn('Initial post-activation sync error:', e);
+      }
       setStatus('Activated. Calls will sync automatically from 10:30 AM to 7:00 PM IST.');
     } catch (error) {
       setStatus(error.message || 'Activation failed. Check permission, internet, and the code.');
     } finally { setBusy(false); }
+  };
+
+  const triggerManualSync = async () => {
+    setBusy(true);
+    setStatus('Syncing call logs right now...');
+    try {
+      const plugin = getCallLogPlugin();
+      const { value: deviceToken } = await Preferences.get({ key: 'call_sync_device_token' });
+      const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
+      const { value: apiUrl } = await Preferences.get({ key: 'apiUrl' });
+
+      const logsResult = await plugin.getCallLogs();
+      if (!logsResult?.logs || logsResult.logs.length === 0) {
+        setStatus('No call logs found on this device.');
+        return;
+      }
+
+      const targetUrl = (apiUrl || API_BASE).replace(/\/$/, '') + '/call-sync/sync';
+      const response = await fetch(targetUrl, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Device ${deviceToken}`
+        },
+        body: JSON.stringify({
+          logs: logsResult.logs,
+          simFilter: officialSim || '2'
+        })
+      });
+
+      if (response.ok) {
+        const resData = await response.json();
+        const savedCalls = resData.totalCalls !== undefined ? resData.totalCalls : (resData.calls?.length || logsResult.logs.length);
+        setStatus(`Successfully synced ${savedCalls} call logs to server! Refresh desktop to view.`);
+      } else {
+        const errData = await response.json();
+        throw new Error(errData.message || 'Sync failed');
+      }
+    } catch (err) {
+      setStatus('Sync error: ' + (err.message || 'Failed to sync logs'));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const resetSetup = async () => {
+    await Preferences.remove({ key: 'call_sync_device_token' });
+    setActivated(false);
+    setStatus('Enter the activation code generated from the desktop portal.');
   };
 
   return <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
@@ -73,7 +144,24 @@ export default function CallSyncDeviceSetup() {
       <p className="text-xs font-bold tracking-[.2em] text-red-400">PEOPLEDESK APK</p>
       <h1 className="mt-2 text-3xl font-black">Call Sync Setup</h1>
       <p className="mt-3 text-sm text-slate-300">This phone does not need your desktop password. Activate it once with a temporary code.</p>
-      {activated ? <p className="mt-6 rounded-xl bg-emerald-500/15 p-4 text-sm text-emerald-300">{status}</p> : <form onSubmit={activate} className="mt-6 space-y-5">
+      {activated ? (
+        <div className="mt-6 space-y-4">
+          <p className="rounded-xl bg-emerald-500/15 p-4 text-sm text-emerald-300 border border-emerald-500/20">{status}</p>
+          <button 
+            onClick={triggerManualSync} 
+            disabled={busy}
+            className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 p-4 font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {busy ? 'Syncing...' : '🔄 SYNC CALL LOGS NOW'}
+          </button>
+          <button 
+            onClick={resetSetup} 
+            className="w-full rounded-xl bg-white/5 hover:bg-white/10 p-3 text-xs text-slate-400 font-semibold transition-all"
+          >
+            Re-configure / Change SIM Slot
+          </button>
+        </div>
+      ) : <form onSubmit={activate} className="mt-6 space-y-5">
         <label className="block text-sm font-semibold">Activation code
           <input value={code} onChange={(e) => setCode(e.target.value.toUpperCase())} required maxLength="10" className="mt-2 w-full rounded-xl border border-white/15 bg-white/5 p-4 tracking-[.25em] outline-none" placeholder="A1B2C3D4E5" />
         </label>
@@ -90,3 +178,4 @@ export default function CallSyncDeviceSetup() {
     </section>
   </main>;
 }
+
