@@ -530,9 +530,9 @@ const AdminCallReports = () => {
                                         { title: 'LA', employees: laMetrics }
                                     ].map((section) => (
                                         section.employees.length > 0 ? [
-                                            <tr key={`${section.title}-header`} className="bg-slate-50/80">
-                                                <td colSpan="5" className="px-10 py-4">
-                                                    <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500">
+                                            <tr key={`${section.title}-header`} className="bg-primary/10">
+                                                <td colSpan="5" className="px-10 py-5 border-y border-primary/20">
+                                                    <span className="text-primary text-base md:text-lg font-black uppercase tracking-[0.28em]">
                                                         {section.title}
                                                     </span>
                                                 </td>
@@ -596,10 +596,10 @@ const AdminCallReports = () => {
                                             ))
                                         ] : null
                                     ))}
-                                    {creMetrics.length === 0 && faMetrics.length === 0 && (
+                                    {creMetrics.length === 0 && faMetrics.length === 0 && laMetrics.length === 0 && (
                                         <tr>
                                             <td colSpan="5" className="px-10 py-10 text-center text-sm font-bold text-slate-400">
-                                                No CRE or FA employees found.
+                                                No CRE, FA, or LA employees found.
                                             </td>
                                         </tr>
                                     )}
