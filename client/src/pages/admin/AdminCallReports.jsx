@@ -162,6 +162,7 @@ const AdminCallReports = () => {
             acc[key] = {
                 name: log.user || "Unknown Personnel",
                 empId: log.empId,
+                designation: log.designation || 'OTHER',
                 totalCalls: 0,
                 incoming: 0,
                 outgoing: 0,
@@ -198,6 +199,10 @@ const AdminCallReports = () => {
     }, {});
 
     const metricsArray = Object.values(employeeMetrics).sort((a, b) => b.totalCalls - a.totalCalls);
+    const filteredMetrics = metricsArray.filter(m => (m.name || "").toLowerCase().includes(searchTerm.toLowerCase()));
+    const creMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('CRE'));
+    const faMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('FA'));
+    const laMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('LA'));
 
     // Chart Data
     const barData = metricsArray.slice(0, 10).map(m => ({
@@ -519,9 +524,20 @@ const AdminCallReports = () => {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
-                                    {metricsArray
-                                        .filter(m => (m.name || "").toLowerCase().includes(searchTerm.toLowerCase()))
-                                        .map((metrics) => (
+                                    {[
+                                        { title: 'CRE', employees: creMetrics },
+                                        { title: 'FA', employees: faMetrics },
+                                        { title: 'LA', employees: laMetrics }
+                                    ].map((section) => (
+                                        section.employees.length > 0 ? [
+                                            <tr key={`${section.title}-header`} className="bg-slate-50/80">
+                                                <td colSpan="5" className="px-10 py-4">
+                                                    <span className="text-[11px] font-black uppercase tracking-[0.25em] text-slate-500">
+                                                        {section.title}
+                                                    </span>
+                                                </td>
+                                            </tr>,
+                                            ...section.employees.map((metrics) => (
                                             <tr key={metrics.empId} className="group hover:bg-slate-50/50 transition-colors">
                                                 <td className="px-10 py-6">
                                                     <div className="flex items-center gap-4">
@@ -577,8 +593,16 @@ const AdminCallReports = () => {
                                                     </button>
                                                 </td>
                                             </tr>
-                                        ))
-                                    }
+                                            ))
+                                        ] : null
+                                    ))}
+                                    {creMetrics.length === 0 && faMetrics.length === 0 && (
+                                        <tr>
+                                            <td colSpan="5" className="px-10 py-10 text-center text-sm font-bold text-slate-400">
+                                                No CRE or FA employees found.
+                                            </td>
+                                        </tr>
+                                    )}
                                 </tbody>
                             </table>
                         </div>

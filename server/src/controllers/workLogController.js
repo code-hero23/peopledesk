@@ -602,7 +602,7 @@ const getAllCallStats = async (req, res) => {
             },
             include: {
                 user: {
-                    select: { name: true, id: true }
+                    select: { name: true, id: true, designation: true }
                 }
             }
         });
@@ -655,6 +655,7 @@ const getAllCallStats = async (req, res) => {
                 date: log.date,
                 lastSync: log.updatedAt,
                 user: log.user.name,
+                designation: log.user.designation,
                 empId: `EMP-${log.user.id}`,
                 calls: filteredCalls,
                 totalCalls: filteredCalls.length

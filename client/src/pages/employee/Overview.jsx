@@ -140,6 +140,27 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     );
 };
 
+const REQUEST_LIMIT = 4;
+
+const getLeaveDaysInCycle = (leave, cycleStart, cycleEnd) => {
+    if (!leave || !cycleStart || !cycleEnd) return 0;
+    if (leave.type === 'HALF_DAY') return 0.5;
+
+    const leaveStart = new Date(leave.startDate);
+    const leaveEnd = new Date(leave.endDate);
+    const effectiveStart = new Date(Math.max(leaveStart.getTime(), cycleStart.getTime()));
+    const effectiveEnd = new Date(Math.min(leaveEnd.getTime(), cycleEnd.getTime()));
+
+    if (effectiveStart > effectiveEnd) return 0;
+
+    return Math.ceil((effectiveEnd - effectiveStart) / (1000 * 60 * 60 * 24)) + 1;
+};
+
+const formatRequestCount = (value) => {
+    if (Number.isInteger(value)) return value;
+    return Number(value.toFixed(1));
+};
+
 const Overview = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
@@ -176,6 +197,56 @@ const Overview = () => {
             navigate('/dashboard/wfh');
         }
     }, [user, navigate]);
+
+    const cycleStart = requests?.cycleData?.startDate ? new Date(requests.cycleData.startDate) : null;
+    const cycleEnd = requests?.cycleData?.endDate ? new Date(requests.cycleData.endDate) : null;
+
+    const activePermissions = requests?.permissions?.filter((request) => request.status !== 'REJECTED') || [];
+    const activeLeaves = requests?.leaves?.filter((request) => request.status !== 'REJECTED') || [];
+
+    const permissionAvailableCount = Math.max(0, REQUEST_LIMIT - activePermissions.length);
+    const permissionExceededCount = Math.max(0, activePermissions.length - REQUEST_LIMIT);
+
+    const leaveTakenCount = activeLeaves.reduce(
+        (total, leave) => total + getLeaveDaysInCycle(leave, cycleStart, cycleEnd),
+        0
+    );
+    const leaveAvailableCount = Math.max(0, REQUEST_LIMIT - leaveTakenCount);
+    const leaveExceededCount = Math.max(0, leaveTakenCount - REQUEST_LIMIT);
+
+    const statsCards = [
+        { icon: Calendar, title: 'Cycle Stats', label: 'Days Present', value: requests?.stats?.presentDays || 0, color: 'indigo' },
+        { icon: AlertCircle, title: 'Requests', label: 'Pending', value: (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0), color: 'rose' },
+        { icon: Clock, title: 'Permissions', label: 'Available', value: formatRequestCount(permissionAvailableCount), secondaryValue: formatRequestCount(permissionExceededCount), secondaryLabel: 'Permission Exceed', color: 'amber' },
+        { icon: Star, title: 'Leaves', label: 'Available', value: formatRequestCount(leaveAvailableCount), secondaryValue: formatRequestCount(leaveExceededCount), secondaryLabel: 'Leave Exceed', color: 'emerald' }
+    ];
+
+    const quickActions = [
+        {
+            icon: Calendar,
+            label: 'Leave Request',
+            sub: 'Casual / Weekoff',
+            type: 'leave',
+            color: 'rose',
+            meta: [
+                `Available: ${leaveAvailableCount}`,
+                `Leave Exceed: ${formatRequestCount(leaveExceededCount)}`
+            ]
+        },
+        {
+            icon: Clock,
+            label: 'Two-hours Permit',
+            sub: 'Early / Late',
+            type: 'permission',
+            color: 'amber',
+            meta: [
+                `Available: ${formatRequestCount(permissionAvailableCount)}`,
+                `Permission Exceed: ${formatRequestCount(permissionExceededCount)}`
+            ]
+        },
+        { icon: MapPin, label: 'Site Visit', sub: 'Project Reporting', type: 'site-visit', color: 'emerald' },
+        { icon: Building2, label: 'Showroom Visit', sub: 'Inter-Branch', type: 'showroom-visit', color: 'indigo' }
+    ];
 
     const getDeviceType = () => {
         const ua = navigator.userAgent;
@@ -996,20 +1067,28 @@ const Overview = () => {
                             </div>
                         </div>
 
-                        <div className="grid md:grid-cols-3 gap-6">
-                            {[
-                                { icon: Calendar, title: 'Cycle Stats', label: 'Days Present', value: requests?.stats?.presentDays || 0, color: 'indigo' },
-                                { icon: AlertCircle, title: 'Requests', label: 'Pending', value: (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0), color: 'rose' },
-                                { icon: Star, title: 'Leaves', label: 'Available', value: Math.max(0, 4 - (requests?.leaves?.filter(l => l.status === 'APPROVED').length || 0)), color: 'emerald' }
-                            ].map((stat, i) => (
+                        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+                            {statsCards.map((stat, i) => (
                                 <div key={i} className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:border-${stat.color}-100 dark:hover:border-${stat.color}-900 transition-all`}>
                                     <div className="flex items-center gap-4 mb-6">
                                         <div className={`p-3 bg-${stat.color}-50 dark:bg-${stat.color}-900/30 text-${stat.color}-600 dark:text-${stat.color}-400 rounded-2xl`}><stat.icon size={24} /></div>
                                         <h4 className="font-bold text-slate-600 dark:text-slate-400">{stat.title}</h4>
                                     </div>
-                                    <div className="flex items-baseline gap-2">
-                                        <span className="text-4xl font-black text-slate-900 dark:text-white tabular-nums">{stat.value}</span>
-                                        <span className="text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-widest">{stat.label}</span>
+                                    <div className="space-y-4">
+                                        <div className="flex items-end gap-3">
+                                            <span className="text-4xl font-black leading-none text-slate-900 dark:text-white tabular-nums">{stat.value}</span>
+                                            <span className="pb-1 text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">{stat.label}</span>
+                                        </div>
+                                        {stat.secondaryLabel ? (
+                                            <div className={`flex items-center justify-between rounded-2xl border border-${stat.color}-100/60 dark:border-${stat.color}-900/40 bg-${stat.color}-50/70 dark:bg-${stat.color}-900/20 px-4 py-2.5`}>
+                                                <span className={`text-[10px] font-black uppercase tracking-[0.22em] text-${stat.color}-700 dark:text-${stat.color}-300`}>
+                                                    {stat.secondaryLabel}
+                                                </span>
+                                                <span className={`text-lg font-black tabular-nums text-${stat.color}-600 dark:text-${stat.color}-300`}>
+                                                    {stat.secondaryValue}
+                                                </span>
+                                            </div>
+                                        ) : null}
                                     </div>
                                 </div>
                             ))}
@@ -1021,12 +1100,7 @@ const Overview = () => {
                         <div className="bg-slate-900 dark:bg-slate-900/40 backdrop-blur-md p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden transition-colors border border-white/5">
                             <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Sparkles className="text-indigo-400 dark:text-primary" size={24} /> Quick Actions</h3>
                             <div className="space-y-4">
-                                {[
-                                    { icon: Calendar, label: 'Leave Request', sub: 'Casual / Weekoff', type: 'leave', color: 'rose' },
-                                    { icon: Clock, label: 'Two-hours Permit', sub: 'Early / Late', type: 'permission', color: 'amber' },
-                                    { icon: MapPin, label: 'Site Visit', sub: 'Project Reporting', type: 'site-visit', color: 'emerald' },
-                                    { icon: Building2, label: 'Showroom Visit', sub: 'Inter-Branch', type: 'showroom-visit', color: 'indigo' }
-                                ].map((act, i) => (
+                                {quickActions.map((act, i) => (
                                     <button
                                         key={i}
                                         onClick={() => setActiveModal(act.type)}
@@ -1037,6 +1111,18 @@ const Overview = () => {
                                             <div className="text-left">
                                                 <p className="font-black text-sm">{act.label}</p>
                                                 <p className="text-[10px] font-bold text-white/40 uppercase tracking-widest">{act.sub}</p>
+                                                {act.meta?.length ? (
+                                                    <div className="mt-2 flex flex-wrap gap-2">
+                                                        {act.meta.map((item) => (
+                                                            <span
+                                                                key={item}
+                                                                className="rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-bold text-white/70"
+                                                            >
+                                                                {item}
+                                                            </span>
+                                                        ))}
+                                                    </div>
+                                                ) : null}
                                             </div>
                                         </div>
                                         <ChevronRight size={18} className="text-white/20 group-hover:text-white transition-all" />
