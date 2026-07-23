@@ -64,22 +64,30 @@ export default function CallSyncDeviceSetup() {
       setActivated(true);
       setStatus('Activated. Sycing call logs now...');
       
-      // Perform immediate sync right after activation
+      // Perform immediate sync right after activation for official SIM only
       try {
         const logsResult = await plugin.getCallLogs();
         if (logsResult?.logs?.length > 0) {
-          const targetUrl = API_BASE.replace(/\/$/, '') + '/call-sync/sync';
-          await fetch(targetUrl, {
-            method: 'PUT',
-            headers: {
-              'Content-Type': 'application/json',
-              'Authorization': `Device ${data.deviceToken}`
-            },
-            body: JSON.stringify({
-              logs: logsResult.logs,
-              simFilter: data.officialSim || sim
-            })
+          const targetSim = String(data.officialSim || sim).toLowerCase();
+          const filteredLogs = logsResult.logs.filter(log => {
+            const slot = String(log.simSlot || log.simId || "").toLowerCase();
+            return slot === targetSim || slot.includes(targetSim);
           });
+
+          if (filteredLogs.length > 0) {
+            const targetUrl = API_BASE.replace(/\/$/, '') + '/call-sync/sync';
+            await fetch(targetUrl, {
+              method: 'PUT',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Device ${data.deviceToken}`
+              },
+              body: JSON.stringify({
+                logs: filteredLogs,
+                simFilter: data.officialSim || sim
+              })
+            });
+          }
         }
       } catch (e) {
         console.warn('Initial post-activation sync error:', e);
@@ -105,6 +113,17 @@ export default function CallSyncDeviceSetup() {
         return;
       }
 
+      const targetSim = String(officialSim || '2').toLowerCase();
+      const filteredLogs = logsResult.logs.filter(log => {
+        const slot = String(log.simSlot || log.simId || "").toLowerCase();
+        return slot === targetSim || slot.includes(targetSim);
+      });
+
+      if (filteredLogs.length === 0) {
+        setStatus(`No calls found for Official SIM ${officialSim || sim}. (Found ${logsResult.logs.length} total calls on other SIMs).`);
+        return;
+      }
+
       const targetUrl = (apiUrl || API_BASE).replace(/\/$/, '') + '/call-sync/sync';
       const response = await fetch(targetUrl, {
         method: 'PUT',
@@ -113,15 +132,15 @@ export default function CallSyncDeviceSetup() {
           'Authorization': `Device ${deviceToken}`
         },
         body: JSON.stringify({
-          logs: logsResult.logs,
+          logs: filteredLogs,
           simFilter: officialSim || '2'
         })
       });
 
       if (response.ok) {
         const resData = await response.json();
-        const savedCalls = resData.totalCalls !== undefined ? resData.totalCalls : (resData.calls?.length || logsResult.logs.length);
-        setStatus(`Successfully synced ${savedCalls} call logs to server! Refresh desktop to view.`);
+        const savedCalls = resData.totalCalls !== undefined ? resData.totalCalls : (resData.calls?.length || filteredLogs.length);
+        setStatus(`Successfully synced ${savedCalls} SIM ${officialSim} call logs to server!`);
       } else {
         const errData = await response.json();
         throw new Error(errData.message || 'Sync failed');
