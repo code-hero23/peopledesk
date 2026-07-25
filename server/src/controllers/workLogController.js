@@ -557,12 +557,12 @@ const syncCallLogs = async (req, res) => {
             let consolidatedLogs = [];
             if (existingCallLog) {
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
-                // Use robust key: stringified date + number
-                const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}`));
+                // Use robust key: stringified date + number + type + duration
+                const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}-${String(l.type || '')}-${String(l.duration || '')}`));
 
                 let addedCount = 0;
                 dayLogs.forEach(log => {
-                    const key = `${String(log.date)}-${String(log.number)}`;
+                    const key = `${String(log.date)}-${String(log.number)}-${String(log.type || '')}-${String(log.duration || '')}`;
                     if (!existingKeys.has(key)) {
                         consolidatedLogs.push(log);
                         existingKeys.add(key);
