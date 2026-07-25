@@ -120,8 +120,16 @@ export default function CallSyncDeviceSetup() {
 
       if (response.ok) {
         const resData = await response.json();
-        const savedCalls = resData.totalCalls !== undefined ? resData.totalCalls : (resData.calls?.length || logsResult.logs.length);
-        setStatus(`Successfully synced ${savedCalls} call logs to server! Refresh desktop to view.`);
+        const savedCalls = typeof resData.totalCalls === 'number' ? resData.totalCalls : 0;
+        const acceptedLogs = typeof resData.acceptedLogs === 'number' ? resData.acceptedLogs : logsResult.logs.length;
+        const rawReceived = typeof resData.rawReceived === 'number' ? resData.rawReceived : logsResult.logs.length;
+
+        if (savedCalls === 0) {
+          setStatus(`Sync request reached server, but 0 call logs were saved. Device sent ${rawReceived} logs and ${acceptedLogs} passed filtering. Please verify SIM selection and refresh desktop after retrying.`);
+        } else {
+          const fallbackNote = resData.fallbackUsed ? ' Server SIM fallback was used.' : '';
+          setStatus(`Successfully saved ${savedCalls} call logs to server from ${acceptedLogs}/${rawReceived} device logs.${fallbackNote} Refresh desktop to view.`);
+        }
       } else {
         const errData = await response.json();
         throw new Error(errData.message || 'Sync failed');

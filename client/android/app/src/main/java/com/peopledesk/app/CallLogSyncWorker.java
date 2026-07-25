@@ -153,6 +153,14 @@ public class CallLogSyncWorker extends Worker {
                     String simSlot = "0";
                     if (simId != null && slotMap.containsKey(simId)) {
                         simSlot = slotMap.get(simId);
+                    } else if (simId != null && simId.matches("\\d{1,2}")) {
+                        try {
+                            simSlot = String.valueOf(Integer.parseInt(simId) + 1);
+                        } catch (NumberFormatException ignored) {}
+                    }
+
+                    if ((simLabel == null || simLabel.equalsIgnoreCase("Unknown")) && simLabels.has(simSlot)) {
+                        simLabel = simLabels.optString(simSlot, simLabel);
                     }
 
                     if (!matches) {
@@ -168,6 +176,7 @@ public class CallLogSyncWorker extends Worker {
                         log.put("type", getCallType(cursor.getInt(typeIndex)));
                         log.put("date", cursor.getLong(dateIndex));
                         log.put("duration", cursor.getInt(durationIndex));
+                        log.put("simId", simId != null ? simId : "");
                         log.put("simLabel", simLabel);
                         log.put("simSlot", simSlot);
                         

@@ -424,15 +424,41 @@ const syncCallLogs = async (req, res) => {
             return res.status(400).json({ message: 'Invalid User ID' });
         }
         let rawLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
+        rawLogs = Array.isArray(rawLogs) ? rawLogs : [];
+        const rawReceived = rawLogs.length;
+        let fallbackUsed = false;
+
+        const normalizeText = (value) => String(value || "").trim().toLowerCase();
+        const inferSlotCandidates = (value) => {
+            const normalized = normalizeText(value);
+            if (!normalized || ["0", "null", "undefined", "unknown"].includes(normalized)) {
+                return [];
+            }
+
+            const candidates = new Set([normalized]);
+            if (/^\d+$/.test(normalized)) {
+                const numeric = parseInt(normalized, 10);
+                if (numeric >= 0 && numeric <= 1) {
+                    candidates.add(String(numeric + 1));
+                }
+            }
+            return [...candidates];
+        };
 
         // --- SERVER-SIDE GUARD ---
         // Re-filter logs based on the simFilter sent in the request body
         let newLogs = rawLogs;
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
-            const target = String(simFilter).toLowerCase();
+            const target = normalizeText(simFilter);
             newLogs = rawLogs.filter(log => {
-                const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
-                return logSlot === target || logSlot.includes(target) || !logSlot || logSlot === "0" || logSlot === "null" || logSlot === "undefined";
+                const simValues = [
+                    ...inferSlotCandidates(log.simSlot),
+                    ...inferSlotCandidates(log.simId)
+                ];
+                const simLabel = normalizeText(log.simLabel);
+                const matchesTarget = simValues.some(value => value === target || value.includes(target) || target.includes(value));
+                const isUnknownSim = simValues.length === 0;
+                return matchesTarget || isUnknownSim || simLabel === target;
             });
             
             // FALLBACK GUARD: If strict SIM filtering results in 0 logs while rawLogs > 0
@@ -441,6 +467,7 @@ const syncCallLogs = async (req, res) => {
             if (newLogs.length === 0 && rawLogs.length > 0) {
                 console.warn(`[Sync Guard] User ${userId}: SIM ${simFilter} filter resulted in 0 logs. Falling back to all ${rawLogs.length} raw logs.`);
                 newLogs = rawLogs;
+                fallbackUsed = true;
             }
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
@@ -471,10 +498,18 @@ const syncCallLogs = async (req, res) => {
                     totalCalls: 0
                 }
             });
-            return res.json({ message: 'Sync heartbeat successful' });
+            return res.json({
+                message: 'Sync heartbeat successful',
+                totalCalls: 0,
+                rawReceived,
+                acceptedLogs: 0,
+                persistedDays: 0,
+                fallbackUsed
+            });
         }
 
         // Group logs by Date (YYYY-MM-DD) - IST Aware (UTC+5:30)
+        let invalidDateCount = 0;
         const groupedLogs = newLogs.reduce((acc, log) => {
             let timestamp = log.date || syncDate || Date.now();
             
@@ -489,6 +524,7 @@ const syncCallLogs = async (req, res) => {
             const d = new Date(timestamp);
             if (isNaN(d.getTime())) {
                 console.warn("[Sync] Invalid date encountered:", timestamp);
+                invalidDateCount++;
                 return acc;
             }
 
@@ -549,8 +585,18 @@ const syncCallLogs = async (req, res) => {
             results.push(updatedLog);
         }
 
-        // Return the latest record or summary
-        res.json(results[results.length - 1]);
+        const totalPersistedCalls = results.reduce((sum, record) => sum + (record.totalCalls || 0), 0);
+
+        res.json({
+            message: 'Call logs synced successfully',
+            totalCalls: totalPersistedCalls,
+            rawReceived,
+            acceptedLogs: newLogs.length,
+            persistedDays: results.length,
+            invalidDateCount,
+            fallbackUsed,
+            latestRecord: results[results.length - 1] || null
+        });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });
