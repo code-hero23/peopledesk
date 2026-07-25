@@ -446,11 +446,12 @@ const syncCallLogs = async (req, res) => {
         };
 
         // --- SERVER-SIDE GUARD ---
-        // Re-filter logs based on the simFilter sent in the request body
+        // Re-filter logs strictly based on the simFilter sent in the request body
         let newLogs = rawLogs;
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
             const target = normalizeText(simFilter);
             newLogs = rawLogs.filter(log => {
+<<<<<<< HEAD
                 const simValues = [
                     ...inferSlotCandidates(log.simSlot),
                     ...inferSlotCandidates(log.simId)
@@ -469,6 +470,11 @@ const syncCallLogs = async (req, res) => {
                 newLogs = rawLogs;
                 fallbackUsed = true;
             }
+=======
+                const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
+                return logSlot === target || logSlot.includes(target);
+            });
+>>>>>>> 523fe72ffcd1e887f83351caa018299fec098f1b
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
 

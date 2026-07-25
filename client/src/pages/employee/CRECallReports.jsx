@@ -347,7 +347,7 @@ const CRECallReports = () => {
         // Auto-filter by Official SIM preference only (Removed the redundant bottom filter)
         if (officialSim === 0) return matchesSearch && matchesType; // Show all if none selected yet for review
         
-        const logSimId = String(call.simId || "").toLowerCase();
+        const logSimId = String(call.simId || call.simSlot || "").toLowerCase();
         const targetSlot = String(officialSim).toLowerCase();
         
         // 1. Direct match with slot string
@@ -359,12 +359,7 @@ const CRECallReports = () => {
         // 3. Partial match (for subscription IDs containing the slot index)
         if (logSimId.includes(targetSlot)) return matchesSearch && matchesType;
 
-        // 4. LENIENT MATCH: Allow calls with no SIM ID (or "0"/"null"/"undefined" strings) 
-        // if they were synced. This prevents the "25 vs 125" discrepancy where 
-        // the sync logic allows unsourced calls but the UI filters them out.
-        const isUnknownSim = !logSimId || logSimId === "0" || logSimId === "null" || logSimId === "undefined" || logSimId === "none";
-        
-        return matchesSearch && matchesType && (isUnknownSim || officialSim === 0);
+        return false;
     });
 
     const displayLogs = isUniqueOnly
