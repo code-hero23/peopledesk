@@ -446,15 +446,23 @@ const syncCallLogs = async (req, res) => {
         };
 
         // --- SERVER-SIDE GUARD ---
-        // Re-filter logs strictly based on the simFilter sent in the request body
+        // Try SIM filtering first, but never discard usable raw logs just because
+        // a device reports SIM metadata differently (common on some Android 12 ROMs).
         let newLogs = rawLogs;
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
             const target = normalizeText(simFilter);
             newLogs = rawLogs.filter(log => {
-                const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
-                return logSlot === target || logSlot.includes(target);
+                const logSlot = normalizeText(log.simSlot || log.simId);
+                const logLabel = normalizeText(log.simLabel);
+                return logSlot === target || logSlot.includes(target) || logLabel === target;
             });
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
+
+            if (newLogs.length === 0 && rawLogs.length > 0) {
+                console.warn(`[Sync Guard] User ${userId}: SIM ${simFilter} matched 0/${rawLogs.length} logs. Falling back to raw logs.`);
+                newLogs = rawLogs;
+                fallbackUsed = true;
+            }
         }
 
         // HEARTBEAT LOGIC: If no logs after filtering, still perform an upsert for "today" to update updatedAt
@@ -495,7 +503,7 @@ const syncCallLogs = async (req, res) => {
 
         // Group logs by Date (YYYY-MM-DD) - IST Aware (UTC+5:30)
         let invalidDateCount = 0;
-        const groupedLogs = newLogs.reduce((acc, log) => {
+        let groupedLogs = newLogs.reduce((acc, log) => {
             let timestamp = log.date || syncDate || Date.now();
             
             // Handle some plugins returning seconds instead of ms (10-digit)
@@ -521,6 +529,33 @@ const syncCallLogs = async (req, res) => {
             acc[dateStr].push(log);
             return acc;
         }, {});
+
+        if (Object.keys(groupedLogs).length === 0 && rawLogs.length > 0) {
+            console.warn(`[Sync Guard] User ${userId}: All filtered logs collapsed during grouping. Falling back to raw log grouping.`);
+            fallbackUsed = true;
+
+            groupedLogs = rawLogs.reduce((acc, log) => {
+                let timestamp = log.date || syncDate || Date.now();
+
+                if (typeof timestamp === 'number' && timestamp < 10000000000) {
+                    timestamp = timestamp * 1000;
+                }
+
+                log.date = timestamp;
+
+                const d = new Date(timestamp);
+                if (isNaN(d.getTime())) {
+                    return acc;
+                }
+
+                const istDate = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
+                const dateStr = istDate.toISOString().split('T')[0];
+
+                if (!acc[dateStr]) acc[dateStr] = [];
+                acc[dateStr].push(log);
+                return acc;
+            }, {});
+        }
 
         const results = [];
 
