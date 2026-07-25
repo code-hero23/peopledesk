@@ -451,30 +451,9 @@ const syncCallLogs = async (req, res) => {
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
             const target = normalizeText(simFilter);
             newLogs = rawLogs.filter(log => {
-<<<<<<< HEAD
-                const simValues = [
-                    ...inferSlotCandidates(log.simSlot),
-                    ...inferSlotCandidates(log.simId)
-                ];
-                const simLabel = normalizeText(log.simLabel);
-                const matchesTarget = simValues.some(value => value === target || value.includes(target) || target.includes(value));
-                const isUnknownSim = simValues.length === 0;
-                return matchesTarget || isUnknownSim || simLabel === target;
-            });
-            
-            // FALLBACK GUARD: If strict SIM filtering results in 0 logs while rawLogs > 0
-            // (e.g., phone ROM tagged logs as SIM 1/Slot 0 but user selected SIM 2),
-            // fallback to rawLogs so call logs are NEVER silently dropped.
-            if (newLogs.length === 0 && rawLogs.length > 0) {
-                console.warn(`[Sync Guard] User ${userId}: SIM ${simFilter} filter resulted in 0 logs. Falling back to all ${rawLogs.length} raw logs.`);
-                newLogs = rawLogs;
-                fallbackUsed = true;
-            }
-=======
                 const logSlot = String(log.simSlot || log.simId || "").toLowerCase();
                 return logSlot === target || logSlot.includes(target);
             });
->>>>>>> 523fe72ffcd1e887f83351caa018299fec098f1b
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
 
