@@ -122,6 +122,7 @@ public class CallLogSyncWorker extends Worker {
                 // Pre-fetch active SIMs for real-time label matching
                 Map<String, String> labelMap = new HashMap<>();
                 Map<String, String> slotMap = new HashMap<>();
+                Map<String, String> labelToSlotMap = new HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getApplicationContext().getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
@@ -130,8 +131,12 @@ public class CallLogSyncWorker extends Worker {
                             for (SubscriptionInfo si : activeList) {
                                 String id = String.valueOf(si.getSubscriptionId());
                                 String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : si.getDisplayName().toString();
+                                String display = si.getDisplayName() != null ? si.getDisplayName().toString() : carrier;
+                                String slot = String.valueOf(si.getSimSlotIndex() + 1);
                                 labelMap.put(id, carrier);
-                                slotMap.put(id, String.valueOf(si.getSimSlotIndex() + 1));
+                                slotMap.put(id, slot);
+                                if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
+                                if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
                             }
                         }
                     }
@@ -154,9 +159,18 @@ public class CallLogSyncWorker extends Worker {
                     String simSlot = "0";
                     if (simId != null && slotMap.containsKey(simId)) {
                         simSlot = slotMap.get(simId);
+                    } else if (simLabel != null && labelToSlotMap.containsKey(simLabel.trim().toLowerCase())) {
+                        simSlot = labelToSlotMap.get(simLabel.trim().toLowerCase());
                     } else if (simId != null && simId.matches("\\d{1,2}")) {
                         try {
-                            simSlot = String.valueOf(Integer.parseInt(simId) + 1);
+                            int parsedSimId = Integer.parseInt(simId);
+                            if (parsedSimId >= 1 && parsedSimId <= 2) {
+                                // Some devices already expose the human-readable slot number directly.
+                                simSlot = String.valueOf(parsedSimId);
+                            } else if (parsedSimId >= 0 && parsedSimId <= 1) {
+                                // Other devices expose zero-based slots (0/1).
+                                simSlot = String.valueOf(parsedSimId + 1);
+                            }
                         } catch (NumberFormatException ignored) {}
                     }
 

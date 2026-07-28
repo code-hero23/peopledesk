@@ -1129,7 +1129,8 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
             const slot = String(simFilter).toLowerCase();
             filteredCalls = filteredCalls.filter(c => {
                 const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
-                return cSlot === slot || cSlot.includes(slot);
+                const cLabel = String(c.simLabel || "").toLowerCase().replace(/^sim\s*/i, '');
+                return cSlot === slot || cLabel === slot;
             });
         }
 

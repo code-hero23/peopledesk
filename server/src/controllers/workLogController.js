@@ -435,11 +435,12 @@ const syncCallLogs = async (req, res) => {
             const logSlot = normalizeText(log.simSlot);
             const logId = normalizeText(log.simId);
             const logLabel = normalizeText(log.simLabel);
+            const normalizedLabel = logLabel.replace(/^sim\s*/i, '');
 
             return (
                 logSlot === normalizedTarget ||
                 logId === normalizedTarget ||
-                (logId && logId.includes(normalizedTarget)) ||
+                normalizedLabel === normalizedTarget ||
                 logLabel === normalizedTarget
             );
         };
@@ -688,8 +689,8 @@ const getAllCallStats = async (req, res) => {
                 const slot = String(simFilter).toLowerCase();
                 filteredCalls = filteredCalls.filter(c => {
                     const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
-                    // Robust match: exact or partial (covers Subscription IDs containing the slot index)
-                    return cSlot === slot || cSlot.includes(slot);
+                    const cLabel = String(c.simLabel || "").toLowerCase().replace(/^sim\s*/i, '');
+                    return cSlot === slot || cLabel === slot;
                 });
             }
 

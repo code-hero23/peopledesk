@@ -14,11 +14,12 @@ const filterLogsForSim = (logs, officialSim) => {
     const simSlot = normalizeSimValue(log.simSlot);
     const simId = normalizeSimValue(log.simId);
     const simLabel = normalizeSimValue(log.simLabel);
-
+    const normalizedLabel = simLabel.replace(/^sim\s*/i, '');
+console.log(simSlot, simId, simLabel, normalizedLabel, target);
     return (
       simSlot === target ||
       simId === target ||
-      simId.includes(target) ||
+      normalizedLabel === target ||
       simLabel === target
     );
   });

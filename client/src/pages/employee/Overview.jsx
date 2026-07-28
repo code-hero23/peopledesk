@@ -384,7 +384,7 @@ const Overview = () => {
 
                 const filteredLogs = logsResult.logs.filter(log => {
                     const logSlot = String(log.simSlot || log.simId || "");
-                    return !logSlot || logSlot === "null" || logSlot === officialSim || logSlot.includes(officialSim);
+                    return !logSlot || logSlot === "null" || logSlot === officialSim;
                 });
 
                 if (filteredLogs.length === 0) return;

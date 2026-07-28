@@ -185,6 +185,7 @@ public class CallLogPlugin extends Plugin {
                 // PRE-FETCH active SIMs to match labels precisely
                 java.util.Map<String, String> labelMap = new java.util.HashMap<>();
                 java.util.Map<String, String> slotMap = new java.util.HashMap<>();
+                java.util.Map<String, String> labelToSlotMap = new java.util.HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
@@ -193,8 +194,12 @@ public class CallLogPlugin extends Plugin {
                             for (SubscriptionInfo si : activeList) {
                                 String id = String.valueOf(si.getSubscriptionId());
                                 String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : si.getDisplayName().toString();
+                                String display = si.getDisplayName() != null ? si.getDisplayName().toString() : carrier;
+                                String slot = String.valueOf(si.getSimSlotIndex() + 1);
                                 labelMap.put(id, carrier);
-                                slotMap.put(id, String.valueOf(si.getSimSlotIndex() + 1));
+                                slotMap.put(id, slot);
+                                if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
+                                if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
                             }
                         }
                     }
@@ -215,11 +220,16 @@ public class CallLogPlugin extends Plugin {
                     if (simId != null && labelMap.containsKey(simId)) {
                         simLabel = labelMap.get(simId);
                         simSlot = slotMap.get(simId);
-                    } else if (simId != null && simId.length() <= 2) {
-                        // If simId is already a slot number (0 or 1), try to match
-                        simSlot = String.valueOf(Integer.parseInt(simId) + 1);
-                        if (labelMap.containsValue(simSlot)) {
-                           // reverse lookup or just keep simLabel
+                    } else if (simLabel != null && labelToSlotMap.containsKey(simLabel.trim().toLowerCase())) {
+                        simSlot = labelToSlotMap.get(simLabel.trim().toLowerCase());
+                    } else if (simId != null && simId.matches("\\d{1,2}")) {
+                        int parsedSimId = Integer.parseInt(simId);
+                        if (parsedSimId >= 1 && parsedSimId <= 2) {
+                            // Some devices already expose the human-readable slot number directly.
+                            simSlot = String.valueOf(parsedSimId);
+                        } else if (parsedSimId >= 0 && parsedSimId <= 1) {
+                            // Other devices expose zero-based slots (0/1).
+                            simSlot = String.valueOf(parsedSimId + 1);
                         }
                     }
                     
