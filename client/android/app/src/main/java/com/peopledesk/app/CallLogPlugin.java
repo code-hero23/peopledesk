@@ -132,6 +132,12 @@ public class CallLogPlugin extends Plugin {
                                 number = si.getNumber();
                             } catch (Exception e) {}
                             sim.put("number", number != null ? number : "");
+                            try {
+                                String iccId = si.getIccId();
+                                sim.put("iccId", iccId != null ? iccId : "");
+                            } catch (Exception e) {
+                                sim.put("iccId", "");
+                            }
                             
                             simList.put(sim);
                         }
@@ -193,11 +199,19 @@ public class CallLogPlugin extends Plugin {
                         if (activeList != null) {
                             for (SubscriptionInfo si : activeList) {
                                 String id = String.valueOf(si.getSubscriptionId());
+                                String iccId = null;
+                                try {
+                                    iccId = si.getIccId();
+                                } catch (Exception ignored) {}
                                 String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : si.getDisplayName().toString();
                                 String display = si.getDisplayName() != null ? si.getDisplayName().toString() : carrier;
                                 String slot = String.valueOf(si.getSimSlotIndex() + 1);
                                 labelMap.put(id, carrier);
                                 slotMap.put(id, slot);
+                                if (iccId != null && !iccId.isEmpty()) {
+                                    labelMap.put(iccId, carrier);
+                                    slotMap.put(iccId, slot);
+                                }
                                 if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
                                 if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
                             }

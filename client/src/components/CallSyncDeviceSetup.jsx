@@ -15,7 +15,6 @@ const filterLogsForSim = (logs, officialSim) => {
     const simId = normalizeSimValue(log.simId);
     const simLabel = normalizeSimValue(log.simLabel);
     const normalizedLabel = simLabel.replace(/^sim\s*/i, '');
-console.log(simSlot, simId, simLabel, normalizedLabel, target);
     return (
       simSlot === target ||
       simId === target ||

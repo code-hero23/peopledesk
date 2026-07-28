@@ -47,6 +47,9 @@ const CRECallReports = () => {
             const data = await response.json();
             if (response.ok && data.enrolled) {
                 setDeviceStatus(data.device);
+                if (!Capacitor.isNativePlatform() && data.device?.officialSim) {
+                    setOfficialSim(parseInt(data.device.officialSim, 10));
+                }
             } else {
                 setDeviceStatus(null);
             }
