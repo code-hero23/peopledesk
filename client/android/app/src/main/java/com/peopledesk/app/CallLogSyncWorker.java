@@ -28,6 +28,16 @@ public class CallLogSyncWorker extends Worker {
     private static final String TAG = "CallLogSyncWorker";
     private static final String PREFS_NAME = "CapacitorStorage";
 
+    private String normalizePhoneNumber(String value) {
+        if (value == null) return "";
+        return value.replaceAll("\\D", "");
+    }
+
+    private String getOptionalColumn(Cursor cursor, String columnName) {
+        int index = cursor.getColumnIndex(columnName);
+        return index != -1 ? cursor.getString(index) : null;
+    }
+
     public CallLogSyncWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
     }
@@ -123,6 +133,7 @@ public class CallLogSyncWorker extends Worker {
                 Map<String, String> labelMap = new HashMap<>();
                 Map<String, String> slotMap = new HashMap<>();
                 Map<String, String> labelToSlotMap = new HashMap<>();
+                Map<String, String> numberToSlotMap = new HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getApplicationContext().getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
@@ -143,6 +154,13 @@ public class CallLogSyncWorker extends Worker {
                                     labelMap.put(iccId, carrier);
                                     slotMap.put(iccId, slot);
                                 }
+                                try {
+                                    String number = si.getNumber();
+                                    String normalizedNumber = normalizePhoneNumber(number);
+                                    if (!normalizedNumber.isEmpty()) {
+                                        numberToSlotMap.put(normalizedNumber, slot);
+                                    }
+                                } catch (Exception ignored) {}
                                 if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
                                 if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
                             }
@@ -156,10 +174,18 @@ public class CallLogSyncWorker extends Worker {
                 while (cursor.moveToNext() && count < limit) {
                     String simId = simIdIndex != -1 ? cursor.getString(simIdIndex) : null;
                     String simLabel = simLabelIndex != -1 ? cursor.getString(simLabelIndex) : "Unknown";
+                    String subscriptionId = getOptionalColumn(cursor, "subscription_id");
+                    String legacySimId = getOptionalColumn(cursor, "simid");
+                    String accountAddress = getOptionalColumn(cursor, "phone_account_address");
+                    String normalizedAccountAddress = normalizePhoneNumber(accountAddress);
                     
                     // Priority matching: Real-time label from ID
                     if (simId != null && labelMap.containsKey(simId)) {
                         simLabel = labelMap.get(simId);
+                    } else if (subscriptionId != null && labelMap.containsKey(subscriptionId)) {
+                        simLabel = labelMap.get(subscriptionId);
+                    } else if (legacySimId != null && labelMap.containsKey(legacySimId)) {
+                        simLabel = labelMap.get(legacySimId);
                     }
 
                     // MATCHING LOGIC (Match officialSim against Slot, ID or Label)
@@ -167,6 +193,12 @@ public class CallLogSyncWorker extends Worker {
                     String simSlot = "0";
                     if (simId != null && slotMap.containsKey(simId)) {
                         simSlot = slotMap.get(simId);
+                    } else if (subscriptionId != null && slotMap.containsKey(subscriptionId)) {
+                        simSlot = slotMap.get(subscriptionId);
+                    } else if (legacySimId != null && slotMap.containsKey(legacySimId)) {
+                        simSlot = slotMap.get(legacySimId);
+                    } else if (!normalizedAccountAddress.isEmpty() && numberToSlotMap.containsKey(normalizedAccountAddress)) {
+                        simSlot = numberToSlotMap.get(normalizedAccountAddress);
                     } else if (simLabel != null && labelToSlotMap.containsKey(simLabel.trim().toLowerCase())) {
                         simSlot = labelToSlotMap.get(simLabel.trim().toLowerCase());
                     } else if (simId != null && simId.matches("\\d{1,2}")) {
@@ -202,6 +234,8 @@ public class CallLogSyncWorker extends Worker {
                         log.put("simId", simId != null ? simId : "");
                         log.put("simLabel", simLabel);
                         log.put("simSlot", simSlot);
+                        log.put("subscriptionId", subscriptionId != null ? subscriptionId : "");
+                        log.put("phoneAccountAddress", accountAddress != null ? accountAddress : "");
                         
                         callLogs.put(log);
                         count++;

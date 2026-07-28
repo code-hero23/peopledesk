@@ -155,6 +155,18 @@ const AdminCallReports = () => {
 
     // Data Processing
     const normalize = (num) => String(num || "").replace(/\D/g, "").slice(-10);
+    const normalizeDesignation = (value) => String(value || '').toUpperCase();
+    const isCreFamilyDesignation = (value) => {
+        const designation = normalizeDesignation(value);
+        return (
+            designation.includes('CRE') ||
+            designation.includes('RELATIONSHIP') ||
+            designation.includes('CLIENT-CARE') ||
+            designation.includes('CLIENT CARE') ||
+            designation.includes('CUSTOMER-RELATIONSHIP') ||
+            designation.includes('CUSTOMER REL')
+        );
+    };
 
     const employeeMetrics = callStats.reduce((acc, log) => {
         const key = log.empId;
@@ -200,7 +212,7 @@ const AdminCallReports = () => {
 
     const metricsArray = Object.values(employeeMetrics).sort((a, b) => b.totalCalls - a.totalCalls);
     const filteredMetrics = metricsArray.filter(m => (m.name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    const creMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('CRE'));
+    const creMetrics = filteredMetrics.filter((m) => isCreFamilyDesignation(m.designation));
     const faMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('FA'));
     const laMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('LA'));
 
@@ -296,7 +308,7 @@ const AdminCallReports = () => {
                         </div>
                         <h1 className="text-4xl font-black tracking-tighter">Command Analytics</h1>
                     </div>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.4em] ml-1">CRE Performance & Engagement Ledger</p>
+                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.4em] ml-1">CRE / Client Care Performance & Engagement Ledger</p>
                 </div>
 
                 <div className="flex flex-wrap items-center gap-4 relative z-10">
@@ -525,7 +537,7 @@ const AdminCallReports = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {[
-                                        { title: 'CRE', employees: creMetrics },
+                                        { title: 'CRE / CLIENT CARE', employees: creMetrics },
                                         { title: 'FA', employees: faMetrics },
                                         { title: 'LA', employees: laMetrics }
                                     ].map((section) => (
@@ -599,7 +611,7 @@ const AdminCallReports = () => {
                                     {creMetrics.length === 0 && faMetrics.length === 0 && laMetrics.length === 0 && (
                                         <tr>
                                             <td colSpan="5" className="px-10 py-10 text-center text-sm font-bold text-slate-400">
-                                                No CRE, FA, or LA employees found.
+                                                No CRE, Client Care, FA, or LA employees found.
                                             </td>
                                         </tr>
                                     )}

@@ -30,6 +30,15 @@ import java.util.concurrent.TimeUnit;
     }
 )
 public class CallLogPlugin extends Plugin {
+    private String normalizePhoneNumber(String value) {
+        if (value == null) return "";
+        return value.replaceAll("\\D", "");
+    }
+
+    private String getOptionalColumn(Cursor cursor, String columnName) {
+        int index = cursor.getColumnIndex(columnName);
+        return index != -1 ? cursor.getString(index) : null;
+    }
 
     @PluginMethod
     public void requestBatteryExemption(PluginCall call) {
@@ -192,6 +201,7 @@ public class CallLogPlugin extends Plugin {
                 java.util.Map<String, String> labelMap = new java.util.HashMap<>();
                 java.util.Map<String, String> slotMap = new java.util.HashMap<>();
                 java.util.Map<String, String> labelToSlotMap = new java.util.HashMap<>();
+                java.util.Map<String, String> numberToSlotMap = new java.util.HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
@@ -212,6 +222,13 @@ public class CallLogPlugin extends Plugin {
                                     labelMap.put(iccId, carrier);
                                     slotMap.put(iccId, slot);
                                 }
+                                try {
+                                    String number = si.getNumber();
+                                    String normalizedNumber = normalizePhoneNumber(number);
+                                    if (!normalizedNumber.isEmpty()) {
+                                        numberToSlotMap.put(normalizedNumber, slot);
+                                    }
+                                } catch (Exception ignored) {}
                                 if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
                                 if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
                             }
@@ -229,11 +246,23 @@ public class CallLogPlugin extends Plugin {
                     
                     String simLabel = simLabelIndex != -1 ? cursor.getString(simLabelIndex) : null;
                     String simSlot = "0";
+                    String subscriptionId = getOptionalColumn(cursor, "subscription_id");
+                    String legacySimId = getOptionalColumn(cursor, "simid");
+                    String accountAddress = getOptionalColumn(cursor, "phone_account_address");
+                    String normalizedAccountAddress = normalizePhoneNumber(accountAddress);
 
                     // OVERRIDE with real-time info if available
                     if (simId != null && labelMap.containsKey(simId)) {
                         simLabel = labelMap.get(simId);
                         simSlot = slotMap.get(simId);
+                    } else if (subscriptionId != null && slotMap.containsKey(subscriptionId)) {
+                        simLabel = labelMap.get(subscriptionId);
+                        simSlot = slotMap.get(subscriptionId);
+                    } else if (legacySimId != null && slotMap.containsKey(legacySimId)) {
+                        simLabel = labelMap.get(legacySimId);
+                        simSlot = slotMap.get(legacySimId);
+                    } else if (!normalizedAccountAddress.isEmpty() && numberToSlotMap.containsKey(normalizedAccountAddress)) {
+                        simSlot = numberToSlotMap.get(normalizedAccountAddress);
                     } else if (simLabel != null && labelToSlotMap.containsKey(simLabel.trim().toLowerCase())) {
                         simSlot = labelToSlotMap.get(simLabel.trim().toLowerCase());
                     } else if (simId != null && simId.matches("\\d{1,2}")) {
@@ -249,6 +278,8 @@ public class CallLogPlugin extends Plugin {
                     
                     log.put("simLabel", simLabel != null ? simLabel : "Unknown");
                     log.put("simSlot", simSlot);
+                    log.put("subscriptionId", subscriptionId != null ? subscriptionId : "");
+                    log.put("phoneAccountAddress", accountAddress != null ? accountAddress : "");
                     
                     log.put("type", getCallType(cursor.getInt(typeIndex)));
                     log.put("date", cursor.getLong(dateIndex));
