@@ -28,7 +28,8 @@ npx cap sync android
 
 # Build the Android APK using Gradle
 cd android
-./gradlew assembleDebug
+chmod +x ./gradlew || true
+bash ./gradlew assembleDebug
 
 # Move APK to a public web path for easy download if needed
 mkdir -p ../../server/uploads/apks/
