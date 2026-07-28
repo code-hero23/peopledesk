@@ -166,6 +166,14 @@ const CRECallReports = () => {
         return () => clearInterval(interval);
     }, [user?.token]);
 
+    useEffect(() => {
+        if (Capacitor.isNativePlatform() || !deviceStatus?.lastSuccessAt) return;
+        dispatch(getMyCallLogs({
+            startDate: selectedDate,
+            endDate: selectedDate
+        }));
+    }, [dispatch, selectedDate, deviceStatus?.lastSuccessAt]);
+
     const handleSimChange = (slot) => {
         const parsed = parseInt(slot);
         setPendingSim(parsed);

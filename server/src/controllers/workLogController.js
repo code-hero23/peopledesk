@@ -427,6 +427,9 @@ const syncCallLogs = async (req, res) => {
         rawLogs = Array.isArray(rawLogs) ? rawLogs : [];
         const rawReceived = rawLogs.length;
         const normalizeText = (value) => String(value || "").trim().toLowerCase();
+        const canonicalSimSlot = simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL'
+            ? String(simFilter).trim()
+            : null;
         const matchesSelectedSim = (log, target) => {
             const normalizedTarget = normalizeText(target);
             const logSlot = normalizeText(log.simSlot);
@@ -440,12 +443,20 @@ const syncCallLogs = async (req, res) => {
                 logLabel === normalizedTarget
             );
         };
+        const normalizeAcceptedLog = (log) => {
+            const normalized = { ...log };
+            if (canonicalSimSlot) {
+                normalized.simSlot = canonicalSimSlot;
+            }
+            return normalized;
+        };
 
         let newLogs = rawLogs;
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
             newLogs = rawLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
+        newLogs = newLogs.map(normalizeAcceptedLog);
 
         // HEARTBEAT LOGIC: If no logs after filtering, still perform an upsert for "today" to update updatedAt
         const isHeartbeat = !newLogs || newLogs.length === 0;
@@ -526,7 +537,9 @@ const syncCallLogs = async (req, res) => {
             if (existingCallLog) {
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
                 if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
-                    consolidatedLogs = consolidatedLogs.filter(log => matchesSelectedSim(log, simFilter));
+                    consolidatedLogs = consolidatedLogs
+                        .filter(log => matchesSelectedSim(log, simFilter))
+                        .map(normalizeAcceptedLog);
                 }
                 // Use robust key: stringified date + number + type + duration
                 const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}-${String(l.type || '')}-${String(l.duration || '')}`));
