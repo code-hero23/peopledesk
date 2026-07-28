@@ -5,6 +5,24 @@ const prisma = new PrismaClient();
 const hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
 const makeCode = () => crypto.randomBytes(5).toString('hex').toUpperCase();
 const makeSecret = () => crypto.randomBytes(32).toString('base64url');
+const REMOTE_SYNC_ACTION = 'CALL_SYNC_REMOTE_REQUEST';
+
+const getLatestRemoteSyncRequest = async (deviceId) => {
+  const request = await prisma.auditLog.findFirst({
+    where: { action: REMOTE_SYNC_ACTION, details: { contains: `"deviceId":${deviceId},` } },
+    orderBy: { createdAt: 'desc' }
+  });
+
+  if (!request) return null;
+
+  try {
+    const details = request.details ? JSON.parse(request.details) : {};
+    return { request, details };
+  } catch (error) {
+    console.warn('Could not parse remote sync audit log details', error);
+    return { request, details: {} };
+  }
+};
 
 const createActivationCode = async (req, res) => {
   try {
@@ -53,12 +71,90 @@ const getSyncStatus = async (req, res) => {
     }
     const device = await prisma.callSyncDevice.findFirst({
       where: { userId, active: true },
-      select: { deviceName: true, officialSim: true, lastAttemptAt: true, lastSuccessAt: true, lastError: true, updatedAt: true }
+      select: { id: true, deviceName: true, officialSim: true, lastAttemptAt: true, lastSuccessAt: true, lastError: true, updatedAt: true }
     });
-    res.json({ enrolled: Boolean(device), device });
+    if (!device) return res.json({ enrolled: false, device: null });
+
+    const latestRequest = await getLatestRemoteSyncRequest(device.id);
+    const requestedAt = latestRequest?.request?.createdAt || null;
+    const requestPending = Boolean(
+      requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > device.lastSuccessAt.getTime())
+    );
+
+    res.json({
+      enrolled: true,
+      device: {
+        ...device,
+        requestPending,
+        requestedAt,
+        requestedById: latestRequest?.details?.requestedById || null
+      }
+    });
   } catch (error) {
     console.error('Call sync status error', error);
     res.status(500).json({ message: 'Could not load device status' });
+  }
+};
+
+const requestRemoteSync = async (req, res) => {
+  try {
+    const userId = Number(req.body.userId || req.user.id);
+    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not allowed to trigger sync for this employee' });
+    }
+
+    const device = await prisma.callSyncDevice.findFirst({
+      where: { userId, active: true },
+      select: { id: true, officialSim: true, lastSuccessAt: true, userId: true }
+    });
+
+    if (!device) {
+      return res.status(400).json({ message: 'No active APK device found for this employee' });
+    }
+
+    const audit = await prisma.auditLog.create({
+      data: {
+        action: REMOTE_SYNC_ACTION,
+        userId: device.userId,
+        details: JSON.stringify({
+          deviceId: device.id,
+          requestedById: req.user.id,
+          requestedAt: new Date().toISOString(),
+          officialSim: device.officialSim || null
+        })
+      }
+    });
+
+    res.status(202).json({
+      message: 'Sync request sent to enrolled device',
+      requestedAt: audit.createdAt,
+      officialSim: device.officialSim || null
+    });
+  } catch (error) {
+    console.error('Call sync request error', error);
+    res.status(500).json({ message: 'Could not request device sync' });
+  }
+};
+
+const getPendingSyncRequest = async (req, res) => {
+  try {
+    const device = req.callSyncDevice;
+    if (!device) return res.status(401).json({ message: 'Device is not active' });
+
+    const latestRequest = await getLatestRemoteSyncRequest(device.id);
+    const requestedAt = latestRequest?.request?.createdAt || null;
+    const pending = Boolean(
+      requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > new Date(device.lastSuccessAt).getTime())
+    );
+
+    res.json({
+      pending,
+      requestedAt,
+      officialSim: device.officialSim || null
+    });
+  } catch (error) {
+    console.error('Pending sync request check error', error);
+    res.status(500).json({ message: 'Could not check pending sync request' });
   }
 };
 
@@ -90,4 +186,12 @@ const recordDeviceAttempt = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
-module.exports = { createActivationCode, enrollDevice, getSyncStatus, protectDevice, recordDeviceAttempt };
+module.exports = {
+  createActivationCode,
+  enrollDevice,
+  getSyncStatus,
+  requestRemoteSync,
+  getPendingSyncRequest,
+  protectDevice,
+  recordDeviceAttempt
+};

@@ -32,6 +32,7 @@ const CRECallReports = () => {
     };
     const [selectedDate, setSelectedDate] = useState(getIstToday());
     const [isFetchingLocal, setIsFetchingLocal] = useState(false);
+    const [isRequestingRemoteSync, setIsRequestingRemoteSync] = useState(false);
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [activationCode, setActivationCode] = useState(null);
     const [isCreatingActivationCode, setIsCreatingActivationCode] = useState(false);
@@ -46,6 +47,8 @@ const CRECallReports = () => {
             const data = await response.json();
             if (response.ok && data.enrolled) {
                 setDeviceStatus(data.device);
+            } else {
+                setDeviceStatus(null);
             }
         } catch (error) {
             console.error('Could not load device status', error);
@@ -153,6 +156,15 @@ const CRECallReports = () => {
             syncDeviceLogs();
         }
     }, [dispatch, selectedDate]);
+
+    useEffect(() => {
+        if (!user?.token) return undefined;
+        const interval = setInterval(() => {
+            fetchDeviceStatus();
+        }, 30000);
+
+        return () => clearInterval(interval);
+    }, [user?.token]);
 
     const handleSimChange = (slot) => {
         const parsed = parseInt(slot);
@@ -286,6 +298,35 @@ const CRECallReports = () => {
         } finally { setIsCreatingActivationCode(false); }
     };
 
+    const requestRemoteDeviceSync = async () => {
+        setIsRequestingRemoteSync(true);
+        try {
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
+            const response = await fetch(`${API_BASE}/call-sync/request-sync`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
+                body: JSON.stringify({ userId: user.id })
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.message || 'Could not request sync');
+
+            toast.success(`Sync request sent to APK for ${data.officialSim ? `SIM ${data.officialSim}` : 'the selected SIM'}.`);
+            await fetchDeviceStatus();
+        } catch (error) {
+            toast.error(error.message || 'Could not request sync');
+        } finally {
+            setIsRequestingRemoteSync(false);
+        }
+    };
+
+    const handleSyncButtonClick = () => {
+        if (Capacitor.isNativePlatform()) {
+            syncDeviceLogs();
+            return;
+        }
+        requestRemoteDeviceSync();
+    };
+
 
 
     const toIstDateString = (dateInput) => {
@@ -293,6 +334,48 @@ const CRECallReports = () => {
         const d = new Date(dateInput);
         if (isNaN(d.getTime())) return null;
         return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+    };
+
+    const normalizeSimValue = (value) => String(value || '').trim().toLowerCase();
+    const resolveCallSimSlot = (call) => {
+        const slot = normalizeSimValue(call?.simSlot);
+        if (slot && slot !== '0' && slot !== 'unknown' && slot !== 'null' && slot !== 'undefined') {
+            return slot;
+        }
+
+        const simId = normalizeSimValue(call?.simId);
+        if (simId && simMap[simId]) {
+            return normalizeSimValue(simMap[simId]);
+        }
+
+        return simId;
+    };
+
+    const matchesOfficialSim = (call, targetSim) => {
+        const targetSlot = normalizeSimValue(targetSim);
+        if (!targetSlot || targetSlot === '0') return true;
+
+        const resolvedSlot = resolveCallSimSlot(call);
+        if (resolvedSlot === targetSlot) return true;
+
+        const simId = normalizeSimValue(call?.simId);
+        if (simId && simMap[simId] === targetSlot) return true;
+
+        return false;
+    };
+
+    const getCallSimDisplay = (call) => {
+        const slot = resolveCallSimSlot(call);
+        if (slot && slot !== '0') {
+            return simLabels[slot] || `SIM ${slot}`;
+        }
+
+        const simId = String(call?.simId || '').trim();
+        if (simId) {
+            return simLabels[simId] || `ID ${simId}`;
+        }
+
+        return 'Unknown';
     };
 
     // Extract & Merge from Decoupled State
@@ -328,14 +411,16 @@ const CRECallReports = () => {
         console.log(`[Diagnostic] callLogs in state:`, callLogs.length);
     }
 
-    // Intelligence
-    const availableSims = [...new Set((callLogs || []).map(c => c.simId))].filter(Boolean);
-
     // Merge persisted labels with any found in current call set
     const activeSimLabels = (callLogs || []).reduce((acc, curr) => {
-        const id = String(curr.simId || "");
-        const label = curr.simLabel;
-        if (id && label && !acc[id]) acc[id] = label; // Only add if NOT already discovered via plugin
+        const calls = Array.isArray(curr.calls) ? curr.calls : [];
+        calls.forEach((call) => {
+            const label = call.simLabel;
+            const slot = String(call.simSlot || '').trim();
+            const id = String(call.simId || '').trim();
+            if (slot && label && !acc[slot]) acc[slot] = label;
+            if (id && label && !acc[id]) acc[id] = label;
+        });
         return acc;
     }, { ...simLabels });
 
@@ -346,20 +431,7 @@ const CRECallReports = () => {
         
         // Auto-filter by Official SIM preference only (Removed the redundant bottom filter)
         if (officialSim === 0) return matchesSearch && matchesType; // Show all if none selected yet for review
-        
-        const logSimId = String(call.simId || call.simSlot || "").toLowerCase();
-        const targetSlot = String(officialSim).toLowerCase();
-        
-        // 1. Direct match with slot string
-        if (logSimId === targetSlot) return matchesSearch && matchesType;
-        
-        // 2. Match via simMap (SubId to Slot)
-        if (simMap[logSimId] === targetSlot) return matchesSearch && matchesType;
-        
-        // 3. Partial match (for subscription IDs containing the slot index)
-        if (logSimId.includes(targetSlot)) return matchesSearch && matchesType;
-
-        return false;
+        return matchesOfficialSim(call, officialSim) && matchesSearch && matchesType;
     });
 
     const displayLogs = isUniqueOnly
@@ -446,6 +518,12 @@ const CRECallReports = () => {
                                         SYNCED: {new Date(lastSyncTime || deviceStatus.lastSuccessAt).toLocaleString([], { dateStyle: 'short', timeStyle: 'short' })}
                                     </div>
                                 )}
+                                {deviceStatus?.requestPending && (
+                                    <div className="px-4 py-1.5 rounded-2xl text-[10px] font-black uppercase tracking-widest flex items-center gap-2 bg-amber-50 text-amber-700">
+                                        <RefreshCw size={12} className="animate-spin" />
+                                        SYNC REQUESTED
+                                    </div>
+                                )}
                             </div>
                         </div>
                         <p className="text-slate-400 font-black text-[10px] uppercase tracking-[0.4em] ml-1">Universal Call Intelligence Ledger</p>
@@ -493,11 +571,14 @@ const CRECallReports = () => {
 
 
                         <button
-                            disabled={isFetchingLocal} onClick={syncDeviceLogs}
+                            disabled={Capacitor.isNativePlatform() ? isFetchingLocal : isRequestingRemoteSync || !deviceStatus}
+                            onClick={handleSyncButtonClick}
                             className="flex items-center gap-3 px-8 py-4 bg-slate-900 text-white rounded-[1.5rem] font-black text-xs hover:bg-slate-800 transition-all shadow-2xl shadow-slate-200 active:scale-95 disabled:opacity-50 group"
                         >
-                            <RefreshCw size={16} className={isFetchingLocal ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'} />
-                            {isFetchingLocal ? "UPDATING LEDGER..." : "SYNC OFFICIAL LOGS"}
+                            <RefreshCw size={16} className={(Capacitor.isNativePlatform() ? isFetchingLocal : isRequestingRemoteSync) ? 'animate-spin' : 'group-hover:rotate-180 transition-transform duration-700'} />
+                            {Capacitor.isNativePlatform()
+                                ? (isFetchingLocal ? "UPDATING LEDGER..." : "SYNC OFFICIAL LOGS")
+                                : (isRequestingRemoteSync ? "REQUESTING DEVICE SYNC..." : "SYNC OFFICIAL LOGS")}
                         </button>
                     </div>
                 </div>
@@ -570,11 +651,11 @@ const CRECallReports = () => {
                             <p className="text-[9px] font-black text-slate-600 truncate">
                                 {Object.entries(
                                     allSyncedCalls.reduce((acc, c) => {
-                                        const id = c.simId || "None";
-                                        acc[id] = (acc[id] || 0) + 1;
+                                        const label = getCallSimDisplay(c);
+                                        acc[label] = (acc[label] || 0) + 1;
                                         return acc;
                                     }, {})
-                                ).map(([id, count]) => `${simLabels[id] || id}:${count}`).join(", ") || "None"}
+                                ).map(([label, count]) => `${label}:${count}`).join(", ") || "None"}
                             </p>
                         </div>
                         <div className="bg-white/50 p-3 rounded-xl">
@@ -708,7 +789,7 @@ const CRECallReports = () => {
                                             <td className="px-10 py-6">
                                                 <div className="flex items-center gap-3">
                                                     <div className="w-2.5 h-2.5 rounded-full bg-slate-200 group-hover:bg-blue-500 transition-all duration-500"></div>
-                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover:text-slate-600 transition-colors">{call.simId ? `SLOT ${String(call.simId).substring(0, 4)}` : 'PRIMARY'}</span>
+                                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] group-hover:text-slate-600 transition-colors">{getCallSimDisplay(call)}</span>
                                                 </div>
                                             </td>
                                         </motion.tr>

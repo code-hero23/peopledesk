@@ -426,43 +426,25 @@ const syncCallLogs = async (req, res) => {
         let rawLogs = typeof incomingData === 'string' ? JSON.parse(incomingData) : incomingData;
         rawLogs = Array.isArray(rawLogs) ? rawLogs : [];
         const rawReceived = rawLogs.length;
-        let fallbackUsed = false;
-
         const normalizeText = (value) => String(value || "").trim().toLowerCase();
-        const inferSlotCandidates = (value) => {
-            const normalized = normalizeText(value);
-            if (!normalized || ["0", "null", "undefined", "unknown"].includes(normalized)) {
-                return [];
-            }
+        const matchesSelectedSim = (log, target) => {
+            const normalizedTarget = normalizeText(target);
+            const logSlot = normalizeText(log.simSlot);
+            const logId = normalizeText(log.simId);
+            const logLabel = normalizeText(log.simLabel);
 
-            const candidates = new Set([normalized]);
-            if (/^\d+$/.test(normalized)) {
-                const numeric = parseInt(normalized, 10);
-                if (numeric >= 0 && numeric <= 1) {
-                    candidates.add(String(numeric + 1));
-                }
-            }
-            return [...candidates];
+            return (
+                logSlot === normalizedTarget ||
+                logId === normalizedTarget ||
+                (logId && logId.includes(normalizedTarget)) ||
+                logLabel === normalizedTarget
+            );
         };
 
-        // --- SERVER-SIDE GUARD ---
-        // Try SIM filtering first, but never discard usable raw logs just because
-        // a device reports SIM metadata differently (common on some Android 12 ROMs).
         let newLogs = rawLogs;
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
-            const target = normalizeText(simFilter);
-            newLogs = rawLogs.filter(log => {
-                const logSlot = normalizeText(log.simSlot || log.simId);
-                const logLabel = normalizeText(log.simLabel);
-                return logSlot === target || logSlot.includes(target) || logLabel === target;
-            });
+            newLogs = rawLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
-
-            if (newLogs.length === 0 && rawLogs.length > 0) {
-                console.warn(`[Sync Guard] User ${userId}: SIM ${simFilter} matched 0/${rawLogs.length} logs. Falling back to raw logs.`);
-                newLogs = rawLogs;
-                fallbackUsed = true;
-            }
         }
 
         // HEARTBEAT LOGIC: If no logs after filtering, still perform an upsert for "today" to update updatedAt
@@ -496,8 +478,7 @@ const syncCallLogs = async (req, res) => {
                 totalCalls: 0,
                 rawReceived,
                 acceptedLogs: 0,
-                persistedDays: 0,
-                fallbackUsed
+                persistedDays: 0
             });
         }
 
@@ -530,33 +511,6 @@ const syncCallLogs = async (req, res) => {
             return acc;
         }, {});
 
-        if (Object.keys(groupedLogs).length === 0 && rawLogs.length > 0) {
-            console.warn(`[Sync Guard] User ${userId}: All filtered logs collapsed during grouping. Falling back to raw log grouping.`);
-            fallbackUsed = true;
-
-            groupedLogs = rawLogs.reduce((acc, log) => {
-                let timestamp = log.date || syncDate || Date.now();
-
-                if (typeof timestamp === 'number' && timestamp < 10000000000) {
-                    timestamp = timestamp * 1000;
-                }
-
-                log.date = timestamp;
-
-                const d = new Date(timestamp);
-                if (isNaN(d.getTime())) {
-                    return acc;
-                }
-
-                const istDate = new Date(d.getTime() + (5.5 * 60 * 60 * 1000));
-                const dateStr = istDate.toISOString().split('T')[0];
-
-                if (!acc[dateStr]) acc[dateStr] = [];
-                acc[dateStr].push(log);
-                return acc;
-            }, {});
-        }
-
         const results = [];
 
         // Process each day group
@@ -571,6 +525,9 @@ const syncCallLogs = async (req, res) => {
             let consolidatedLogs = [];
             if (existingCallLog) {
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
+                if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
+                    consolidatedLogs = consolidatedLogs.filter(log => matchesSelectedSim(log, simFilter));
+                }
                 // Use robust key: stringified date + number + type + duration
                 const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}-${String(l.type || '')}-${String(l.duration || '')}`));
 
@@ -614,7 +571,6 @@ const syncCallLogs = async (req, res) => {
             acceptedLogs: newLogs.length,
             persistedDays: results.length,
             invalidDateCount,
-            fallbackUsed,
             latestRecord: results[results.length - 1] || null
         });
     } catch (error) {

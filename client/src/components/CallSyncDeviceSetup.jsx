@@ -4,6 +4,26 @@ import { getCallLogPlugin } from '../utils/capacitorPlugins';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
 
+const normalizeSimValue = (value) => String(value || '').trim().toLowerCase();
+
+const filterLogsForSim = (logs, officialSim) => {
+  const target = normalizeSimValue(officialSim);
+  if (!target || target === '0' || target === 'all') return Array.isArray(logs) ? logs : [];
+
+  return (Array.isArray(logs) ? logs : []).filter((log) => {
+    const simSlot = normalizeSimValue(log.simSlot);
+    const simId = normalizeSimValue(log.simId);
+    const simLabel = normalizeSimValue(log.simLabel);
+
+    return (
+      simSlot === target ||
+      simId === target ||
+      simId.includes(target) ||
+      simLabel === target
+    );
+  });
+};
+
 export default function CallSyncDeviceSetup() {
   const [code, setCode] = useState('');
   const [sim, setSim] = useState('1');
@@ -65,10 +85,11 @@ export default function CallSyncDeviceSetup() {
       setStatus('Activated. Sycing call logs now...');
       
       // Perform immediate sync right after activation. Let the server apply
-      // tolerant SIM handling so devices with inconsistent metadata still sync.
+      // strict SIM handling so only the selected SIM is uploaded.
       try {
         const logsResult = await plugin.getCallLogs();
-        if (logsResult?.logs?.length > 0) {
+        const filteredLogs = filterLogsForSim(logsResult?.logs, data.officialSim || sim);
+        if (filteredLogs.length > 0) {
           const targetUrl = API_BASE.replace(/\/$/, '') + '/call-sync/sync';
           await fetch(targetUrl, {
             method: 'PUT',
@@ -77,7 +98,7 @@ export default function CallSyncDeviceSetup() {
               'Authorization': `Device ${data.deviceToken}`
             },
             body: JSON.stringify({
-              logs: logsResult.logs,
+              logs: filteredLogs,
               simFilter: data.officialSim || sim
             })
           });
@@ -106,6 +127,13 @@ export default function CallSyncDeviceSetup() {
         return;
       }
 
+      const selectedSim = officialSim || '2';
+      const filteredLogs = filterLogsForSim(logsResult.logs, selectedSim);
+      if (filteredLogs.length === 0) {
+        setStatus(`No call logs found for selected SIM ${selectedSim}.`);
+        return;
+      }
+
       const targetUrl = (apiUrl || API_BASE).replace(/\/$/, '') + '/call-sync/sync';
       const response = await fetch(targetUrl, {
         method: 'PUT',
@@ -114,22 +142,21 @@ export default function CallSyncDeviceSetup() {
           'Authorization': `Device ${deviceToken}`
         },
         body: JSON.stringify({
-          logs: logsResult.logs,
-          simFilter: officialSim || '2'
+          logs: filteredLogs,
+          simFilter: selectedSim
         })
       });
 
       if (response.ok) {
         const resData = await response.json();
         const savedCalls = typeof resData.totalCalls === 'number' ? resData.totalCalls : 0;
-        const acceptedLogs = typeof resData.acceptedLogs === 'number' ? resData.acceptedLogs : logsResult.logs.length;
+        const acceptedLogs = typeof resData.acceptedLogs === 'number' ? resData.acceptedLogs : filteredLogs.length;
         const rawReceived = typeof resData.rawReceived === 'number' ? resData.rawReceived : logsResult.logs.length;
 
         if (savedCalls === 0) {
           setStatus(`Sync request reached server, but 0 call logs were saved. Device sent ${rawReceived} logs and ${acceptedLogs} passed filtering. Please verify SIM selection and refresh desktop after retrying.`);
         } else {
-          const fallbackNote = resData.fallbackUsed ? ' Server SIM fallback was used.' : '';
-          setStatus(`Successfully saved ${savedCalls} call logs to server from ${acceptedLogs}/${rawReceived} device logs.${fallbackNote} Refresh desktop to view.`);
+          setStatus(`Successfully saved ${savedCalls} call logs to server from ${acceptedLogs}/${rawReceived} device logs. Refresh desktop to view.`);
         }
       } else {
         const errData = await response.json();

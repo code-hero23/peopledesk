@@ -60,17 +60,18 @@ public class CallLogSyncWorker extends Worker {
             }
 
             boolean forceSync = getInputData().getBoolean("forceSync", false);
-            if (!forceSync && !isWithinWorkWindow()) {
+            boolean remoteSyncRequested = hasPendingRemoteSyncRequest(apiUrl, deviceToken);
+            if (!forceSync && !remoteSyncRequested && !isWithinWorkWindow()) {
                 Log.d(TAG, "Sync skipped outside 10:30-19:00 IST work window");
                 return Result.success();
             }
 
-            if (ContextCompat.checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat   .checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG, "Sync skipped: READ_CALL_LOG permission is not granted");
                 return Result.failure();
             }
 
-            Log.d(TAG, "Syncing device call logs for official SIM: " + officialSim);
+            Log.d(TAG, "Syncing device call logs for official SIM: " + officialSim + " | forceSync=" + forceSync + " | remoteRequest=" + remoteSyncRequested);
 
             // Fetch logs
             JSONArray logs = fetchLogs(officialSim, simLabelsJson);
@@ -232,6 +233,38 @@ public class CallLogSyncWorker extends Worker {
 
         } catch (Exception e) {
             Log.e(TAG, "Error sending logs", e);
+            return false;
+        }
+    }
+
+    private boolean hasPendingRemoteSyncRequest(String baseUrl, String deviceToken) {
+        try {
+            String fullUrl = baseUrl;
+            if (!fullUrl.endsWith("/")) fullUrl += "/";
+            fullUrl += "call-sync/pending";
+
+            URL url = new URL(fullUrl);
+            HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+            conn.setRequestMethod("GET");
+            conn.setRequestProperty("Authorization", "Device " + deviceToken);
+            conn.setConnectTimeout(15000);
+            conn.setReadTimeout(15000);
+
+            int code = conn.getResponseCode();
+            if (code < 200 || code >= 300) {
+                Log.w(TAG, "Pending remote sync check returned code: " + code);
+                return false;
+            }
+
+            String body;
+            try (Scanner scanner = new Scanner(conn.getInputStream(), "utf-8").useDelimiter("\\A")) {
+                body = scanner.hasNext() ? scanner.next() : "{}";
+            }
+
+            JSONObject response = new JSONObject(body);
+            return response.optBoolean("pending", false);
+        } catch (Exception e) {
+            Log.w(TAG, "Could not check pending remote sync request", e);
             return false;
         }
     }
