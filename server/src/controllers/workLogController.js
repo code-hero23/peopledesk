@@ -427,22 +427,45 @@ const syncCallLogs = async (req, res) => {
         rawLogs = Array.isArray(rawLogs) ? rawLogs : [];
         const rawReceived = rawLogs.length;
         const normalizeText = (value) => String(value || "").trim().toLowerCase();
+        const extractDigits = (value) => normalizeText(value).replace(/\D/g, "");
+        const buildSimCandidates = (value) => {
+            const normalized = normalizeText(value);
+            const digits = extractDigits(value);
+            const variants = new Set();
+            if (normalized) variants.add(normalized);
+            if (digits) {
+                variants.add(digits);
+                variants.add(`sim${digits}`);
+                variants.add(`sim ${digits}`);
+                variants.add(`slot${digits}`);
+                variants.add(`slot ${digits}`);
+                if (digits === '1') variants.add('0');
+                if (digits === '2') variants.add('1');
+            }
+            return variants;
+        };
         const canonicalSimSlot = simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL'
             ? String(simFilter).trim()
             : null;
         const matchesSelectedSim = (log, target) => {
-            const normalizedTarget = normalizeText(target);
-            const logSlot = normalizeText(log.simSlot);
-            const logId = normalizeText(log.simId);
-            const logLabel = normalizeText(log.simLabel);
-            const normalizedLabel = logLabel.replace(/^sim\s*/i, '');
+            const targetCandidates = buildSimCandidates(target);
+            const values = [
+                log.simSlot,
+                log.simId,
+                log.subscriptionId,
+                log.legacySimId,
+                log.simLabel,
+                log.phoneAccountAddress,
+                log.phoneAccountId
+            ];
 
-            return (
-                logSlot === normalizedTarget ||
-                logId === normalizedTarget ||
-                normalizedLabel === normalizedTarget ||
-                logLabel === normalizedTarget
-            );
+            return values.some((value) => {
+                const valueCandidates = buildSimCandidates(value);
+                for (const candidate of valueCandidates) {
+                    if (targetCandidates.has(candidate)) return true;
+                }
+                return false;
+            });
         };
         const normalizeAcceptedLog = (log) => {
             const normalized = { ...log };
@@ -456,6 +479,22 @@ const syncCallLogs = async (req, res) => {
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
             newLogs = rawLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
+            if (rawLogs.length > 0 && newLogs.length === 0) {
+                console.log('[Sync Guard Diagnostic]', JSON.stringify({
+                    userId,
+                    targetSim: simFilter,
+                    samples: rawLogs.slice(0, 5).map((log) => ({
+                        simSlot: log.simSlot ?? null,
+                        simId: log.simId ?? null,
+                        subscriptionId: log.subscriptionId ?? null,
+                        legacySimId: log.legacySimId ?? null,
+                        simLabel: log.simLabel ?? null,
+                        phoneAccountAddress: log.phoneAccountAddress ?? null,
+                        phoneAccountId: log.phoneAccountId ?? null,
+                        number: log.number ?? null
+                    }))
+                }));
+            }
         }
         newLogs = newLogs.map(normalizeAcceptedLog);
 

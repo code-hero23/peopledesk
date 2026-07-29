@@ -38,6 +38,24 @@ public class CallLogSyncWorker extends Worker {
         return index != -1 ? cursor.getString(index) : null;
     }
 
+    private String normalizeSimSlotValue(String simSlot, String simId) {
+        if (simSlot != null && !simSlot.trim().isEmpty() && !"0".equals(simSlot.trim())) {
+            return simSlot.trim();
+        }
+        if (simId != null && simId.matches("\\d{1,2}")) {
+            try {
+                int parsedSimId = Integer.parseInt(simId);
+                if (parsedSimId >= 1 && parsedSimId <= 2) {
+                    return String.valueOf(parsedSimId);
+                }
+                if (parsedSimId >= 0 && parsedSimId <= 1) {
+                    return String.valueOf(parsedSimId + 1);
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return simSlot != null && !simSlot.trim().isEmpty() ? simSlot.trim() : "0";
+    }
+
     public CallLogSyncWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
         super(context, workerParams);
     }
@@ -171,12 +189,15 @@ public class CallLogSyncWorker extends Worker {
                 int count = 0;
                 int limit = 200; // Limit per sync burst
 
+                Map<String, Integer> diagnosticCounts = new HashMap<>();
+
                 while (cursor.moveToNext() && count < limit) {
                     String simId = simIdIndex != -1 ? cursor.getString(simIdIndex) : null;
                     String simLabel = simLabelIndex != -1 ? cursor.getString(simLabelIndex) : "Unknown";
                     String subscriptionId = getOptionalColumn(cursor, "subscription_id");
                     String legacySimId = getOptionalColumn(cursor, "simid");
                     String accountAddress = getOptionalColumn(cursor, "phone_account_address");
+                    String phoneAccountId = getOptionalColumn(cursor, "phone_account_id");
                     String normalizedAccountAddress = normalizePhoneNumber(accountAddress);
                     
                     // Priority matching: Real-time label from ID
@@ -188,8 +209,6 @@ public class CallLogSyncWorker extends Worker {
                         simLabel = labelMap.get(legacySimId);
                     }
 
-                    // MATCHING LOGIC (Match officialSim against Slot, ID or Label)
-                    boolean matches = officialSim.equals("0"); // "0" means ALL SIMs
                     String simSlot = "0";
                     if (simId != null && slotMap.containsKey(simId)) {
                         simSlot = slotMap.get(simId);
@@ -214,33 +233,33 @@ public class CallLogSyncWorker extends Worker {
                         } catch (NumberFormatException ignored) {}
                     }
 
+                    simSlot = normalizeSimSlotValue(simSlot, simId);
+
                     if ((simLabel == null || simLabel.equalsIgnoreCase("Unknown")) && simLabels.has(simSlot)) {
                         simLabel = simLabels.optString(simSlot, simLabel);
                     }
 
-                    if (!matches) {
-                        if (simSlot.equals(officialSim)) matches = true; // Check Slot (1 or 2)
-                        else if (simId != null && simId.equals(officialSim)) matches = true; // Check ID
-                        else if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true; // Check Label
-                    }
+                    JSONObject log = new JSONObject();
+                    log.put("number", cursor.getString(numberIndex));
+                    log.put("name", cursor.getString(nameIndex));
+                    log.put("type", getCallType(cursor.getInt(typeIndex)));
+                    log.put("date", cursor.getLong(dateIndex));
+                    log.put("duration", cursor.getInt(durationIndex));
+                    log.put("simId", simId != null ? simId : "");
+                    log.put("legacySimId", legacySimId != null ? legacySimId : "");
+                    log.put("simLabel", simLabel);
+                    log.put("simSlot", simSlot);
+                    log.put("subscriptionId", subscriptionId != null ? subscriptionId : "");
+                    log.put("phoneAccountAddress", accountAddress != null ? accountAddress : "");
+                    log.put("phoneAccountId", phoneAccountId != null ? phoneAccountId : "");
 
-                    if (matches) {
-                        JSONObject log = new JSONObject();
-                        log.put("number", cursor.getString(numberIndex));
-                        log.put("name", cursor.getString(nameIndex));
-                        log.put("type", getCallType(cursor.getInt(typeIndex)));
-                        log.put("date", cursor.getLong(dateIndex));
-                        log.put("duration", cursor.getInt(durationIndex));
-                        log.put("simId", simId != null ? simId : "");
-                        log.put("simLabel", simLabel);
-                        log.put("simSlot", simSlot);
-                        log.put("subscriptionId", subscriptionId != null ? subscriptionId : "");
-                        log.put("phoneAccountAddress", accountAddress != null ? accountAddress : "");
-                        
-                        callLogs.put(log);
-                        count++;
-                    }
+                    String diagnosticKey = "slot=" + simSlot + "|simId=" + (simId != null ? simId : "") + "|sub=" + (subscriptionId != null ? subscriptionId : "") + "|label=" + (simLabel != null ? simLabel : "");
+                    diagnosticCounts.put(diagnosticKey, diagnosticCounts.getOrDefault(diagnosticKey, 0) + 1);
+
+                    callLogs.put(log);
+                    count++;
                 }
+                Log.d(TAG, "Collected " + count + " raw call logs for server-side SIM filtering. officialSim=" + officialSim + " diagnostics=" + diagnosticCounts.toString());
                 cursor.close();
             }
         } catch (Exception e) {

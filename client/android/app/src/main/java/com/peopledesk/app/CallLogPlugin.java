@@ -40,6 +40,24 @@ public class CallLogPlugin extends Plugin {
         return index != -1 ? cursor.getString(index) : null;
     }
 
+    private String normalizeSimSlotValue(String simSlot, String simId) {
+        if (simSlot != null && !simSlot.trim().isEmpty() && !"0".equals(simSlot.trim())) {
+            return simSlot.trim();
+        }
+        if (simId != null && simId.matches("\\d{1,2}")) {
+            try {
+                int parsedSimId = Integer.parseInt(simId);
+                if (parsedSimId >= 1 && parsedSimId <= 2) {
+                    return String.valueOf(parsedSimId);
+                }
+                if (parsedSimId >= 0 && parsedSimId <= 1) {
+                    return String.valueOf(parsedSimId + 1);
+                }
+            } catch (NumberFormatException ignored) {}
+        }
+        return simSlot != null && !simSlot.trim().isEmpty() ? simSlot.trim() : "0";
+    }
+
     @PluginMethod
     public void requestBatteryExemption(PluginCall call) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
@@ -249,6 +267,7 @@ public class CallLogPlugin extends Plugin {
                     String subscriptionId = getOptionalColumn(cursor, "subscription_id");
                     String legacySimId = getOptionalColumn(cursor, "simid");
                     String accountAddress = getOptionalColumn(cursor, "phone_account_address");
+                    String phoneAccountId = getOptionalColumn(cursor, "phone_account_id");
                     String normalizedAccountAddress = normalizePhoneNumber(accountAddress);
 
                     // OVERRIDE with real-time info if available
@@ -275,11 +294,15 @@ public class CallLogPlugin extends Plugin {
                             simSlot = String.valueOf(parsedSimId + 1);
                         }
                     }
+
+                    simSlot = normalizeSimSlotValue(simSlot, simId);
                     
                     log.put("simLabel", simLabel != null ? simLabel : "Unknown");
                     log.put("simSlot", simSlot);
                     log.put("subscriptionId", subscriptionId != null ? subscriptionId : "");
+                    log.put("legacySimId", legacySimId != null ? legacySimId : "");
                     log.put("phoneAccountAddress", accountAddress != null ? accountAddress : "");
+                    log.put("phoneAccountId", phoneAccountId != null ? phoneAccountId : "");
                     
                     log.put("type", getCallType(cursor.getInt(typeIndex)));
                     log.put("date", cursor.getLong(dateIndex));
