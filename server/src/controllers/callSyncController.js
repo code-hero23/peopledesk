@@ -7,6 +7,30 @@ const makeCode = () => crypto.randomBytes(5).toString('hex').toUpperCase();
 const makeSecret = () => crypto.randomBytes(32).toString('base64url');
 const REMOTE_SYNC_ACTION = 'CALL_SYNC_REMOTE_REQUEST';
 
+const normalizeDigits = (value) => String(value || '').replace(/\D/g, '');
+const parseOfficialSimConfig = (value) => {
+  if (!value) return null;
+  try {
+    const parsed = JSON.parse(value);
+    return parsed && typeof parsed === 'object' ? parsed : null;
+  } catch (error) {
+    return null;
+  }
+};
+const getOfficialSimDisplay = (value) => {
+  const parsed = parseOfficialSimConfig(value);
+  if (!parsed) return value || null;
+  return String(parsed.slot || parsed.simSlot || value || '').trim() || null;
+};
+const buildOfficialSimConfig = (slot, meta) => JSON.stringify({
+  slot: String(slot || '').trim(),
+  simId: String(meta?.simId || '').trim(),
+  subscriptionId: String(meta?.subscriptionId || meta?.simId || '').trim(),
+  iccId: String(meta?.iccId || '').trim(),
+  number: normalizeDigits(meta?.number),
+  label: String(meta?.simLabel || meta?.displayName || '').trim()
+});
+
 const getLatestRemoteSyncRequest = async (deviceId) => {
   const request = await prisma.auditLog.findFirst({
     where: { action: REMOTE_SYNC_ACTION, details: { contains: `"deviceId":${deviceId},` } },
@@ -47,14 +71,16 @@ const enrollDevice = async (req, res) => {
   try {
     const code = String(req.body.code || '').trim().toUpperCase();
     const officialSim = String(req.body.officialSim || '').trim();
+    const officialSimMeta = req.body.officialSimMeta && typeof req.body.officialSimMeta === 'object' ? req.body.officialSimMeta : {};
     if (!code || !officialSim || officialSim === '0') return res.status(400).json({ message: 'Activation code and official SIM are required' });
     const activation = await prisma.callSyncActivationCode.findFirst({ where: { codeHash: hash(code), usedAt: null, expiresAt: { gt: new Date() } } });
     if (!activation) return res.status(400).json({ message: 'Activation code is invalid or expired' });
     const secret = makeSecret();
+    const officialSimConfig = buildOfficialSimConfig(officialSim, officialSimMeta);
     const device = await prisma.$transaction(async (tx) => {
       await tx.callSyncActivationCode.update({ where: { id: activation.id }, data: { usedAt: new Date() } });
       await tx.callSyncDevice.updateMany({ where: { userId: activation.userId, active: true }, data: { active: false } });
-      return tx.callSyncDevice.create({ data: { userId: activation.userId, deviceName: String(req.body.deviceName || '').slice(0, 120), officialSim, secretHash: hash(secret) } });
+      return tx.callSyncDevice.create({ data: { userId: activation.userId, deviceName: String(req.body.deviceName || '').slice(0, 120), officialSim: officialSimConfig, secretHash: hash(secret) } });
     });
     res.status(201).json({ deviceId: device.id, deviceToken: secret, officialSim });
   } catch (error) {
@@ -85,6 +111,7 @@ const getSyncStatus = async (req, res) => {
       enrolled: true,
       device: {
         ...device,
+        officialSim: getOfficialSimDisplay(device.officialSim),
         requestPending,
         requestedAt,
         requestedById: latestRequest?.details?.requestedById || null
@@ -128,7 +155,7 @@ const requestRemoteSync = async (req, res) => {
     res.status(202).json({
       message: 'Sync request sent to enrolled device',
       requestedAt: audit.createdAt,
-      officialSim: device.officialSim || null
+      officialSim: getOfficialSimDisplay(device.officialSim)
     });
   } catch (error) {
     console.error('Call sync request error', error);
@@ -201,7 +228,7 @@ const getPendingSyncRequest = async (req, res) => {
     res.json({
       pending,
       requestedAt,
-      officialSim: device.officialSim || null
+      officialSim: getOfficialSimDisplay(device.officialSim)
     });
   } catch (error) {
     console.error('Pending sync request check error', error);

@@ -36,6 +36,11 @@ export default function CallSyncDeviceSetup() {
     { slot: '2', label: 'SIM 2' }
   ]);
 
+  const getSelectedSimMeta = () => {
+    const selected = simOptions.find((option) => option.slot === sim);
+    return selected?.meta || {};
+  };
+
   useEffect(() => {
     Preferences.get({ key: 'call_sync_device_token' }).then(({ value }) => setActivated(Boolean(value)));
     
@@ -47,7 +52,8 @@ export default function CallSyncDeviceSetup() {
         if (info && info.sims && info.sims.length > 0) {
           const options = info.sims.map(sim => ({
             slot: sim.simSlot,
-            label: `${sim.simLabel || sim.displayName || 'SIM ' + sim.simSlot} (SIM ${sim.simSlot})`
+            label: `${sim.simLabel || sim.displayName || 'SIM ' + sim.simSlot} (SIM ${sim.simSlot})`,
+            meta: sim
           }));
           setSimOptions(options);
           if (options.length > 0) {
@@ -71,7 +77,12 @@ export default function CallSyncDeviceSetup() {
       const response = await fetch(`${API_BASE}/call-sync/enroll`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ code: code.trim(), officialSim: sim, deviceName: navigator.userAgent })
+        body: JSON.stringify({
+          code: code.trim(),
+          officialSim: sim,
+          officialSimMeta: getSelectedSimMeta(),
+          deviceName: navigator.userAgent
+        })
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Activation failed');
@@ -88,8 +99,7 @@ export default function CallSyncDeviceSetup() {
       // strict SIM handling so only the selected SIM is uploaded.
       try {
         const logsResult = await plugin.getCallLogs();
-        const filteredLogs = filterLogsForSim(logsResult?.logs, data.officialSim || sim);
-        if (filteredLogs.length > 0) {
+        if (Array.isArray(logsResult?.logs) && logsResult.logs.length > 0) {
           const targetUrl = API_BASE.replace(/\/$/, '') + '/call-sync/sync';
           await fetch(targetUrl, {
             method: 'PUT',
@@ -98,7 +108,7 @@ export default function CallSyncDeviceSetup() {
               'Authorization': `Device ${data.deviceToken}`
             },
             body: JSON.stringify({
-              logs: filteredLogs,
+              logs: logsResult.logs,
               simFilter: data.officialSim || sim
             })
           });
@@ -128,11 +138,6 @@ export default function CallSyncDeviceSetup() {
       }
 
       const selectedSim = officialSim || '2';
-      const filteredLogs = filterLogsForSim(logsResult.logs, selectedSim);
-      if (filteredLogs.length === 0) {
-        setStatus(`No call logs found for selected SIM ${selectedSim}.`);
-        return;
-      }
 
       const targetUrl = (apiUrl || API_BASE).replace(/\/$/, '') + '/call-sync/sync';
       const response = await fetch(targetUrl, {
@@ -142,7 +147,7 @@ export default function CallSyncDeviceSetup() {
           'Authorization': `Device ${deviceToken}`
         },
         body: JSON.stringify({
-          logs: filteredLogs,
+          logs: logsResult.logs,
           simFilter: selectedSim
         })
       });
@@ -150,7 +155,7 @@ export default function CallSyncDeviceSetup() {
       if (response.ok) {
         const resData = await response.json();
         const savedCalls = typeof resData.totalCalls === 'number' ? resData.totalCalls : 0;
-        const acceptedLogs = typeof resData.acceptedLogs === 'number' ? resData.acceptedLogs : filteredLogs.length;
+        const acceptedLogs = typeof resData.acceptedLogs === 'number' ? resData.acceptedLogs : logsResult.logs.length;
         const rawReceived = typeof resData.rawReceived === 'number' ? resData.rawReceived : logsResult.logs.length;
 
         if (savedCalls === 0) {

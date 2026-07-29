@@ -429,8 +429,25 @@ const syncCallLogs = async (req, res) => {
         const normalizeText = (value) => String(value || "").trim().toLowerCase();
         const extractDigits = (value) => normalizeText(value).replace(/\D/g, "");
         const buildSimCandidates = (value) => {
-            const normalized = normalizeText(value);
-            const digits = extractDigits(value);
+            let rawValue = value;
+            if (typeof value === 'string' && value.trim().startsWith('{')) {
+                try {
+                    const parsed = JSON.parse(value);
+                    rawValue = [
+                        parsed.slot,
+                        parsed.simSlot,
+                        parsed.simId,
+                        parsed.subscriptionId,
+                        parsed.iccId,
+                        parsed.number,
+                        parsed.label
+                    ].filter(Boolean).join(' ');
+                } catch (error) {
+                    rawValue = value;
+                }
+            }
+            const normalized = normalizeText(rawValue);
+            const digits = extractDigits(rawValue);
             const variants = new Set();
             if (normalized) variants.add(normalized);
             if (digits) {
