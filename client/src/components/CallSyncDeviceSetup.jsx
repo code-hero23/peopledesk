@@ -6,6 +6,18 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixd
 
 const normalizeSimValue = (value) => String(value || '').trim().toLowerCase();
 
+const buildSimLabelMap = (sims = []) => {
+  const labels = {};
+  sims.forEach((sim) => {
+    const slot = String(sim?.simSlot || '').trim();
+    const simId = String(sim?.simId || '').trim();
+    const label = sim?.simLabel || sim?.displayName || (slot ? `SIM ${slot}` : 'SIM');
+    if (slot) labels[slot] = label;
+    if (simId) labels[simId] = label;
+  });
+  return labels;
+};
+
 const filterLogsForSim = (logs, officialSim) => {
   const target = normalizeSimValue(officialSim);
   if (!target || target === '0' || target === 'all') return Array.isArray(logs) ? logs : [];
@@ -30,11 +42,32 @@ export default function CallSyncDeviceSetup() {
   const [status, setStatus] = useState('Enter the activation code generated from the desktop portal.');
   const [busy, setBusy] = useState(false);
   const [activated, setActivated] = useState(false);
+  const [detectedSims, setDetectedSims] = useState([]);
+  const [lastSyncStatus, setLastSyncStatus] = useState(null);
 
   const [simOptions, setSimOptions] = useState([
     { slot: '1', label: 'SIM 1' },
     { slot: '2', label: 'SIM 2' }
   ]);
+
+  const refreshDiagnostics = async () => {
+    const [{ value: statusValue }, { value: detailValue }, { value: runAtValue }] = await Promise.all([
+      Preferences.get({ key: 'call_sync_last_status' }),
+      Preferences.get({ key: 'call_sync_last_detail' }),
+      Preferences.get({ key: 'call_sync_last_run_at' })
+    ]);
+
+    if (!statusValue && !detailValue && !runAtValue) {
+      setLastSyncStatus(null);
+      return;
+    }
+
+    setLastSyncStatus({
+      status: statusValue || 'unknown',
+      detail: detailValue || 'No worker details available yet.',
+      runAt: runAtValue || ''
+    });
+  };
 
   useEffect(() => {
     Preferences.get({ key: 'call_sync_device_token' }).then(({ value }) => setActivated(Boolean(value)));
@@ -45,6 +78,8 @@ export default function CallSyncDeviceSetup() {
         const plugin = getCallLogPlugin();
         const info = await plugin.getSimInfo();
         if (info && info.sims && info.sims.length > 0) {
+          setDetectedSims(info.sims);
+          await Preferences.set({ key: 'sim_labels', value: JSON.stringify(buildSimLabelMap(info.sims)) });
           const options = info.sims.map(sim => ({
             slot: sim.simSlot,
             label: `${sim.simLabel || sim.displayName || 'SIM ' + sim.simSlot} (SIM ${sim.simSlot})`
@@ -59,6 +94,7 @@ export default function CallSyncDeviceSetup() {
       }
     };
     loadSims();
+    refreshDiagnostics();
   }, []);
 
   const activate = async (event) => {
@@ -78,6 +114,9 @@ export default function CallSyncDeviceSetup() {
       await Preferences.set({ key: 'apiUrl', value: API_BASE });
       await Preferences.set({ key: 'call_sync_device_token', value: data.deviceToken });
       await Preferences.set({ key: 'cre_official_sim', value: data.officialSim });
+      if (detectedSims.length > 0) {
+        await Preferences.set({ key: 'sim_labels', value: JSON.stringify(buildSimLabelMap(detectedSims)) });
+      }
       await plugin.requestExactAlarmPermission?.();
       await plugin.requestBatteryExemption?.();
       await plugin.scheduleCallLogSync();
@@ -107,6 +146,7 @@ export default function CallSyncDeviceSetup() {
         console.warn('Initial post-activation sync error:', e);
       }
       setStatus('Activated. Calls will sync automatically from 10:30 AM to 7:00 PM IST.');
+      await refreshDiagnostics();
     } catch (error) {
       setStatus(error.message || 'Activation failed. Check permission, internet, and the code.');
     } finally { setBusy(false); }
@@ -124,6 +164,7 @@ export default function CallSyncDeviceSetup() {
       const logsResult = await plugin.getCallLogs();
       if (!logsResult?.logs || logsResult.logs.length === 0) {
         setStatus('No call logs found on this device.');
+        await refreshDiagnostics();
         return;
       }
 
@@ -131,6 +172,7 @@ export default function CallSyncDeviceSetup() {
       const filteredLogs = filterLogsForSim(logsResult.logs, selectedSim);
       if (filteredLogs.length === 0) {
         setStatus(`No call logs found for selected SIM ${selectedSim}.`);
+        await refreshDiagnostics();
         return;
       }
 
@@ -165,14 +207,18 @@ export default function CallSyncDeviceSetup() {
     } catch (err) {
       setStatus('Sync error: ' + (err.message || 'Failed to sync logs'));
     } finally {
+      await refreshDiagnostics();
       setBusy(false);
     }
   };
 
   const resetSetup = async () => {
     await Preferences.remove({ key: 'call_sync_device_token' });
+    await Preferences.remove({ key: 'cre_official_sim' });
+    await Preferences.remove({ key: 'sim_labels' });
     setActivated(false);
     setStatus('Enter the activation code generated from the desktop portal.');
+    setLastSyncStatus(null);
   };
 
   return <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
@@ -183,6 +229,13 @@ export default function CallSyncDeviceSetup() {
       {activated ? (
         <div className="mt-6 space-y-4">
           <p className="rounded-xl bg-emerald-500/15 p-4 text-sm text-emerald-300 border border-emerald-500/20">{status}</p>
+          {lastSyncStatus ? (
+            <div className="rounded-xl border border-white/10 bg-white/5 p-4 text-xs text-slate-300">
+              <p className="font-semibold text-white">Background sync status: {lastSyncStatus.status}</p>
+              <p className="mt-1">{lastSyncStatus.detail}</p>
+              {lastSyncStatus.runAt ? <p className="mt-2 text-slate-400">Last checked: {lastSyncStatus.runAt}</p> : null}
+            </div>
+          ) : null}
           <button 
             onClick={triggerManualSync} 
             disabled={busy}
