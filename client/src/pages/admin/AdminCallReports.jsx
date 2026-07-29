@@ -34,6 +34,7 @@ const AdminCallReports = () => {
     const [emailAddress, setEmailAddress] = useState('');
     const [isEmailing, setIsEmailing] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
+    const [isRequestingAllSync, setIsRequestingAllSync] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -49,6 +50,28 @@ const AdminCallReports = () => {
 
     const handleRefresh = () => {
         dispatch(getCallStats({ ...dateRange }));
+    };
+
+    const handleRequestAllSync = async () => {
+        try {
+            setIsRequestingAllSync(true);
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+
+            const response = await axios.post(`${baseUrl}/call-sync/request-sync-all`, {}, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success(response.data.message || 'Sync request sent to all enrolled devices');
+            window.setTimeout(() => {
+                dispatch(getCallStats({ ...dateRange }));
+            }, 12000);
+        } catch (error) {
+            console.error('Bulk sync request failed:', error);
+            toast.error(error.response?.data?.message || 'Failed to request sync for all employees');
+        } finally {
+            setIsRequestingAllSync(false);
+        }
     };
 
     // Auto-sync drill-down data when stats update
@@ -333,6 +356,18 @@ const AdminCallReports = () => {
                     </div>
                     <button onClick={handleRefresh} className="p-4 bg-slate-800 text-slate-400 hover:text-white rounded-2xl transition-all border border-slate-700 active:scale-90">
                         <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
+                    </button>
+
+                    <button
+                        onClick={handleRequestAllSync}
+                        disabled={isRequestingAllSync}
+                        className="p-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2 disabled:opacity-50"
+                        title="Request Sync For All Enrolled Employees"
+                    >
+                        <Smartphone size={18} className={isRequestingAllSync ? 'animate-pulse' : ''} />
+                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
+                            {isRequestingAllSync ? 'Requesting Sync...' : 'Sync All Employees'}
+                        </span>
                     </button>
                     
                     <button 

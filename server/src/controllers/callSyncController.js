@@ -136,6 +136,57 @@ const requestRemoteSync = async (req, res) => {
   }
 };
 
+const requestRemoteSyncForAll = async (req, res) => {
+  try {
+    if (!['ADMIN', 'HR'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not allowed to trigger sync for all employees' });
+    }
+
+    const devices = await prisma.callSyncDevice.findMany({
+      where: {
+        active: true,
+        user: {
+          status: 'ACTIVE',
+          callAnalyticsViewEnabled: true
+        }
+      },
+      select: {
+        id: true,
+        userId: true,
+        officialSim: true
+      }
+    });
+
+    if (!devices.length) {
+      return res.status(400).json({ message: 'No active enrolled devices found' });
+    }
+
+    const requestedAt = new Date();
+    await prisma.auditLog.createMany({
+      data: devices.map((device) => ({
+        action: REMOTE_SYNC_ACTION,
+        userId: device.userId,
+        details: JSON.stringify({
+          deviceId: device.id,
+          requestedById: req.user.id,
+          requestedAt: requestedAt.toISOString(),
+          officialSim: device.officialSim || null,
+          bulkRequest: true
+        })
+      }))
+    });
+
+    res.status(202).json({
+      message: 'Sync request sent to all enrolled devices',
+      requestedAt,
+      requestedDevices: devices.length
+    });
+  } catch (error) {
+    console.error('Bulk call sync request error', error);
+    res.status(500).json({ message: 'Could not request sync for all employees' });
+  }
+};
+
 const getPendingSyncRequest = async (req, res) => {
   try {
     const device = req.callSyncDevice;
@@ -191,6 +242,7 @@ module.exports = {
   enrollDevice,
   getSyncStatus,
   requestRemoteSync,
+  requestRemoteSyncForAll,
   getPendingSyncRequest,
   protectDevice,
   recordDeviceAttempt

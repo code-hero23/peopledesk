@@ -6,6 +6,7 @@ const {
   enrollDevice,
   getSyncStatus,
   requestRemoteSync,
+  requestRemoteSyncForAll,
   getPendingSyncRequest,
   protectDevice,
   recordDeviceAttempt
@@ -15,6 +16,7 @@ const router = express.Router();
 router.post('/activation-codes', protect, createActivationCode);
 router.get('/status', protect, getSyncStatus);
 router.post('/request-sync', protect, requestRemoteSync);
+router.post('/request-sync-all', protect, requestRemoteSyncForAll);
 router.post('/enroll', enrollDevice);
 router.get('/pending', protectDevice, getPendingSyncRequest);
 router.put('/sync', protectDevice, recordDeviceAttempt, (req, res, next) => {
