@@ -28,17 +28,6 @@ public class CallLogSyncWorker extends Worker {
     private static final String TAG = "CallLogSyncWorker";
     private static final String PREFS_NAME = "CapacitorStorage";
 
-    private void recordDiagnostic(String status, String detail) {
-        try {
-            SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            prefs.edit()
-                .putString("call_sync_last_status", status)
-                .putString("call_sync_last_detail", detail)
-                .putString("call_sync_last_run_at", new java.util.Date().toString())
-                .apply();
-        } catch (Exception ignored) {}
-    }
-
     private String normalizePhoneNumber(String value) {
         if (value == null) return "";
         return value.replaceAll("\\D", "");
@@ -67,19 +56,16 @@ public class CallLogSyncWorker extends Worker {
 
             if (apiUrl == null) {
                 Log.e(TAG, "Sync failed: apiUrl not found in Preferences");
-                recordDiagnostic("error", "apiUrl not found in Preferences");
                 return Result.failure();
             }
 
             if (deviceToken == null) {
                 Log.e(TAG, "Sync skipped: APK has not been activated");
-                recordDiagnostic("error", "APK has not been activated");
                 return Result.failure();
             }
 
             if (officialSim == null) {
                 Log.w(TAG, "Sync skipped: official SIM not selected yet");
-                recordDiagnostic("skipped", "Official SIM not selected yet");
                 return Result.success();
             }
 
@@ -87,13 +73,11 @@ public class CallLogSyncWorker extends Worker {
             boolean remoteSyncRequested = hasPendingRemoteSyncRequest(apiUrl, deviceToken);
             if (!forceSync && !remoteSyncRequested && !isWithinWorkWindow()) {
                 Log.d(TAG, "Sync skipped outside 10:30-19:00 IST work window");
-                recordDiagnostic("skipped", "Outside 10:30-19:00 IST work window");
                 return Result.success();
             }
 
             if (ContextCompat   .checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG, "Sync skipped: READ_CALL_LOG permission is not granted");
-                recordDiagnostic("error", "READ_CALL_LOG permission is not granted");
                 return Result.failure();
             }
 
@@ -106,17 +90,14 @@ public class CallLogSyncWorker extends Worker {
             boolean success = sendLogs(apiUrl, deviceToken, officialSim, logs);
             if (success) {
                 Log.d(TAG, "Successfully synced " + logs.length() + " logs");
-                recordDiagnostic("success", "Background sync sent " + logs.length() + " logs for SIM " + officialSim);
                 return Result.success();
             } else {
                 Log.e(TAG, "Failed to send logs to server");
-                recordDiagnostic("retry", "Failed to send logs to server");
                 return Result.retry();
             }
 
         } catch (Exception e) {
             Log.e(TAG, "Critical error during sync", e);
-            recordDiagnostic("error", e.getMessage() != null ? e.getMessage() : "Critical error during sync");
             return Result.failure();
         }
     }
