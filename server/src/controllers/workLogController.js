@@ -2,16 +2,6 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
-const parseJsonObject = (value) => {
-    if (!value || typeof value !== 'string') return null;
-    try {
-        const parsed = JSON.parse(value);
-        return parsed && typeof parsed === 'object' ? parsed : null;
-    } catch (error) {
-        return null;
-    }
-};
-
 // @desc    Submit a daily work log
 // @route   POST /api/worklogs
 // @access  Private (Employee)
@@ -437,62 +427,22 @@ const syncCallLogs = async (req, res) => {
         rawLogs = Array.isArray(rawLogs) ? rawLogs : [];
         const rawReceived = rawLogs.length;
         const normalizeText = (value) => String(value || "").trim().toLowerCase();
-        const extractDigits = (value) => normalizeText(value).replace(/\D/g, "");
-        const buildSimCandidates = (value) => {
-            let rawValue = value;
-            if (typeof value === 'string' && value.trim().startsWith('{')) {
-                try {
-                    const parsed = JSON.parse(value);
-                    rawValue = [
-                        parsed.slot,
-                        parsed.simSlot,
-                        parsed.simId,
-                        parsed.subscriptionId,
-                        parsed.iccId,
-                        parsed.number,
-                        parsed.label
-                    ].filter(Boolean).join(' ');
-                } catch (error) {
-                    rawValue = value;
-                }
-            }
-            const normalized = normalizeText(rawValue);
-            const digits = extractDigits(rawValue);
-            const variants = new Set();
-            if (normalized) variants.add(normalized);
-            if (digits) {
-                variants.add(digits);
-                variants.add(`sim${digits}`);
-                variants.add(`sim ${digits}`);
-                variants.add(`slot${digits}`);
-                variants.add(`slot ${digits}`);
-                if (digits === '1') variants.add('0');
-                if (digits === '2') variants.add('1');
-            }
-            return variants;
-        };
         const canonicalSimSlot = simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL'
             ? String(simFilter).trim()
             : null;
         const matchesSelectedSim = (log, target) => {
-            const targetCandidates = buildSimCandidates(target);
-            const values = [
-                log.simSlot,
-                log.simId,
-                log.subscriptionId,
-                log.legacySimId,
-                log.simLabel,
-                log.phoneAccountAddress,
-                log.phoneAccountId
-            ];
+            const normalizedTarget = normalizeText(target);
+            const logSlot = normalizeText(log.simSlot);
+            const logId = normalizeText(log.simId);
+            const logLabel = normalizeText(log.simLabel);
+            const normalizedLabel = logLabel.replace(/^sim\s*/i, '');
 
-            return values.some((value) => {
-                const valueCandidates = buildSimCandidates(value);
-                for (const candidate of valueCandidates) {
-                    if (targetCandidates.has(candidate)) return true;
-                }
-                return false;
-            });
+            return (
+                logSlot === normalizedTarget ||
+                logId === normalizedTarget ||
+                normalizedLabel === normalizedTarget ||
+                logLabel === normalizedTarget
+            );
         };
         const normalizeAcceptedLog = (log) => {
             const normalized = { ...log };
@@ -506,65 +456,6 @@ const syncCallLogs = async (req, res) => {
         if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
             newLogs = rawLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
-            if (rawLogs.length > 0 && newLogs.length === 0) {
-                console.log('[Sync Guard Diagnostic]', JSON.stringify({
-                    userId,
-                    targetSim: simFilter,
-                    samples: rawLogs.slice(0, 5).map((log) => ({
-                        simSlot: log.simSlot ?? null,
-                        simId: log.simId ?? null,
-                        subscriptionId: log.subscriptionId ?? null,
-                        legacySimId: log.legacySimId ?? null,
-                        simLabel: log.simLabel ?? null,
-                        phoneAccountAddress: log.phoneAccountAddress ?? null,
-                        phoneAccountId: log.phoneAccountId ?? null,
-                        number: log.number ?? null
-                    }))
-                }));
-
-                const configuredSim = parseJsonObject(String(simFilter));
-                const identityCandidates = rawLogs.reduce((acc, log) => {
-                    const candidate = {
-                        simId: String(log.simId || '').trim(),
-                        subscriptionId: String(log.subscriptionId || '').trim(),
-                        legacySimId: String(log.legacySimId || '').trim(),
-                        phoneAccountAddress: String(log.phoneAccountAddress || '').trim(),
-                        phoneAccountId: String(log.phoneAccountId || '').trim(),
-                        simLabel: String(log.simLabel || '').trim()
-                    };
-                    const hasIdentity = candidate.simId || candidate.subscriptionId || candidate.legacySimId || candidate.phoneAccountAddress || candidate.phoneAccountId;
-                    if (!hasIdentity) return acc;
-                    const key = JSON.stringify(candidate);
-                    if (!acc.some((entry) => entry.key === key)) {
-                        acc.push({ key, candidate });
-                    }
-                    return acc;
-                }, []);
-
-                if (configuredSim && req.callSyncDevice && identityCandidates.length === 1) {
-                    const learnedIdentity = identityCandidates[0].candidate;
-                    const learnedConfig = JSON.stringify({
-                        ...configuredSim,
-                        simId: learnedIdentity.simId || configuredSim.simId || '',
-                        subscriptionId: learnedIdentity.subscriptionId || configuredSim.subscriptionId || '',
-                        legacySimId: learnedIdentity.legacySimId || configuredSim.legacySimId || '',
-                        number: learnedIdentity.phoneAccountAddress ? learnedIdentity.phoneAccountAddress.replace(/\D/g, '') : (configuredSim.number || ''),
-                        phoneAccountAddress: learnedIdentity.phoneAccountAddress || '',
-                        phoneAccountId: learnedIdentity.phoneAccountId || '',
-                        label: learnedIdentity.simLabel || configuredSim.label || ''
-                    });
-
-                    await prisma.callSyncDevice.update({
-                        where: { id: req.callSyncDevice.id },
-                        data: { officialSim: learnedConfig }
-                    });
-
-                    req.callSyncDevice.officialSim = learnedConfig;
-                    req.body.simFilter = learnedConfig;
-                    newLogs = rawLogs.filter(log => matchesSelectedSim(log, learnedConfig));
-                    console.log(`[Sync Guard Learning] User ${userId}: learned SIM identity from uploaded logs and re-filtered ${rawLogs.length} down to ${newLogs.length}.`);
-                }
-            }
         }
         newLogs = newLogs.map(normalizeAcceptedLog);
 
