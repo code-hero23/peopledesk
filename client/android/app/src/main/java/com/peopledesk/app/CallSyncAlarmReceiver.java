@@ -6,6 +6,7 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
+import android.util.Log;
 import androidx.work.Constraints;
 import androidx.work.Data;
 import androidx.work.NetworkType;
@@ -15,6 +16,7 @@ import java.util.Calendar;
 import java.util.TimeZone;
 
 public class CallSyncAlarmReceiver extends BroadcastReceiver {
+    private static final String TAG = "CallSyncAlarmReceiver";
     public static final String ACTION_START = "com.peopledesk.app.CALL_SYNC_START";
     public static final String ACTION_TICK = "com.peopledesk.app.CALL_SYNC_TICK";
     public static final String ACTION_FINAL = "com.peopledesk.app.CALL_SYNC_FINAL";
@@ -26,7 +28,11 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
     @Override
     public void onReceive(Context context, Intent intent) {
         String action = intent.getAction();
-        if (Intent.ACTION_BOOT_COMPLETED.equals(action) || "android.intent.action.MY_PACKAGE_REPLACED".equals(action)) {
+        Log.d(TAG, "Received alarm action=" + action);
+        if (Intent.ACTION_BOOT_COMPLETED.equals(action)
+            || Intent.ACTION_TIME_CHANGED.equals(action)
+            || Intent.ACTION_TIMEZONE_CHANGED.equals(action)
+            || "android.intent.action.MY_PACKAGE_REPLACED".equals(action)) {
             schedule(context);
             return;
         }
@@ -62,6 +68,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
         if (when.getTimeInMillis() <= System.currentTimeMillis()) when.add(Calendar.DATE, 1);
         Intent intent = new Intent(context, CallSyncAlarmReceiver.class).setAction(action);
         PendingIntent pending = PendingIntent.getBroadcast(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Log.d(TAG, "Scheduling " + action + " for " + when.getTime().toString());
         
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarms.canScheduleExactAlarms()) {
@@ -100,6 +107,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
 
         Intent intent = new Intent(context, CallSyncAlarmReceiver.class).setAction(ACTION_TICK);
         PendingIntent pending = PendingIntent.getBroadcast(context, REQUEST_TICK, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+        Log.d(TAG, "Scheduling " + ACTION_TICK + " for " + next.getTime().toString());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
             if (alarms.canScheduleExactAlarms()) {

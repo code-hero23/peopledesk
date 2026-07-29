@@ -74,12 +74,12 @@ public class CallLogSyncWorker extends Worker {
 
             if (apiUrl == null) {
                 Log.e(TAG, "Sync failed: apiUrl not found in Preferences");
-                return Result.failure();
+                return Result.success();
             }
 
             if (deviceToken == null) {
                 Log.e(TAG, "Sync skipped: APK has not been activated");
-                return Result.failure();
+                return Result.success();
             }
 
             if (officialSim == null) {
@@ -96,7 +96,7 @@ public class CallLogSyncWorker extends Worker {
 
             if (ContextCompat   .checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG, "Sync skipped: READ_CALL_LOG permission is not granted");
-                return Result.failure();
+                return Result.success();
             }
 
             Log.d(TAG, "Syncing device call logs for official SIM: " + officialSim + " | forceSync=" + forceSync + " | remoteRequest=" + remoteSyncRequested);
