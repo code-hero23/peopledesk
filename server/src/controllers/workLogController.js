@@ -2,6 +2,16 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
+const parseJsonObject = (value) => {
+    if (!value || typeof value !== 'string') return null;
+    try {
+        const parsed = JSON.parse(value);
+        return parsed && typeof parsed === 'object' ? parsed : null;
+    } catch (error) {
+        return null;
+    }
+};
+
 // @desc    Submit a daily work log
 // @route   POST /api/worklogs
 // @access  Private (Employee)
@@ -511,6 +521,49 @@ const syncCallLogs = async (req, res) => {
                         number: log.number ?? null
                     }))
                 }));
+
+                const configuredSim = parseJsonObject(String(simFilter));
+                const identityCandidates = rawLogs.reduce((acc, log) => {
+                    const candidate = {
+                        simId: String(log.simId || '').trim(),
+                        subscriptionId: String(log.subscriptionId || '').trim(),
+                        legacySimId: String(log.legacySimId || '').trim(),
+                        phoneAccountAddress: String(log.phoneAccountAddress || '').trim(),
+                        phoneAccountId: String(log.phoneAccountId || '').trim(),
+                        simLabel: String(log.simLabel || '').trim()
+                    };
+                    const hasIdentity = candidate.simId || candidate.subscriptionId || candidate.legacySimId || candidate.phoneAccountAddress || candidate.phoneAccountId;
+                    if (!hasIdentity) return acc;
+                    const key = JSON.stringify(candidate);
+                    if (!acc.some((entry) => entry.key === key)) {
+                        acc.push({ key, candidate });
+                    }
+                    return acc;
+                }, []);
+
+                if (configuredSim && req.callSyncDevice && identityCandidates.length === 1) {
+                    const learnedIdentity = identityCandidates[0].candidate;
+                    const learnedConfig = JSON.stringify({
+                        ...configuredSim,
+                        simId: learnedIdentity.simId || configuredSim.simId || '',
+                        subscriptionId: learnedIdentity.subscriptionId || configuredSim.subscriptionId || '',
+                        legacySimId: learnedIdentity.legacySimId || configuredSim.legacySimId || '',
+                        number: learnedIdentity.phoneAccountAddress ? learnedIdentity.phoneAccountAddress.replace(/\D/g, '') : (configuredSim.number || ''),
+                        phoneAccountAddress: learnedIdentity.phoneAccountAddress || '',
+                        phoneAccountId: learnedIdentity.phoneAccountId || '',
+                        label: learnedIdentity.simLabel || configuredSim.label || ''
+                    });
+
+                    await prisma.callSyncDevice.update({
+                        where: { id: req.callSyncDevice.id },
+                        data: { officialSim: learnedConfig }
+                    });
+
+                    req.callSyncDevice.officialSim = learnedConfig;
+                    req.body.simFilter = learnedConfig;
+                    newLogs = rawLogs.filter(log => matchesSelectedSim(log, learnedConfig));
+                    console.log(`[Sync Guard Learning] User ${userId}: learned SIM identity from uploaded logs and re-filtered ${rawLogs.length} down to ${newLogs.length}.`);
+                }
             }
         }
         newLogs = newLogs.map(normalizeAcceptedLog);
