@@ -13,13 +13,9 @@ const filterLogsForSim = (logs, officialSim) => {
   return (Array.isArray(logs) ? logs : []).filter((log) => {
     const simSlot = normalizeSimValue(log.simSlot);
     const simId = normalizeSimValue(log.simId);
-    const simLabel = normalizeSimValue(log.simLabel);
-    const normalizedLabel = simLabel.replace(/^sim\s*/i, '');
     return (
       simSlot === target ||
-      simId === target ||
-      normalizedLabel === target ||
-      simLabel === target
+      simId === target
     );
   });
 };

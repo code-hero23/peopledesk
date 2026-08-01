@@ -261,7 +261,6 @@ public class CallLogSyncWorker extends Worker {
                     if (!matches) {
                         if (simSlot.equals(officialSim)) matches = true;
                         else if (simId != null && simId.equals(officialSim)) matches = true;
-                        else if (simLabel != null && simLabel.equalsIgnoreCase(officialSim)) matches = true;
                     }
 
                     if (matches) {

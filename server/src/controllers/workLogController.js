@@ -434,14 +434,10 @@ const syncCallLogs = async (req, res) => {
             const normalizedTarget = normalizeText(target);
             const logSlot = normalizeText(log.simSlot);
             const logId = normalizeText(log.simId);
-            const logLabel = normalizeText(log.simLabel);
-            const normalizedLabel = logLabel.replace(/^sim\s*/i, '');
 
             return (
                 logSlot === normalizedTarget ||
-                logId === normalizedTarget ||
-                normalizedLabel === normalizedTarget ||
-                logLabel === normalizedTarget
+                logId === normalizedTarget
             );
         };
         const normalizeAcceptedLog = (log) => {
