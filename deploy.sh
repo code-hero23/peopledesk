@@ -33,9 +33,9 @@ bash ./gradlew assembleDebug
 
 # Move APK to a public web path for easy download if needed
 mkdir -p ../../server/uploads/apks/
-cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test(1)peopledesk-latest-v1.0.3.apk
+cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk
 
 cd ../..
-echo "Call analyser apk location: server/uploads/apks/test(1)peopledesk-latest-v1.0.3.apk"
+echo "Call analyser apk location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
 echo "✅ Deployment & APK Build Complete!"
 echo "📍 APK Location: client/android/app/build/outputs/apk/debug/app-debug.apk"
