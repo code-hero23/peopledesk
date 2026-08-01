@@ -217,8 +217,32 @@ const Overview = () => {
     const statsCards = [
         { icon: Calendar, title: 'Cycle Stats', label: 'Days Present', value: requests?.stats?.presentDays || 0, color: 'indigo' },
         { icon: AlertCircle, title: 'Requests', label: 'Pending', value: (requests?.leaves?.filter(l => l.status === 'PENDING').length || 0) + (requests?.permissions?.filter(p => p.status === 'PENDING').length || 0), color: 'rose' },
-        { icon: Clock, title: 'Permissions', label: 'Available', value: formatRequestCount(permissionAvailableCount), secondaryValue: formatRequestCount(permissionExceededCount), secondaryLabel: 'Permission Exceed', color: 'amber' },
-        { icon: Star, title: 'Leaves', label: 'Available', value: formatRequestCount(leaveAvailableCount), secondaryValue: formatRequestCount(leaveExceededCount), secondaryLabel: 'Leave Exceed', color: 'emerald' }
+        {
+            icon: Clock,
+            title: 'Permissions',
+            label: 'Available',
+            value: formatRequestCount(permissionAvailableCount),
+            secondaryValue: formatRequestCount(permissionExceededCount),
+            secondaryLabel: 'Permission Exceed',
+            color: 'amber',
+            breakdown: [
+                { label: 'Allotted', value: formatRequestCount(REQUEST_LIMIT) },
+                { label: 'Taken', value: formatRequestCount(activePermissions.length) }
+            ]
+        },
+        {
+            icon: Star,
+            title: 'Leaves',
+            label: 'Available',
+            value: formatRequestCount(leaveAvailableCount),
+            secondaryValue: formatRequestCount(leaveExceededCount),
+            secondaryLabel: 'Leave Exceed',
+            color: 'emerald',
+            breakdown: [
+                { label: 'Allotted', value: formatRequestCount(REQUEST_LIMIT) },
+                { label: 'Taken', value: formatRequestCount(leaveTakenCount) }
+            ]
+        }
     ];
 
     const quickActions = [
@@ -227,22 +251,14 @@ const Overview = () => {
             label: 'Leave Request',
             sub: 'Casual / Weekoff',
             type: 'leave',
-            color: 'rose',
-            meta: [
-                `Available: ${leaveAvailableCount}`,
-                `Leave Exceed: ${formatRequestCount(leaveExceededCount)}`
-            ]
+            color: 'rose'
         },
         {
             icon: Clock,
             label: 'Two-hours Permit',
             sub: 'Early / Late',
             type: 'permission',
-            color: 'amber',
-            meta: [
-                `Available: ${formatRequestCount(permissionAvailableCount)}`,
-                `Permission Exceed: ${formatRequestCount(permissionExceededCount)}`
-            ]
+            color: 'amber'
         },
         { icon: MapPin, label: 'Site Visit', sub: 'Project Reporting', type: 'site-visit', color: 'emerald' },
         { icon: Building2, label: 'Showroom Visit', sub: 'Inter-Branch', type: 'showroom-visit', color: 'indigo' }
@@ -1067,21 +1083,33 @@ const Overview = () => {
                             </div>
                         </div>
 
-                        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-6">
+                        <div className="grid md:grid-cols-2 xl:grid-cols-3 gap-6">
                             {statsCards.map((stat, i) => (
                                 <div key={i} className={`bg-white dark:bg-slate-900 p-8 rounded-[2.5rem] border border-slate-100 dark:border-slate-800 shadow-sm hover:border-${stat.color}-100 dark:hover:border-${stat.color}-900 transition-all`}>
                                     <div className="flex items-center gap-4 mb-6">
                                         <div className={`p-3 bg-${stat.color}-50 dark:bg-${stat.color}-900/30 text-${stat.color}-600 dark:text-${stat.color}-400 rounded-2xl`}><stat.icon size={24} /></div>
-                                        <h4 className="font-bold text-slate-600 dark:text-slate-400">{stat.title}</h4>
+                                        <h4 className={`font-bold text-slate-600 dark:text-slate-400 ${stat.title === 'Leaves' ? 'text-xl' : 'text-lg'}`}>{stat.title}</h4>
                                     </div>
                                     <div className="space-y-4">
                                         <div className="flex items-end gap-3">
-                                            <span className="text-4xl font-black leading-none text-slate-900 dark:text-white tabular-nums">{stat.value}</span>
-                                            <span className="pb-1 text-slate-400 dark:text-slate-500 font-bold uppercase text-[10px] tracking-[0.2em]">{stat.label}</span>
+                                            <span className={`font-black leading-none text-slate-900 dark:text-white tabular-nums ${stat.title === 'Leaves' ? 'text-5xl' : 'text-4xl'}`}>{stat.value}</span>
+                                            <span className="pb-1 text-slate-400 dark:text-slate-500 font-bold uppercase text-xs tracking-[0.18em]">{stat.label}</span>
                                         </div>
+                                        {stat.breakdown?.length ? (
+                                            <div className="mb-3 flex flex-wrap gap-2">
+                                                {stat.breakdown.map((item) => (
+                                                    <span
+                                                        key={item.label}
+                                                        className="rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-black uppercase tracking-[0.16em] text-slate-500 dark:text-slate-300"
+                                                    >
+                                                        {item.label} {item.value}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        ) : null}
                                         {stat.secondaryLabel ? (
                                             <div className={`flex items-center justify-between rounded-2xl border border-${stat.color}-100/60 dark:border-${stat.color}-900/40 bg-${stat.color}-50/70 dark:bg-${stat.color}-900/20 px-4 py-2.5`}>
-                                                <span className={`text-[10px] font-black uppercase tracking-[0.22em] text-${stat.color}-700 dark:text-${stat.color}-300`}>
+                                                <span className={`text-xs font-black uppercase tracking-[0.18em] text-${stat.color}-700 dark:text-${stat.color}-300`}>
                                                     {stat.secondaryLabel}
                                                 </span>
                                                 <span className={`text-lg font-black tabular-nums text-${stat.color}-600 dark:text-${stat.color}-300`}>

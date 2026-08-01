@@ -21,6 +21,8 @@ import android.provider.Settings;
 import android.app.AlarmManager;
 import androidx.work.*;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @CapacitorPlugin(
@@ -56,6 +58,22 @@ public class CallLogPlugin extends Plugin {
             } catch (NumberFormatException ignored) {}
         }
         return simSlot != null && !simSlot.trim().isEmpty() ? simSlot.trim() : "0";
+    }
+
+    private void registerLabelSlotMapping(String label, String slot, java.util.Map<String, String> labelToSlotMap, java.util.Map<String, Integer> labelFrequencyMap, Set<String> seenKeys) {
+        if (label == null) return;
+        String key = label.trim().toLowerCase();
+        if (key.isEmpty() || seenKeys.contains(key)) return;
+
+        seenKeys.add(key);
+        int count = labelFrequencyMap.containsKey(key) ? labelFrequencyMap.get(key) + 1 : 1;
+        labelFrequencyMap.put(key, count);
+
+        if (count == 1) {
+            labelToSlotMap.put(key, slot);
+        } else {
+            labelToSlotMap.remove(key);
+        }
     }
 
     @PluginMethod
@@ -219,6 +237,7 @@ public class CallLogPlugin extends Plugin {
                 java.util.Map<String, String> labelMap = new java.util.HashMap<>();
                 java.util.Map<String, String> slotMap = new java.util.HashMap<>();
                 java.util.Map<String, String> labelToSlotMap = new java.util.HashMap<>();
+                java.util.Map<String, Integer> labelFrequencyMap = new java.util.HashMap<>();
                 java.util.Map<String, String> numberToSlotMap = new java.util.HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
@@ -247,8 +266,9 @@ public class CallLogPlugin extends Plugin {
                                         numberToSlotMap.put(normalizedNumber, slot);
                                     }
                                 } catch (Exception ignored) {}
-                                if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
-                                if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
+                                Set<String> seenKeys = new HashSet<>();
+                                registerLabelSlotMapping(carrier, slot, labelToSlotMap, labelFrequencyMap, seenKeys);
+                                registerLabelSlotMapping(display, slot, labelToSlotMap, labelFrequencyMap, seenKeys);
                             }
                         }
                     }

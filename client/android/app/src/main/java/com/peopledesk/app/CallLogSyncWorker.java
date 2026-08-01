@@ -16,9 +16,11 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 import java.util.Calendar;
 import java.util.TimeZone;
 import androidx.core.content.ContextCompat;
@@ -54,6 +56,22 @@ public class CallLogSyncWorker extends Worker {
             } catch (NumberFormatException ignored) {}
         }
         return simSlot != null && !simSlot.trim().isEmpty() ? simSlot.trim() : "0";
+    }
+
+    private void registerLabelSlotMapping(String label, String slot, Map<String, String> labelToSlotMap, Map<String, Integer> labelFrequencyMap, Set<String> seenKeys) {
+        if (label == null) return;
+        String key = label.trim().toLowerCase();
+        if (key.isEmpty() || seenKeys.contains(key)) return;
+
+        seenKeys.add(key);
+        int count = labelFrequencyMap.containsKey(key) ? labelFrequencyMap.get(key) + 1 : 1;
+        labelFrequencyMap.put(key, count);
+
+        if (count == 1) {
+            labelToSlotMap.put(key, slot);
+        } else {
+            labelToSlotMap.remove(key);
+        }
     }
 
     public CallLogSyncWorker(@NonNull Context context, @NonNull WorkerParameters workerParams) {
@@ -151,6 +169,7 @@ public class CallLogSyncWorker extends Worker {
                 Map<String, String> labelMap = new HashMap<>();
                 Map<String, String> slotMap = new HashMap<>();
                 Map<String, String> labelToSlotMap = new HashMap<>();
+                Map<String, Integer> labelFrequencyMap = new HashMap<>();
                 Map<String, String> numberToSlotMap = new HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getApplicationContext().getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
@@ -179,8 +198,9 @@ public class CallLogSyncWorker extends Worker {
                                         numberToSlotMap.put(normalizedNumber, slot);
                                     }
                                 } catch (Exception ignored) {}
-                                if (carrier != null) labelToSlotMap.put(carrier.trim().toLowerCase(), slot);
-                                if (display != null) labelToSlotMap.put(display.trim().toLowerCase(), slot);
+                                Set<String> seenKeys = new HashSet<>();
+                                registerLabelSlotMapping(carrier, slot, labelToSlotMap, labelFrequencyMap, seenKeys);
+                                registerLabelSlotMapping(display, slot, labelToSlotMap, labelFrequencyMap, seenKeys);
                             }
                         }
                     }
