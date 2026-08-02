@@ -78,6 +78,13 @@ public class CallLogSyncWorker extends Worker {
         super(context, workerParams);
     }
 
+    private String getPreferenceValue(SharedPreferences prefs, String key, String defaultValue) {
+        if (prefs.contains(key)) return prefs.getString(key, defaultValue);
+        if (prefs.contains("_CapacitorStorage_" + key)) return prefs.getString("_CapacitorStorage_" + key, defaultValue);
+        if (prefs.contains("CapacitorStorage." + key)) return prefs.getString("CapacitorStorage." + key, defaultValue);
+        return defaultValue;
+    }
+
     @NonNull
     @Override
     public Result doWork() {
@@ -85,10 +92,10 @@ public class CallLogSyncWorker extends Worker {
         
         try {
             SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            String apiUrl = prefs.getString("apiUrl", null);
-            String deviceToken = prefs.getString("call_sync_device_token", null);
-            String officialSim = prefs.getString("cre_official_sim", null);
-            String simLabelsJson = prefs.getString("sim_labels", "{}");
+            String apiUrl = getPreferenceValue(prefs, "apiUrl", null);
+            String deviceToken = getPreferenceValue(prefs, "call_sync_device_token", null);
+            String officialSim = getPreferenceValue(prefs, "cre_official_sim", null);
+            String simLabelsJson = getPreferenceValue(prefs, "sim_labels", "{}");
 
             if (apiUrl == null) {
                 Log.e(TAG, "Sync failed: apiUrl not found in Preferences");

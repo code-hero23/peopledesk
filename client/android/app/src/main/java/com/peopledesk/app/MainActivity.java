@@ -27,11 +27,18 @@ public class MainActivity extends BridgeActivity {
         ensureCallSyncScheduling();
     }
 
+    private String getPreferenceValue(SharedPreferences prefs, String key) {
+        if (prefs.contains(key)) return prefs.getString(key, null);
+        if (prefs.contains("_CapacitorStorage_" + key)) return prefs.getString("_CapacitorStorage_" + key, null);
+        if (prefs.contains("CapacitorStorage." + key)) return prefs.getString("CapacitorStorage." + key, null);
+        return null;
+    }
+
     private boolean isCallSyncActivated() {
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        return prefs.getString("call_sync_device_token", null) != null
-            && prefs.getString("cre_official_sim", null) != null
-            && prefs.getString("apiUrl", null) != null;
+        return getPreferenceValue(prefs, "call_sync_device_token") != null
+            && getPreferenceValue(prefs, "cre_official_sim") != null
+            && getPreferenceValue(prefs, "apiUrl") != null;
     }
 
     private void ensureCallSyncScheduling() {
