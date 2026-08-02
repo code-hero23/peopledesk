@@ -237,10 +237,81 @@ const recordDeviceAttempt = async (req, res, next) => {
   } catch (error) { next(error); }
 };
 
+const getBulkSyncStatus = async (req, res) => {
+  try {
+    if (!['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
+      return res.status(403).json({ message: 'Not allowed to view bulk sync status' });
+    }
+
+    const devices = await prisma.callSyncDevice.findMany({
+      where: {
+        active: true,
+        user: {
+          status: 'ACTIVE',
+          callAnalyticsViewEnabled: true
+        }
+      },
+      select: {
+        id: true,
+        deviceName: true,
+        officialSim: true,
+        lastAttemptAt: true,
+        lastSuccessAt: true,
+        lastError: true,
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+            designation: true
+          }
+        }
+      }
+    });
+
+    const statusList = await Promise.all(
+      devices.map(async (device) => {
+        const latestRequest = await getLatestRemoteSyncRequest(device.id);
+        const requestedAt = latestRequest?.request?.createdAt || null;
+        const requestPending = Boolean(
+          requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > new Date(device.lastSuccessAt).getTime())
+        );
+
+        return {
+          id: device.id,
+          deviceName: device.deviceName,
+          officialSim: device.officialSim,
+          lastAttemptAt: device.lastAttemptAt,
+          lastSuccessAt: device.lastSuccessAt,
+          lastError: device.lastError,
+          user: device.user,
+          requestedAt,
+          requestPending
+        };
+      })
+    );
+
+    const totalDevices = statusList.length;
+    const pendingDevices = statusList.filter((d) => d.requestPending).length;
+    const syncedDevices = totalDevices - pendingDevices;
+
+    res.json({
+      totalDevices,
+      syncedDevices,
+      pendingDevices,
+      devices: statusList
+    });
+  } catch (error) {
+    console.error('Bulk sync status error', error);
+    res.status(500).json({ message: 'Could not load bulk sync status' });
+  }
+};
+
 module.exports = {
   createActivationCode,
   enrollDevice,
   getSyncStatus,
+  getBulkSyncStatus,
   requestRemoteSync,
   requestRemoteSyncForAll,
   getPendingSyncRequest,

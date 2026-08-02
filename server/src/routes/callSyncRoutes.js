@@ -5,6 +5,7 @@ const {
   createActivationCode,
   enrollDevice,
   getSyncStatus,
+  getBulkSyncStatus,
   requestRemoteSync,
   requestRemoteSyncForAll,
   getPendingSyncRequest,
@@ -15,6 +16,7 @@ const {
 const router = express.Router();
 router.post('/activation-codes', protect, createActivationCode);
 router.get('/status', protect, getSyncStatus);
+router.get('/status-all', protect, getBulkSyncStatus);
 router.post('/request-sync', protect, requestRemoteSync);
 router.post('/request-sync-all', protect, requestRemoteSyncForAll);
 router.post('/enroll', enrollDevice);

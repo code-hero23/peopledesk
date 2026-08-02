@@ -97,7 +97,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
         Calendar next = (Calendar) now.clone();
         next.set(Calendar.SECOND, 0);
         next.set(Calendar.MILLISECOND, 0);
-        next.add(Calendar.MINUTE, 30);
+        next.add(Calendar.MINUTE, 15);
 
         int nextMinutes = next.get(Calendar.HOUR_OF_DAY) * 60 + next.get(Calendar.MINUTE);
         if (nextMinutes > WINDOW_END_MINUTES) {

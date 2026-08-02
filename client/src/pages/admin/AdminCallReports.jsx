@@ -35,6 +35,9 @@ const AdminCallReports = () => {
     const [isEmailing, setIsEmailing] = useState(false);
     const [isMounted, setIsMounted] = useState(false);
     const [isRequestingAllSync, setIsRequestingAllSync] = useState(false);
+    const [showSyncModal, setShowSyncModal] = useState(false);
+    const [syncStatusData, setSyncStatusData] = useState(null);
+    const [isPollingSync, setIsPollingSync] = useState(false);
 
     useEffect(() => {
         setIsMounted(true);
@@ -52,9 +55,41 @@ const AdminCallReports = () => {
         dispatch(getCallStats({ ...dateRange }));
     };
 
+    const pollBulkStatus = async (token, baseUrl, startTime) => {
+        try {
+            const statusRes = await axios.get(`${baseUrl}/call-sync/status-all`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            const data = statusRes.data;
+            setSyncStatusData(data);
+
+            const elapsedTime = Date.now() - startTime;
+            if (data.pendingDevices === 0 || elapsedTime >= 30000) {
+                setIsPollingSync(false);
+                setIsRequestingAllSync(false);
+                dispatch(getCallStats({ ...dateRange }));
+                if (data.pendingDevices === 0) {
+                    toast.success('All employee devices synced call logs successfully!');
+                } else {
+                    toast.info(`Sync complete. ${data.syncedDevices}/${data.totalDevices} devices synced.`);
+                }
+            } else {
+                setTimeout(() => pollBulkStatus(token, baseUrl, startTime), 2000);
+            }
+        } catch (err) {
+            console.error('Failed polling bulk sync status:', err);
+            setIsPollingSync(false);
+            setIsRequestingAllSync(false);
+        }
+    };
+
     const handleRequestAllSync = async () => {
         try {
             setIsRequestingAllSync(true);
+            setShowSyncModal(true);
+            setSyncStatusData(null);
+            setIsPollingSync(true);
+
             const token = JSON.parse(localStorage.getItem('user')).token;
             const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
 
@@ -62,15 +97,14 @@ const AdminCallReports = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            toast.success(response.data.message || 'Sync request sent to all enrolled devices');
-            window.setTimeout(() => {
-                dispatch(getCallStats({ ...dateRange }));
-            }, 12000);
+            toast.info(response.data.message || 'Sync trigger sent to all employee devices');
+            const startTime = Date.now();
+            pollBulkStatus(token, baseUrl, startTime);
         } catch (error) {
             console.error('Bulk sync request failed:', error);
             toast.error(error.response?.data?.message || 'Failed to request sync for all employees');
-        } finally {
             setIsRequestingAllSync(false);
+            setIsPollingSync(false);
         }
     };
 
@@ -834,6 +868,108 @@ const AdminCallReports = () => {
                     </div>
                 </motion.div>
             )}
+
+            {/* Live Sync Progress Modal */}
+            <AnimatePresence>
+                {showSyncModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl text-white space-y-6"
+                        >
+                            <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-2xl border border-cyan-500/20">
+                                        <Smartphone className={isPollingSync ? 'animate-pulse' : ''} size={24} />
+                                    </div>
+                                    <div>
+                                        <h3 className="text-lg font-black tracking-tight">Live Employee Call Log Sync</h3>
+                                        <p className="text-xs text-slate-400">Triggering and receiving call logs from all employee phones</p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setShowSyncModal(false)}
+                                    className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
+                                >
+                                    <CloseIcon size={20} />
+                                </button>
+                            </div>
+
+                            {/* Progress Section */}
+                            <div className="space-y-3 bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80">
+                                <div className="flex justify-between items-center text-xs font-bold">
+                                    <span className="text-slate-300">
+                                        {isPollingSync ? 'Syncing call logs from devices...' : 'Sync Completed'}
+                                    </span>
+                                    <span className="text-cyan-400 font-mono">
+                                        {syncStatusData ? `${syncStatusData.syncedDevices} / ${syncStatusData.totalDevices} Synced` : 'Connecting...'}
+                                    </span>
+                                </div>
+
+                                <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5">
+                                    <motion.div
+                                        className="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                                        style={{
+                                            width: syncStatusData && syncStatusData.totalDevices > 0
+                                                ? `${Math.round((syncStatusData.syncedDevices / syncStatusData.totalDevices) * 100)}%`
+                                                : '5%'
+                                        }}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Devices List */}
+                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                                {syncStatusData?.devices?.map((dev) => (
+                                    <div key={dev.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-800 text-xs">
+                                        <div className="flex items-center gap-3">
+                                            <User size={16} className="text-slate-400" />
+                                            <div>
+                                                <div className="font-bold text-white">{dev.user?.name || 'Employee'}</div>
+                                                <div className="text-[10px] text-slate-400">{dev.deviceName || 'Android Device'} • SIM {dev.officialSim}</div>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            {dev.requestPending ? (
+                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
+                                                    <RefreshCw size={10} className="animate-spin" /> Syncing...
+                                                </span>
+                                            ) : (
+                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                                    ✓ Synced
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+                                ))}
+
+                                {(!syncStatusData || syncStatusData.devices?.length === 0) && (
+                                    <div className="text-center py-6 text-slate-500 text-xs">
+                                        <RefreshCw size={18} className="animate-spin mx-auto mb-2 opacity-50" />
+                                        Waiting for status update from employee devices...
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="flex justify-end pt-2">
+                                <button
+                                    onClick={() => setShowSyncModal(false)}
+                                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
+                                >
+                                    Close & View Reports
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
 };

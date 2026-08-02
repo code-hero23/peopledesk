@@ -369,6 +369,7 @@ public class CallLogPlugin extends Plugin {
                 syncRequest
             );
             CallSyncAlarmReceiver.schedule(getContext());
+            ForegroundSyncService.startService(getContext());
 
             Log.d("CallLogPlugin", "Background sync scheduled (REPLACE policy)");
             if (call != null) call.resolve();
