@@ -241,8 +241,9 @@ const AdminCallReports = () => {
                 logs: []
             };
         } else {
-            // Update lastSync to the most recent one if multiple log records
-            if (new Date(log.lastSync) > new Date(acc[key].lastSync)) {
+            const logTime = log.lastSync ? new Date(log.lastSync).getTime() : 0;
+            const currTime = acc[key].lastSync ? new Date(acc[key].lastSync).getTime() : 0;
+            if (logTime > currTime) {
                 acc[key].lastSync = log.lastSync;
             }
         }

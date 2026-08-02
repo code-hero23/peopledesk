@@ -649,6 +649,7 @@ const getAllCallStats = async (req, res) => {
                         callSyncDevices: {
                             where: { active: true },
                             select: { lastSuccessAt: true },
+                            orderBy: { lastSuccessAt: 'desc' },
                             take: 1
                         }
                     }
