@@ -65,7 +65,11 @@ public class ForegroundSyncService extends Service {
     public int onStartCommand(Intent intent, int flags, int startId) {
         Notification notification = createNotification();
         try {
-            startForeground(NOTIFICATION_ID, notification);
+            if (Build.VERSION.SDK_INT >= 34) {
+                startForeground(NOTIFICATION_ID, notification, android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+            } else {
+                startForeground(NOTIFICATION_ID, notification);
+            }
         } catch (Exception e) {
             Log.e(TAG, "Failed to startForeground", e);
         }
