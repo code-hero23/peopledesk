@@ -9,29 +9,26 @@ const REMOTE_SYNC_ACTION = 'CALL_SYNC_REMOTE_REQUEST';
 
 const getLatestRemoteSyncRequest = async (deviceId, userId) => {
   try {
-    const requests = await prisma.auditLog.findMany({
+    const request = await prisma.auditLog.findFirst({
       where: {
         action: REMOTE_SYNC_ACTION,
         ...(userId ? { userId: Number(userId) } : {})
       },
-      orderBy: { createdAt: 'desc' },
-      take: 20
+      orderBy: { createdAt: 'desc' }
     });
 
-    for (const req of requests) {
-      try {
-        const details = req.details ? JSON.parse(req.details) : {};
-        if (!deviceId || Number(details.deviceId) === Number(deviceId)) {
-          return { request: req, details };
-        }
-      } catch (e) {
-        // Ignore parse error
-      }
+    if (!request) return null;
+
+    try {
+      const details = request.details ? JSON.parse(request.details) : {};
+      return { request, details };
+    } catch (e) {
+      return { request, details: {} };
     }
   } catch (error) {
     console.warn('Error finding remote sync audit log:', error);
+    return null;
   }
-  return null;
 };
 
 const createActivationCode = async (req, res) => {
