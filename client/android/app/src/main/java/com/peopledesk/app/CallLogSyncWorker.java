@@ -30,17 +30,17 @@ public class CallLogSyncWorker extends Worker {
     private static final String TAG = "CallLogSyncWorker";
     private static final String PREFS_NAME = "CapacitorStorage";
 
-    private String normalizePhoneNumber(String value) {
+    private static String normalizePhoneNumber(String value) {
         if (value == null) return "";
         return value.replaceAll("\\D", "");
     }
 
-    private String getOptionalColumn(Cursor cursor, String columnName) {
+    private static String getOptionalColumn(Cursor cursor, String columnName) {
         int index = cursor.getColumnIndex(columnName);
         return index != -1 ? cursor.getString(index) : null;
     }
 
-    private String normalizeSimSlotValue(String simSlot, String simId) {
+    private static String normalizeSimSlotValue(String simSlot, String simId) {
         if (simSlot != null && !simSlot.trim().isEmpty() && !"0".equals(simSlot.trim())) {
             return simSlot.trim();
         }
@@ -58,7 +58,7 @@ public class CallLogSyncWorker extends Worker {
         return simSlot != null && !simSlot.trim().isEmpty() ? simSlot.trim() : "0";
     }
 
-    private void registerLabelSlotMapping(String label, String slot, Map<String, String> labelToSlotMap, Map<String, Integer> labelFrequencyMap, Set<String> seenKeys) {
+    private static void registerLabelSlotMapping(String label, String slot, Map<String, String> labelToSlotMap, Map<String, Integer> labelFrequencyMap, Set<String> seenKeys) {
         if (label == null) return;
         String key = label.trim().toLowerCase();
         if (key.isEmpty() || seenKeys.contains(key)) return;
@@ -175,7 +175,7 @@ public class CallLogSyncWorker extends Worker {
                 Map<String, Integer> labelFrequencyMap = new HashMap<>();
                 Map<String, String> numberToSlotMap = new HashMap<>();
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
-                    SubscriptionManager sm = (SubscriptionManager) getApplicationContext().getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                    SubscriptionManager sm = (SubscriptionManager) context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
                         List<SubscriptionInfo> activeList = sm.getActiveSubscriptionInfoList();
                         if (activeList != null) {
@@ -294,7 +294,7 @@ public class CallLogSyncWorker extends Worker {
         return callLogs;
     }
 
-    private String getCallType(int type) {
+    private static String getCallType(int type) {
         switch (type) {
             case CallLog.Calls.INCOMING_TYPE: return "INCOMING";
             case CallLog.Calls.OUTGOING_TYPE: return "OUTGOING";
