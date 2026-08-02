@@ -7,21 +7,31 @@ const makeCode = () => crypto.randomBytes(5).toString('hex').toUpperCase();
 const makeSecret = () => crypto.randomBytes(32).toString('base64url');
 const REMOTE_SYNC_ACTION = 'CALL_SYNC_REMOTE_REQUEST';
 
-const getLatestRemoteSyncRequest = async (deviceId) => {
-  const request = await prisma.auditLog.findFirst({
-    where: { action: REMOTE_SYNC_ACTION, details: { contains: `"deviceId":${deviceId},` } },
-    orderBy: { createdAt: 'desc' }
-  });
-
-  if (!request) return null;
-
+const getLatestRemoteSyncRequest = async (deviceId, userId) => {
   try {
-    const details = request.details ? JSON.parse(request.details) : {};
-    return { request, details };
+    const requests = await prisma.auditLog.findMany({
+      where: {
+        action: REMOTE_SYNC_ACTION,
+        ...(userId ? { userId: Number(userId) } : {})
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 20
+    });
+
+    for (const req of requests) {
+      try {
+        const details = req.details ? JSON.parse(req.details) : {};
+        if (!deviceId || Number(details.deviceId) === Number(deviceId)) {
+          return { request: req, details };
+        }
+      } catch (e) {
+        // Ignore parse error
+      }
+    }
   } catch (error) {
-    console.warn('Could not parse remote sync audit log details', error);
-    return { request, details: {} };
+    console.warn('Error finding remote sync audit log:', error);
   }
+  return null;
 };
 
 const createActivationCode = async (req, res) => {
@@ -75,7 +85,7 @@ const getSyncStatus = async (req, res) => {
     });
     if (!device) return res.json({ enrolled: false, device: null });
 
-    const latestRequest = await getLatestRemoteSyncRequest(device.id);
+    const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
     const requestedAt = latestRequest?.request?.createdAt || null;
     const requestPending = Boolean(
       requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > device.lastSuccessAt.getTime())
@@ -192,7 +202,7 @@ const getPendingSyncRequest = async (req, res) => {
     const device = req.callSyncDevice;
     if (!device) return res.status(401).json({ message: 'Device is not active' });
 
-    const latestRequest = await getLatestRemoteSyncRequest(device.id);
+    const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
     const requestedAt = latestRequest?.request?.createdAt || null;
     const pending = Boolean(
       requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > new Date(device.lastSuccessAt).getTime())
@@ -227,9 +237,13 @@ const recordDeviceAttempt = async (req, res, next) => {
   try {
     await prisma.callSyncDevice.update({ where: { id: device.id }, data: { lastAttemptAt: new Date(), lastError: null } });
     const originalJson = res.json.bind(res);
-    res.json = (body) => {
+    res.json = async function (body) {
       if (res.statusCode >= 200 && res.statusCode < 300) {
-        prisma.callSyncDevice.update({ where: { id: device.id }, data: { lastSuccessAt: new Date(), lastError: null } }).catch(console.error);
+        try {
+          await prisma.callSyncDevice.update({ where: { id: device.id }, data: { lastSuccessAt: new Date(), lastError: null } });
+        } catch (err) {
+          console.error('Error updating lastSuccessAt:', err);
+        }
       }
       return originalJson(body);
     };
@@ -271,7 +285,7 @@ const getBulkSyncStatus = async (req, res) => {
 
     const statusList = await Promise.all(
       devices.map(async (device) => {
-        const latestRequest = await getLatestRemoteSyncRequest(device.id);
+        const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
         const requestedAt = latestRequest?.request?.createdAt || null;
         const requestPending = Boolean(
           requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > new Date(device.lastSuccessAt).getTime())
