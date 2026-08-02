@@ -642,7 +642,16 @@ const getAllCallStats = async (req, res) => {
             },
             include: {
                 user: {
-                    select: { name: true, id: true, designation: true }
+                    select: {
+                        name: true,
+                        id: true,
+                        designation: true,
+                        callSyncDevices: {
+                            where: { active: true },
+                            select: { lastSuccessAt: true },
+                            take: 1
+                        }
+                    }
                 }
             }
         });
@@ -651,16 +660,9 @@ const getAllCallStats = async (req, res) => {
         const stats = callLogs.map(log => {
             let filteredCalls = log.calls || [];
 
-            // 1. Filter by DATE (to remove вчерашние logs synced today)
             // 1. Filter by DATE (to remove昨日 logs synced today) - IST Aware
             if (startDate && endDate) {
-                // Ensure absolute IST boundaries regardless of server locale
-                // IST = UTC+5.5 -> Start of day is UTC 18:30 yesterday
                 const startOfIstDay = (dtStr) => {
-                    const d = new Date(dtStr + 'T00:00:00');
-                    // If server is UTC, this is 00:00 UTC. If server is IST, this is 00:00 IST.
-                    // We want 00:00 IST = 18:30 UTC yesterday.
-                    // To be safe, we'll parse as ISO and adjust.
                     const utcDate = new Date(dtStr + 'T00:00:00Z'); // Force UTC parse
                     return utcDate.getTime() - (5.5 * 60 * 60 * 1000);
                 };
@@ -670,7 +672,6 @@ const getAllCallStats = async (req, res) => {
 
                 filteredCalls = filteredCalls.filter(c => {
                     if (!c.date) return false;
-                    // Robust parsing: handles both numeric timestamps and ISO strings
                     const timestamp = !isNaN(c.date) ? parseInt(c.date) : new Date(c.date).getTime();
                     return timestamp >= s && timestamp <= e;
                 });
@@ -690,10 +691,15 @@ const getAllCallStats = async (req, res) => {
                 });
             }
 
+            const deviceLastSuccess = log.user.callSyncDevices?.[0]?.lastSuccessAt;
+            const effectiveLastSync = deviceLastSuccess && new Date(deviceLastSuccess) > new Date(log.updatedAt)
+                ? deviceLastSuccess
+                : log.updatedAt;
+
             return {
                 id: log.id,
                 date: log.date,
-                lastSync: log.updatedAt,
+                lastSync: effectiveLastSync,
                 user: log.user.name,
                 designation: log.user.designation,
                 empId: `EMP-${log.user.id}`,
