@@ -78,86 +78,82 @@ public class CallLogSyncWorker extends Worker {
         super(context, workerParams);
     }
 
-    private String getPreferenceValue(SharedPreferences prefs, String key, String defaultValue) {
-        if (prefs.contains(key)) return prefs.getString(key, defaultValue);
-        if (prefs.contains("_CapacitorStorage_" + key)) return prefs.getString("_CapacitorStorage_" + key, defaultValue);
-        if (prefs.contains("CapacitorStorage." + key)) return prefs.getString("CapacitorStorage." + key, defaultValue);
+    public static String readPreference(Context context, String key, String defaultValue) {
+        SharedPreferences capPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (capPrefs.contains(key)) return capPrefs.getString(key, defaultValue);
+        if (capPrefs.contains("_CapacitorStorage_" + key)) return capPrefs.getString("_CapacitorStorage_" + key, defaultValue);
+        if (capPrefs.contains("CapacitorStorage." + key)) return capPrefs.getString("CapacitorStorage." + key, defaultValue);
+
+        try {
+            SharedPreferences defPrefs = android.preference.PreferenceManager.getDefaultSharedPreferences(context);
+            if (defPrefs.contains(key)) return defPrefs.getString(key, defaultValue);
+            if (defPrefs.contains("_CapacitorStorage_" + key)) return defPrefs.getString("_CapacitorStorage_" + key, defaultValue);
+        } catch (Exception ignored) {}
+
         return defaultValue;
     }
 
     @NonNull
     @Override
     public Result doWork() {
-        Log.d(TAG, "Starting automatic call log sync...");
-        
-        try {
-            SharedPreferences prefs = getApplicationContext().getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-            String apiUrl = getPreferenceValue(prefs, "apiUrl", null);
-            String deviceToken = getPreferenceValue(prefs, "call_sync_device_token", null);
-            String officialSim = getPreferenceValue(prefs, "cre_official_sim", null);
-            String simLabelsJson = getPreferenceValue(prefs, "sim_labels", "{}");
+        boolean forceSync = getInputData().getBoolean("forceSync", false);
+        boolean success = performSync(getApplicationContext(), forceSync);
+        return success ? Result.success() : Result.retry();
+    }
 
-            if (apiUrl == null) {
-                Log.e(TAG, "Sync failed: apiUrl not found in Preferences");
-                return Result.success();
-            }
+    public static boolean performSync(Context context, boolean forceSync) {
+        Log.d(TAG, "Starting automatic call log sync...");
+        try {
+            String apiUrl = readPreference(context, "apiUrl", "https://peopledesk.orbixdesigns.com/api");
+            String deviceToken = readPreference(context, "call_sync_device_token", null);
+            String officialSim = readPreference(context, "cre_official_sim", "1");
+            String simLabelsJson = readPreference(context, "sim_labels", "{}");
 
             if (deviceToken == null) {
-                Log.e(TAG, "Sync skipped: APK has not been activated");
-                return Result.success();
+                Log.e(TAG, "Sync skipped: APK has not been activated (deviceToken null)");
+                return true;
             }
 
-            if (officialSim == null) {
-                Log.w(TAG, "Sync skipped: official SIM not selected yet");
-                return Result.success();
-            }
-
-            boolean forceSync = getInputData().getBoolean("forceSync", false);
             boolean remoteSyncRequested = hasPendingRemoteSyncRequest(apiUrl, deviceToken);
             if (!forceSync && !remoteSyncRequested && !isWithinWorkWindow()) {
                 Log.d(TAG, "Sync skipped outside 10:30-19:00 IST work window");
-                return Result.success();
+                return true;
             }
 
-            if (ContextCompat   .checkSelfPermission(getApplicationContext(), android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
+            if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG, "Sync skipped: READ_CALL_LOG permission is not granted");
-                return Result.success();
+                return false;
             }
 
             Log.d(TAG, "Syncing device call logs for official SIM: " + officialSim + " | forceSync=" + forceSync + " | remoteRequest=" + remoteSyncRequested);
 
-            // Fetch logs
-            JSONArray logs = fetchLogs(officialSim, simLabelsJson);
-
-            // Send to server
+            JSONArray logs = fetchLogs(context, officialSim, simLabelsJson);
             boolean success = sendLogs(apiUrl, deviceToken, officialSim, logs);
             if (success) {
                 Log.d(TAG, "Successfully synced " + logs.length() + " logs");
-                return Result.success();
+                return true;
             } else {
                 Log.e(TAG, "Failed to send logs to server");
-                return Result.retry();
+                return false;
             }
-
         } catch (Exception e) {
             Log.e(TAG, "Critical error during sync", e);
-            return Result.failure();
+            return false;
         }
     }
 
-    private boolean isWithinWorkWindow() {
+    private static boolean isWithinWorkWindow() {
         Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
         int minutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
         return minutes >= (10 * 60 + 30) && minutes <= (19 * 60);
     }
 
-    private JSONArray fetchLogs(String officialSim, String simLabelsJson) {
+    private static JSONArray fetchLogs(Context context, String officialSim, String simLabelsJson) {
         JSONArray callLogs = new JSONArray();
         try {
-            // Parse sim labels for slot mapping fallback if needed
             JSONObject simLabels = new JSONObject(simLabelsJson);
             
-            Cursor cursor = getApplicationContext().getContentResolver().query(
+            Cursor cursor = context.getContentResolver().query(
                 CallLog.Calls.CONTENT_URI,
                 null, null, null,
                 CallLog.Calls.DATE + " DESC"
@@ -308,7 +304,7 @@ public class CallLogSyncWorker extends Worker {
         }
     }
 
-    private boolean sendLogs(String baseUrl, String deviceToken, String officialSim, JSONArray logs) {
+    private static boolean sendLogs(String baseUrl, String deviceToken, String officialSim, JSONArray logs) {
         try {
             String fullUrl = baseUrl;
             if (!fullUrl.endsWith("/")) fullUrl += "/";
@@ -342,7 +338,7 @@ public class CallLogSyncWorker extends Worker {
         }
     }
 
-    private boolean hasPendingRemoteSyncRequest(String baseUrl, String deviceToken) {
+    private static boolean hasPendingRemoteSyncRequest(String baseUrl, String deviceToken) {
         try {
             String fullUrl = baseUrl;
             if (!fullUrl.endsWith("/")) fullUrl += "/";

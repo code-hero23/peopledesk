@@ -90,14 +90,17 @@ public class ForegroundSyncService extends Service {
         super.onDestroy();
     }
 
+    private final java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+
     private void triggerSyncWorker() {
         try {
-            androidx.work.OneTimeWorkRequest request = new androidx.work.OneTimeWorkRequest.Builder(CallLogSyncWorker.class)
-                .setConstraints(new androidx.work.Constraints.Builder()
-                    .setRequiredNetworkType(androidx.work.NetworkType.CONNECTED)
-                    .build())
-                .build();
-            androidx.work.WorkManager.getInstance(getApplicationContext()).enqueue(request);
+            executor.execute(() -> {
+                try {
+                    CallLogSyncWorker.performSync(getApplicationContext(), false);
+                } catch (Exception e) {
+                    Log.e(TAG, "Direct sync execution error", e);
+                }
+            });
         } catch (Exception e) {
             Log.e(TAG, "Failed to trigger sync worker from service", e);
         }
