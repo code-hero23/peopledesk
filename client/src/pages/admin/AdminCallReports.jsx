@@ -135,6 +135,20 @@ const AdminCallReports = () => {
         }
     };
 
+    const handleRequestSingleDeviceSync = async (userId, userName) => {
+        try {
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+            await axios.post(`${baseUrl}/call-sync/request-sync`, { userId }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            toast.success(`Sync request re-sent to ${userName || 'employee'}'s device`);
+            fetchBulkStatusOnce();
+        } catch (err) {
+            toast.error(err.response?.data?.message || `Failed requesting sync for ${userName || 'employee'}`);
+        }
+    };
+
     // Clean up timer when modal closes
     useEffect(() => {
         if (!showSyncModal && pollTimeoutRef.current) {
@@ -989,10 +1003,18 @@ const AdminCallReports = () => {
                                 </div>
                             </div>
 
+                            {/* Info Helper Banner */}
+                            <div className="bg-cyan-950/30 border border-cyan-500/20 p-3 rounded-2xl flex items-start gap-2.5 text-[11px] text-cyan-200/90 leading-relaxed">
+                                <Info size={16} className="text-cyan-400 shrink-0 mt-0.5" />
+                                <div>
+                                    <span className="font-semibold text-white">How Background Sync Works:</span> Remote sync requests are active on the server. Employee Android phones check in automatically when connected to the network. Devices that haven't checked in yet show <span className="text-amber-400 font-semibold">Pending Check-in</span> and will sync when active.
+                                </div>
+                            </div>
+
                             {/* Devices List */}
                             <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
                                 {syncStatusData?.devices?.map((dev) => (
-                                    <div key={dev.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-800 text-xs">
+                                    <div key={dev.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-800 text-xs hover:border-slate-700 transition-all">
                                         <div className="flex items-center gap-3">
                                             <User size={16} className="text-slate-400" />
                                             <div>
@@ -1007,16 +1029,30 @@ const AdminCallReports = () => {
                                                 </div>
                                             </div>
                                         </div>
-                                        <div>
+                                        <div className="flex items-center gap-2">
                                             {dev.requestPending ? (
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
-                                                    <RefreshCw size={10} className="animate-spin" /> Syncing...
-                                                </span>
+                                                isPollingSync ? (
+                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
+                                                        <RefreshCw size={10} className="animate-spin" /> Syncing...
+                                                    </span>
+                                                ) : (
+                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5" title="Device has an active request and will sync on next check-in">
+                                                        <Clock size={10} /> Pending Check-in
+                                                    </span>
+                                                )
                                             ) : (
                                                 <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                                                     ✓ Synced
                                                 </span>
                                             )}
+
+                                            <button
+                                                onClick={() => handleRequestSingleDeviceSync(dev.user?.id, dev.user?.name)}
+                                                title={`Re-trigger sync signal for ${dev.user?.name || 'employee'}`}
+                                                className="p-1.5 text-slate-400 hover:text-cyan-400 rounded-lg hover:bg-slate-700/60 transition-colors"
+                                            >
+                                                <RefreshCw size={12} />
+                                            </button>
                                         </div>
                                     </div>
                                 ))}
