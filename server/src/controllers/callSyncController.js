@@ -85,7 +85,7 @@ const getSyncStatus = async (req, res) => {
     const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
     const requestedAt = latestRequest?.request?.createdAt || null;
     const requestPending = Boolean(
-      requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > device.lastSuccessAt.getTime())
+      requestedAt && (!device.lastSuccessAt || new Date(requestedAt).getTime() > new Date(device.lastSuccessAt).getTime())
     );
 
     res.json({
@@ -202,7 +202,7 @@ const getPendingSyncRequest = async (req, res) => {
     const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
     const requestedAt = latestRequest?.request?.createdAt || null;
     const pending = Boolean(
-      requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > new Date(device.lastSuccessAt).getTime())
+      requestedAt && (!device.lastSuccessAt || new Date(requestedAt).getTime() > new Date(device.lastSuccessAt).getTime())
     );
 
     res.json({
@@ -285,7 +285,7 @@ const getBulkSyncStatus = async (req, res) => {
         const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
         const requestedAt = latestRequest?.request?.createdAt || null;
         const requestPending = Boolean(
-          requestedAt && (!device.lastSuccessAt || requestedAt.getTime() > new Date(device.lastSuccessAt).getTime())
+          requestedAt && (!device.lastSuccessAt || new Date(requestedAt).getTime() > new Date(device.lastSuccessAt).getTime())
         );
 
         return {
