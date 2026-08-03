@@ -13,7 +13,7 @@ const HourlyAlarm = () => {
     // Only for AE
     const isAE = user?.designation === 'AE';
 
-    const VAPID_PUBLIC_KEY = "BOP1fHGa34CnDiQuA8NSVd4DvmSLPrvphs-qMgJF2l75J0yOwiSHdYwTfESjPYGTy_Kkk8jTAjoxG4uXMvOsu4Y";
+    const vapidPublicKey = import.meta.env.VITE_VAPID_PUBLIC_KEY;
 
     const urlBase64ToUint8Array = (base64String) => {
         const padding = '='.repeat((4 - base64String.length % 4) % 4);
@@ -29,6 +29,11 @@ const HourlyAlarm = () => {
     const subscribeToPush = async () => {
         if (!('serviceWorker' in navigator) || !('PushManager' in window)) {
             console.warn('Push notifications not supported');
+            return;
+        }
+
+        if (!vapidPublicKey) {
+            console.warn('Push notifications not configured: missing VITE_VAPID_PUBLIC_KEY');
             return;
         }
 
@@ -48,12 +53,13 @@ const HourlyAlarm = () => {
 
                 subscription = await registration.pushManager.subscribe({
                     userVisibleOnly: true,
-                    applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+                    applicationServerKey: urlBase64ToUint8Array(vapidPublicKey)
                 });
             }
 
             // Send subscription to backend
-            const response = await fetch(`${import.meta.env.VITE_API_URL || ''}/api/notifications/subscribe`, {
+            const apiBaseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const response = await fetch(`${apiBaseUrl}/notifications/subscribe`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

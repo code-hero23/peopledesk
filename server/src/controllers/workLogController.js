@@ -415,7 +415,7 @@ const getMyWorkLogs = async (req, res) => {
 // @route   PUT /api/worklogs/sync-calls
 // @access  Private (CRE)
 const syncCallLogs = async (req, res) => {
-    const { logs, calls, date, syncDate, simFilter } = req.body;
+    const { logs, calls, date, syncDate, simFilter, replaceExistingForSim } = req.body;
     const incomingData = calls || logs || [];
 
     try {
@@ -532,6 +532,16 @@ const syncCallLogs = async (req, res) => {
 
             let consolidatedLogs = [];
             if (existingCallLog) {
+                const shouldReplaceExistingForSim =
+                    Boolean(replaceExistingForSim) &&
+                    simFilter &&
+                    String(simFilter) !== '0' &&
+                    String(simFilter) !== 'ALL';
+
+                if (shouldReplaceExistingForSim) {
+                    consolidatedLogs = dayLogs.map(normalizeAcceptedLog);
+                    console.log(`[Sync] User ${userId} for ${dateStr}: Replaced existing SIM ${simFilter} logs with ${consolidatedLogs.length} freshly filtered logs.`);
+                } else {
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
                 if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
                     consolidatedLogs = consolidatedLogs
@@ -551,6 +561,7 @@ const syncCallLogs = async (req, res) => {
                     }
                 });
                 console.log(`[Sync] User ${userId} for ${dateStr}: Found ${existingCallLog.calls.length} existing, added ${addedCount} new logs.`);
+                }
             } else {
                 consolidatedLogs = dayLogs;
                 console.log(`[Sync] User ${userId} for ${dateStr}: Creating new record with ${dayLogs.length} logs.`);

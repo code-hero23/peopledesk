@@ -23,6 +23,7 @@ router.post('/enroll', enrollDevice);
 router.get('/pending', protectDevice, getPendingSyncRequest);
 router.put('/sync', protectDevice, recordDeviceAttempt, (req, res, next) => {
   req.body.simFilter = req.callSyncDevice.officialSim;
+  req.body.replaceExistingForSim = true;
   syncCallLogs(req, res, next);
 });
 module.exports = router;

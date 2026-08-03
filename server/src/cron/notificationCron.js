@@ -2,15 +2,16 @@ const cron = require('node-cron');
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const webpush = require('web-push');
-
-// Configure web-push
-webpush.setVapidDetails(
-    process.env.VAPID_SUBJECT,
-    process.env.VAPID_PUBLIC_KEY,
-    process.env.VAPID_PRIVATE_KEY
-);
+const { configureWebPush } = require('../utils/vapidConfig');
 
 const initNotificationCron = () => {
+    const vapidConfig = configureWebPush();
+
+    if (!vapidConfig.ok) {
+        console.warn(`Push notifications disabled: ${vapidConfig.error}`);
+        return;
+    }
+
     // Schedule task: Every hour at 30 minutes past the hour
     // Window: 10:30 AM to 7:30 PM (10:30 to 19:30)
     cron.schedule('30 10-19 * * *', async () => {
