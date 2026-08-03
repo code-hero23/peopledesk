@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCallStats } from '../../features/admin/adminSlice';
@@ -38,6 +38,8 @@ const AdminCallReports = () => {
     const [showSyncModal, setShowSyncModal] = useState(false);
     const [syncStatusData, setSyncStatusData] = useState(null);
     const [isPollingSync, setIsPollingSync] = useState(false);
+    const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+    const pollTimeoutRef = useRef(null);
 
     useEffect(() => {
         setIsMounted(true);
@@ -55,6 +57,25 @@ const AdminCallReports = () => {
         dispatch(getCallStats({ ...dateRange }));
     };
 
+    const fetchBulkStatusOnce = async () => {
+        try {
+            setIsRefreshingStatus(true);
+            const token = JSON.parse(localStorage.getItem('user')).token;
+            const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+            const statusRes = await axios.get(`${baseUrl}/call-sync/status-all`, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setSyncStatusData(statusRes.data);
+            dispatch(getCallStats({ ...dateRange }));
+            return statusRes.data;
+        } catch (err) {
+            console.error('Failed fetching bulk sync status:', err);
+            return null;
+        } finally {
+            setIsRefreshingStatus(false);
+        }
+    };
+
     const pollBulkStatus = async (token, baseUrl, startTime) => {
         try {
             const statusRes = await axios.get(`${baseUrl}/call-sync/status-all`, {
@@ -64,17 +85,19 @@ const AdminCallReports = () => {
             setSyncStatusData(data);
 
             const elapsedTime = Date.now() - startTime;
-            if (data.pendingDevices === 0 || elapsedTime >= 30000) {
+            // Employee Android devices check for sync requests every 60s.
+            // Poll for up to 3 minutes (180,000ms) or until all devices reply.
+            if (data.pendingDevices === 0 || elapsedTime >= 180000) {
                 setIsPollingSync(false);
                 setIsRequestingAllSync(false);
                 dispatch(getCallStats({ ...dateRange }));
                 if (data.pendingDevices === 0) {
                     toast.success('All employee devices synced call logs successfully!');
                 } else {
-                    toast.info(`Sync complete. ${data.syncedDevices}/${data.totalDevices} devices synced.`);
+                    toast.info(`Sync polling cycle ended. ${data.syncedDevices}/${data.totalDevices} devices synced so far.`);
                 }
             } else {
-                setTimeout(() => pollBulkStatus(token, baseUrl, startTime), 2000);
+                pollTimeoutRef.current = setTimeout(() => pollBulkStatus(token, baseUrl, startTime), 3000);
             }
         } catch (err) {
             console.error('Failed polling bulk sync status:', err);
@@ -85,6 +108,10 @@ const AdminCallReports = () => {
 
     const handleRequestAllSync = async () => {
         try {
+            if (pollTimeoutRef.current) {
+                clearTimeout(pollTimeoutRef.current);
+                pollTimeoutRef.current = null;
+            }
             setIsRequestingAllSync(true);
             setShowSyncModal(true);
             setSyncStatusData(null);
@@ -107,6 +134,16 @@ const AdminCallReports = () => {
             setIsPollingSync(false);
         }
     };
+
+    // Clean up timer when modal closes
+    useEffect(() => {
+        if (!showSyncModal && pollTimeoutRef.current) {
+            clearTimeout(pollTimeoutRef.current);
+            pollTimeoutRef.current = null;
+            setIsPollingSync(false);
+            setIsRequestingAllSync(false);
+        }
+    }, [showSyncModal]);
 
     // Auto-sync drill-down data when stats update
     useEffect(() => {
@@ -887,12 +924,30 @@ const AdminCallReports = () => {
                         >
                             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-3 bg-cyan-500/10 text-cyan-400 rounded-2xl border border-cyan-500/20">
+                                    <div className={`p-3 rounded-2xl border transition-all ${
+                                        isPollingSync 
+                                            ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' 
+                                            : syncStatusData && syncStatusData.pendingDevices === 0 
+                                            ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
+                                            : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
+                                    }`}>
                                         <Smartphone className={isPollingSync ? 'animate-pulse' : ''} size={24} />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-black tracking-tight">Live Employee Call Log Sync</h3>
-                                        <p className="text-xs text-slate-400">Triggering and receiving call logs from all employee phones</p>
+                                        <h3 className="text-lg font-black tracking-tight">
+                                            {isPollingSync 
+                                                ? 'Live Employee Call Log Sync' 
+                                                : syncStatusData && syncStatusData.pendingDevices === 0 
+                                                ? '✓ All Devices Synced' 
+                                                : 'Sync Request Active'}
+                                        </h3>
+                                        <p className="text-xs text-slate-400">
+                                            {isPollingSync 
+                                                ? 'Triggering and receiving call logs from all employee phones...' 
+                                                : syncStatusData && syncStatusData.pendingDevices === 0 
+                                                ? 'Call logs successfully received from all employee devices' 
+                                                : 'Sync request is active. Employee Android devices poll for requests every 1 min.'}
+                                        </p>
                                     </div>
                                 </div>
                                 <button
@@ -907,7 +962,11 @@ const AdminCallReports = () => {
                             <div className="space-y-3 bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80">
                                 <div className="flex justify-between items-center text-xs font-bold">
                                     <span className="text-slate-300">
-                                        {isPollingSync ? 'Syncing call logs from devices...' : 'Sync Completed'}
+                                        {isPollingSync 
+                                            ? 'Syncing call logs from devices...' 
+                                            : syncStatusData && syncStatusData.pendingDevices === 0 
+                                            ? '✓ All Employees Synced' 
+                                            : 'Waiting for remaining devices to check in...'}
                                     </span>
                                     <span className="text-cyan-400 font-mono">
                                         {syncStatusData ? `${syncStatusData.syncedDevices} / ${syncStatusData.totalDevices} Synced` : 'Connecting...'}
@@ -916,7 +975,11 @@ const AdminCallReports = () => {
 
                                 <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5">
                                     <motion.div
-                                        className="bg-gradient-to-r from-cyan-500 to-emerald-400 h-full rounded-full transition-all duration-500"
+                                        className={`h-full rounded-full transition-all duration-500 ${
+                                            syncStatusData && syncStatusData.pendingDevices === 0 
+                                                ? 'bg-gradient-to-r from-emerald-500 to-teal-400' 
+                                                : 'bg-gradient-to-r from-cyan-500 to-emerald-400'
+                                        }`}
                                         style={{
                                             width: syncStatusData && syncStatusData.totalDevices > 0
                                                 ? `${Math.round((syncStatusData.syncedDevices / syncStatusData.totalDevices) * 100)}%`
@@ -934,7 +997,14 @@ const AdminCallReports = () => {
                                             <User size={16} className="text-slate-400" />
                                             <div>
                                                 <div className="font-bold text-white">{dev.user?.name || 'Employee'}</div>
-                                                <div className="text-[10px] text-slate-400">{dev.deviceName || 'Android Device'} • SIM {dev.officialSim}</div>
+                                                <div className="text-[10px] text-slate-400">
+                                                    {dev.deviceName || 'Android Device'} • SIM {dev.officialSim}
+                                                    {dev.lastSuccessAt && (
+                                                        <span className="ml-2 text-slate-400 font-mono">
+                                                            (Last: {new Date(dev.lastSuccessAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
+                                                        </span>
+                                                    )}
+                                                </div>
                                             </div>
                                         </div>
                                         <div>
@@ -959,7 +1029,34 @@ const AdminCallReports = () => {
                                 )}
                             </div>
 
-                            <div className="flex justify-end pt-2">
+                            {/* Footer Actions */}
+                            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={fetchBulkStatusOnce}
+                                        disabled={isRefreshingStatus}
+                                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-semibold rounded-xl border border-slate-700/60 transition-all flex items-center gap-2"
+                                    >
+                                        <RefreshCw size={14} className={isRefreshingStatus ? 'animate-spin' : ''} />
+                                        Refresh Status
+                                    </button>
+
+                                    {!isPollingSync && syncStatusData && syncStatusData.pendingDevices > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                setIsPollingSync(true);
+                                                const token = JSON.parse(localStorage.getItem('user')).token;
+                                                const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+                                                pollBulkStatus(token, baseUrl, Date.now());
+                                            }}
+                                            className="px-3.5 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-semibold rounded-xl border border-cyan-500/30 transition-all flex items-center gap-2"
+                                        >
+                                            <Activity size={14} className="animate-pulse" />
+                                            Resume Polling
+                                        </button>
+                                    )}
+                                </div>
+
                                 <button
                                     onClick={() => setShowSyncModal(false)}
                                     className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
