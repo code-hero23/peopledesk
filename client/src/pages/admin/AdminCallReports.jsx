@@ -3,7 +3,7 @@ import axios from 'axios';
 import { useDispatch, useSelector } from 'react-redux';
 import { getCallStats } from '../../features/admin/adminSlice';
 import {
-    Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+    Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff,
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, ChevronRight, Activity, Smartphone,
     PieChart as PieChartIcon, BarChart3, TrendingUp, Users,
@@ -827,6 +827,7 @@ const AdminCallReports = () => {
                     incoming: employeeFilteredLogs.filter(c => c.type === 'INCOMING').length,
                     outgoing: employeeFilteredLogs.filter(c => c.type === 'OUTGOING').length,
                     missed: employeeFilteredLogs.filter(c => c.type === 'MISSED' || c.type === 'REJECTED').length,
+                    unattendedOutgoing: employeeFilteredLogs.filter(c => c.type === 'OUTGOING' && (c.duration === 0 || c.duration === '0' || !c.duration)).length,
                     uniqueLeads: new Set(employeeFilteredLogs.map(c => normalize(c.number))).size,
                     duration: employeeFilteredLogs.reduce((acc, c) => acc + (c.duration || 0), 0)
                 };
@@ -914,6 +915,7 @@ const AdminCallReports = () => {
                                     <MetricBox label="Incoming" value={localMetrics.incoming} color="emerald" icon={PhoneIncoming} />
                                     <MetricBox label="Outgoing" value={localMetrics.outgoing} color="sky" icon={PhoneOutgoing} />
                                     <MetricBox label="Missed" value={localMetrics.missed} color="rose" icon={PhoneMissed} />
+                                    <MetricBox label="Unattended Outgoing" value={localMetrics.unattendedOutgoing} color="amber" icon={PhoneOff} />
                                     <MetricBox label="Unique Leads" value={localMetrics.uniqueLeads} color="indigo" icon={User} />
                                     <MetricBox label="Session Time" value={formatDuration(localMetrics.duration)} color="fuchsia" icon={Clock} />
                                 </div>
