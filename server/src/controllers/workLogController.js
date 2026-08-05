@@ -549,22 +549,39 @@ const syncCallLogs = async (req, res) => {
                         .filter(log => matchesSelectedSim(log, simFilter))
                         .map(normalizeAcceptedLog);
                 }
-                // Use robust key: stringified date + number + type + duration
-                const existingKeys = new Set(consolidatedLogs.map(l => `${String(l.date)}-${String(l.number)}-${String(l.type || '')}-${String(l.duration || '')}`));
+                // Map existing logs for duplicate check and slot correction
+                const existingMap = new Map(
+                    consolidatedLogs.map((l, index) => [
+                        `${String(l.date)}-${String(l.number)}-${String(l.type || '')}-${String(l.duration || '')}`,
+                        { log: l, index }
+                    ])
+                );
 
                 let addedCount = 0;
+                let updatedCount = 0;
                 dayLogs.forEach(log => {
-                    const key = `${String(log.date)}-${String(log.number)}-${String(log.type || '')}-${String(log.duration || '')}`;
-                    if (!existingKeys.has(key)) {
-                        consolidatedLogs.push(log);
-                        existingKeys.add(key);
+                    const normalizedLog = normalizeAcceptedLog(log);
+                    const key = `${String(normalizedLog.date)}-${String(normalizedLog.number)}-${String(normalizedLog.type || '')}-${String(normalizedLog.duration || '')}`;
+                    
+                    if (existingMap.has(key)) {
+                        const existing = existingMap.get(key);
+                        if (existing.log.simSlot !== normalizedLog.simSlot) {
+                            consolidatedLogs[existing.index].simSlot = normalizedLog.simSlot;
+                            if (normalizedLog.simLabel) {
+                                consolidatedLogs[existing.index].simLabel = normalizedLog.simLabel;
+                            }
+                            updatedCount++;
+                        }
+                    } else {
+                        consolidatedLogs.push(normalizedLog);
+                        existingMap.set(key, { log: normalizedLog, index: consolidatedLogs.length - 1 });
                         addedCount++;
                     }
                 });
-                console.log(`[Sync] User ${userId} for ${dateStr}: Found ${existingCallLog.calls.length} existing, added ${addedCount} new logs.`);
+                console.log(`[Sync] User ${userId} for ${dateStr}: Found ${existingCallLog.calls.length} existing, added ${addedCount} new, corrected ${updatedCount} SIM slots.`);
                 }
             } else {
-                consolidatedLogs = dayLogs;
+                consolidatedLogs = dayLogs.map(normalizeAcceptedLog);
                 console.log(`[Sync] User ${userId} for ${dateStr}: Creating new record with ${dayLogs.length} logs.`);
             }
 
