@@ -263,7 +263,6 @@ public class CallLogSyncWorker extends Worker {
                     boolean matches = officialSim.equals("0");
                     if (!matches) {
                         if (simSlot.equals(officialSim)) matches = true;
-                        else if (simId != null && simId.equals(officialSim)) matches = true;
                     }
 
                     if (matches) {

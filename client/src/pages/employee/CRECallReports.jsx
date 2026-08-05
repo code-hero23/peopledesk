@@ -239,11 +239,19 @@ const CRECallReports = () => {
                 // --- STRICT CLIENT-SIDE FILTERING ---
                 // Only send logs that match the specifically selected official SIM
                 const filteredLogs = allLogs.filter(log => {
-                    const logSimId = String(log.simSlot || log.simId || "").toLowerCase();
-                    const targetSlot = String(officialSim).toLowerCase();
+                    let resolvedSlot = "";
+                    const slot = String(log.simSlot || "").trim();
+                    if (slot && slot !== "0") {
+                        resolvedSlot = slot;
+                    } else {
+                        const id = String(log.simId || "").trim();
+                        if (id && simMap[id]) {
+                            resolvedSlot = String(simMap[id]);
+                        }
+                    }
                     
-                    // Direct match or reverse mapping via simMap
-                    return logSimId === targetSlot || simMap[logSimId] === targetSlot;
+                    const targetSlot = String(officialSim).trim();
+                    return resolvedSlot === targetSlot;
                 });
 
                 if (filteredLogs.length === 0) {
