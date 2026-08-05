@@ -970,8 +970,7 @@ const AdminCallReports = () => {
                         </div>
                     </motion.div>
                 );
-            })()
-            )}
+            })()}
 
             {/* Live Sync Progress Modal */}
             <AnimatePresence>
