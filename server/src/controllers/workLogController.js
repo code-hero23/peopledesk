@@ -442,7 +442,8 @@ const syncCallLogs = async (req, res) => {
         };
         const normalizeAcceptedLog = (log) => {
             const normalized = { ...log };
-            if (canonicalSimSlot) {
+            const existingSlot = String(normalized.simSlot || '').trim();
+            if (canonicalSimSlot && (existingSlot === '' || existingSlot === '0' || existingSlot === 'unknown')) {
                 normalized.simSlot = canonicalSimSlot;
             }
             return normalized;
