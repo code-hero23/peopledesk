@@ -75,7 +75,7 @@ const calculateAutomatedMetrics = async (req, res) => {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
 
-        // 1. Efficiency: (Present Days / 26) * 20
+        // 1. System (PD): (Present Days / 26) * 15
         const presentDays = await prisma.attendance.count({
             where: {
                 userId: parseInt(userId),
@@ -84,7 +84,7 @@ const calculateAutomatedMetrics = async (req, res) => {
             }
         });
 
-        const efficiencyScore = Math.min(20, (presentDays / 26) * 20);
+        const systemScore = Math.min(15, (presentDays / 26) * 15);
 
         // 2. Consistency: (Days with Worklogs / 26) * 30
         // Use groupBy to get unique dates
@@ -99,7 +99,7 @@ const calculateAutomatedMetrics = async (req, res) => {
         const consistencyScore = Math.min(30, (worklogDates.length / 26) * 30);
 
         res.json({
-            efficiency: parseFloat(efficiencyScore.toFixed(2)),
+            system: parseFloat(systemScore.toFixed(2)),
             consistency: parseFloat(consistencyScore.toFixed(2)),
             counts: {
                 presentDays,

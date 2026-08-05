@@ -631,10 +631,10 @@ model PerformanceScore {
   userId       Int
   month        Int
   year         Int
-  efficiency   Float    @default(0) // Weight: 20 (Automated)
+  efficiency   Float    @default(0) // Weight: 20
   consistency  Float    @default(0) // Weight: 30 (Automated)
   quality      Float    @default(0) // Weight: 20
-  system       Float    @default(0) // Weight: 15
+  system       Float    @default(0) // Weight: 15 (Automated)
   behaviour    Float    @default(0) // Weight: 15
   totalScore   Float    @default(0) // (E+C+Q+S+B)
   remarks      String?

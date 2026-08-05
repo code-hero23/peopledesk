@@ -72,11 +72,11 @@ const PerformanceManagement = () => {
                 headers: { Authorization: `Bearer ${user.token}` }
             });
             
-            const { efficiency, consistency } = response.data;
+            const { consistency, system } = response.data;
             setScores(prev => ({
                 ...prev,
-                efficiency,
-                consistency
+                consistency,
+                system
             }));
             toast.success(`Fetched: ${response.data.counts.presentDays} days present, ${response.data.counts.worklogDays} worklogs.`);
         } catch (error) {
@@ -395,16 +395,13 @@ const PerformanceManagement = () => {
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
                                         Efficiency <span>max 20</span>
                                     </label>
-                                    <div className="relative">
-                                        <input 
-                                            type="number" 
-                                            max={20}
-                                            value={scores.efficiency}
-                                            onChange={(e) => setScores({ ...scores, efficiency: parseFloat(e.target.value) || 0 })}
-                                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
-                                        />
-                                        <Zap size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/30" />
-                                    </div>
+                                    <input 
+                                        type="number" 
+                                        max={20}
+                                        value={scores.efficiency}
+                                        onChange={(e) => setScores({ ...scores, efficiency: parseFloat(e.target.value) || 0 })}
+                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
+                                    />
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
@@ -437,13 +434,16 @@ const PerformanceManagement = () => {
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
                                         System (PD) <span>max 15</span>
                                     </label>
-                                    <input 
-                                        type="number" 
-                                        max={15}
-                                        value={scores.system}
-                                        onChange={(e) => setScores({ ...scores, system: parseFloat(e.target.value) || 0 })}
-                                        className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
-                                    />
+                                    <div className="relative">
+                                        <input 
+                                            type="number" 
+                                            max={15}
+                                            value={scores.system}
+                                            onChange={(e) => setScores({ ...scores, system: parseFloat(e.target.value) || 0 })}
+                                            className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold outline-none focus:ring-2 focus:ring-primary"
+                                        />
+                                        <Zap size={14} className="absolute right-3 top-1/2 -translate-y-1/2 text-primary/30" />
+                                    </div>
                                 </div>
                                 <div className="space-y-1">
                                     <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1 flex justify-between">
