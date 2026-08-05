@@ -47,15 +47,15 @@ const AdminCallReports = () => {
     }, []);
 
     useEffect(() => {
-        dispatch(getCallStats({ ...dateRange, simFilter }));
-    }, [dispatch, dateRange, simFilter]);
+        dispatch(getCallStats({ ...dateRange }));
+    }, [dispatch, dateRange]);
 
     useEffect(() => {
         console.log("Admin Call Stats Data:", callStats);
     }, [callStats]);
 
     const handleRefresh = () => {
-        dispatch(getCallStats({ ...dateRange, simFilter }));
+        dispatch(getCallStats({ ...dateRange }));
     };
 
     const fetchBulkStatusOnce = async () => {
@@ -67,7 +67,7 @@ const AdminCallReports = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSyncStatusData(statusRes.data);
-            dispatch(getCallStats({ ...dateRange, simFilter }));
+            dispatch(getCallStats({ ...dateRange }));
             return statusRes.data;
         } catch (err) {
             console.error('Failed fetching bulk sync status:', err);
@@ -91,7 +91,7 @@ const AdminCallReports = () => {
             if (data.pendingDevices === 0 || elapsedTime >= 180000) {
                 setIsPollingSync(false);
                 setIsRequestingAllSync(false);
-                dispatch(getCallStats({ ...dateRange, simFilter }));
+                dispatch(getCallStats({ ...dateRange }));
                 if (data.pendingDevices === 0) {
                     toast.success('All employee devices synced call logs successfully!');
                 } else {
@@ -436,19 +436,6 @@ const AdminCallReports = () => {
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
                             className="bg-transparent text-xs font-bold text-white outline-none [color-scheme:dark]"
                         />
-                    </div>
-                    
-                    <div className="flex items-center gap-2 bg-slate-800 p-2 px-3 rounded-2xl border border-slate-700">
-                        <Filter size={14} className="text-blue-400" />
-                        <select
-                            value={simFilter}
-                            onChange={(e) => setSimFilter(e.target.value)}
-                            className="bg-transparent text-xs font-bold text-white outline-none border-none cursor-pointer [color-scheme:dark]"
-                        >
-                            <option value="ALL" className="bg-slate-900 text-white">All SIMs</option>
-                            <option value="1" className="bg-slate-900 text-white">SIM 1</option>
-                            <option value="2" className="bg-slate-900 text-white">SIM 2</option>
-                        </select>
                     </div>
 
                     <div className="flex items-center gap-3 bg-slate-800 p-2 px-4 rounded-2xl border border-slate-700">
@@ -812,128 +799,178 @@ const AdminCallReports = () => {
                         )}
                     </AnimatePresence>
                 </>
-            ) : (
-                <motion.div
-                    initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                    className="space-y-8"
-                >
-                    {/* Drill-down Header */}
-                    <div className="flex items-center justify-between">
-                        <button
-                            onClick={() => setSelectedEmployee(null)}
-                            className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-black uppercase text-[10px] tracking-widest transition-colors bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm"
-                        >
-                            <ArrowLeft size={14} /> Back to Command
-                        </button>
-                    </div>
+            ) : (() => {
+                // Perform client-side SIM filtering for the selected employee's logs
+                const normExcluded = (excludedNumbers || []).map(normalize);
+                const employeeFilteredLogs = selectedEmployee.logs
+                    .filter(c => {
+                        if (!c.number) return false;
+                        return !normExcluded.includes(normalize(c.number));
+                    })
+                    .filter(c => {
+                        if (simFilter === 'ALL') return true;
+                        const slot = String(simFilter).toLowerCase();
+                        const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
+                        const cLabel = String(c.simLabel || "").toLowerCase().replace(/^sim\s*/i, '');
+                        return cSlot === slot || cLabel === slot;
+                    });
 
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                        {/* Profile & Pie Chart */}
-                        <div className="lg:col-span-4 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-2xl flex flex-col items-center">
-                            <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black mb-4 shadow-xl shadow-blue-200">
-                                {(selectedEmployee.name || "U").charAt(0)}
-                            </div>
-                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
-                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
+                const localMetrics = {
+                    total: employeeFilteredLogs.length,
+                    incoming: employeeFilteredLogs.filter(c => c.type === 'INCOMING').length,
+                    outgoing: employeeFilteredLogs.filter(c => c.type === 'OUTGOING').length,
+                    missed: employeeFilteredLogs.filter(c => c.type === 'MISSED' || c.type === 'REJECTED').length,
+                    uniqueLeads: new Set(employeeFilteredLogs.map(c => normalize(c.number))).size,
+                    duration: employeeFilteredLogs.reduce((acc, c) => acc + (c.duration || 0), 0)
+                };
 
-                             <div className="w-full space-y-4">
-                                 <div className="h-[250px] w-full">
-                                     {(isMounted && selectedEmployee) && (
-                                         <ResponsiveContainer width="100%" height={250} minWidth={0}>
-                                        <PieChart>
-                                            <Pie
-                                                data={getPieData(selectedEmployee)}
-                                                cx="50%" cy="50%"
-                                                innerRadius={60} outerRadius={80}
-                                                paddingAngle={5}
-                                                dataKey="value"
-                                                stroke="none"
-                                            >
-                                                {getPieData(selectedEmployee).map((entry, index) => (
-                                                    <Cell key={`cell-${index}`} fill={entry.color} />
-                                                ))}
-                                            </Pie>
-                                            <Tooltip
-                                                contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                            />
-                                            <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900' }} />
-                                        </PieChart>
-                                    </ResponsiveContainer>
-                                )}
-                            </div>
+                const localPieData = [
+                    { name: 'Incoming', value: localMetrics.incoming, color: '#10b981' },
+                    { name: 'Outgoing', value: localMetrics.outgoing, color: '#3b82f6' },
+                    { name: 'Missed', value: localMetrics.missed, color: '#f43f5e' }
+                ].filter(d => d.value > 0);
+
+                return (
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+                        className="space-y-8"
+                    >
+                        {/* Drill-down Header */}
+                        <div className="flex items-center justify-between gap-4 flex-wrap">
+                            <button
+                                onClick={() => {
+                                    setSelectedEmployee(null);
+                                    setSimFilter('ALL'); // Reset filter when backing out
+                                }}
+                                className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-black uppercase text-[10px] tracking-widest transition-colors bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm"
+                            >
+                                <ArrowLeft size={14} /> Back to Command
+                            </button>
+
+                            <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
+                                <Filter size={14} className="text-blue-500" />
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">SIM Target:</span>
+                                <select
+                                    value={simFilter}
+                                    onChange={(e) => setSimFilter(e.target.value)}
+                                    className="bg-transparent text-xs font-black text-slate-700 outline-none border-none cursor-pointer"
+                                >
+                                    <option value="ALL">All SIMs</option>
+                                    <option value="1">SIM 1</option>
+                                    <option value="2">SIM 2</option>
+                                </select>
                             </div>
                         </div>
 
-                        {/* Analysis Metrics Grid */}
-                        <div className="lg:col-span-8 space-y-8">
-                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                <MetricBox label="Identified" value={selectedEmployee.totalCalls} color="blue" icon={Hash} />
-                                <MetricBox label="Incoming" value={selectedEmployee.incoming} color="emerald" icon={PhoneIncoming} />
-                                <MetricBox label="Outgoing" value={selectedEmployee.outgoing} color="sky" icon={PhoneOutgoing} />
-                                <MetricBox label="Missed" value={selectedEmployee.missed} color="rose" icon={PhoneMissed} />
-                                <MetricBox label="Unique Leads" value={new Set(selectedEmployee.logs.map(l => normalize(l.number)).filter(n => n && !(excludedNumbers || []).map(normalize).includes(n))).size} color="indigo" icon={User} />
-                                <MetricBox label="Session Time" value={formatDuration(selectedEmployee.duration)} color="fuchsia" icon={Clock} />
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+                            {/* Profile & Pie Chart */}
+                            <div className="lg:col-span-4 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-2xl flex flex-col items-center">
+                                <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black mb-4 shadow-xl shadow-blue-200">
+                                    {(selectedEmployee.name || "U").charAt(0)}
+                                </div>
+                                <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
+
+                                 <div className="w-full space-y-4">
+                                     <div className="h-[250px] w-full">
+                                         {(isMounted && selectedEmployee) && (
+                                             <ResponsiveContainer width="100%" height={250} minWidth={0}>
+                                            <PieChart>
+                                                <Pie
+                                                    data={localPieData}
+                                                    cx="50%" cy="50%"
+                                                    innerRadius={60} outerRadius={80}
+                                                    paddingAngle={5}
+                                                    dataKey="value"
+                                                    stroke="none"
+                                                >
+                                                    {localPieData.map((entry, index) => (
+                                                        <Cell key={`cell-${index}`} fill={entry.color} />
+                                                    ))}
+                                                </Pie>
+                                                <Tooltip
+                                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                                />
+                                                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900' }} />
+                                            </PieChart>
+                                        </ResponsiveContainer>
+                                    )}
+                                </div>
+                                </div>
                             </div>
 
-                            {/* Recent Activity Log */}
-                            <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl overflow-hidden flex flex-col">
-                                <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                                    <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-3">
-                                        <Activity className="text-blue-500" size={16} /> Raw Log Transmission
-                                    </h3>
-                                    <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                        Total Records: {selectedEmployee.logs.length}
+                            {/* Analysis Metrics Grid */}
+                            <div className="lg:col-span-8 space-y-8">
+                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                    <MetricBox label="Identified" value={localMetrics.total} color="blue" icon={Hash} />
+                                    <MetricBox label="Incoming" value={localMetrics.incoming} color="emerald" icon={PhoneIncoming} />
+                                    <MetricBox label="Outgoing" value={localMetrics.outgoing} color="sky" icon={PhoneOutgoing} />
+                                    <MetricBox label="Missed" value={localMetrics.missed} color="rose" icon={PhoneMissed} />
+                                    <MetricBox label="Unique Leads" value={localMetrics.uniqueLeads} color="indigo" icon={User} />
+                                    <MetricBox label="Session Time" value={formatDuration(localMetrics.duration)} color="fuchsia" icon={Clock} />
+                                </div>
+
+                                {/* Recent Activity Log */}
+                                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl overflow-hidden flex flex-col">
+                                    <div className="p-8 border-b border-slate-50 flex items-center justify-between">
+                                        <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-3">
+                                            <Activity className="text-blue-500" size={16} /> Raw Log Transmission
+                                        </h3>
+                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                                            Total Records: {employeeFilteredLogs.length}
+                                        </div>
+                                    </div>
+                                    <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
+                                        <table className="w-full text-left">
+                                            <thead className="bg-slate-50/50 sticky top-0 z-10">
+                                                <tr>
+                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descriptor</th>
+                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identifier</th>
+                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
+                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-slate-50">
+                                                {employeeFilteredLogs
+                                                    .sort((a, b) => b.date - a.date)
+                                                    .map((call, idx) => (
+                                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
+                                                            <td className="px-8 py-4">
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                        {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
+                                                                    </div>
+                                                                    <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-8 py-4">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-sm font-black text-slate-800">{call.number}</span>
+                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-8 py-4">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
+                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-8 py-4 text-right">
+                                                                <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                                    {call.duration}s
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                            </tbody>
+                                        </table>
                                     </div>
                                 </div>
-                                <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                                    <table className="w-full text-left">
-                                        <thead className="bg-slate-50/50 sticky top-0 z-10">
-                                            <tr>
-                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descriptor</th>
-                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identifier</th>
-                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
-                                                <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-slate-50">
-                                            {selectedEmployee.logs
-                                                .sort((a, b) => b.date - a.date)
-                                                .map((call, idx) => (
-                                                    <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                        <td className="px-8 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                                    {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
-                                                                </div>
-                                                                <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-4 px-8 py-4">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-sm font-black text-slate-800">{call.number}</span>
-                                                                <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-4">
-                                                            <div className="flex flex-col">
-                                                                <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
-                                                                <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-8 py-4 text-right">
-                                                            <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                                                {call.duration}s
-                                                            </span>
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                        </tbody>
-                                    </table>
-                                </div>
                             </div>
                         </div>
-                    </div>
-                </motion.div>
+                    </motion.div>
+                );
+            })()
             )}
 
             {/* Live Sync Progress Modal */}
