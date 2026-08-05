@@ -810,9 +810,16 @@ const AdminCallReports = () => {
                     .filter(c => {
                         if (simFilter === 'ALL') return true;
                         const slot = String(simFilter).toLowerCase();
-                        const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
-                        const cLabel = String(c.simLabel || "").toLowerCase().replace(/^sim\s*/i, '');
-                        return cSlot === slot || cLabel === slot;
+                        
+                        let resolvedSlot = "";
+                        const labelLower = String(c.simLabel || "").trim().toLowerCase();
+                        if (/^sim\s*[12]$/i.test(labelLower)) {
+                            resolvedSlot = labelLower.replace(/^sim\s*/i, '');
+                        } else {
+                            resolvedSlot = String(c.simSlot || c.simId || "").toLowerCase();
+                        }
+                        
+                        return resolvedSlot === slot;
                     });
 
                 const localMetrics = {
@@ -926,6 +933,7 @@ const AdminCallReports = () => {
                                                 <tr>
                                                     <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descriptor</th>
                                                     <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identifier</th>
+                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">SIM</th>
                                                     <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
                                                     <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
                                                 </tr>
@@ -947,6 +955,13 @@ const AdminCallReports = () => {
                                                                 <div className="flex flex-col">
                                                                     <span className="text-sm font-black text-slate-800">{call.number}</span>
                                                                     <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
+                                                                </div>
+                                                            </td>
+                                                            <td className="px-8 py-4">
+                                                                <div className="flex flex-col">
+                                                                    <span className="text-xs font-black text-slate-700">
+                                                                        {call.simLabel || (call.simSlot ? `SIM ${call.simSlot}` : 'N/A')}
+                                                                    </span>
                                                                 </div>
                                                             </td>
                                                             <td className="px-8 py-4">
