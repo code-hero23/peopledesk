@@ -6,7 +6,7 @@ import { Preferences } from '@capacitor/preferences';
 import { getCallLogPlugin } from '../../utils/capacitorPlugins';
 import { toast } from 'react-toastify';
 import {
-    Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed,
+    Phone, PhoneIncoming, PhoneOutgoing, PhoneMissed, PhoneOff,
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, CheckCircle2, ChevronRight, Activity, Smartphone,
      Zap, Layers, Share2, PlayCircle, Settings
@@ -483,7 +483,8 @@ const CRECallReports = () => {
         INCOMING: displayLogs.filter(c => c.type === 'INCOMING').length,
         OUTGOING: displayLogs.filter(c => c.type === 'OUTGOING').length,
         MISSED: displayLogs.filter(c => c.type === 'MISSED').length,
-        REJECTED: displayLogs.filter(c => c.type === 'REJECTED').length
+        REJECTED: displayLogs.filter(c => c.type === 'REJECTED').length,
+        UNATTENDED_OUTGOING: displayLogs.filter(c => c.type === 'OUTGOING' && (c.duration === 0 || c.duration === '0' || !c.duration)).length
     };
 
     const pieData = [
@@ -744,6 +745,7 @@ const CRECallReports = () => {
                     <MetricBox label="Outgoing" value={stats.OUTGOING} color="sky" icon={PhoneOutgoing} subtext="Dispatched signals" />
                     <MetricBox label="Missed" value={stats.MISSED} color="rose" icon={PhoneMissed} subtext="Dropped connections" />
                     <MetricBox label="Rejected" value={stats.REJECTED} color="amber" icon={PhoneMissed} subtext="Declined handshakes" />
+                    <MetricBox label="Unattended Outgoing" value={stats.UNATTENDED_OUTGOING} color="amber" icon={PhoneOff} subtext="No response dials" />
                     <MetricBox label="Unique Leads" value={new Set(displayLogs.map(l => l.number)).size} color="indigo" icon={User} subtext="Distinct entities" />
                     <div className="col-span-2 md:col-span-3">
                         <MetricBox label="Total Talk Time" value={formatDuration(displayLogs.reduce((acc, curr) => acc + (curr.duration || 0), 0))} color="fuchsia" icon={Clock} subtext="Cumulative VoIP Duration" />
