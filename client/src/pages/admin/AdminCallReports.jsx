@@ -39,6 +39,7 @@ const AdminCallReports = () => {
     const [syncStatusData, setSyncStatusData] = useState(null);
     const [isPollingSync, setIsPollingSync] = useState(false);
     const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
+    const [simFilter, setSimFilter] = useState('ALL');
     const pollTimeoutRef = useRef(null);
 
     useEffect(() => {
@@ -46,15 +47,15 @@ const AdminCallReports = () => {
     }, []);
 
     useEffect(() => {
-        dispatch(getCallStats({ ...dateRange }));
-    }, [dispatch, dateRange]);
+        dispatch(getCallStats({ ...dateRange, simFilter }));
+    }, [dispatch, dateRange, simFilter]);
 
     useEffect(() => {
         console.log("Admin Call Stats Data:", callStats);
     }, [callStats]);
 
     const handleRefresh = () => {
-        dispatch(getCallStats({ ...dateRange }));
+        dispatch(getCallStats({ ...dateRange, simFilter }));
     };
 
     const fetchBulkStatusOnce = async () => {
@@ -66,7 +67,7 @@ const AdminCallReports = () => {
                 headers: { Authorization: `Bearer ${token}` }
             });
             setSyncStatusData(statusRes.data);
-            dispatch(getCallStats({ ...dateRange }));
+            dispatch(getCallStats({ ...dateRange, simFilter }));
             return statusRes.data;
         } catch (err) {
             console.error('Failed fetching bulk sync status:', err);
@@ -90,7 +91,7 @@ const AdminCallReports = () => {
             if (data.pendingDevices === 0 || elapsedTime >= 180000) {
                 setIsPollingSync(false);
                 setIsRequestingAllSync(false);
-                dispatch(getCallStats({ ...dateRange }));
+                dispatch(getCallStats({ ...dateRange, simFilter }));
                 if (data.pendingDevices === 0) {
                     toast.success('All employee devices synced call logs successfully!');
                 } else {
@@ -207,7 +208,7 @@ const AdminCallReports = () => {
             const token = JSON.parse(localStorage.getItem('user')).token;
             const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
             
-            const response = await fetch(`${baseUrl}/export/call-stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}`, {
+            const response = await fetch(`${baseUrl}/export/call-stats?startDate=${dateRange.startDate}&endDate=${dateRange.endDate}&simFilter=${simFilter}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
@@ -245,6 +246,7 @@ const AdminCallReports = () => {
             
             const response = await axios.post(`${baseUrl}/export/call-stats/email`, {
                 ...dateRange,
+                simFilter,
                 email: emailAddress
             }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -434,6 +436,19 @@ const AdminCallReports = () => {
                             onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
                             className="bg-transparent text-xs font-bold text-white outline-none [color-scheme:dark]"
                         />
+                    </div>
+                    
+                    <div className="flex items-center gap-2 bg-slate-800 p-2 px-3 rounded-2xl border border-slate-700">
+                        <Filter size={14} className="text-blue-400" />
+                        <select
+                            value={simFilter}
+                            onChange={(e) => setSimFilter(e.target.value)}
+                            className="bg-transparent text-xs font-bold text-white outline-none border-none cursor-pointer [color-scheme:dark]"
+                        >
+                            <option value="ALL" className="bg-slate-900 text-white">All SIMs</option>
+                            <option value="1" className="bg-slate-900 text-white">SIM 1</option>
+                            <option value="2" className="bg-slate-900 text-white">SIM 2</option>
+                        </select>
                     </div>
 
                     <div className="flex items-center gap-3 bg-slate-800 p-2 px-4 rounded-2xl border border-slate-700">
