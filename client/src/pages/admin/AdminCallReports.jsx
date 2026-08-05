@@ -800,7 +800,17 @@ const AdminCallReports = () => {
                     </AnimatePresence>
                 </>
             ) : (() => {
-                // Perform client-side SIM filtering for the selected employee's logs
+                // Dynamic SIM labels resolution helper
+                const getCallSimLabel = (c) => {
+                    const label = String(c.simLabel || "").trim();
+                    if (label && label.toLowerCase() !== 'unknown' && label.toLowerCase() !== 'null') {
+                        return label;
+                    }
+                    return c.simSlot ? `SIM ${c.simSlot}` : 'N/A';
+                };
+
+                const uniqueLabels = [...new Set(selectedEmployee.logs.map(getCallSimLabel))].filter(l => l !== 'N/A');
+
                 const normExcluded = (excludedNumbers || []).map(normalize);
                 const employeeFilteredLogs = selectedEmployee.logs
                     .filter(c => {
@@ -809,17 +819,7 @@ const AdminCallReports = () => {
                     })
                     .filter(c => {
                         if (simFilter === 'ALL') return true;
-                        const slot = String(simFilter).toLowerCase();
-                        
-                        let resolvedSlot = "";
-                        const labelLower = String(c.simLabel || "").trim().toLowerCase();
-                        if (/^sim\s*[12]$/i.test(labelLower)) {
-                            resolvedSlot = labelLower.replace(/^sim\s*/i, '');
-                        } else {
-                            resolvedSlot = String(c.simSlot || c.simId || "").toLowerCase();
-                        }
-                        
-                        return resolvedSlot === slot;
+                        return getCallSimLabel(c).toLowerCase() === simFilter.toLowerCase();
                     });
 
                 const localMetrics = {
@@ -863,8 +863,9 @@ const AdminCallReports = () => {
                                     className="bg-transparent text-xs font-black text-slate-700 outline-none border-none cursor-pointer"
                                 >
                                     <option value="ALL">All SIMs</option>
-                                    <option value="1">SIM 1</option>
-                                    <option value="2">SIM 2</option>
+                                    {uniqueLabels.map(label => (
+                                        <option key={label} value={label}>{label}</option>
+                                    ))}
                                 </select>
                             </div>
                         </div>
