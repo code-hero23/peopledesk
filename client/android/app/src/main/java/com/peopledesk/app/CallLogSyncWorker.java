@@ -262,7 +262,17 @@ public class CallLogSyncWorker extends Worker {
 
                     boolean matches = officialSim.equals("0");
                     if (!matches) {
-                        if (simSlot.equals(officialSim)) matches = true;
+                        String officialLabel = null;
+                        if (simLabels.has(officialSim)) {
+                            officialLabel = simLabels.optString(officialSim, "").trim().toLowerCase();
+                        }
+                        String currentLabel = (simLabel != null) ? simLabel.trim().toLowerCase() : "";
+                        
+                        if (officialLabel != null && !officialLabel.isEmpty() && !currentLabel.isEmpty() && !currentLabel.equals("unknown") && !currentLabel.equals("null")) {
+                            matches = currentLabel.equals(officialLabel);
+                        } else {
+                            matches = simSlot.equals(officialSim);
+                        }
                     }
 
                     if (matches) {
