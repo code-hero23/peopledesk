@@ -32,13 +32,17 @@ async function run() {
         for (const log of logs) {
             const mapping = userSimMap[log.userId];
             if (!mapping) {
-                console.log(`Skipping logs for User ID ${log.userId} (No active device registered).`);
+                console.log(`No active device for User ID ${log.userId}. Deleting its log.`);
+                await prisma.callLog.delete({ where: { id: log.id } });
+                deletedDocumentsCount++;
                 continue;
             }
 
             const { officialSim, name } = mapping;
             if (!officialSim || officialSim === '0') {
-                console.log(`Skipping logs for ${name} (Official SIM is set to ALL or 0).`);
+                console.log(`Official SIM for ${name} is unset or ALL. Deleting its log.`);
+                await prisma.callLog.delete({ where: { id: log.id } });
+                deletedDocumentsCount++;
                 continue;
             }
 
