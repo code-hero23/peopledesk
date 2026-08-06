@@ -27,7 +27,7 @@ async function run() {
         console.log(`Fetched ${logs.length} call log documents to review.`);
 
         let totalCleanedCalls = 0;
-        let updatedDocumentsCount = 0;
+        let deletedDocumentsCount = 0;
 
         for (const log of logs) {
             const mapping = userSimMap[log.userId];
@@ -67,24 +67,20 @@ async function run() {
             const removedCount = originalCalls.length - filteredCalls.length;
 
             if (removedCount > 0) {
-                console.log(`Cleaning ${name} for date ${log.date.toISOString().split('T')[0]}: Keeping ${filteredCalls.length} calls (Removed ${removedCount} unselected SIM calls).`);
+                console.log(`Deleting log for ${name} on date ${log.date.toISOString().split('T')[0]}: Found ${removedCount} unselected SIM calls.`);
                 
-                // Update the document
-                await prisma.callLog.update({
-                    where: { id: log.id },
-                    data: {
-                        calls: filteredCalls,
-                        totalCalls: filteredCalls.length
-                    }
+                // Delete the document
+                await prisma.callLog.delete({
+                    where: { id: log.id }
                 });
 
                 totalCleanedCalls += removedCount;
-                updatedDocumentsCount++;
+                deletedDocumentsCount++;
             }
         }
 
-        console.log("\n--- Clean-up Summary ---");
-        console.log(`Successfully updated ${updatedDocumentsCount} documents.`);
+        console.log(`\n--- Clean-up Summary ---`);
+        console.log(`Successfully deleted ${deletedDocumentsCount} documents.`);
         console.log(`Deleted ${totalCleanedCalls} unselected SIM calls from database.`);
     } catch (e) {
         console.error("Error during execution:", e);
