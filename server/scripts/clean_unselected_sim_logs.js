@@ -49,6 +49,8 @@ async function run() {
             const originalCalls = Array.isArray(log.calls) ? log.calls : [];
             if (originalCalls.length === 0) continue;
 
+
+
             // Filter out calls that don't match the official SIM slot index
             const filteredCalls = originalCalls.filter(c => {
                 // If the call's simSlot is the official SIM, keep it.
@@ -70,16 +72,28 @@ async function run() {
 
             const removedCount = originalCalls.length - filteredCalls.length;
 
-            if (removedCount > 0) {
-                console.log(`Deleting log for ${name} on date ${log.date.toISOString().split('T')[0]}: Found ${removedCount} unselected SIM calls.`);
-                
-                // Delete the document
-                await prisma.callLog.delete({
-                    where: { id: log.id }
-                });
-
-                totalCleanedCalls += removedCount;
+            if (filteredCalls.length === 0) {
+                // No calls match the official SIM – delete the whole log
+                console.log(`No calls match official SIM for ${name}. Deleting entire log.`);
+                await prisma.callLog.delete({ where: { id: log.id } });
                 deletedDocumentsCount++;
+                totalCleanedCalls += originalCalls.length;
+                continue;
+            }
+
+            if (removedCount > 0) {
+                // Some unselected calls were removed – update the document
+                console.log(`Cleaning log for ${name} on date ${log.date.toISOString().split('T')[0]}: Keeping ${filteredCalls.length} calls (Removed ${removedCount} unselected SIM calls).`);
+                await prisma.callLog.update({
+                    where: { id: log.id },
+                    data: {
+                        calls: filteredCalls,
+                        totalCalls: filteredCalls.length
+                    }
+                });
+                totalCleanedCalls += removedCount;
+                // Count as an updated document (not a full delete)
+                // (optional – you can track separate counters if needed)
             }
         }
 
