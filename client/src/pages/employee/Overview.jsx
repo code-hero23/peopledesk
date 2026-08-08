@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
     Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
-    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone, RefreshCw
+    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone, RefreshCw, Armchair
 } from 'lucide-react';
 import {
     getAttendanceStatus,
@@ -29,6 +29,7 @@ import AttendanceCalendarModal from '../../components/AttendanceCalendarModal';
 import ConfirmationModal from '../../components/ConfirmationModal';
 import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
 import NotificationBell from '../../components/NotificationBell';
+import SeatSelectionModal from '../../components/seating/SeatSelectionModal';
 
 // Helper: DataURL to Blob
 function dataURLtoBlob(dataurl) {
@@ -508,6 +509,7 @@ const Overview = () => {
         [attendance, user]);
 
     const [sessionDuration, setSessionDuration] = useState('00:00:00');
+    const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
 
     useEffect(() => {
         let interval;
@@ -1009,7 +1011,7 @@ const Overview = () => {
                                                             : 'Your daily progress begins here. Don\'t forget to sign in!')}
                                                 </p>
                                                 {(isCheckedIn || isSessionFinished) && (
-                                                    <div className="flex items-center gap-6 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                                    <div className="flex flex-wrap items-center gap-6 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
                                                         <div className="flex items-center gap-2">
                                                             <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
                                                                  <Clock size={14} />
@@ -1023,6 +1025,21 @@ const Overview = () => {
                                                             </div>
                                                             <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Type:</span>
                                                             <span className="text-sm font-bold text-slate-700 dark:text-slate-300">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site' : 'Office'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            <div className="p-1.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-lg">
+                                                                <Armchair size={14} />
+                                                            </div>
+                                                            <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Seat:</span>
+                                                            <span className="text-sm font-bold text-blue-600 dark:text-blue-400">
+                                                                {attendance?.seatId || 'Not Selected'}
+                                                            </span>
+                                                            <button
+                                                                onClick={() => setIsSeatModalOpen(true)}
+                                                                className="ml-2 text-xs font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 underline flex items-center gap-1"
+                                                            >
+                                                                Change Seat
+                                                            </button>
                                                         </div>
                                                     </div>
                                                 )}
@@ -1613,6 +1630,16 @@ const Overview = () => {
                     </div>
                 )}
             </AnimatePresence>
+
+            <SeatSelectionModal
+                isOpen={isSeatModalOpen}
+                onClose={() => setIsSeatModalOpen(false)}
+                currentSeatId={attendance?.seatId}
+                isCheckInMode={!isCheckedIn}
+                onSeatConfirmed={() => {
+                    dispatch(getAttendanceStatus());
+                }}
+            />
 
             <ConfirmationModal
                 isOpen={confirmationConfig.isOpen}

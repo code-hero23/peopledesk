@@ -28,6 +28,7 @@ import {
     ChevronDown,
     Settings,
     ShieldCheck,
+    Armchair,
     Boxes,
     Award
 } from 'lucide-react';
@@ -217,6 +218,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                                 <NavItem to="/admin/helpdesk" icon={LifeBuoy} label="Support Hub" indent />
                             )}
+                            <NavItem to="/admin/seating" icon={Armchair} label="Seating Plan" indent />
                         </NavGroup>
 
                         <NavGroup id="admin" label="Administration" icon={ShieldCheck}>
@@ -249,6 +251,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                             <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
+                            <NavItem to="/seating" icon={Armchair} label="Seating Layout" />
                             {isSalaryEnabled && (
                                 <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
                             )}

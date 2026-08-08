@@ -29,6 +29,7 @@ import PerformanceManagement from './pages/admin/PerformanceManagement';
 import MyScoreBoard from './pages/employee/MyScoreBoard';
 import Helpdesk from './pages/employee/Helpdesk';
 import HelpdeskManagement from './pages/admin/HelpdeskManagement';
+import SeatingLayout from './pages/admin/SeatingLayout';
 
 import OSCDirectory from './pages/OSCDirectory';
 import DecoraAI from './pages/DecoraAI';
@@ -64,6 +65,7 @@ function App() {
                 <Route path="/dashboard/call-reports" element={<CRECallReports />} />
                 <Route path="/dashboard/scoreboard" element={<MyScoreBoard />} />
                 <Route path="/dashboard/helpdesk" element={<Helpdesk />} />
+                <Route path="/seating" element={<SeatingLayout />} />
               </Route>
 
               {/* Admin Routes */}
@@ -84,6 +86,7 @@ function App() {
               <Route path="/admin/call-reports" element={<AdminCallReports />} />
               <Route path="/admin/performance" element={<PerformanceManagement />} />
               <Route path="/admin/helpdesk" element={<HelpdeskManagement />} />
+              <Route path="/admin/seating" element={<SeatingLayout />} />
 
               <Route path="/osc-directory" element={<OSCDirectory />} />
               <Route path="/decora-ai" element={<DecoraAI />} />

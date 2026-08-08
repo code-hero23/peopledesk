@@ -52,6 +52,7 @@ model User {
   workLogs                     WorkLog[]
   performanceScores            PerformanceScore[]
   tickets                      HelpdeskTicket[]
+  seatAssignments              SeatAssignment[]
 }
 
 model CallSyncDevice {
@@ -140,6 +141,7 @@ model Attendance {
   ipAddress          String?
   checkoutDeviceInfo String?
   checkoutIpAddress  String?
+  seatId             String?
   user               User       @relation(fields: [userId], references: [id])
   breaks             BreakLog[]
 
@@ -682,4 +684,16 @@ enum HelpdeskCategory {
   WORKPLACE
   GROWTH
   OTHER
+}
+
+model SeatAssignment {
+  id         Int      @id @default(autoincrement())
+  seatId     String   @unique
+  level      Int
+  status     String   @default("AVAILABLE")
+  clientNote String?
+  userId     Int?
+  date       DateTime @default(now())
+  user       User?    @relation(fields: [userId], references: [id])
+  updatedAt  DateTime @updatedAt
 }
