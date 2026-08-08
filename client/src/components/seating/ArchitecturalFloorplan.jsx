@@ -1,7 +1,7 @@
 import React from 'react';
 import { Armchair, CheckCircle2, User, Briefcase, DoorOpen, LogIn } from 'lucide-react';
 
-const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeats, onSelect }) => {
+const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeats, highlightSearch, onSelect }) => {
     const isSelected = Array.isArray(selectedSeats) 
         ? selectedSeats.includes(seatId) 
         : (selectedSeat === seatId || (Array.isArray(selectedSeat) && selectedSeat.includes(seatId)));
@@ -9,6 +9,13 @@ const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeat
     const isClientReserved = status === 'CLIENT_RESERVED';
     const isReserved = status === 'RESERVED';
     const isBlocked = status === 'BLOCKED';
+
+    const isSearchMatch = highlightSearch && highlightSearch.trim() !== '' && (
+        seatId.toLowerCase().includes(highlightSearch.toLowerCase()) ||
+        (user && user.name && user.name.toLowerCase().includes(highlightSearch.toLowerCase())) ||
+        (user && user.designation && user.designation.toLowerCase().includes(highlightSearch.toLowerCase())) ||
+        (clientNote && clientNote.toLowerCase().includes(highlightSearch.toLowerCase()))
+    );
 
     let bgClass = 'bg-white dark:bg-slate-900 border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:border-blue-500 hover:scale-110';
 
@@ -24,6 +31,10 @@ const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeat
         bgClass = 'bg-slate-400 border-slate-400 text-slate-200 cursor-not-allowed opacity-50';
     } else {
         bgClass = 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-500 text-emerald-700 dark:text-emerald-300 hover:bg-emerald-500 hover:text-white';
+    }
+
+    if (isSearchMatch) {
+        bgClass += ' ring-4 ring-amber-400 dark:ring-amber-300 scale-125 z-40 font-black shadow-2xl animate-bounce';
     }
 
     return (
@@ -44,16 +55,16 @@ const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeat
             </div>
 
             {/* Micro details overlay on hover */}
-            {(isOccupied || isClientReserved) && (
-                <div className="absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-black px-2 py-0.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none whitespace-nowrap z-30 shadow-xl">
-                    {isOccupied && user ? user.name : clientNote || 'Client Seat'}
+            {(isOccupied || isClientReserved || isSearchMatch) && (
+                <div className={`absolute -bottom-8 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[8px] font-black px-2 py-0.5 rounded-md transition-opacity pointer-events-none whitespace-nowrap z-50 shadow-xl ${isSearchMatch ? 'opacity-100 bg-amber-600' : 'opacity-0 group-hover:opacity-100'}`}>
+                    {isOccupied && user ? user.name : clientNote || (isSearchMatch ? `Match: ${seatId}` : 'Client Seat')}
                 </div>
             )}
         </button>
     );
 };
 
-const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats, onSelectSeat }) => {
+const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats, highlightSearch, onSelectSeat }) => {
     const seatMap = new Map();
     seats.forEach(s => seatMap.set(s.seatId, s));
 
@@ -66,6 +77,7 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
             clientNote: data.clientNote || null,
             selectedSeat,
             selectedSeats,
+            highlightSearch,
             onSelect: onSelectSeat
         };
     };

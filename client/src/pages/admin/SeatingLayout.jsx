@@ -261,16 +261,17 @@ const SeatingLayout = () => {
                 <div className="space-y-6">
                     {activeLevel === 'ALL' ? (
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                            <ArchitecturalFloorplan level={1} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
-                            <ArchitecturalFloorplan level={3} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
-                            <ArchitecturalFloorplan level={2} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
-                            <ArchitecturalFloorplan level={4} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={1} seats={seats} selectedSeat={userSeat} highlightSearch={searchTerm} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={3} seats={seats} selectedSeat={userSeat} highlightSearch={searchTerm} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={2} seats={seats} selectedSeat={userSeat} highlightSearch={searchTerm} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={4} seats={seats} selectedSeat={userSeat} highlightSearch={searchTerm} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
                         </div>
                     ) : (
                         <ArchitecturalFloorplan
                             level={Number(activeLevel)}
                             seats={seats}
                             selectedSeat={userSeat}
+                            highlightSearch={searchTerm}
                             onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }}
                         />
                     )}
