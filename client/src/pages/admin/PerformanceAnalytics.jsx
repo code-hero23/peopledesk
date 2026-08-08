@@ -266,32 +266,56 @@ const PerformanceAnalytics = () => {
                             <table className="w-full text-left border-separate border-spacing-0">
                                 <thead className="sticky top-0 z-30">
                                     <tr className="bg-slate-900 shadow-xl">
-                                        <th className="pl-6 pr-4 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] first:rounded-tl-none">
+                                        <th className="pl-6 pr-3 py-4 text-[10px] font-black text-slate-400 uppercase tracking-[0.1em] first:rounded-tl-none">
                                             <div className="flex flex-col">
                                                 <span className="text-white mb-0.5 text-xs">Employee Profile</span>
                                                 <span className="text-[9px] text-slate-500 font-bold lowercase tracking-wider">Details & Role</span>
                                             </div>
                                         </th>
-                                        <th className="px-4 py-4 text-center">
+                                        <th className="px-3 py-4 text-center">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">Efficiency</span>
-                                                <div className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-2 py-1 rounded-lg border border-emerald-400/20 uppercase tracking-wider shadow-sm">
-                                                    (Working Hours)
+                                                <div className="text-[9px] font-black text-emerald-400 bg-emerald-400/10 px-2 py-0.5 rounded-lg border border-emerald-400/20 uppercase tracking-wider shadow-sm">
+                                                    Max 20
                                                 </div>
                                             </div>
                                         </th>
-                                        <th className="px-4 py-4 text-center">
+                                        <th className="px-3 py-4 text-center">
                                             <div className="flex flex-col items-center">
                                                 <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">Consistency</span>
-                                                <div className="text-[9px] font-black text-violet-400 bg-violet-400/10 px-2 py-1 rounded-lg border border-violet-400/20 uppercase tracking-wider shadow-sm">
-                                                    (Logs & Punctuality)
+                                                <div className="text-[9px] font-black text-violet-400 bg-violet-400/10 px-2 py-0.5 rounded-lg border border-violet-400/20 uppercase tracking-wider shadow-sm">
+                                                    Max 30
+                                                </div>
+                                            </div>
+                                        </th>
+                                        <th className="px-3 py-4 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">Quality</span>
+                                                <div className="text-[9px] font-black text-blue-400 bg-blue-400/10 px-2 py-0.5 rounded-lg border border-blue-400/20 uppercase tracking-wider shadow-sm">
+                                                    Max 20
+                                                </div>
+                                            </div>
+                                        </th>
+                                        <th className="px-3 py-4 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">System</span>
+                                                <div className="text-[9px] font-black text-amber-400 bg-amber-400/10 px-2 py-0.5 rounded-lg border border-amber-400/20 uppercase tracking-wider shadow-sm">
+                                                    Max 15
+                                                </div>
+                                            </div>
+                                        </th>
+                                        <th className="px-3 py-4 text-center">
+                                            <div className="flex flex-col items-center">
+                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">Behaviour</span>
+                                                <div className="text-[9px] font-black text-rose-400 bg-rose-400/10 px-2 py-0.5 rounded-lg border border-rose-400/20 uppercase tracking-wider shadow-sm">
+                                                    Max 15
                                                 </div>
                                             </div>
                                         </th>
                                         <th className="px-4 py-4 text-center">
                                             <div className="flex flex-col items-center">
-                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">Presence</span>
-                                                <span className="text-[9px] text-slate-500 font-black mt-0.5 uppercase tracking-widest">Total Days</span>
+                                                <span className="text-[10px] font-black text-white uppercase tracking-[0.15em] mb-1">Overall Score</span>
+                                                <span className="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Total / 100</span>
                                             </div>
                                         </th>
                                         <th className="px-4 py-4 text-right pr-6 last:rounded-tr-none">
@@ -301,15 +325,17 @@ const PerformanceAnalytics = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-50">
                                     {filteredTeam.map((emp) => {
-                                        const isHighAchiever = emp.efficiency >= 97 && emp.consistency >= 95;
+                                        const scores = emp.scores || { efficiency: 0, consistency: 0, quality: 0, system: 0, behaviour: 0 };
+                                        const totalScore = emp.totalScore || 0;
+                                        const isHighAchiever = totalScore >= 80 || (emp.efficiency >= 97 && emp.consistency >= 95);
 
                                         return (
                                             <tr key={emp.id} className={`transition-all duration-300 group relative
                                                 ${selectedEmployee === emp.id ? 'bg-blue-50/60' : 'hover:bg-slate-50/80'}
                                             `}>
-                                                <td className="pl-6 pr-4 py-4">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="relative group/avatar">
+                                                <td className="pl-6 pr-3 py-4">
+                                                    <div className="flex items-center gap-3">
+                                                        <div className="relative group/avatar flex-shrink-0">
                                                             <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm transition-all shadow-md duration-300
                                                                 ${isHighAchiever
                                                                     ? 'bg-gradient-to-br from-amber-400 to-orange-600 text-white shadow-orange-200'
@@ -324,55 +350,108 @@ const PerformanceAnalytics = () => {
                                                                 </div>
                                                             )}
                                                         </div>
-                                                        <div>
+                                                        <div className="min-w-0">
                                                             <div className="flex items-center gap-2">
-                                                                <p className={`font-black text-sm leading-tight transition-colors tracking-tight
+                                                                <p className={`font-black text-sm leading-tight transition-colors tracking-tight truncate
                                                                     ${isHighAchiever ? 'text-slate-800' : 'text-slate-700 group-hover:text-blue-700'}`}>
                                                                     {emp.name}
                                                                 </p>
                                                             </div>
-                                                            <div className="flex items-center gap-2 mt-1">
+                                                            <div className="flex items-center gap-1.5 mt-1">
                                                                 <span className="text-[9px] font-black text-white bg-slate-900 border border-slate-800 px-2 py-0.5 rounded-md uppercase tracking-[0.15em] opacity-80 group-hover:opacity-100 group-hover:bg-blue-700 transition-all">{emp.designation}</span>
                                                                 {isHighAchiever && <span className="text-[8px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded-md border border-emerald-100 uppercase tracking-widest">Star</span>}
                                                             </div>
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-4 text-center">
+
+                                                {/* 1. Efficiency Score (Max 20) */}
+                                                <td className="px-3 py-4 text-center">
                                                     <div className="flex flex-col items-center">
-                                                        <div className="flex items-end gap-1 mb-1">
-                                                            <span className={`text-xl font-black leading-none ${emp.efficiency >= 85 ? 'text-emerald-500' : emp.efficiency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.efficiency}%</span>
+                                                        <span className="text-base font-black text-emerald-600 leading-none">
+                                                            {scores.efficiency}<span className="text-[10px] text-slate-400 font-bold">/20</span>
+                                                        </span>
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mt-1.5">
+                                                            <div className="h-full bg-emerald-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (scores.efficiency / 20) * 100)}%` }}></div>
                                                         </div>
-                                                        <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mb-2">
-                                                            <div className={`h-full rounded-full transition-all duration-[1000ms] ${emp.efficiency >= 85 ? 'bg-emerald-500' : emp.efficiency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${Math.min(100, emp.efficiency)}%` }}></div>
-                                                        </div>
-                                                        <span className="text-[9px] font-black text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 shadow-sm uppercase tracking-widest whitespace-nowrap">
-                                                            {emp.totalHours || 0} / {emp.expectedHours || 0} Hrs
+                                                        <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">
+                                                            {emp.totalHours || 0}h Logged
                                                         </span>
                                                     </div>
                                                 </td>
-                                                <td className="px-4 py-4 text-center">
+
+                                                {/* 2. Consistency Score (Max 30) */}
+                                                <td className="px-3 py-4 text-center">
                                                     <div className="flex flex-col items-center">
-                                                        <div className="flex items-end gap-1 mb-1">
-                                                            <span className={`text-xl font-black leading-none ${emp.consistency >= 85 ? 'text-violet-500' : emp.consistency >= 65 ? 'text-blue-500' : 'text-orange-500'}`}>{emp.consistency}%</span>
+                                                        <span className="text-base font-black text-violet-600 leading-none">
+                                                            {scores.consistency}<span className="text-[10px] text-slate-400 font-bold">/30</span>
+                                                        </span>
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mt-1.5">
+                                                            <div className="h-full bg-violet-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (scores.consistency / 30) * 100)}%` }}></div>
                                                         </div>
-                                                        <div className="w-24 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mb-2">
-                                                            <div className={`h-full rounded-full transition-all duration-[1000ms] ${emp.consistency >= 85 ? 'bg-violet-500' : emp.consistency >= 65 ? 'bg-blue-500' : 'bg-orange-500'}`} style={{ width: `${emp.consistency}%` }}></div>
-                                                        </div>
-                                                        <div className="flex flex-col gap-0.5 items-center">
-                                                            <span className="text-[9px] font-black text-slate-500 bg-slate-50 px-2 py-0.5 rounded-full border border-slate-100 shadow-sm uppercase tracking-widest leading-none">
-                                                                {emp.logsSubmitted || 0}/{emp.daysPresent || 0} Logs
-                                                            </span>
-                                                            {emp.avgLateness > 0 && <span className="text-[9px] font-black text-red-500 bg-red-50 px-1.5 py-0.5 rounded-md border border-red-100 uppercase tracking-tighter mt-1">Avg {emp.avgLateness}m Late</span>}
+                                                        <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase">
+                                                            {emp.logsSubmitted || 0}/{emp.daysPresent || 0} Logs
+                                                        </span>
+                                                    </div>
+                                                </td>
+
+                                                {/* 3. Quality Score (Max 20) */}
+                                                <td className="px-3 py-4 text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-base font-black text-blue-600 leading-none">
+                                                            {scores.quality}<span className="text-[10px] text-slate-400 font-bold">/20</span>
+                                                        </span>
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mt-1.5">
+                                                            <div className="h-full bg-blue-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (scores.quality / 20) * 100)}%` }}></div>
                                                         </div>
                                                     </div>
                                                 </td>
+
+                                                {/* 4. System Score (Max 15) */}
+                                                <td className="px-3 py-4 text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-base font-black text-amber-600 leading-none">
+                                                            {scores.system}<span className="text-[10px] text-slate-400 font-bold">/15</span>
+                                                        </span>
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mt-1.5">
+                                                            <div className="h-full bg-amber-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (scores.system / 15) * 100)}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* 5. Behaviour Score (Max 15) */}
+                                                <td className="px-3 py-4 text-center">
+                                                    <div className="flex flex-col items-center">
+                                                        <span className="text-base font-black text-rose-600 leading-none">
+                                                            {scores.behaviour}<span className="text-[10px] text-slate-400 font-bold">/15</span>
+                                                        </span>
+                                                        <div className="w-16 h-1.5 bg-slate-100 rounded-full overflow-hidden shadow-inner mt-1.5">
+                                                            <div className="h-full bg-rose-500 rounded-full transition-all duration-500" style={{ width: `${Math.min(100, (scores.behaviour / 15) * 100)}%` }}></div>
+                                                        </div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Overall Total Score (Max 100) */}
                                                 <td className="px-4 py-4 text-center">
-                                                    <div className="inline-flex flex-col items-center p-2 rounded-2xl bg-slate-50 border border-slate-100 shadow-inner group-hover:bg-white transition-all duration-300">
-                                                        <span className="text-lg font-black text-slate-800 leading-none">{emp.daysPresent}</span>
-                                                        <span className="text-[8px] font-black text-slate-400 uppercase tracking-widest mt-0.5">Days</span>
+                                                    <div className="inline-flex flex-col items-center">
+                                                        <span className={`px-3 py-1.5 rounded-xl font-black text-sm tracking-tight shadow-sm border ${
+                                                            totalScore >= 80 
+                                                                ? 'bg-emerald-50 text-emerald-700 border-emerald-200/60' 
+                                                                : totalScore >= 60 
+                                                                ? 'bg-amber-50 text-amber-700 border-amber-200/60' 
+                                                                : 'bg-rose-50 text-rose-700 border-rose-200/60'
+                                                        }`}>
+                                                            {totalScore}%
+                                                        </span>
+                                                        {!emp.hasRecordedScore && (
+                                                            <span className="text-[8px] font-bold text-slate-400 mt-1 uppercase tracking-tighter">
+                                                                Unrecorded
+                                                            </span>
+                                                        )}
                                                     </div>
                                                 </td>
+
+                                                {/* Action Button */}
                                                 <td className="px-4 py-4 text-right pr-6">
                                                     <button
                                                         onClick={() => handleEmployeeSelect(emp.id)}

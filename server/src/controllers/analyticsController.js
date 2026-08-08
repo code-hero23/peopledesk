@@ -138,6 +138,9 @@ const getTeamOverview = async (req, res) => {
         const start = startDate ? new Date(startDate) : getCycleStartDateIST();
         const end = endDate ? new Date(endDate) : getCycleEndDateIST();
 
+        const targetMonth = start.getMonth() + 1;
+        const targetYear = start.getFullYear();
+
         const employees = await prisma.user.findMany({
             where: { role: 'EMPLOYEE', status: 'ACTIVE' },
             select: { id: true, name: true, designation: true }
@@ -152,6 +155,10 @@ const getTeamOverview = async (req, res) => {
             const workLogsData = await prisma.workLog.findMany({
                 where: { userId: emp.id, date: { gte: start, lte: end } },
                 select: { date: true }
+            });
+
+            const perfScore = await prisma.performanceScore.findFirst({
+                where: { userId: emp.id, month: targetMonth, year: targetYear }
             });
 
             const uniqueDaysWithLogs = new Set(workLogsData.map(log => new Date(log.date).toDateString())).size;
@@ -196,7 +203,16 @@ const getTeamOverview = async (req, res) => {
                 totalHours: totalHours,
                 expectedHours: expectedHours,
                 logsSubmitted: logsCount,
-                avgLateness: avgLateness > 0 ? avgLateness : 0
+                avgLateness: avgLateness > 0 ? avgLateness : 0,
+                scores: {
+                    efficiency: perfScore ? perfScore.efficiency : 0,
+                    consistency: perfScore ? perfScore.consistency : 0,
+                    quality: perfScore ? perfScore.quality : 0,
+                    system: perfScore ? perfScore.system : 0,
+                    behaviour: perfScore ? perfScore.behaviour : 0,
+                },
+                totalScore: perfScore ? perfScore.totalScore : 0,
+                hasRecordedScore: !!perfScore
             };
         }));
 
