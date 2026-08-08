@@ -371,8 +371,8 @@ const SeatingLayout = () => {
                                 </div>
                             </div>
                         );
-                    })}
                 </div>
+            </div>
             )}
 
             {/* Seat Selection Modal */}
