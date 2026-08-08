@@ -353,16 +353,12 @@ const SeatingLayout = () => {
                                             <span className="text-slate-400 font-medium italic">Occupied</span>
                                         )
                                     ) : isClientReserved ? (
-                                        (isUserAdminOrHr || seat.userId === currentUserId) ? (
-                                            <button
-                                                onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')}
-                                                className="text-purple-600 dark:text-purple-400 hover:underline"
-                                            >
-                                                Free Client Seat
-                                            </button>
-                                        ) : (
-                                            <span className="text-purple-400 font-medium italic">Reserved for Client</span>
-                                        )
+                                        <button
+                                            onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')}
+                                            className="text-purple-600 dark:text-purple-400 hover:underline font-black"
+                                        >
+                                            Free Client Seat
+                                        </button>
                                     ) : (
                                         <>
                                             <button
@@ -375,9 +371,7 @@ const SeatingLayout = () => {
                                                 + Client
                                             </button>
                                             {isReserved ? (
-                                                isUserAdminOrHr ? (
-                                                    <button onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')} className="text-emerald-600">Free</button>
-                                                ) : <span className="text-amber-500">Reserved</span>
+                                                <button onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')} className="text-emerald-600 font-bold">Unreserve</button>
                                             ) : (
                                                 <button onClick={() => handleAdminStatusChange(seat.seatId, 'RESERVED')} className="text-amber-600">Reserve</button>
                                             )}

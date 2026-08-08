@@ -128,6 +128,33 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
         }
     };
 
+    const handleUnreserveSeats = async () => {
+        const targets = selectedSeats.length > 0 ? selectedSeats : (selectedSeat ? [selectedSeat] : []);
+        if (targets.length === 0) return;
+
+        try {
+            setIsSubmitting(true);
+            const userStr = localStorage.getItem('user');
+            const token = userStr ? JSON.parse(userStr).token : '';
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+            await axios.put(`${baseUrl}/seating/update-status`, {
+                seatIds: targets,
+                status: 'AVAILABLE'
+            }, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+
+            toast.success(`${targets.length} seat(s) unreserved / freed!`);
+            setSelectedSeats([]);
+            fetchSeats();
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to unreserve seats');
+        } finally {
+            setIsSubmitting(false);
+        }
+    };
+
     if (!isOpen) return null;
 
     const levelSeats = seats.filter(s => s.level === selectedLevel);
@@ -378,13 +405,24 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
 
                         <div className="flex flex-wrap items-center gap-3">
                             {(selectedSeats.length > 0 || selectedSeat) && (
-                                <button
-                                    onClick={() => setShowClientModal(true)}
-                                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 dark:border-purple-800 transition-colors flex items-center gap-1.5 shadow-sm"
-                                >
-                                    <Briefcase size={14} />
-                                    <span>Reserve {selectedSeats.length > 1 ? `${selectedSeats.length} Chairs` : 'Seat'} for Client</span>
-                                </button>
+                                <>
+                                    <button
+                                        type="button"
+                                        onClick={handleUnreserveSeats}
+                                        className="px-4 py-2.5 rounded-xl font-bold text-xs bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800 transition-colors flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <X size={14} />
+                                        <span>Unreserve / Free {selectedSeats.length > 1 ? `${selectedSeats.length} Chairs` : 'Seat'}</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowClientModal(true)}
+                                        className="px-4 py-2.5 rounded-xl font-bold text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 dark:border-purple-800 transition-colors flex items-center gap-1.5 shadow-sm"
+                                    >
+                                        <Briefcase size={14} />
+                                        <span>Reserve {selectedSeats.length > 1 ? `${selectedSeats.length} Chairs` : 'Seat'} for Client</span>
+                                    </button>
+                                </>
                             )}
                             <button
                                 onClick={onClose}

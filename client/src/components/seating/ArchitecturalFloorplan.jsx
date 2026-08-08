@@ -319,11 +319,15 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
                         <SeatNode {...getSeatProps('L4/2')} />
                         <SeatNode {...getSeatProps('L4/3')} />
                     </div>
-                    <div className="flex flex-col gap-2 my-2">
-                        <SeatNode {...getSeatProps('L4/4')} />
-                        <SeatNode {...getSeatProps('L4/5')} />
+                    {/* Tamil Mam's Cabin (L4/4, L4/5, L4/6) */}
+                    <div className="w-full bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-700 flex flex-col items-center gap-1 my-1">
+                        <div className="flex flex-col gap-1">
+                            <SeatNode {...getSeatProps('L4/4')} />
+                            <SeatNode {...getSeatProps('L4/5')} />
+                            <SeatNode {...getSeatProps('L4/6')} />
+                        </div>
+                        <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[7.5px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">Tamil Mam's Cabin</div>
                     </div>
-                    <SeatNode {...getSeatProps('L4/6')} />
                 </div>
 
                 {/* Main Central Seating Hall (L4/7..L4/38) */}
