@@ -1,5 +1,5 @@
 import React from 'react';
-import { Armchair, CheckCircle2, User, Briefcase } from 'lucide-react';
+import { Armchair, CheckCircle2, User, Briefcase, DoorOpen, LogIn } from 'lucide-react';
 
 const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeats, onSelect }) => {
     const isSelected = Array.isArray(selectedSeats) 
@@ -79,8 +79,15 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
                     LEVEL-1 (NO OF SEATS - 16)
                 </div>
 
+                {/* Room Start / Entrance Marking */}
+                <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-emerald-600 text-white font-black text-[10px] px-3 py-1 rounded-lg border border-emerald-400 shadow-md tracking-wider uppercase z-20">
+                    <DoorOpen size={14} /> ROOM START / ENTRANCE ➔
+                </div>
+
                 {/* Left Door Handle Graphic */}
-                <div className="absolute left-0 top-1/3 w-2 h-16 bg-slate-900 rounded-r-md"></div>
+                <div className="absolute left-0 top-1/3 w-3 h-16 bg-emerald-500 rounded-r-md border-r-2 border-emerald-300 flex items-center justify-center">
+                    <span className="text-[7px] font-black text-white rotate-90 uppercase">START</span>
+                </div>
 
                 <div className="grid grid-cols-12 gap-4 mt-8 h-full flex-1">
                     {/* Left & Middle Zone */}
@@ -172,7 +179,14 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
                     LEVEL-2 (NO OF SEATS - 13)
                 </div>
 
-                <div className="absolute left-0 top-1/4 w-2 h-16 bg-slate-900 rounded-r-md"></div>
+                {/* Room Start / Entrance Marking */}
+                <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-emerald-600 text-white font-black text-[10px] px-3 py-1 rounded-lg border border-emerald-400 shadow-md tracking-wider uppercase z-20">
+                    <DoorOpen size={14} /> ROOM START / ENTRANCE ➔
+                </div>
+
+                <div className="absolute left-0 top-1/4 w-3 h-16 bg-emerald-500 rounded-r-md border-r-2 border-emerald-300 flex items-center justify-center">
+                    <span className="text-[7px] font-black text-white rotate-90 uppercase">START</span>
+                </div>
 
                 <div className="grid grid-cols-12 gap-6 mt-8 flex-1 items-center">
                     {/* Left Table: L2/1, L2/2 on top, L2/3 on bottom */}
@@ -229,6 +243,15 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
             <div className="w-full bg-slate-50 dark:bg-slate-950 p-6 rounded-3xl border-4 border-slate-800 relative overflow-hidden min-h-[500px] flex flex-col justify-between select-none">
                 <div className="absolute top-2 left-4 font-black text-xs text-slate-800 dark:text-slate-200 tracking-wider uppercase bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-300">
                     LEVEL-3 (NO OF SEATS - 16)
+                </div>
+
+                {/* Room Start / Entrance Marking */}
+                <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-emerald-600 text-white font-black text-[10px] px-3 py-1 rounded-lg border border-emerald-400 shadow-md tracking-wider uppercase z-20">
+                    <DoorOpen size={14} /> ROOM START / ENTRANCE ➔
+                </div>
+
+                <div className="absolute left-0 top-1/4 w-3 h-16 bg-emerald-500 rounded-r-md border-r-2 border-emerald-300 flex items-center justify-center">
+                    <span className="text-[7px] font-black text-white rotate-90 uppercase">START</span>
                 </div>
 
                 <div className="grid grid-cols-12 gap-6 mt-8 flex-1">
@@ -309,6 +332,15 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
         <div className="w-full bg-slate-50 dark:bg-slate-950 p-6 rounded-3xl border-4 border-slate-800 relative overflow-hidden min-h-[600px] flex flex-col justify-between select-none">
             <div className="absolute top-2 left-4 font-black text-xs text-slate-800 dark:text-slate-200 tracking-wider uppercase bg-white dark:bg-slate-900 px-3 py-1 rounded-lg border border-slate-300">
                 LEVEL-4 (NO OF SEATS - 46)
+            </div>
+
+            {/* Room Start / Entrance Marking */}
+            <div className="absolute top-2 right-4 flex items-center gap-1.5 bg-emerald-600 text-white font-black text-[10px] px-3 py-1 rounded-lg border border-emerald-400 shadow-md tracking-wider uppercase z-20">
+                <DoorOpen size={14} /> ROOM START / ENTRANCE ➔
+            </div>
+
+            <div className="absolute left-0 bottom-1/4 w-3 h-16 bg-emerald-500 rounded-r-md border-r-2 border-emerald-300 flex items-center justify-center">
+                <span className="text-[7px] font-black text-white rotate-90 uppercase">START</span>
             </div>
 
             <div className="grid grid-cols-12 gap-4 mt-8 flex-1">
