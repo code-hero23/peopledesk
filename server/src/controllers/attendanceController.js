@@ -116,6 +116,13 @@ const checkoutAttendance = async (req, res) => {
             },
         });
 
+        // AUTO-RELEASE EMPLOYEE SEAT ON SESSION FINISH / CHECKOUT
+        await prisma.seatAssignment.updateMany({
+            where: { userId },
+            data: { status: 'AVAILABLE', userId: null, clientNote: null }
+        });
+        console.log(`Auto-released active seat for user ${userId} on checkout`);
+
         // AUTO-CLOSE ACTIVE BREAKS ON CHECKOUT
         // Find any active break (without endTime) for this attendance
         const activeBreak = await prisma.breakLog.findFirst({

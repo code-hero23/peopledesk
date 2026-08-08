@@ -368,7 +368,7 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, onSelectSeat 
                             <SeatNode {...getSeatProps('L4/40')} />
                             <SeatNode {...getSeatProps('L4/41')} />
                         </div>
-                        <div className="w-full h-4 bg-slate-300 dark:bg-slate-700 border border-slate-500 rounded text-[7px] font-bold text-center">Booth 1</div>
+                        <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[8px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">RN Sir's Cabin</div>
                         <SeatNode {...getSeatProps('L4/42')} />
                     </div>
 
@@ -379,7 +379,7 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, onSelectSeat 
                             <SeatNode {...getSeatProps('L4/44')} />
                             <SeatNode {...getSeatProps('L4/45')} />
                         </div>
-                        <div className="w-full h-4 bg-slate-300 dark:bg-slate-700 border border-slate-500 rounded text-[7px] font-bold text-center">Booth 2</div>
+                        <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[8px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">Leo Sir's Cabin</div>
                         <SeatNode {...getSeatProps('L4/46')} />
                     </div>
                 </div>
