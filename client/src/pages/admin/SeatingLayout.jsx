@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Armchair, Users, CheckCircle, ShieldAlert, Ban, Search, RefreshCw, Layers, User, Sparkles, Briefcase, X } from 'lucide-react';
+import { Armchair, Users, CheckCircle, ShieldAlert, Ban, Search, RefreshCw, Layers, User, Sparkles, Briefcase, X, Map, LayoutGrid } from 'lucide-react';
 import { toast } from 'react-toastify';
 import SeatSelectionModal from '../../components/seating/SeatSelectionModal';
+import ArchitecturalFloorplan from '../../components/seating/ArchitecturalFloorplan';
 
 const SeatingLayout = () => {
     const [seats, setSeats] = useState([]);
     const [stats, setStats] = useState({ total: 91, available: 0, occupied: 0, reserved: 0, clientReserved: 0, blocked: 0 });
-    const [activeLevel, setActiveLevel] = useState('ALL');
+    const [activeLevel, setActiveLevel] = useState('1'); // Default to Level 1 floorplan
+    const [viewMode, setViewMode] = useState('blueprint'); // 'blueprint' or 'grid'
     const [searchTerm, setSearchTerm] = useState('');
     const [isLoading, setIsLoading] = useState(false);
     const [isChangeModalOpen, setIsChangeModalOpen] = useState(false);
@@ -214,21 +216,63 @@ const SeatingLayout = () => {
                     ))}
                 </div>
 
-                <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-64">
-                    <Search size={16} className="text-slate-400" />
-                    <input
-                        type="text"
-                        placeholder="Search seat, user, client..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 w-full"
-                    />
+                <div className="flex items-center gap-3">
+                    <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('blueprint')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                                viewMode === 'blueprint' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-sm' : 'text-slate-500'
+                            }`}
+                        >
+                            <Map size={14} /> Blueprint Map
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setViewMode('grid')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                                viewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-sm' : 'text-slate-500'
+                            }`}
+                        >
+                            <LayoutGrid size={14} /> Tile Grid
+                        </button>
+                    </div>
+
+                    <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-950 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-56">
+                        <Search size={16} className="text-slate-400" />
+                        <input
+                            type="text"
+                            placeholder="Search seat, user, client..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 w-full"
+                        />
+                    </div>
                 </div>
             </div>
 
-            {/* Grid of Seats */}
-            <div className="bg-white dark:bg-slate-900 p-6 rounded-[28px] shadow-sm border border-slate-100 dark:border-slate-800">
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
+            {/* Display Area */}
+            {viewMode === 'blueprint' ? (
+                <div className="space-y-6">
+                    {activeLevel === 'ALL' ? (
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <ArchitecturalFloorplan level={1} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={3} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={2} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                            <ArchitecturalFloorplan level={4} seats={seats} selectedSeat={userSeat} onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }} />
+                        </div>
+                    ) : (
+                        <ArchitecturalFloorplan
+                            level={Number(activeLevel)}
+                            seats={seats}
+                            selectedSeat={userSeat}
+                            onSelectSeat={(s) => { setUserSeat(s); setIsChangeModalOpen(true); }}
+                        />
+                    )}
+                </div>
+            ) : (
+                <div className="bg-white dark:bg-slate-900 p-6 rounded-[28px] shadow-sm border border-slate-100 dark:border-slate-800">
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-8 gap-3">
                     {filteredSeats.map(seat => {
                         const isOccupied = seat.status === 'OCCUPIED';
                         const isClientReserved = seat.status === 'CLIENT_RESERVED';

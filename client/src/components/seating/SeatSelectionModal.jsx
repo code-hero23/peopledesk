@@ -1,13 +1,11 @@
-import { useState, useEffect } from 'react';
-import axios from 'axios';
-import { motion, AnimatePresence } from 'framer-motion';
-import { X, Search, Armchair, CheckCircle2, User, RefreshCw, AlertCircle, Sparkles, Briefcase, UserCheck } from 'lucide-react';
-import { toast } from 'react-toastify';
+import ArchitecturalFloorplan from './ArchitecturalFloorplan';
+import { LayoutGrid, Map } from 'lucide-react';
 
 const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = null, isCheckInMode = false }) => {
     const [selectedLevel, setSelectedLevel] = useState(1);
     const [seats, setSeats] = useState([]);
     const [selectedSeat, setSelectedSeat] = useState(currentSeatId);
+    const [viewMode, setViewMode] = useState('blueprint'); // 'blueprint' or 'grid'
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [searchTerm, setSearchTerm] = useState('');
@@ -185,16 +183,39 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                             ))}
                         </div>
 
-                        {/* Search Input */}
-                        <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-56">
-                            <Search size={14} className="text-slate-400" />
-                            <input
-                                type="text"
-                                placeholder="Search seat, user, client..."
-                                value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
-                                className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 w-full"
-                            />
+                        <div className="flex items-center gap-2">
+                            <div className="flex bg-slate-200 dark:bg-slate-800 p-1 rounded-xl">
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('blueprint')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                                        viewMode === 'blueprint' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-sm' : 'text-slate-500'
+                                    }`}
+                                >
+                                    <Map size={14} /> Blueprint
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('grid')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-black transition-all flex items-center gap-1 ${
+                                        viewMode === 'grid' ? 'bg-white dark:bg-slate-900 text-blue-600 shadow-sm' : 'text-slate-500'
+                                    }`}
+                                >
+                                    <LayoutGrid size={14} /> Grid
+                                </button>
+                            </div>
+
+                            {/* Search Input */}
+                            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 w-full sm:w-48">
+                                <Search size={14} className="text-slate-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search..."
+                                    value={searchTerm}
+                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    className="bg-transparent border-none outline-none text-xs font-bold text-slate-700 dark:text-white placeholder:text-slate-400 w-full"
+                                />
+                            </div>
                         </div>
                     </div>
 
@@ -224,13 +245,20 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                         </div>
                     </div>
 
-                    {/* Grid of Seats */}
+                    {/* Content View */}
                     <div className="flex-1 overflow-y-auto p-6 bg-slate-50/50 dark:bg-slate-950/50">
                         {isLoading ? (
                             <div className="flex flex-col items-center justify-center py-16 text-slate-400 gap-3">
                                 <RefreshCw className="animate-spin text-blue-600" size={32} />
                                 <p className="font-bold text-xs">Loading seating floorplan...</p>
                             </div>
+                        ) : viewMode === 'blueprint' ? (
+                            <ArchitecturalFloorplan
+                                level={selectedLevel}
+                                seats={seats}
+                                selectedSeat={selectedSeat}
+                                onSelectSeat={(seatId) => setSelectedSeat(seatId)}
+                            />
                         ) : filteredSeats.length === 0 ? (
                             <div className="text-center py-16 text-slate-400">
                                 <AlertCircle size={32} className="mx-auto mb-2 opacity-50" />
