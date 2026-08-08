@@ -373,7 +373,7 @@ const SeatingLayout = () => {
                         );
                     })}
                 </div>
-            </div>
+            )}
 
             {/* Seat Selection Modal */}
             <SeatSelectionModal
