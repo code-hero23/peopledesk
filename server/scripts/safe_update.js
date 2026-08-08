@@ -246,6 +246,7 @@ async function main() {
           CONSTRAINT "SeatAssignment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
       )
     `);
+    await prisma.$executeRawUnsafe(`CREATE UNIQUE INDEX IF NOT EXISTS "SeatAssignment_seatId_key" ON "SeatAssignment"("seatId")`);
     console.log('Seating schema synced successfully.');
   } catch (err) {
     console.error('Error in Seating schema sync:', err.message);
