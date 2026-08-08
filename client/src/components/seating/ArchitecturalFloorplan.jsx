@@ -29,7 +29,7 @@ const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, onSelect }) 
             type="button"
             disabled={isBlocked || (isOccupied && !isSelected)}
             onClick={() => onSelect(seatId)}
-            className={`group relative flex flex-col items-center justify-center p-1.5 rounded-xl border-2 transition-all duration-300 shadow-sm ${bgClass}`}
+            className={`group relative flex flex-col items-center justify-center p-1.5 rounded-xl border-2 transition-all duration-300 shadow-sm touch-manipulation min-w-[38px] active:scale-95 ${bgClass}`}
             title={
                 isOccupied && user ? `Seat ${seatId} - ${user.name} (${user.designation})` :
                 isClientReserved ? `Seat ${seatId} - ${clientNote || 'Client Guest'}` :

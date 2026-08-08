@@ -165,8 +165,8 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                     </div>
 
                     {/* Level Selector Tabs */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-                        <div className="flex gap-2">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-950 border-b border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3 overflow-x-auto">
+                        <div className="flex gap-2 overflow-x-auto pb-1 max-w-full">
                             {[1, 2, 3, 4].map((lvl) => (
                                 <button
                                     key={lvl}
