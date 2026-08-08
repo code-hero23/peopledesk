@@ -20,6 +20,11 @@ const SeatingLayout = () => {
     const [targetSeatForClient, setTargetSeatForClient] = useState(null);
     const [clientNoteInput, setClientNoteInput] = useState('');
 
+    const userStr = localStorage.getItem('user');
+    const currentUser = userStr ? JSON.parse(userStr) : null;
+    const isUserAdminOrHr = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'HR');
+    const currentUserId = currentUser ? currentUser.id : null;
+
     useEffect(() => {
         fetchSeatingData();
 
@@ -337,19 +342,27 @@ const SeatingLayout = () => {
                                 {/* Context Quick Actions */}
                                 <div className="mt-3 pt-2 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between text-[9px] font-bold gap-1">
                                     {isOccupied ? (
-                                        <button
-                                            onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')}
-                                            className="text-slate-400 hover:text-rose-600 transition-colors"
-                                        >
-                                            Release
-                                        </button>
+                                        (isUserAdminOrHr || seat.userId === currentUserId) ? (
+                                            <button
+                                                onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')}
+                                                className="text-slate-400 hover:text-rose-600 transition-colors"
+                                            >
+                                                Release
+                                            </button>
+                                        ) : (
+                                            <span className="text-slate-400 font-medium italic">Occupied</span>
+                                        )
                                     ) : isClientReserved ? (
-                                        <button
-                                            onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')}
-                                            className="text-purple-600 dark:text-purple-400 hover:underline"
-                                        >
-                                            Free Client Seat
-                                        </button>
+                                        (isUserAdminOrHr || seat.userId === currentUserId) ? (
+                                            <button
+                                                onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')}
+                                                className="text-purple-600 dark:text-purple-400 hover:underline"
+                                            >
+                                                Free Client Seat
+                                            </button>
+                                        ) : (
+                                            <span className="text-purple-400 font-medium italic">Reserved for Client</span>
+                                        )
                                     ) : (
                                         <>
                                             <button
@@ -362,7 +375,9 @@ const SeatingLayout = () => {
                                                 + Client
                                             </button>
                                             {isReserved ? (
-                                                <button onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')} className="text-emerald-600">Free</button>
+                                                isUserAdminOrHr ? (
+                                                    <button onClick={() => handleAdminStatusChange(seat.seatId, 'AVAILABLE')} className="text-emerald-600">Free</button>
+                                                ) : <span className="text-amber-500">Reserved</span>
                                             ) : (
                                                 <button onClick={() => handleAdminStatusChange(seat.seatId, 'RESERVED')} className="text-amber-600">Reserve</button>
                                             )}

@@ -1,5 +1,9 @@
+import { useState, useEffect } from 'react';
+import axios from 'axios';
+import { motion, AnimatePresence } from 'framer-motion';
+import { X, Search, Armchair, CheckCircle2, User, RefreshCw, AlertCircle, Sparkles, Briefcase, UserCheck, LayoutGrid, Map } from 'lucide-react';
+import { toast } from 'react-toastify';
 import ArchitecturalFloorplan from './ArchitecturalFloorplan';
-import { LayoutGrid, Map } from 'lucide-react';
 
 const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = null, isCheckInMode = false }) => {
     const [selectedLevel, setSelectedLevel] = useState(1);

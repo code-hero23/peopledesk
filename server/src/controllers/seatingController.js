@@ -183,9 +183,22 @@ const releaseSeat = async (req, res) => {
 const updateSeatStatusByAdmin = async (req, res) => {
     try {
         const { seatId, status, userId, clientNote } = req.body;
+        const currentUserId = req.user.id;
+        const currentUserRole = req.user.role;
+        const isPrivileged = currentUserRole === 'ADMIN' || currentUserRole === 'HR';
 
         if (!seatId || !status) {
             return res.status(400).json({ message: 'Seat ID and status are required' });
+        }
+
+        const existingSeat = await prisma.seatAssignment.findUnique({ where: { seatId } });
+        if (!existingSeat) {
+            return res.status(404).json({ message: 'Seat not found' });
+        }
+
+        // Prevent non-admin employees from removing someone else's seat
+        if (status === 'AVAILABLE' && existingSeat.status === 'OCCUPIED' && existingSeat.userId !== currentUserId && !isPrivileged) {
+            return res.status(403).json({ message: "You do not have permission to remove another employee's seat assignment." });
         }
 
         const updatedSeat = await prisma.seatAssignment.update({
