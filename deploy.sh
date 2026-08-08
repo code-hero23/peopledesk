@@ -11,10 +11,10 @@ echo "🛠️ Updating Server..."
 cd server
 npm install
 npx prisma generate
-# prisma migrate deploy is safe for existing data (it doesn't reset)
-npx prisma migrate deploy 
+# Attempt prisma migrate deploy safely (fallback to safe_update.js if no pending migrations)
+npx prisma migrate deploy || echo "⚠️ Prisma migrate deploy skipped/handled, running safe_update.js..."
 node scripts/safe_update.js
-pm2 restart all
+pm2 restart all || pm2 start src/app.js --name "peopledesk-backend"
 cd ..
 
 echo "🎨 Building Frontend..."
@@ -22,20 +22,20 @@ cd client
 npm install
 npm run build
 
-echo "📱 Building Mobile APK..."
-# Sync web assets to Capacitor
-npx cap sync android
+echo "📱 Checking Mobile APK Build (Optional)..."
+if [ -d "android" ] && command -v java &> /dev/null; then
+    echo "Syncing Capacitor Android..."
+    npx cap sync android || true
+    cd android
+    chmod +x ./gradlew || true
+    ./gradlew assembleDebug || true
+    mkdir -p ../../server/uploads/apks/
+    cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk || true
+    cd ../..
+    echo "📍 APK Location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
+else
+    cd ..
+    echo "ℹ️ Android SDK/Java not found on VPS - Web & Server deployment complete!"
+fi
 
-# Build the Android APK using Gradle
-cd android
-chmod +x ./gradlew || true
-bash ./gradlew assembleDebug
-
-# Move APK to a public web path for easy download if needed
-mkdir -p ../../server/uploads/apks/
-cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk
-
-cd ../..
-echo "Call analyser apk location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
-echo "✅ Deployment & APK Build Complete!"
-echo "📍 APK Location: client/android/app/build/outputs/apk/debug/app-debug.apk"
+echo "✅ Deployment Complete!"

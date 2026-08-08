@@ -228,6 +228,29 @@ async function main() {
     console.error('Error in Helpdesk Schema sync:', err.message);
   }
 
+  // Adding Seating Columns and SeatAssignment Table
+  try {
+    console.log('Syncing Seating schema...');
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "seatId" TEXT`);
+
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "SeatAssignment" (
+          "id" SERIAL PRIMARY KEY,
+          "seatId" TEXT UNIQUE NOT NULL,
+          "level" INTEGER NOT NULL,
+          "status" TEXT NOT NULL DEFAULT 'AVAILABLE',
+          "clientNote" TEXT,
+          "userId" INTEGER,
+          "date" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "SeatAssignment_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
+    `);
+    console.log('Seating schema synced successfully.');
+  } catch (err) {
+    console.error('Error in Seating schema sync:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 
