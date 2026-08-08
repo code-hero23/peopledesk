@@ -369,8 +369,8 @@ const SeatingLayout = () => {
                                         </>
                                     )}
                                 </div>
-                            </div>
                         );
+                    })}
                 </div>
             </div>
             )}
