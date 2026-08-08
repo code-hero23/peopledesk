@@ -9,6 +9,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
     const [selectedLevel, setSelectedLevel] = useState(1);
     const [seats, setSeats] = useState([]);
     const [selectedSeat, setSelectedSeat] = useState(currentSeatId);
+    const [selectedSeats, setSelectedSeats] = useState([]);
     const [viewMode, setViewMode] = useState('blueprint'); // 'blueprint' or 'grid'
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -21,6 +22,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
         if (isOpen) {
             fetchSeats();
             setSelectedSeat(currentSeatId);
+            if (currentSeatId) setSelectedSeats([currentSeatId]);
 
             // Real-time 5-second polling interval for live update across all users
             const interval = setInterval(() => {
@@ -30,6 +32,17 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
             return () => clearInterval(interval);
         }
     }, [isOpen, currentSeatId]);
+
+    const handleSeatClick = (seatId) => {
+        setSelectedSeat(seatId);
+        setSelectedSeats(prev => {
+            if (prev.includes(seatId)) {
+                return prev.filter(s => s !== seatId);
+            } else {
+                return [...prev, seatId];
+            }
+        });
+    };
 
     const fetchSeats = async (silent = false) => {
         try {
@@ -47,13 +60,14 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
         } catch (error) {
             console.error('Failed to fetch seating layout', error);
             if (!silent) toast.error('Failed to load seating layout');
-        } fontally: {
+        } finally {
             if (!silent) setIsLoading(false);
         }
     };
 
     const handleConfirm = async () => {
-        if (!selectedSeat) {
+        const targetSeat = selectedSeat || (selectedSeats.length > 0 ? selectedSeats[0] : null);
+        if (!targetSeat) {
             toast.warning('Please select an available seat first');
             return;
         }
@@ -64,13 +78,13 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
             const token = userStr ? JSON.parse(userStr).token : '';
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
-            await axios.post(`${baseUrl}/seating/assign`, { seatId: selectedSeat }, {
+            await axios.post(`${baseUrl}/seating/assign`, { seatId: targetSeat }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            toast.success(`Seat ${selectedSeat} assigned successfully!`);
+            toast.success(`Seat ${targetSeat} assigned successfully!`);
             if (onSeatConfirmed) {
-                onSeatConfirmed(selectedSeat);
+                onSeatConfirmed(targetSeat);
             }
             onClose();
         } catch (error) {
@@ -82,8 +96,9 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
     };
 
     const handleReserveClientSeat = async () => {
-        if (!selectedSeat) {
-            toast.warning('Please select a seat to reserve for client');
+        const targets = selectedSeats.length > 0 ? selectedSeats : (selectedSeat ? [selectedSeat] : []);
+        if (targets.length === 0) {
+            toast.warning('Please select at least one chair to reserve for client');
             return;
         }
 
@@ -94,16 +109,17 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
             await axios.put(`${baseUrl}/seating/update-status`, {
-                seatId: selectedSeat,
+                seatIds: targets,
                 status: 'CLIENT_RESERVED',
-                clientNote: clientNoteInput || 'Client Guest Seat'
+                clientNote: clientNoteInput || 'Client Guest Team'
             }, {
                 headers: { Authorization: `Bearer ${token}` }
             });
 
-            toast.success(`Seat ${selectedSeat} reserved for client!`);
+            toast.success(`${targets.length} chair(s) reserved for client! (${targets.join(', ')})`);
             setShowClientModal(false);
             setClientNoteInput('');
+            setSelectedSeats([]);
             fetchSeats();
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to reserve client seat');
@@ -261,7 +277,8 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                                 level={selectedLevel}
                                 seats={seats}
                                 selectedSeat={selectedSeat}
-                                onSelectSeat={(seatId) => setSelectedSeat(seatId)}
+                                selectedSeats={selectedSeats}
+                                onSelectSeat={handleSeatClick}
                             />
                         ) : filteredSeats.length === 0 ? (
                             <div className="text-center py-16 text-slate-400">
@@ -271,7 +288,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                         ) : (
                             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3">
                                 {filteredSeats.map((seat) => {
-                                    const isSelected = selectedSeat === seat.seatId;
+                                    const isSelected = selectedSeats.includes(seat.seatId) || selectedSeat === seat.seatId;
                                     const isOccupied = seat.status === 'OCCUPIED';
                                     const isReserved = seat.status === 'RESERVED';
                                     const isClientReserved = seat.status === 'CLIENT_RESERVED';
@@ -295,7 +312,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                                         <button
                                             key={seat.seatId}
                                             disabled={(isOccupied || isClientReserved || isBlocked) && !isSelected}
-                                            onClick={() => setSelectedSeat(seat.seatId)}
+                                            onClick={() => handleSeatClick(seat.seatId)}
                                             className={`p-3.5 rounded-2xl border transition-all duration-300 flex flex-col items-center text-center relative group ${cardBg}`}
                                         >
                                             <div className="flex items-center gap-1 mb-1">
@@ -345,26 +362,28 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                     <div className="p-5 bg-white dark:bg-slate-900 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
                         <div className="flex items-center gap-3">
                             <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-100 dark:border-blue-900 flex items-center justify-center text-blue-600 dark:text-blue-400 font-black text-sm">
-                                {selectedSeat || '?'}
+                                {selectedSeats.length > 0 ? selectedSeats.length : (selectedSeat || '?')}
                             </div>
                             <div>
                                 <p className="text-xs font-black text-slate-800 dark:text-white">
-                                    {selectedSeat ? `Selected Seat: ${selectedSeat}` : 'No seat selected'}
+                                    {selectedSeats.length > 0 
+                                        ? `${selectedSeats.length} Chair(s) Selected (${selectedSeats.join(', ')})`
+                                        : (selectedSeat ? `Selected Seat: ${selectedSeat}` : 'No seat selected')}
                                 </p>
                                 <p className="text-[10px] text-slate-500 font-medium">
-                                    {selectedSeat ? `Level ${selectedLevel} • Ready to assign` : 'Click an available seat above'}
+                                    {selectedSeats.length > 0 ? 'Click "Reserve for Client" to reserve all selected chairs for a team' : (selectedSeat ? `Level ${selectedLevel} • Ready to assign` : 'Click an available seat above')}
                                 </p>
                             </div>
                         </div>
 
                         <div className="flex flex-wrap items-center gap-3">
-                            {selectedSeat && (
+                            {(selectedSeats.length > 0 || selectedSeat) && (
                                 <button
                                     onClick={() => setShowClientModal(true)}
-                                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 dark:border-purple-800 transition-colors flex items-center gap-1.5"
+                                    className="px-4 py-2.5 rounded-xl font-bold text-xs bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 dark:border-purple-800 transition-colors flex items-center gap-1.5 shadow-sm"
                                 >
                                     <Briefcase size={14} />
-                                    <span>Reserve for Client</span>
+                                    <span>Reserve {selectedSeats.length > 1 ? `${selectedSeats.length} Chairs` : 'Seat'} for Client</span>
                                 </button>
                             )}
                             <button
@@ -375,7 +394,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                             </button>
                             <button
                                 onClick={handleConfirm}
-                                disabled={!selectedSeat || isSubmitting}
+                                disabled={(!selectedSeat && selectedSeats.length === 0) || isSubmitting}
                                 className="px-6 py-2.5 rounded-xl font-black text-xs bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white shadow-lg shadow-blue-600/30 transition-all flex items-center gap-2"
                             >
                                 {isSubmitting ? (
@@ -386,7 +405,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                                 ) : (
                                     <>
                                         <Sparkles size={14} />
-                                        <span>Confirm & Assign Seat</span>
+                                        <span>Confirm My Seat</span>
                                     </>
                                 )}
                             </button>
@@ -404,20 +423,22 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                         >
                             <div className="flex items-center justify-between">
                                 <h4 className="font-black text-slate-800 dark:text-white text-base flex items-center gap-2">
-                                    <Briefcase className="text-purple-600" size={18} /> Reserve Seat {selectedSeat} for Client
+                                    <Briefcase className="text-purple-600" size={18} /> Reserve {selectedSeats.length || 1} Chair(s) for Client
                                 </h4>
                                 <button onClick={() => setShowClientModal(false)} className="text-slate-400 hover:text-slate-600">
                                     <X size={18} />
                                 </button>
                             </div>
 
-                            <p className="text-xs text-slate-500">Enter client/guest details for this extra seat reservation.</p>
+                            <p className="text-xs text-slate-500 font-medium">
+                                Selected chairs: <span className="font-black text-purple-600">{selectedSeats.length > 0 ? selectedSeats.join(', ') : selectedSeat}</span>. Enter client/guest team details below.
+                            </p>
 
                             <div className="space-y-1">
                                 <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Client Name / Meeting Note</label>
                                 <input
                                     type="text"
-                                    placeholder="e.g. Mr. Sharma (Acme Corp)"
+                                    placeholder="e.g. Mr. Sharma (Acme Corp Team)"
                                     value={clientNoteInput}
                                     onChange={(e) => setClientNoteInput(e.target.value)}
                                     className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-bold text-xs outline-none focus:ring-2 focus:ring-purple-500"
@@ -436,7 +457,7 @@ const SeatSelectionModal = ({ isOpen, onClose, onSeatConfirmed, currentSeatId = 
                                     disabled={isSubmitting}
                                     className="flex-1 py-2.5 rounded-xl font-black text-xs bg-purple-600 hover:bg-purple-700 text-white shadow-lg shadow-purple-600/30"
                                 >
-                                    Save Client Reservation
+                                    Save Client Reservation ({selectedSeats.length || 1} Chairs)
                                 </button>
                             </div>
                         </motion.div>

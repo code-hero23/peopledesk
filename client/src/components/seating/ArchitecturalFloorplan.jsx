@@ -1,8 +1,10 @@
 import React from 'react';
 import { Armchair, CheckCircle2, User, Briefcase } from 'lucide-react';
 
-const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, onSelect }) => {
-    const isSelected = selectedSeat === seatId;
+const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, selectedSeats, onSelect }) => {
+    const isSelected = Array.isArray(selectedSeats) 
+        ? selectedSeats.includes(seatId) 
+        : (selectedSeat === seatId || (Array.isArray(selectedSeat) && selectedSeat.includes(seatId)));
     const isOccupied = status === 'OCCUPIED';
     const isClientReserved = status === 'CLIENT_RESERVED';
     const isReserved = status === 'RESERVED';
@@ -51,7 +53,7 @@ const SeatNode = ({ seatId, status, user, clientNote, selectedSeat, onSelect }) 
     );
 };
 
-const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, onSelectSeat }) => {
+const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats, onSelectSeat }) => {
     const seatMap = new Map();
     seats.forEach(s => seatMap.set(s.seatId, s));
 
@@ -63,6 +65,7 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, onSelectSeat 
             user: data.user || null,
             clientNote: data.clientNote || null,
             selectedSeat,
+            selectedSeats,
             onSelect: onSelectSeat
         };
     };
