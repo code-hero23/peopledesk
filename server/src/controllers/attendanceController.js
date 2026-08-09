@@ -51,6 +51,11 @@ const markAttendance = async (req, res) => {
             console.warn('No file received for check-in');
         }
 
+        // Find user's reserved seat assignment if available
+        const userSeat = await prisma.seatAssignment.findFirst({
+            where: { userId }
+        });
+
         const attendance = await prisma.attendance.create({
             data: {
                 userId,
@@ -58,7 +63,8 @@ const markAttendance = async (req, res) => {
                 date: new Date(),
                 checkInPhoto: req.file ? `/uploads/${req.file.filename}` : null,
                 deviceInfo: req.body.deviceInfo || req.headers['user-agent'],
-                ipAddress: req.ip || req.connection.remoteAddress
+                ipAddress: req.ip || req.connection.remoteAddress,
+                seatId: userSeat ? userSeat.seatId : null
             },
         });
 
@@ -253,7 +259,7 @@ const getAttendanceStatus = async (req, res) => {
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 
-        const attendance = await prisma.attendance.findFirst({
+        let attendance = await prisma.attendance.findFirst({
             where: {
                 userId,
                 date: {
@@ -267,6 +273,20 @@ const getAttendanceStatus = async (req, res) => {
                 breaks: true // Include breaks to check status
             }
         });
+
+        // Auto-link assigned seat from SeatAssignment if attendance record has no seatId set
+        if (attendance && !attendance.seatId) {
+            const userSeat = await prisma.seatAssignment.findFirst({
+                where: { userId }
+            });
+            if (userSeat) {
+                attendance = await prisma.attendance.update({
+                    where: { id: attendance.id },
+                    data: { seatId: userSeat.seatId },
+                    include: { breaks: true }
+                });
+            }
+        }
 
         // Determine pause status
         let isPaused = false;
