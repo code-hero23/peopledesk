@@ -70,6 +70,27 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
 
     const getSeatProps = (seatId) => {
         const data = seatMap.get(seatId) || {};
+
+        if (seatId === 'CR1' || seatId === 'CR2') {
+            data.status = 'OCCUPIED';
+            data.user = { name: 'Conference', designation: 'Booked' };
+        } else if (seatId === 'L4/5') {
+            if (!data.userId && (data.status === 'AVAILABLE' || !data.status)) {
+                data.status = 'OCCUPIED';
+                data.user = { name: 'Sangathamizh Mam', designation: 'Management' };
+            }
+        } else if (seatId === 'L4/39') {
+            if (!data.userId && (data.status === 'AVAILABLE' || !data.status)) {
+                data.status = 'OCCUPIED';
+                data.user = { name: 'RN Sir', designation: 'Management' };
+            }
+        } else if (seatId === 'L4/40') {
+            if (!data.userId && (data.status === 'AVAILABLE' || !data.status)) {
+                data.status = 'OCCUPIED';
+                data.user = { name: 'Leo Sir', designation: 'Management' };
+            }
+        }
+
         return {
             seatId,
             status: data.status || 'AVAILABLE',
@@ -117,8 +138,8 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
                                 Desk
                             </div>
                             <div className="flex flex-col gap-3">
-                                <SeatNode {...getSeatProps('L1/1')} />
-                                <SeatNode {...getSeatProps('L1/2')} />
+                                <SeatNode {...getSeatProps('CR1')} />
+                                <SeatNode {...getSeatProps('CR2')} />
                             </div>
                         </div>
 
@@ -356,21 +377,22 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
             </div>
 
             <div className="grid grid-cols-12 gap-4 mt-8 flex-1">
-                {/* Left Side (L4/1..L4/6) */}
+                {/* Left Side (L4/1..L4/5) */}
                 <div className="col-span-2 border-r-2 border-dashed border-slate-400 p-2 flex flex-col justify-between items-center">
-                    <SeatNode {...getSeatProps('L4/1')} />
-                    <div className="flex flex-col gap-2 my-2">
-                        <SeatNode {...getSeatProps('L4/2')} />
-                        <SeatNode {...getSeatProps('L4/3')} />
-                    </div>
-                    {/* Tamil Mam's Cabin (L4/4, L4/5, L4/6) */}
-                    <div className="w-full bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-700 flex flex-col items-center gap-1 my-1">
-                        <div className="flex flex-col gap-1">
-                            <SeatNode {...getSeatProps('L4/4')} />
-                            <SeatNode {...getSeatProps('L4/5')} />
-                            <SeatNode {...getSeatProps('L4/6')} />
+                    <div className="flex flex-col gap-2 my-1 items-center">
+                        <div className="flex gap-2">
+                            <SeatNode {...getSeatProps('L4/1')} />
+                            <SeatNode {...getSeatProps('L4/2')} />
                         </div>
-                        <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[7.5px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">Tamil Mam's Cabin</div>
+                        <div className="flex gap-2">
+                            <SeatNode {...getSeatProps('L4/3')} />
+                            <SeatNode {...getSeatProps('L4/4')} />
+                        </div>
+                    </div>
+                    {/* Sangathamizh Mam's Cabin (1 Chair: L4/5) */}
+                    <div className="w-full bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-700 flex flex-col items-center gap-1.5 my-1 shadow-inner">
+                        <SeatNode {...getSeatProps('L4/5')} />
+                        <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[7.5px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">Sangathamizh Mam's Cabin</div>
                     </div>
                 </div>
 
@@ -410,28 +432,18 @@ const ArchitecturalFloorplan = ({ level, seats = [], selectedSeat, selectedSeats
                     </div>
                 </div>
 
-                {/* Right Side Booths (L4/39..L4/46) */}
-                <div className="col-span-2 border-l-2 border-dashed border-slate-400 p-2 flex flex-col justify-between">
-                    {/* Top Booth */}
-                    <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-700 flex flex-col items-center gap-1">
-                        <div className="flex flex-col gap-1">
-                            <SeatNode {...getSeatProps('L4/39')} />
-                            <SeatNode {...getSeatProps('L4/40')} />
-                            <SeatNode {...getSeatProps('L4/41')} />
-                        </div>
+                {/* Right Side Booths (RN Sir's & Leo Sir's Cabins) */}
+                <div className="col-span-2 border-l-2 border-dashed border-slate-400 p-2 flex flex-col justify-around">
+                    {/* Top Booth: RN Sir's Cabin (2 Chairs: L4/41 & L4/39) */}
+                    <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-700 flex flex-col items-center gap-1.5 shadow-inner">
                         <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[8px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">RN Sir's Cabin</div>
-                        <SeatNode {...getSeatProps('L4/42')} />
+                        <SeatNode {...getSeatProps('L4/39')} />
                     </div>
 
-                    {/* Bottom Booth */}
-                    <div className="bg-white dark:bg-slate-900 p-2 rounded-xl border border-slate-700 flex flex-col items-center gap-1">
-                        <div className="flex flex-col gap-1">
-                            <SeatNode {...getSeatProps('L4/43')} />
-                            <SeatNode {...getSeatProps('L4/44')} />
-                            <SeatNode {...getSeatProps('L4/45')} />
-                        </div>
+                    {/* Bottom Booth: Leo Sir's Cabin (2 Chairs: L4/45 & L4/40) */}
+                    <div className="bg-white dark:bg-slate-900 p-2.5 rounded-xl border border-slate-700 flex flex-col items-center gap-1.5 shadow-inner">
                         <div className="w-full py-0.5 bg-amber-100 dark:bg-amber-950/80 border border-amber-500 rounded text-[8px] font-black text-amber-900 dark:text-amber-300 text-center tracking-tight">Leo Sir's Cabin</div>
-                        <SeatNode {...getSeatProps('L4/46')} />
+                        <SeatNode {...getSeatProps('L4/40')} />
                     </div>
                 </div>
             </div>
