@@ -26,7 +26,7 @@ const Approvals = () => {
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [typeFilter, setTypeFilter] = useState("all");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 9;
+  const itemsPerPage = 20;
 
   const handleCycleChange = (range) => {
     setCycleRange(range);
