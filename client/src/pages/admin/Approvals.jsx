@@ -197,6 +197,23 @@ const Approvals = () => {
     }
   };
 
+  const getPageNumbers = () => {
+    const pages = [];
+    const delta = 2; // numbers to show on each side of active page
+    for (let i = 1; i <= totalPages; i++) {
+      if (
+        i === 1 ||
+        i === totalPages ||
+        (i >= currentPage - delta && i <= currentPage + delta)
+      ) {
+        pages.push(i);
+      } else if (pages[pages.length - 1] !== "...") {
+        pages.push("...");
+      }
+    }
+    return pages;
+  };
+
   const handleBulkApprove = async () => {
     if (selectedKeys.length === 0) return;
     if (
@@ -731,19 +748,28 @@ const Approvals = () => {
           </button>
           
           <div className="flex items-center gap-1.5">
-            {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
-              <button
-                key={page}
-                onClick={() => setCurrentPage(page)}
-                className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
-                  currentPage === page
-                    ? "bg-blue-600 text-white shadow-md"
-                    : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
-                }`}
-              >
-                {page}
-              </button>
-            ))}
+            {getPageNumbers().map((page, idx) => {
+              if (page === "...") {
+                return (
+                  <span key={`dots-${idx}`} className="px-2 text-slate-400 dark:text-slate-500 font-bold select-none">
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={page}
+                  onClick={() => setCurrentPage(page)}
+                  className={`w-8 h-8 rounded-xl text-xs font-bold transition-all ${
+                    currentPage === page
+                      ? "bg-blue-600 text-white shadow-md font-black"
+                      : "bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300"
+                  }`}
+                >
+                  {page}
+                </button>
+              );
+            })}
           </div>
 
           <button
