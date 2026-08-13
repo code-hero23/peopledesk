@@ -550,6 +550,10 @@ const exportAttendance = async (req, res) => {
                 });
             }
 
+            if (group.status === 'ABSENT' && (group.approvedLeaveCount > 0 || group.approvedHalfLeaveCount > 0)) {
+                group.status = 'LEAVE';
+            }
+
             const parseTime = (d) => { if(!d) return null; const ist = new Date(d.getTime() + (5.5*60*60*1000)); return ist.getUTCHours() * 60 + ist.getUTCMinutes(); };
             
             const loginMins = parseTime(group.firstLogin);
@@ -591,9 +595,15 @@ const exportAttendance = async (req, res) => {
 
         flattenedRecords.sort((a, b) => new Date(b.Date.split('/').reverse().join('-')) - new Date(a.Date.split('/').reverse().join('-')));
 
+        let finalRecords = flattenedRecords;
+        if (req.query.status) {
+            const statusFilter = req.query.status.toUpperCase();
+            finalRecords = flattenedRecords.filter(r => r.Status === statusFilter);
+        }
+
         const wb = XLSX.utils.book_new();
-        const ws = XLSX.utils.json_to_sheet(flattenedRecords);
-        ws['!cols'] = setAutoWidth(flattenedRecords);
+        const ws = XLSX.utils.json_to_sheet(finalRecords);
+        ws['!cols'] = setAutoWidth(finalRecords);
         XLSX.utils.book_append_sheet(wb, ws, "Monthly Attendance");
 
         const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });

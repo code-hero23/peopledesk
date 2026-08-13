@@ -388,7 +388,7 @@ const updateRequestStatus = async (req, res) => {
             }
             // If Approved by BH, overall remains PENDING (waiting for HR)
         }
-        else if (userRole === 'HR') {
+        else if (userRole === 'HR' || userRole === 'ADMIN') {
             updateData.hrStatus = status;
             updateData.hrId = userId;
 
@@ -707,6 +707,15 @@ const getDailyAttendance = async (req, res) => {
             }
         });
 
+        // Get approved leave requests for the date
+        const leaveRequests = await prisma.leaveRequest.findMany({
+            where: {
+                status: 'APPROVED',
+                startDate: { lte: endOfDay },
+                endDate: { gte: startOfDay }
+            }
+        });
+
         // 3. Merge data
         const dailyReport = users.map(user => {
             // Find ALL records for this user (AEs might have multiple)
@@ -774,7 +783,8 @@ const getDailyAttendance = async (req, res) => {
 
             // Calculate overall status
             const isPresent = userRecords.some(r => r.status === 'PRESENT');
-            const status = isPresent ? 'PRESENT' : 'ABSENT';
+            const isOnLeave = leaveRequests.some(l => l.userId === user.id);
+            const status = isPresent ? 'PRESENT' : (isOnLeave ? 'LEAVE' : 'ABSENT');
 
             // Only show times if PRESENT
             const finalTimeIn = status === 'PRESENT' ? timeIn : null;
