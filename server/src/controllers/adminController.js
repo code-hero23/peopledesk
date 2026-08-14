@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const xlsx = require('xlsx');
 const prisma = new PrismaClient();
 const { generateAndSendDailySummary } = require('../cron/DailySummaryCron');
+const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // @desc    Get all employees
 // @route   GET /api/admin/employees
@@ -57,38 +58,31 @@ const getAllPendingRequests = async (req, res) => {
         const { date, startDate, endDate } = req.query;
 
         // Date filter logic
-        let leaveDateFilter = {};
-        let generalDateFilter = {};
-
+        let start, end;
         if (startDate && endDate) {
-            const start = new Date(startDate);
+            start = new Date(startDate);
             start.setHours(0, 0, 0, 0);
-            const end = new Date(endDate);
+            end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-
-            leaveDateFilter = {
-                startDate: { lte: end },
-                endDate: { gte: start }
-            };
-
-            generalDateFilter = {
-                date: { gte: start, lte: end }
-            };
         } else if (date) {
-            const startOfDay = new Date(date);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(date);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            leaveDateFilter = {
-                startDate: { lte: endOfDay },
-                endDate: { gte: startOfDay }
-            };
-
-            generalDateFilter = {
-                date: { gte: startOfDay, lte: endOfDay }
-            };
+            start = new Date(date);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(date);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            // Default to current cycle
+            start = getCycleStartDateIST(new Date());
+            end = getCycleEndDateIST(new Date());
         }
+
+        const leaveDateFilter = {
+            startDate: { lte: end },
+            endDate: { gte: start }
+        };
+
+        const generalDateFilter = {
+            date: { gte: start, lte: end }
+        };
 
         // Base query conditions
         let leaveWhere = leaveDateFilter;
@@ -190,39 +184,32 @@ const getRequestHistory = async (req, res) => {
         const { date, startDate, endDate } = req.query;
 
         // Date filter logic
-        let leaveDateFilter = {};
-        let generalDateFilter = {};
-
+        let start, end;
         if (startDate && endDate) {
-            const start = new Date(startDate);
+            start = new Date(startDate);
             start.setHours(0, 0, 0, 0);
-            const end = new Date(endDate);
+            end = new Date(endDate);
             end.setHours(23, 59, 59, 999);
-
-            leaveDateFilter = {
-                startDate: { lte: end },
-                endDate: { gte: start }
-            };
-
-            generalDateFilter = {
-                date: { gte: start, lte: end }
-            };
         } else if (date || startDate) {
             const filterDate = date || startDate;
-            const startOfDay = new Date(filterDate);
-            startOfDay.setHours(0, 0, 0, 0);
-            const endOfDay = new Date(filterDate);
-            endOfDay.setHours(23, 59, 59, 999);
-
-            leaveDateFilter = {
-                startDate: { lte: endOfDay },
-                endDate: { gte: startOfDay }
-            };
-
-            generalDateFilter = {
-                date: { gte: startOfDay, lte: endOfDay }
-            };
+            start = new Date(filterDate);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(filterDate);
+            end.setHours(23, 59, 59, 999);
+        } else {
+            // Default to current cycle
+            start = getCycleStartDateIST(new Date());
+            end = getCycleEndDateIST(new Date());
         }
+
+        const leaveDateFilter = {
+            startDate: { lte: end },
+            endDate: { gte: start }
+        };
+
+        const generalDateFilter = {
+            date: { gte: start, lte: end }
+        };
 
         // Initialize where clauses with date filters
         let leaveWhere = { ...leaveDateFilter };
@@ -347,6 +334,10 @@ const updateRequestStatus = async (req, res) => {
     }
 
     try {
+        if (userRole === 'ADMIN') {
+            return res.status(403).json({ message: 'Administrators are only allowed to view requests, not approve or reject them.' });
+        }
+
         let result;
         const model = type === 'leave' ? prisma.leaveRequest :
             type === 'permission' ? prisma.permissionRequest :
@@ -388,7 +379,7 @@ const updateRequestStatus = async (req, res) => {
             }
             // If Approved by BH, overall remains PENDING (waiting for HR)
         }
-        else if (userRole === 'HR' || userRole === 'ADMIN') {
+        else if (userRole === 'HR') {
             updateData.hrStatus = status;
             updateData.hrId = userId;
 

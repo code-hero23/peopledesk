@@ -65,13 +65,17 @@ const MyRequests = () => {
                                         <td className="py-3">{req.type}</td>
                                         <td className="py-3 text-slate-500 italic">
                                             "{req.reason}"
-                                            {(req.isExceededLimit || (req.startDate && req.endDate && (Math.ceil(Math.abs(new Date(req.endDate) - new Date(req.startDate)) / (1000 * 60 * 60 * 24)) + 1) > 4)) && (
-                                                <div className="mt-1">
+                                            <div className="mt-1">
+                                                {req.isExceededLimit ? (
                                                     <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200">
-                                                        ⚠️ LIMIT EXCEEDED (4+)
+                                                        ⚠️ Approval Request (Exceeded Limit)
                                                     </span>
-                                                </div>
-                                            )}
+                                                ) : (
+                                                    <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-green-200">
+                                                        ✨ Direct Update (Auto-Approved)
+                                                    </span>
+                                                )}
+                                            </div>
                                         </td>
                                         <td className="py-3">
                                             {req.status === 'APPROVED' ? (
@@ -108,13 +112,17 @@ const MyRequests = () => {
                                     </p>
                                     <p className="text-sm text-slate-500">{req.startTime} - {req.endTime}</p>
                                     <p className="text-xs text-slate-400 mt-1 italic">"{req.reason}"</p>
-                                    {req.isExceededLimit && (
-                                        <div className="mt-1">
+                                    <div className="mt-1">
+                                        {req.isExceededLimit ? (
                                             <span className="bg-red-100 text-red-600 text-[10px] font-black px-2 py-0.5 rounded-full border border-red-200">
-                                                ⚠️ LIMIT EXCEEDED
+                                                ⚠️ Approval Request (Exceeded Limit)
                                             </span>
-                                        </div>
-                                    )}
+                                        ) : (
+                                            <span className="bg-green-100 text-green-700 text-[10px] font-black px-2 py-0.5 rounded-full border border-green-200">
+                                                ✨ Direct Update (Auto-Approved)
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
                                 <span className={`px-3 py-1 rounded-full text-xs font-bold ${req.status === 'APPROVED' ? 'bg-green-100 text-green-700' :
                                     req.status === 'REJECTED' ? 'bg-red-100 text-red-700' : 'bg-orange-100 text-orange-700'

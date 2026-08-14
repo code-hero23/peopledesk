@@ -123,6 +123,8 @@ const createLeaveRequest = async (req, res) => {
             return res.status(400).json({ message: 'You already have an active leave request overlapping these dates.' });
         }
 
+        const initialStatus = isExceededLimit ? 'PENDING' : 'APPROVED';
+
         const leaveRequest = await prisma.leaveRequest.create({
             data: {
                 userId,
@@ -131,7 +133,9 @@ const createLeaveRequest = async (req, res) => {
                 endDate: parseRobustDate(endDate),
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
-                status: 'PENDING',
+                status: initialStatus,
+                bhStatus: initialStatus,
+                hrStatus: initialStatus,
                 isExceededLimit
             },
         });
@@ -357,6 +361,9 @@ const createPermissionRequest = async (req, res) => {
             return res.status(400).json({ message: 'You have already raised a permission request for this date.' });
         }
 
+        const isExceededLimit = permCount >= 4;
+        const initialStatus = isExceededLimit ? 'PENDING' : 'APPROVED';
+
         const permissionRequest = await prisma.permissionRequest.create({
             data: {
                 userId,
@@ -365,8 +372,10 @@ const createPermissionRequest = async (req, res) => {
                 endTime,
                 reason,
                 targetBhId: targetBhId ? parseInt(targetBhId) : null,
-                status: 'PENDING',
-                isExceededLimit: permCount >= 4
+                status: initialStatus,
+                bhStatus: initialStatus,
+                hrStatus: initialStatus,
+                isExceededLimit
             },
         });
 

@@ -25,6 +25,7 @@ const Approvals = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [categoryFilter, setCategoryFilter] = useState("all"); // 'all', 'requests', 'direct'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -33,6 +34,10 @@ const Approvals = () => {
   };
 
   useEffect(() => {
+    if (!filterDate && (!cycleRange.startDate || !cycleRange.endDate)) {
+      return;
+    }
+
     const params = filterDate
       ? { date: filterDate }
       : { startDate: cycleRange.startDate, endDate: cycleRange.endDate };
@@ -96,7 +101,7 @@ const Approvals = () => {
     activeTab === "pending" ? pendingRequests : requestHistory;
 
   const canDelete = ["ADMIN", "HR"].includes(user?.role);
-  const canApprove = ["HR", "BUSINESS_HEAD", "AE_MANAGER", "ADMIN"].includes(user?.role);
+  const canApprove = ["HR", "BUSINESS_HEAD", "AE_MANAGER"].includes(user?.role);
   const isGlobalBH = user?.role === "BUSINESS_HEAD" && user?.isGlobalAccess;
 
   // For Global BH: split requests into Mine vs Others
@@ -154,9 +159,27 @@ const Approvals = () => {
     );
   });
 
-  const filteredRequests = sortedRequests.filter(({ type }) => {
-    if (typeFilter === "all") return true;
-    return type === typeFilter;
+  const filteredRequests = sortedRequests.filter(({ req, type }) => {
+    if (typeFilter !== "all" && type !== typeFilter) return false;
+
+    if (categoryFilter === "requests") {
+      // Exceeded limit (for leave, we check isExceededLimit or duration > 4. For permission, isExceededLimit)
+      // Visits (site/showroom) are always requests
+      const isLeave = type === "leave";
+      const isPerm = type === "permission";
+      if ((isLeave || isPerm) && !req.isExceededLimit) {
+        return false;
+      }
+    } else if (categoryFilter === "direct") {
+      // Within limit (leaves and permissions that are auto-approved)
+      // Visits (site/showroom) are never direct updates
+      const isLeave = type === "leave";
+      const isPerm = type === "permission";
+      if (!isLeave && !isPerm) return false;
+      if (req.isExceededLimit) return false;
+    }
+
+    return true;
   });
 
   const totalItems = filteredRequests.length;
@@ -383,20 +406,21 @@ const Approvals = () => {
 
         {/* Status Badges */}
         <div className="flex flex-wrap gap-2 mb-3">
-          {(req.isExceededLimit ||
-            (req.startDate &&
-              req.endDate &&
-              Math.ceil(
-                Math.abs(new Date(req.endDate) - new Date(req.startDate)) /
-                  (1000 * 60 * 60 * 24),
-              ) +
-                1 >
-                4)) && (
-            <span className="bg-red-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 animate-pulse shadow-sm">
-              <AlertTriangle size={10} />
-              {type === "leave"
-                ? "LEAVE LIMIT EXCEEDED (4+ Days)"
-                : "PERMISSION LIMIT EXCEEDED (4+)"}
+          {(type === "leave" || type === "permission") && (
+            req.isExceededLimit ? (
+              <span className="bg-rose-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                <AlertTriangle size={10} />
+                Approval Request (Exceeded Limit)
+              </span>
+            ) : (
+              <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+                ✨ Direct Update (Auto-Approved)
+              </span>
+            )
+          )}
+          {(type === "site-visit" || type === "showroom-visit") && (
+            <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              📋 Approval Request
             </span>
           )}
           {req.bhStatus === "PENDING" && (
@@ -633,6 +657,31 @@ const Approvals = () => {
                   className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
                     typeFilter === opt.value
                       ? "bg-blue-600 text-white shadow-xs"
+                      : "text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-250"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Category Toggle Filters */}
+            <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 shadow-sm">
+              <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-wider">Category:</span>
+              {[
+                { value: "all", label: "All" },
+                { value: "requests", label: "Approval Requests" },
+                { value: "direct", label: "Direct Updates" }
+              ].map((opt) => (
+                <button
+                  key={opt.label}
+                  onClick={() => {
+                    setCategoryFilter(opt.value);
+                    setCurrentPage(1);
+                  }}
+                  className={`px-3 py-1 rounded-lg text-xs font-bold uppercase tracking-wider transition-all duration-200 ${
+                    categoryFilter === opt.value
+                      ? "bg-indigo-600 text-white shadow-xs"
                       : "text-slate-500 hover:text-slate-850 dark:text-slate-400 dark:hover:text-slate-250"
                   }`}
                 >
