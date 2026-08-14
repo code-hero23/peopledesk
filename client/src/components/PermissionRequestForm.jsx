@@ -60,14 +60,7 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // Calculate combined request count for the current month
-    const currentMonth = new Date().getMonth();
-    const currentYear = new Date().getFullYear();
-
-    const monthlyPermissions = requests.permissions.filter(req => {
-        const d = new Date(req.createdAt);
-        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-    }).length;
+    const monthlyPermissions = requests.permissions.filter(req => req.status !== 'REJECTED').length;
 
     const isLimitExceeded = monthlyPermissions >= 4;
 
@@ -191,7 +184,7 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                     disabled={isSubmitting}
                     className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/20'} text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95`}
                 >
-                    {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                    {isSubmitting ? 'Submitting...' : (isLimitExceeded ? 'Request Permission' : 'Update Permission')}
                 </button>
             </div>
 
@@ -201,8 +194,8 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Permission Sent!"
-                subMessage="Waiting for approval."
+                message={isLimitExceeded ? "Permission Request Sent!" : "Permission Updated!"}
+                subMessage={isLimitExceeded ? "Waiting for approval." : "Your attendance has been directly updated."}
             />
         </form>
     );

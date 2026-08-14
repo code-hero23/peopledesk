@@ -25,7 +25,7 @@ const Approvals = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedKeys, setSelectedKeys] = useState([]);
   const [typeFilter, setTypeFilter] = useState("all");
-  const [categoryFilter, setCategoryFilter] = useState("all"); // 'all', 'requests', 'direct'
+  const [categoryFilter, setCategoryFilter] = useState("requests"); // 'requests', 'direct'
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
@@ -663,7 +663,6 @@ const Approvals = () => {
             <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-2.5 py-1.5 shadow-sm">
               <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-wider">Category:</span>
               {[
-                { value: "all", label: "All" },
                 { value: "requests", label: "Approval Requests" },
                 { value: "direct", label: "Direct Updates" }
               ].map((opt) => (

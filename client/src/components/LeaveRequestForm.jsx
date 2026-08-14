@@ -26,14 +26,7 @@ const LeaveRequestForm = ({ onSuccess }) => {
     };
 
     const totalExistingDays = requests.leaves
-        .filter(req => {
-            // Robustly check month/year of the record
-            const d = new Date(req.startDate);
-            // If the application stores as Date, d.getMonth() is localized.
-            // If it's 2/3 and was misparsed as Feb 3rd in DB, this logic reflects that.
-            // But for THE FUTURE, it will be correct.
-            return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
-        })
+        .filter(req => req.status !== 'REJECTED')
         .reduce((sum, req) => sum + calculateDays(req.startDate, req.endDate, req.type), 0);
 
     const [formData, setFormData] = useState({
@@ -167,7 +160,7 @@ const LeaveRequestForm = ({ onSuccess }) => {
                     disabled={isSubmitting}
                     className={`flex-1 ${isSubmitting ? 'bg-slate-400 cursor-not-allowed opacity-50' : 'bg-blue-600 hover:bg-blue-700 hover:shadow-blue-500/20'} text-white font-black uppercase text-xs tracking-widest py-3 px-6 rounded-xl shadow-lg transition-all active:scale-95`}
                 >
-                    {isSubmitting ? 'Submitting...' : 'Submit Request'}
+                    {isSubmitting ? 'Submitting...' : (isLimitExceeded ? 'Request Leave' : 'Update Leave')}
                 </button>
             </div>
 
@@ -177,8 +170,8 @@ const LeaveRequestForm = ({ onSuccess }) => {
                     setShowSuccess(false);
                     if (onSuccess) onSuccess();
                 }}
-                message="Leave Request Sent!"
-                subMessage="Your manager will be notified."
+                message={isLimitExceeded ? "Leave Request Sent!" : "Leave Updated!"}
+                subMessage={isLimitExceeded ? "Your manager will be notified." : "Your attendance has been directly updated."}
             />
         </form>
     );
