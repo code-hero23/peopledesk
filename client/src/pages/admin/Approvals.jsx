@@ -162,21 +162,15 @@ const Approvals = () => {
   const filteredRequests = sortedRequests.filter(({ req, type }) => {
     if (typeFilter !== "all" && type !== typeFilter) return false;
 
+    // A request is a Direct Update ONLY if it's within the limit AND already approved.
+    // If it's pending, it's always an approval request.
+    const isLeaveOrPerm = type === "leave" || type === "permission";
+    const isDirectUpdate = isLeaveOrPerm && !req.isExceededLimit && req.status === "APPROVED";
+
     if (categoryFilter === "requests") {
-      // Exceeded limit (for leave, we check isExceededLimit or duration > 4. For permission, isExceededLimit)
-      // Visits (site/showroom) are always requests
-      const isLeave = type === "leave";
-      const isPerm = type === "permission";
-      if ((isLeave || isPerm) && !req.isExceededLimit) {
-        return false;
-      }
+      if (isDirectUpdate) return false;
     } else if (categoryFilter === "direct") {
-      // Within limit (leaves and permissions that are auto-approved)
-      // Visits (site/showroom) are never direct updates
-      const isLeave = type === "leave";
-      const isPerm = type === "permission";
-      if (!isLeave && !isPerm) return false;
-      if (req.isExceededLimit) return false;
+      if (!isDirectUpdate) return false;
     }
 
     return true;
@@ -407,19 +401,19 @@ const Approvals = () => {
         {/* Status Badges */}
         <div className="flex flex-wrap gap-2 mb-3">
           {(type === "leave" || type === "permission") && (
-            req.isExceededLimit ? (
-              <span className="bg-rose-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+            (req.isExceededLimit || req.status === "PENDING") ? (
+              <span className="text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm" style={{ backgroundColor: '#e11d48' }}>
                 <AlertTriangle size={10} />
-                Approval Request (Exceeded Limit)
+                Approval Request {(req.isExceededLimit || req.status === "PENDING") && "(Requires Approval)"}
               </span>
             ) : (
-              <span className="bg-emerald-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+              <span className="text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm" style={{ backgroundColor: '#10b981' }}>
                 ✨ Direct Update (Auto-Approved)
               </span>
             )
           )}
           {(type === "site-visit" || type === "showroom-visit") && (
-            <span className="bg-blue-600 text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm">
+            <span className="text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm" style={{ backgroundColor: '#2563eb' }}>
               📋 Approval Request
             </span>
           )}
