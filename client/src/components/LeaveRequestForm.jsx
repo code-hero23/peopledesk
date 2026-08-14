@@ -4,7 +4,7 @@ import { createLeaveRequest, getBusinessHeads, getMyRequests } from '../features
 import { AlertCircle } from 'lucide-react';
 import SuccessModal from './SuccessModal';
 
-const LeaveRequestForm = ({ onSuccess }) => {
+const LeaveRequestForm = ({ onSuccess, onTitleChange }) => {
     const dispatch = useDispatch();
     const { businessHeads, requests } = useSelector((state) => state.employee);
     const { user } = useSelector((state) => state.auth);
@@ -44,6 +44,12 @@ const LeaveRequestForm = ({ onSuccess }) => {
         dispatch(getBusinessHeads());
         dispatch(getMyRequests());
     }, [dispatch]);
+
+    useEffect(() => {
+        if (onTitleChange) {
+            onTitleChange(isLimitExceeded ? 'Request Leave' : 'Update Leave');
+        }
+    }, [isLimitExceeded, onTitleChange]);
 
     const onSubmit = async (e) => {
         e.preventDefault();

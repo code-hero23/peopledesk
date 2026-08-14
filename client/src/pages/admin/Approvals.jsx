@@ -42,16 +42,13 @@ const Approvals = () => {
       ? { date: filterDate }
       : { startDate: cycleRange.startDate, endDate: cycleRange.endDate };
 
-    if (activeTab === "pending") {
-      dispatch(getPendingRequests(params));
-    } else {
-      dispatch(getRequestHistory(params));
-    }
+    dispatch(getPendingRequests(params));
+    dispatch(getRequestHistory(params));
 
     return () => {
       dispatch(reset());
     };
-  }, [dispatch, activeTab, filterDate, cycleRange]);
+  }, [dispatch, filterDate, cycleRange]);
 
   const onUpdateStatus = (type, id, status) => {
     if (window.confirm(`Confirm ${status} action?`)) {
@@ -97,18 +94,21 @@ const Approvals = () => {
     }
   };
 
-  const displayData =
-    activeTab === "pending" ? pendingRequests : requestHistory;
-
   const canDelete = ["ADMIN", "HR"].includes(user?.role);
   const canApprove = ["HR", "BUSINESS_HEAD", "AE_MANAGER"].includes(user?.role);
   const isGlobalBH = user?.role === "BUSINESS_HEAD" && user?.isGlobalAccess;
 
-  // For Global BH: split requests into Mine vs Others
-  let leaves = displayData?.leaves || [];
-  let permissions = displayData?.permissions || [];
+  // Combine both pending and history lists
+  let leaves = [
+    ...(pendingRequests?.leaves || []),
+    ...(requestHistory?.leaves || [])
+  ];
+  let permissions = [
+    ...(pendingRequests?.permissions || []),
+    ...(requestHistory?.permissions || [])
+  ];
 
-  if (isGlobalBH && activeTab === "pending") {
+  if (isGlobalBH) {
     if (bhView === "mine") {
       leaves = leaves.filter(
         (r) => r.targetBhId === user.id || r.user?.reportingBhId === user.id,
@@ -162,10 +162,9 @@ const Approvals = () => {
   const filteredRequests = sortedRequests.filter(({ req, type }) => {
     if (typeFilter !== "all" && type !== typeFilter) return false;
 
-    // A request is a Direct Update ONLY if it's within the limit AND already approved.
-    // If it's pending, it's always an approval request.
+    // A request is a Direct Update if it's leave/permission and is within limits
     const isLeaveOrPerm = type === "leave" || type === "permission";
-    const isDirectUpdate = isLeaveOrPerm && !req.isExceededLimit && req.status === "APPROVED";
+    const isDirectUpdate = isLeaveOrPerm && !req.isExceededLimit;
 
     if (categoryFilter === "requests") {
       if (isDirectUpdate) return false;
@@ -186,7 +185,7 @@ const Approvals = () => {
 
   // Actionable requests for current page (to support Select All and select list filters)
   const actionablePageRequests = paginatedRequests.filter(({ req, type }) => {
-    if (activeTab !== "pending" || !canApprove) return false;
+    if (categoryFilter !== "requests" || req.status !== "PENDING" || !canApprove) return false;
     if (isGlobalBH && bhView === "others") return false;
     return (
       (user.role !== "BUSINESS_HEAD" && user.role !== "AE_MANAGER") ||
@@ -305,7 +304,7 @@ const Approvals = () => {
   const renderRequestCard = (req, type, typeLabel, color) => {
     const cardKey = `${type}-${req.id}`;
     const isSelected = selectedKeys.includes(cardKey);
-    const isActionable = activeTab === "pending" && canApprove && (
+    const isActionable = categoryFilter === "requests" && req.status === "PENDING" && canApprove && (
       !isGlobalBH || bhView === "mine"
     ) && (
       (user.role !== "BUSINESS_HEAD" && user.role !== "AE_MANAGER") ||
@@ -471,14 +470,14 @@ const Approvals = () => {
                 {formatDateTime(req.createdAt)}
               </span>
             </span>
-            {activeTab === "history" && (
+            {req.status !== "PENDING" && (
               <span>
                 Updated: {formatDateTime(req.updatedAt || req.createdAt)}
               </span>
             )}
           </div>
         </div>
-        {activeTab === "pending" && canApprove && (
+        {categoryFilter === "requests" && req.status === "PENDING" && canApprove && (
           <div className="grid grid-cols-2 gap-3">
             {isGlobalBH && bhView === "others" ? (
               <div className="col-span-2 py-2.5 bg-amber-50 rounded-lg text-center text-amber-600 text-[10px] font-bold border border-amber-100 uppercase tracking-widest">
@@ -514,7 +513,7 @@ const Approvals = () => {
             )}
           </div>
         )}
-        {activeTab === "pending" && !canApprove && (
+        {categoryFilter === "requests" && req.status === "PENDING" && !canApprove && (
           <div className="py-2.5 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
             👁️ Monitoring View (Authorization Required)
           </div>
@@ -684,42 +683,12 @@ const Approvals = () => {
             </div>
           </div>
 
-          {/* Tabs */}
-          <div className="flex bg-white dark:bg-slate-900 p-1 rounded-lg border border-slate-200 dark:border-slate-800">
-            <button
-              onClick={() => {
-                setActiveTab("pending");
-                setSelectedKeys([]);
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === "pending"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-655 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              Pending
-            </button>
-            <button
-              onClick={() => {
-                setActiveTab("history");
-                setSelectedKeys([]);
-                setCurrentPage(1);
-              }}
-              className={`px-4 py-2 text-sm font-medium rounded-md transition-colors ${
-                activeTab === "history"
-                  ? "bg-blue-600 text-white shadow-sm"
-                  : "text-slate-655 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200"
-              }`}
-            >
-              History
-            </button>
-          </div>
+
         </div>
       </div>
 
       {/* Global BH tabs */}
-      {isGlobalBH && activeTab === "pending" && (
+      {isGlobalBH && categoryFilter === "requests" && (
         <div className="col-span-full">
           <div className="flex gap-2 bg-white border border-slate-200 rounded-xl p-1.5 w-fit shadow-sm">
             <button
@@ -768,11 +737,11 @@ const Approvals = () => {
         {paginatedRequests.length === 0 && (
           <div className="col-span-full border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-xl p-8 text-center bg-slate-50 dark:bg-slate-900/50">
             <p className="text-slate-400 dark:text-slate-500 font-medium">
-              {isGlobalBH && activeTab === "pending" && bhView === "mine"
+              {isGlobalBH && categoryFilter === "requests" && bhView === "mine"
                 ? "✨ No pending requests assigned to you."
-                : isGlobalBH && activeTab === "pending" && bhView === "others"
+                : isGlobalBH && categoryFilter === "requests" && bhView === "others"
                   ? "✨ No pending requests for other Business Heads."
-                  : `✨ No ${activeTab} requests found.`}
+                  : `✨ No ${categoryFilter === "requests" ? "approval requests" : "direct updates"} found.`}
             </p>
           </div>
         )}

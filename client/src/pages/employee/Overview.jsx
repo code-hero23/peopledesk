@@ -170,6 +170,8 @@ const Overview = () => {
 
     // States
     const [activeModal, setActiveModal] = useState(null);
+    const [leaveModalTitle, setLeaveModalTitle] = useState('Update Leave');
+    const [permissionModalTitle, setPermissionModalTitle] = useState('Update Permission');
     const [showCheckInModal, setShowCheckInModal] = useState(false);
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [photo, setPhoto] = useState(null);
@@ -1211,15 +1213,19 @@ const Overview = () => {
 
             <AnimatePresence>
                 {activeModal === 'leave' && (
-                    <Modal isOpen onClose={() => setActiveModal(null)} title="Request Leave">
-                        <LeaveRequestForm onSuccess={() => { setActiveModal(null); dispatch(getMyRequests()); }} />
+                    <Modal isOpen onClose={() => { setActiveModal(null); setLeaveModalTitle('Update Leave'); }} title={leaveModalTitle}>
+                        <LeaveRequestForm
+                            onTitleChange={setLeaveModalTitle}
+                            onSuccess={() => { setActiveModal(null); setLeaveModalTitle('Update Leave'); dispatch(getMyRequests()); }}
+                        />
                     </Modal>
                 )}
                 {activeModal === 'permission' && (
-                    <Modal isOpen onClose={() => !isAutoPermission && setActiveModal(null)} title={isAutoPermission ? "Mandatory Permission" : "Request Permission"}>
+                    <Modal isOpen onClose={() => { if (!isAutoPermission && !isCompletingLateCheckIn) { setActiveModal(null); setPermissionModalTitle('Update Permission'); } }} title={isAutoPermission ? "Mandatory Permission" : permissionModalTitle}>
                         <PermissionRequestForm
                             isMandatory={isAutoPermission}
                             initialData={permissionInitialData}
+                            onTitleChange={setPermissionModalTitle}
                             onSuccess={async () => {
                                 const shouldCompleteLateCheckIn =
                                     isAutoPermission && !!pendingLateCheckIn;
@@ -1241,12 +1247,14 @@ const Overview = () => {
                                 }
 
                                 setActiveModal(null);
+                                setPermissionModalTitle('Update Permission');
                                 setIsAutoPermission(false);
                                 setPermissionInitialData(null);
                             }}
                             onCancel={() => {
                                 if (!isAutoPermission && !isCompletingLateCheckIn) {
                                     setActiveModal(null);
+                                    setPermissionModalTitle('Update Permission');
                                     setPermissionInitialData(null);
                                 }
                             }}

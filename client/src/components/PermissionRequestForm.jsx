@@ -53,7 +53,7 @@ const TimePicker = ({ label, value, onChange }) => {
     );
 };
 
-const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
+const PermissionRequestForm = ({ onSuccess, initialData, isMandatory, onTitleChange }) => {
     const dispatch = useDispatch();
     const { businessHeads, requests } = useSelector((state) => state.employee);
     const { user } = useSelector((state) => state.auth);
@@ -76,6 +76,12 @@ const PermissionRequestForm = ({ onSuccess, initialData, isMandatory }) => {
         dispatch(getBusinessHeads());
         dispatch(getMyRequests());
     }, [dispatch]);
+
+    useEffect(() => {
+        if (onTitleChange && !isMandatory) {
+            onTitleChange(isLimitExceeded ? 'Request Permission' : 'Update Permission');
+        }
+    }, [isLimitExceeded, onTitleChange, isMandatory]);
 
     const onSubmit = async (e) => {
         e.preventDefault();
