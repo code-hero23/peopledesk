@@ -29,6 +29,11 @@ const Approvals = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 20;
 
+  // Reset pagination when filters or views change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [typeFilter, categoryFilter, searchTerm, filterDate, cycleRange.startDate, cycleRange.endDate, bhView]);
+
   const handleCycleChange = (range) => {
     setCycleRange(range);
   };
@@ -98,15 +103,19 @@ const Approvals = () => {
   const canApprove = ["HR", "BUSINESS_HEAD", "AE_MANAGER"].includes(user?.role);
   const isGlobalBH = user?.role === "BUSINESS_HEAD" && user?.isGlobalAccess;
 
-  // Combine both pending and history lists
-  let leaves = [
-    ...(pendingRequests?.leaves || []),
-    ...(requestHistory?.leaves || [])
-  ];
-  let permissions = [
-    ...(pendingRequests?.permissions || []),
-    ...(requestHistory?.permissions || [])
-  ];
+  // Combine both pending and history lists and deduplicate by ID to prevent key collisions and rendering bugs
+  const mergeAndDeduplicate = (list1, list2) => {
+    const map = new Map();
+    [...(list1 || []), ...(list2 || [])].forEach((item) => {
+      if (item && item.id) {
+        map.set(item.id, item);
+      }
+    });
+    return Array.from(map.values());
+  };
+
+  let leaves = mergeAndDeduplicate(pendingRequests?.leaves, requestHistory?.leaves);
+  let permissions = mergeAndDeduplicate(pendingRequests?.permissions, requestHistory?.permissions);
 
   if (isGlobalBH) {
     if (bhView === "mine") {
@@ -161,17 +170,21 @@ const Approvals = () => {
 
   const filteredRequests = sortedRequests.filter(({ req, type }) => {
     if (typeFilter !== "all" && type !== typeFilter) return false;
-
-    // A request is a Direct Update if it's leave/permission and is within limits
+ 
+    // A request is a Direct Update if it's leave/permission and is within limits (not exceeded)
     const isLeaveOrPerm = type === "leave" || type === "permission";
     const isDirectUpdate = isLeaveOrPerm && !req.isExceededLimit;
-
+ 
     if (categoryFilter === "requests") {
       if (isDirectUpdate) return false;
+      if (req.status !== "PENDING") return false;
     } else if (categoryFilter === "direct") {
       if (!isDirectUpdate) return false;
+    } else if (categoryFilter === "approved") {
+      if (req.status !== "APPROVED") return false;
+      if (isDirectUpdate) return false;
     }
-
+ 
     return true;
   });
 
@@ -304,6 +317,7 @@ const Approvals = () => {
   const renderRequestCard = (req, type, typeLabel, color) => {
     const cardKey = `${type}-${req.id}`;
     const isSelected = selectedKeys.includes(cardKey);
+    const isDirectUpdate = (type === "leave" || type === "permission") && !req.isExceededLimit;
     const isActionable = categoryFilter === "requests" && req.status === "PENDING" && canApprove && (
       !isGlobalBH || bhView === "mine"
     ) && (
@@ -400,10 +414,10 @@ const Approvals = () => {
         {/* Status Badges */}
         <div className="flex flex-wrap gap-2 mb-3">
           {(type === "leave" || type === "permission") && (
-            (req.isExceededLimit || req.status === "PENDING") ? (
+            req.isExceededLimit ? (
               <span className="text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm" style={{ backgroundColor: '#e11d48' }}>
                 <AlertTriangle size={10} />
-                Approval Request {(req.isExceededLimit || req.status === "PENDING") && "(Requires Approval)"}
+                {type === "leave" ? "Leave Exceeded" : "Permission Exceeded"} (Requires Approval)
               </span>
             ) : (
               <span className="text-white text-[10px] font-black px-2 py-1 rounded-full flex items-center gap-1 shadow-sm" style={{ backgroundColor: '#10b981' }}>
@@ -416,7 +430,7 @@ const Approvals = () => {
               📋 Approval Request
             </span>
           )}
-          {req.bhStatus === "PENDING" && (
+          {req.bhStatus === "PENDING" && !isDirectUpdate && (
             <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
               ⏳ Waiting for {req.bhDesignation || "BH"}
             </span>
@@ -429,6 +443,11 @@ const Approvals = () => {
           {req.bhStatus === "REJECTED" && (
             <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full border border-red-200 flex items-center gap-1">
               ❌ Rejected by {req.bhName || req.bhDesignation || "BH"}
+            </span>
+          )}
+          {req.status === "APPROVED" && (type === "site-visit" || type === "showroom-visit" || req.isExceededLimit) && (
+            <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full border border-indigo-200 flex items-center gap-1">
+              🏆 Approved by {req.approvedByName || req.hrName || "Admin/HR"}
             </span>
           )}
         </div>
@@ -663,7 +682,8 @@ const Approvals = () => {
               <span className="text-[10px] font-black text-slate-400 dark:text-slate-550 uppercase tracking-wider">Category:</span>
               {[
                 { value: "requests", label: "Approval Requests" },
-                { value: "direct", label: "Direct Updates" }
+                { value: "direct", label: "Direct Updates" },
+                { value: "approved", label: "Approved History" }
               ].map((opt) => (
                 <button
                   key={opt.label}
@@ -741,7 +761,13 @@ const Approvals = () => {
                 ? "✨ No pending requests assigned to you."
                 : isGlobalBH && categoryFilter === "requests" && bhView === "others"
                   ? "✨ No pending requests for other Business Heads."
-                  : `✨ No ${categoryFilter === "requests" ? "approval requests" : "direct updates"} found.`}
+                  : `✨ No ${
+                      categoryFilter === "requests"
+                        ? "pending approval requests"
+                        : categoryFilter === "approved"
+                          ? "approved requests"
+                          : "direct updates"
+                    } found.`}
             </p>
           </div>
         )}

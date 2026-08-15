@@ -135,34 +135,42 @@ const getAllPendingRequests = async (req, res) => {
             include: { user: { select: { name: true, email: true, designation: true } } },
             orderBy: { createdAt: 'asc' },
         });
+        // Enrich with BH, HR, and final approver names
+        const allUserIds = [...new Set([
+            ...leavesRaw.map(r => r.bhId),
+            ...leavesRaw.map(r => r.hrId),
+            ...leavesRaw.map(r => r.approvedBy),
+            ...permissionsRaw.map(r => r.bhId),
+            ...permissionsRaw.map(r => r.hrId),
+            ...permissionsRaw.map(r => r.approvedBy),
+            ...siteVisitsRaw.map(r => r.bhId),
+            ...siteVisitsRaw.map(r => r.approvedBy),
+            ...showroomVisitsRaw.map(r => r.bhId),
+            ...showroomVisitsRaw.map(r => r.approvedBy)
+        ].filter(id => id))];
 
-        // Enrich with BH Name
-        const leaveBhIds = [...new Set(leavesRaw.map(r => r.bhId).filter(id => id))];
-        const permissionBhIds = [...new Set(permissionsRaw.map(r => r.bhId).filter(id => id))];
-        const siteBhIds = [...new Set(siteVisitsRaw.map(r => r.bhId).filter(id => id))];
-        const showroomBhIds = [...new Set(showroomVisitsRaw.map(r => r.bhId).filter(id => id))];
-
-        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds, ...siteBhIds, ...showroomBhIds])];
-
-        let bhMap = {};
-        if (allBhIds.length > 0) {
-            const bhUsers = await prisma.user.findMany({
-                where: { id: { in: allBhIds } },
+        let userMap = {};
+        if (allUserIds.length > 0) {
+            const users = await prisma.user.findMany({
+                where: { id: { in: allUserIds } },
                 select: { id: true, name: true, designation: true }
             });
-            bhUsers.forEach(u => bhMap[u.id] = { name: u.name, designation: u.designation });
+            users.forEach(u => userMap[u.id] = { name: u.name, designation: u.designation });
         }
 
-        const enrichWithBhName = (req) => ({
+        const enrichWithNames = (req) => ({
             ...req,
-            bhName: req.bhId ? (bhMap[req.bhId]?.name || bhMap[req.bhId]) : null,
-            bhDesignation: req.bhId ? bhMap[req.bhId]?.designation : 'BH'
+            bhName: req.bhId ? (userMap[req.bhId]?.name || 'BH') : null,
+            bhDesignation: req.bhId ? (userMap[req.bhId]?.designation || 'BH') : 'BH',
+            hrName: req.hrId ? (userMap[req.hrId]?.name || 'HR') : null,
+            approvedByName: req.approvedBy ? (userMap[req.approvedBy]?.name || 'Admin/HR') : null,
+            approvedByDesignation: req.approvedBy ? (userMap[req.approvedBy]?.designation || 'HR') : null
         });
 
-        const leaves = leavesRaw.map(enrichWithBhName);
-        const permissions = permissionsRaw.map(enrichWithBhName);
-        const siteVisits = siteVisitsRaw.map(enrichWithBhName);
-        const showroomVisits = showroomVisitsRaw.map(enrichWithBhName);
+        const leaves = leavesRaw.map(enrichWithNames);
+        const permissions = permissionsRaw.map(enrichWithNames);
+        const siteVisits = siteVisitsRaw.map(enrichWithNames);
+        const showroomVisits = showroomVisitsRaw.map(enrichWithNames);
 
         res.json({ leaves, permissions, siteVisits, showroomVisits });
     } catch (error) {
@@ -290,32 +298,42 @@ const getRequestHistory = async (req, res) => {
             take: 50
         });
 
-        // Enrich with BH Name
-        const leaveBhIds = [...new Set(leavesRaw.map(r => r.bhId).filter(id => id))];
-        const permissionBhIds = [...new Set(permissionsRaw.map(r => r.bhId).filter(id => id))];
-        const siteBhIds = [...new Set(siteVisitsRaw.map(r => r.bhId).filter(id => id))];
-        const showroomBhIds = [...new Set(showroomVisitsRaw.map(r => r.bhId).filter(id => id))];
-        const allBhIds = [...new Set([...leaveBhIds, ...permissionBhIds, ...siteBhIds, ...showroomBhIds])];
+        // Enrich with BH, HR, and final approver names
+        const allUserIds = [...new Set([
+            ...leavesRaw.map(r => r.bhId),
+            ...leavesRaw.map(r => r.hrId),
+            ...leavesRaw.map(r => r.approvedBy),
+            ...permissionsRaw.map(r => r.bhId),
+            ...permissionsRaw.map(r => r.hrId),
+            ...permissionsRaw.map(r => r.approvedBy),
+            ...siteVisitsRaw.map(r => r.bhId),
+            ...siteVisitsRaw.map(r => r.approvedBy),
+            ...showroomVisitsRaw.map(r => r.bhId),
+            ...showroomVisitsRaw.map(r => r.approvedBy)
+        ].filter(id => id))];
 
-        let bhMap = {};
-        if (allBhIds.length > 0) {
-            const bhUsers = await prisma.user.findMany({
-                where: { id: { in: allBhIds } },
+        let userMap = {};
+        if (allUserIds.length > 0) {
+            const users = await prisma.user.findMany({
+                where: { id: { in: allUserIds } },
                 select: { id: true, name: true, designation: true }
             });
-            bhUsers.forEach(u => bhMap[u.id] = { name: u.name, designation: u.designation });
+            users.forEach(u => userMap[u.id] = { name: u.name, designation: u.designation });
         }
 
-        const enrichWithBhName = (req) => ({
+        const enrichWithNames = (req) => ({
             ...req,
-            bhName: req.bhId ? (bhMap[req.bhId]?.name || bhMap[req.bhId]) : null,
-            bhDesignation: req.bhId ? bhMap[req.bhId]?.designation : 'BH'
+            bhName: req.bhId ? (userMap[req.bhId]?.name || 'BH') : null,
+            bhDesignation: req.bhId ? (userMap[req.bhId]?.designation || 'BH') : 'BH',
+            hrName: req.hrId ? (userMap[req.hrId]?.name || 'HR') : null,
+            approvedByName: req.approvedBy ? (userMap[req.approvedBy]?.name || 'Admin/HR') : null,
+            approvedByDesignation: req.approvedBy ? (userMap[req.approvedBy]?.designation || 'HR') : null
         });
 
-        const leaves = leavesRaw.map(enrichWithBhName);
-        const permissions = permissionsRaw.map(enrichWithBhName);
-        const siteVisits = siteVisitsRaw.map(enrichWithBhName);
-        const showroomVisits = showroomVisitsRaw.map(enrichWithBhName);
+        const leaves = leavesRaw.map(enrichWithNames);
+        const permissions = permissionsRaw.map(enrichWithNames);
+        const siteVisits = siteVisitsRaw.map(enrichWithNames);
+        const showroomVisits = showroomVisitsRaw.map(enrichWithNames);
 
         res.json({ leaves, permissions, siteVisits, showroomVisits });
     } catch (error) {

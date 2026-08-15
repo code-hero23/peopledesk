@@ -7,15 +7,15 @@ const prisma = new PrismaClient();
 
 const designations = [
     { label: "Office Administration", value: "OFFICE-ADMINISTRATION", email: "admin01@cookscape.com", role: "ADMIN" },
-    // { label: "Account", value: "ACCOUNT", email: "account@cs.com" },
-    // { label: "Lead Operation", value: "LEAD-OPERATION", email: "leadop@cs.com" },
-    // { label: "Lead Conversion", value: "LEAD-CONVERSION", email: "leadconv@cs.com" },
-    // { label: "Digital Marketing", value: "DIGITAL-MARKETING", email: "digital@cs.com" },
-    // { label: "Vendor Management", value: "VENDOR-MANAGEMENT", email: "vendor@cs.com" },
-    // { label: "Customer Relationship", value: "CUSTOMER-RELATIONSHIP", email: "custrel@cs.com" },
-    // { label: "Client Care", value: "CLIENT-CARE", email: "clientcare@cs.com" },
-    // { label: "Escalation", value: "ESCALATION", email: "escalation@cs.com" },
-    // { label: "Client Facilitator", value: "CLIENT-FACILITATOR", email: "facilitator@cs.com" }
+    { label: "Account", value: "ACCOUNT", email: "account@cs.com" },
+    { label: "Lead Operation", value: "LEAD-OPERATION", email: "leadop@cs.com" },
+    { label: "Lead Conversion", value: "LEAD-CONVERSION", email: "leadconv@cs.com" },
+    { label: "Digital Marketing", value: "DIGITAL-MARKETING", email: "digital@cs.com" },
+    { label: "Vendor Management", value: "VENDOR-MANAGEMENT", email: "vendor@cs.com" },
+    { label: "Customer Relationship", value: "CUSTOMER-RELATIONSHIP", email: "custrel@cs.com" },
+    { label: "Client Care", value: "CLIENT-CARE", email: "clientcare@cs.com" },
+    { label: "Escalation", value: "ESCALATION", email: "escalation@cs.com" },
+    { label: "Client Facilitator", value: "CLIENT-FACILITATOR", email: "facilitator@cs.com" }
 ];
 
 async function createEmployees() {
