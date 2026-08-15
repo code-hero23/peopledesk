@@ -1,18 +1,21 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '../.env') });
+
 const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const prisma = new PrismaClient();
 
 const designations = [
-    { label: "Office Administration", value: "OFFICE-ADMINISTRATION", email: "office@cs.com" },
-    { label: "Account", value: "ACCOUNT", email: "account@cs.com" },
-    { label: "Lead Operation", value: "LEAD-OPERATION", email: "leadop@cs.com" },
-    { label: "Lead Conversion", value: "LEAD-CONVERSION", email: "leadconv@cs.com" },
-    { label: "Digital Marketing", value: "DIGITAL-MARKETING", email: "digital@cs.com" },
-    { label: "Vendor Management", value: "VENDOR-MANAGEMENT", email: "vendor@cs.com" },
-    { label: "Customer Relationship", value: "CUSTOMER-RELATIONSHIP", email: "custrel@cs.com" },
-    { label: "Client Care", value: "CLIENT-CARE", email: "clientcare@cs.com" },
-    { label: "Escalation", value: "ESCALATION", email: "escalation@cs.com" },
-    { label: "Client Facilitator", value: "CLIENT-FACILITATOR", email: "facilitator@cs.com" }
+    { label: "Office Administration", value: "OFFICE-ADMINISTRATION", email: "admin01@cookscape.com", role: "ADMIN" },
+    // { label: "Account", value: "ACCOUNT", email: "account@cs.com" },
+    // { label: "Lead Operation", value: "LEAD-OPERATION", email: "leadop@cs.com" },
+    // { label: "Lead Conversion", value: "LEAD-CONVERSION", email: "leadconv@cs.com" },
+    // { label: "Digital Marketing", value: "DIGITAL-MARKETING", email: "digital@cs.com" },
+    // { label: "Vendor Management", value: "VENDOR-MANAGEMENT", email: "vendor@cs.com" },
+    // { label: "Customer Relationship", value: "CUSTOMER-RELATIONSHIP", email: "custrel@cs.com" },
+    // { label: "Client Care", value: "CLIENT-CARE", email: "clientcare@cs.com" },
+    // { label: "Escalation", value: "ESCALATION", email: "escalation@cs.com" },
+    // { label: "Client Facilitator", value: "CLIENT-FACILITATOR", email: "facilitator@cs.com" }
 ];
 
 async function createEmployees() {
@@ -33,12 +36,12 @@ async function createEmployees() {
                     name: d.label,
                     email: d.email,
                     password: password,
-                    role: 'EMPLOYEE',
+                    role: d.role || 'EMPLOYEE', // Dynamic role support
                     designation: d.value,
                     status: 'ACTIVE'
                 }
             });
-            console.log(`Created: ${user.name} (${user.designation}) - ${user.email}`);
+            console.log(`Created: ${user.name} (${user.designation}) [Role: ${user.role}] - ${user.email}`);
         } catch (e) {
             console.error(`Failed to create ${d.email}:`, e.message);
         }
