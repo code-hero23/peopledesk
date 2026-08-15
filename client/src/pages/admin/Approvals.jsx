@@ -174,26 +174,46 @@ const Approvals = () => {
     // A request is a Direct Update if it's leave/permission and is within limits (not exceeded)
     const isLeaveOrPerm = type === "leave" || type === "permission";
     const isDirectUpdate = isLeaveOrPerm && !req.isExceededLimit;
- 
-    const isBhAlreadyActed = (user?.role === "BUSINESS_HEAD" || user?.role === "AE_MANAGER") && req.bhStatus !== "PENDING";
-    const isHrAlreadyActed = user?.role === "HR" && req.hrStatus !== "PENDING";
+
+    const userRole = user?.role;
+    const isBh = userRole === "BUSINESS_HEAD" || userRole === "AE_MANAGER";
+    const isHr = userRole === "HR";
+    const isAdmin = userRole === "ADMIN";
+
+    // 1. Is the request pending action / view for this role?
+    let isPending = false;
+    if (isBh) {
+      isPending = req.bhStatus === "PENDING" && req.status === "PENDING";
+    } else if (isHr) {
+      isPending = req.hrStatus === "PENDING" && req.status === "PENDING";
+    } else if (isAdmin) {
+      isPending = req.status === "PENDING" && (req.bhStatus === "PENDING" || req.hrStatus === "PENDING");
+    }
+
+    // 2. Is the request approved for this role?
+    let isApproved = false;
+    if (isBh) {
+      isApproved = req.bhStatus === "APPROVED";
+    } else if (isHr) {
+      isApproved = req.hrStatus === "APPROVED" || req.status === "APPROVED";
+    } else if (isAdmin) {
+      const isVisit = type === "site-visit" || type === "showroom-visit";
+      if (isVisit) {
+        isApproved = req.status === "APPROVED";
+      } else {
+        isApproved = req.bhStatus === "APPROVED" && (req.hrStatus === "APPROVED" || req.status === "APPROVED");
+      }
+    }
  
     if (categoryFilter === "requests") {
       if (isDirectUpdate) return false;
-      if (req.status !== "PENDING") return false;
-      if (isBhAlreadyActed || isHrAlreadyActed) return false;
+      if (!isPending) return false;
     } else if (categoryFilter === "direct") {
       if (!isDirectUpdate) return false;
     } else if (categoryFilter === "approved") {
       if (isDirectUpdate) return false;
       if (req.status === "REJECTED") return false;
-      
-      const isApprovedForUser = 
-        req.status === "APPROVED" ||
-        req.hrStatus === "APPROVED" ||
-        req.bhStatus === "APPROVED";
-
-      if (!isApprovedForUser) return false;
+      if (!isApproved) return false;
     }
  
     return true;
@@ -447,7 +467,7 @@ const Approvals = () => {
               📋 Approval Request
             </span>
           )}
-          {req.bhStatus === "PENDING" && !isDirectUpdate && (
+          {req.bhStatus === "PENDING" && !isDirectUpdate && req.status !== "APPROVED" && req.status !== "REJECTED" && (
             <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-1 rounded-full border border-yellow-200 flex items-center gap-1">
               ⏳ Waiting for {req.bhDesignation || "BH"}
             </span>
@@ -465,6 +485,11 @@ const Approvals = () => {
           {req.status === "APPROVED" && (type === "site-visit" || type === "showroom-visit" || req.isExceededLimit) && (
             <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-full border border-indigo-200 flex items-center gap-1">
               🏆 Approved by {req.approvedByName || req.hrName || "Admin/HR"}
+            </span>
+          )}
+          {(req.hrStatus === "REJECTED" || (req.status === "REJECTED" && req.bhStatus !== "REJECTED")) && (
+            <span className="bg-red-100 text-red-800 text-xs px-2 py-1 rounded-full border border-red-200 flex items-center gap-1">
+              ❌ Rejected by {req.approvedByName || req.hrName || "HR/Admin"}
             </span>
           )}
         </div>
