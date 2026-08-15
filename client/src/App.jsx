@@ -26,7 +26,7 @@ import VoucherManagement from './pages/admin/VoucherManagement';
 import CRECallReports from './pages/employee/CRECallReports';
 import AdminCallReports from './pages/admin/AdminCallReports';
 import PerformanceManagement from './pages/admin/PerformanceManagement';
-import MyScoreBoard from './pages/employee/MyScoreBoard';
+import MyKPIScoreboard from './pages/employee/MyKPIScoreboard';
 import Helpdesk from './pages/employee/Helpdesk';
 import HelpdeskManagement from './pages/admin/HelpdeskManagement';
 import SeatingLayout from './pages/admin/SeatingLayout';
@@ -63,7 +63,7 @@ function App() {
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
                 <Route path="/dashboard/expenses" element={<ExpenseHub />} />
                 <Route path="/dashboard/call-reports" element={<CRECallReports />} />
-                <Route path="/dashboard/scoreboard" element={<MyScoreBoard />} />
+                <Route path="/dashboard/kpi-scoreboard" element={<MyKPIScoreboard />} />
                 <Route path="/dashboard/helpdesk" element={<Helpdesk />} />
                 <Route path="/seating" element={<SeatingLayout />} />
               </Route>

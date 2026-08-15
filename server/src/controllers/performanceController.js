@@ -137,7 +137,7 @@ const getPerformanceHistory = async (req, res) => {
     }
 };
 
-// @desc    Get current employee's own scoreboard
+// @desc    Get current employee's own KPI scoreboard
 // @route   GET /api/performance/my-scores
 // @access  Private
 const getMyPerformance = async (req, res) => {

@@ -4,7 +4,7 @@ import axios from 'axios';
 import { Award, Target, Zap, ShieldCheck, Heart, Info, Calendar, RefreshCw } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const MyScoreBoard = () => {
+const MyKPIScoreboard = () => {
     const { user } = useSelector((state) => state.auth);
     const [scores, setScores] = useState([]);
     const [isLoading, setIsLoading] = useState(true);
@@ -31,7 +31,7 @@ const MyScoreBoard = () => {
 
     const currentScore = scores[selectedMonth] || null;
 
-    if (isLoading) return <div className="p-12 text-center text-slate-400 font-bold animate-pulse">Loading ScoreBoard...</div>;
+    if (isLoading) return <div className="p-12 text-center text-slate-400 font-bold animate-pulse">Loading KPI scoreboard...</div>;
 
     if (scores.length === 0) {
         return (
@@ -58,7 +58,7 @@ const MyScoreBoard = () => {
             {/* Header Section */}
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
                 <div>
-                   <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">My ScoreBoard</h2>
+                   <h2 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">My KPI scoreboard</h2>
                    <p className="text-slate-500 font-medium">Performance summary for {new Date(0, currentScore.month - 1).toLocaleString('default', { month: 'long' })} {currentScore.year}</p>
                 </div>
 
@@ -179,4 +179,4 @@ const MyScoreBoard = () => {
     );
 };
 
-export default MyScoreBoard;
+export default MyKPIScoreboard;

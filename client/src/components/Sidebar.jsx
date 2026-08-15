@@ -262,7 +262,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {user?.callAnalyticsViewEnabled && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
-                            <NavItem to="/dashboard/scoreboard" icon={BarChart3} label="My ScoreBoard" />
+                             <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI scoreboard" />
                             <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
                             {user?.designation === 'ACCOUNT' && (
                                 <NavItem to="/admin/attendance" icon={CalendarClock} label="Company Attendance" />
