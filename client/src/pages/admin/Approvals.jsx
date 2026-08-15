@@ -175,14 +175,25 @@ const Approvals = () => {
     const isLeaveOrPerm = type === "leave" || type === "permission";
     const isDirectUpdate = isLeaveOrPerm && !req.isExceededLimit;
  
+    const isBhAlreadyActed = (user?.role === "BUSINESS_HEAD" || user?.role === "AE_MANAGER") && req.bhStatus !== "PENDING";
+    const isHrAlreadyActed = user?.role === "HR" && req.hrStatus !== "PENDING";
+ 
     if (categoryFilter === "requests") {
       if (isDirectUpdate) return false;
       if (req.status !== "PENDING") return false;
+      if (isBhAlreadyActed || isHrAlreadyActed) return false;
     } else if (categoryFilter === "direct") {
       if (!isDirectUpdate) return false;
     } else if (categoryFilter === "approved") {
-      if (req.status !== "APPROVED") return false;
       if (isDirectUpdate) return false;
+      if (req.status === "REJECTED") return false;
+      
+      const isApprovedForUser = 
+        req.status === "APPROVED" ||
+        req.hrStatus === "APPROVED" ||
+        req.bhStatus === "APPROVED";
+
+      if (!isApprovedForUser) return false;
     }
  
     return true;
@@ -318,13 +329,19 @@ const Approvals = () => {
     const cardKey = `${type}-${req.id}`;
     const isSelected = selectedKeys.includes(cardKey);
     const isDirectUpdate = (type === "leave" || type === "permission") && !req.isExceededLimit;
-    const isActionable = categoryFilter === "requests" && req.status === "PENDING" && canApprove && (
-      !isGlobalBH || bhView === "mine"
-    ) && (
-      (user.role !== "BUSINESS_HEAD" && user.role !== "AE_MANAGER") ||
-      req.targetBhId === user.id ||
-      req.user.reportingBhId === user.id
-    );
+    const isBhAlreadyActed = (user?.role === "BUSINESS_HEAD" || user?.role === "AE_MANAGER") && req.bhStatus !== "PENDING";
+    const isHrAlreadyActed = user?.role === "HR" && req.hrStatus !== "PENDING";
+    const isActionable = categoryFilter === "requests" && 
+      req.status === "PENDING" && 
+      !isBhAlreadyActed && 
+      !isHrAlreadyActed &&
+      canApprove && (
+        !isGlobalBH || bhView === "mine"
+      ) && (
+        (user.role !== "BUSINESS_HEAD" && user.role !== "AE_MANAGER") ||
+        req.targetBhId === user.id ||
+        req.user.reportingBhId === user.id
+      );
 
     return (
       <div
@@ -502,9 +519,7 @@ const Approvals = () => {
               <div className="col-span-2 py-2.5 bg-amber-50 rounded-lg text-center text-amber-600 text-[10px] font-bold border border-amber-100 uppercase tracking-widest">
                 🌐 Monitoring — Other {req.bhDesignation || "BH"}'s Approval
               </div>
-            ) : (user.role !== "BUSINESS_HEAD" && user.role !== "AE_MANAGER") ||
-              req.targetBhId === user.id ||
-              req.user.reportingBhId === user.id ? (
+            ) : isActionable ? (
               <>
                 <button
                   onClick={(e) => {
@@ -525,8 +540,12 @@ const Approvals = () => {
                   Reject
                 </button>
               </>
+            ) : isBhAlreadyActed || isHrAlreadyActed ? (
+              <div className="col-span-2 py-2.5 bg-slate-50 rounded-lg text-center text-slate-500 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
+                🔒 Action Already Taken
+              </div>
             ) : (
-              <div className="col-span-2 py-2.5 bg-slate-50 rounded-lg text-center text-slate-400 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
+              <div className="col-span-2 py-2.5 bg-slate-50 rounded-lg text-center text-slate-450 text-[10px] font-bold border border-slate-100 uppercase tracking-widest">
                 👁️ Monitoring Only
               </div>
             )}
@@ -708,7 +727,7 @@ const Approvals = () => {
       </div>
 
       {/* Global BH tabs */}
-      {isGlobalBH && categoryFilter === "requests" && (
+      {isGlobalBH && (categoryFilter === "requests" || categoryFilter === "approved") && (
         <div className="col-span-full">
           <div className="flex gap-2 bg-white border border-slate-200 rounded-xl p-1.5 w-fit shadow-sm">
             <button
@@ -740,7 +759,7 @@ const Approvals = () => {
             </button>
           </div>
 
-          {bhView === "others" && (
+          {bhView === "others" && categoryFilter === "requests" && (
             <p className="mt-2 text-xs text-amber-600 font-semibold">
               🔒 Monitoring only — you cannot approve requests assigned to other Business Heads.
             </p>

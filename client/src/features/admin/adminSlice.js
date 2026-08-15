@@ -293,7 +293,7 @@ export const updateRequestStatus = createAsyncThunk(
                 { status },
                 config
             );
-            return { type, id, status }; // Return specific data to update local state efficiently
+            return { type, id, request: response.data.request }; // Return specific data and full request to update local state efficiently
         } catch (error) {
             const message =
                 (error.response && error.response.data && error.response.data.message) ||
@@ -536,32 +536,57 @@ export const adminSlice = createSlice({
             })
             // Update Status
             .addCase(updateRequestStatus.fulfilled, (state, action) => {
-                const { type, id } = action.payload;
+                const { type, id, request } = action.payload;
+                
+                const updateList = (pendingList, historyList) => {
+                    const list1 = pendingList || [];
+                    const list2 = historyList || [];
+                    
+                    const oldReq = list1.find(r => r.id === id) || list2.find(r => r.id === id);
+                    const updatedReq = oldReq ? { ...oldReq, ...request } : request;
+                    
+                    const newPending = list1.filter(r => r.id !== id);
+                    
+                    let newHistory = [...list2];
+                    const index = newHistory.findIndex(r => r.id === id);
+                    if (index !== -1) {
+                        newHistory[index] = updatedReq;
+                    } else {
+                        newHistory.push(updatedReq);
+                    }
+                    
+                    return { newPending, newHistory };
+                };
+
                 if (type === 'leave') {
-                    state.pendingRequests.leaves = state.pendingRequests.leaves.filter(
-                        (req) => req.id !== id
-                    );
+                    const { newPending, newHistory } = updateList(state.pendingRequests.leaves, state.requestHistory?.leaves);
+                    state.pendingRequests.leaves = newPending;
+                    if (state.requestHistory) {
+                        state.requestHistory.leaves = newHistory;
+                    }
                 } else if (type === 'permission') {
-                    state.pendingRequests.permissions = state.pendingRequests.permissions.filter(
-                        (req) => req.id !== id
-                    );
+                    const { newPending, newHistory } = updateList(state.pendingRequests.permissions, state.requestHistory?.permissions);
+                    state.pendingRequests.permissions = newPending;
+                    if (state.requestHistory) {
+                        state.requestHistory.permissions = newHistory;
+                    }
                 } else if (type === 'site-visit') {
-                    if (state.pendingRequests.siteVisits) {
-                        state.pendingRequests.siteVisits = state.pendingRequests.siteVisits.filter(
-                            (req) => req.id !== id
-                        );
+                    const { newPending, newHistory } = updateList(state.pendingRequests.siteVisits, state.requestHistory?.siteVisits);
+                    state.pendingRequests.siteVisits = newPending;
+                    if (state.requestHistory) {
+                        state.requestHistory.siteVisits = newHistory;
                     }
                 } else if (type === 'showroom-visit') {
-                    if (state.pendingRequests.showroomVisits) {
-                        state.pendingRequests.showroomVisits = state.pendingRequests.showroomVisits.filter(
-                            (req) => req.id !== id
-                        );
+                    const { newPending, newHistory } = updateList(state.pendingRequests.showroomVisits, state.requestHistory?.showroomVisits);
+                    state.pendingRequests.showroomVisits = newPending;
+                    if (state.requestHistory) {
+                        state.requestHistory.showroomVisits = newHistory;
                     }
                 } else if (type === 'wfh') {
-                    if (state.pendingRequests.wfh) {
-                        state.pendingRequests.wfh = state.pendingRequests.wfh.filter(
-                            (req) => req.id !== id
-                        );
+                    const { newPending, newHistory } = updateList(state.pendingRequests.wfh, state.requestHistory?.wfh);
+                    state.pendingRequests.wfh = newPending;
+                    if (state.requestHistory) {
+                        state.requestHistory.wfh = newHistory;
                     }
                 }
             })
