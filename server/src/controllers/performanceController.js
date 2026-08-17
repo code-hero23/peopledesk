@@ -60,6 +60,43 @@ const setEmployeeScore = async (req, res) => {
     }
 };
 
+// Helper to calculate automated metrics for an employee
+const computeAutomatedMetrics = async (userId, month, year) => {
+    const startDate = new Date(year, month - 1, 1);
+    const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
+
+    // 1. System (PD): (Present Days / 26) * 15
+    const presentDays = await prisma.attendance.count({
+        where: {
+            userId: parseInt(userId),
+            date: { gte: startDate, lte: endDate },
+            status: 'PRESENT'
+        }
+    });
+
+    const systemScore = Math.min(15, (presentDays / 26) * 15);
+
+    // 2. Consistency: (Days with Worklogs / 26) * 30
+    const worklogDates = await prisma.workLog.groupBy({
+        by: ['date'],
+        where: {
+            userId: parseInt(userId),
+            date: { gte: startDate, lte: endDate }
+        }
+    });
+
+    const consistencyScore = Math.min(30, (worklogDates.length / 26) * 30);
+
+    return {
+        system: parseFloat(systemScore.toFixed(2)),
+        consistency: parseFloat(consistencyScore.toFixed(2)),
+        counts: {
+            presentDays,
+            worklogDays: worklogDates.length
+        }
+    };
+};
+
 // @desc    Calculate automated metrics for an employee
 // @route   GET /api/performance/calculate/:userId
 // @access  Private (Admin, HR)
@@ -72,40 +109,8 @@ const calculateAutomatedMetrics = async (req, res) => {
     }
 
     try {
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
-
-        // 1. System (PD): (Present Days / 26) * 15
-        const presentDays = await prisma.attendance.count({
-            where: {
-                userId: parseInt(userId),
-                date: { gte: startDate, lte: endDate },
-                status: 'PRESENT'
-            }
-        });
-
-        const systemScore = Math.min(15, (presentDays / 26) * 15);
-
-        // 2. Consistency: (Days with Worklogs / 26) * 30
-        // Use groupBy to get unique dates
-        const worklogDates = await prisma.workLog.groupBy({
-            by: ['date'],
-            where: {
-                userId: parseInt(userId),
-                date: { gte: startDate, lte: endDate }
-            }
-        });
-
-        const consistencyScore = Math.min(30, (worklogDates.length / 26) * 30);
-
-        res.json({
-            system: parseFloat(systemScore.toFixed(2)),
-            consistency: parseFloat(consistencyScore.toFixed(2)),
-            counts: {
-                presentDays,
-                worklogDays: worklogDates.length
-            }
-        });
+        const metrics = await computeAutomatedMetrics(userId, month, year);
+        res.json(metrics);
     } catch (error) {
         console.error('Error calculating metrics:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -175,23 +180,55 @@ const importPerformanceScores = async (req, res) => {
         };
 
         for (const data of scores) {
-            const { email, month, year, efficiency, consistency, quality, system, behaviour, remarks } = data;
+            const email = data.email || data.Email;
+            const month = data.month || data.Month;
+            const year = data.year || data.Year;
+            const efficiency = data.efficiency ?? data.Efficiency;
+            const quality = data.quality ?? data.Quality;
+            const behaviour = data.behaviour ?? data.Behaviour ?? data.behavior ?? data.Behavior;
+            const remarks = data.remarks ?? data.Remarks ?? '';
+
+            let consistency = data.consistency ?? data.Consistency ?? data['consistency (30)'] ?? data['consis'];
+            let system = data.system ?? data.System ?? data['system (pd)'] ?? data['system (15)'] ?? data['sys'];
 
             try {
                 if (!email || !month || !year) {
                     throw new Error(`Missing required fields for entry: ${email || 'unknown'}`);
                 }
 
-                // Find user by email
-                const targetUser = await prisma.user.findUnique({
-                    where: { email }
+                // Find user by email (case-insensitive)
+                const targetUser = await prisma.user.findFirst({
+                    where: { email: { equals: email.trim(), mode: 'insensitive' } }
                 });
 
                 if (!targetUser) {
                     throw new Error(`User not found for email: ${email}`);
                 }
 
-                const totalScore = (parseFloat(efficiency) || 0) + (parseFloat(consistency) || 0) + (parseFloat(quality) || 0) + (parseFloat(system) || 0) + (parseFloat(behaviour) || 0);
+                let consistencyVal = (consistency !== undefined && consistency !== null && consistency.toString().trim() !== '')
+                    ? parseFloat(consistency)
+                    : NaN;
+
+                let systemVal = (system !== undefined && system !== null && system.toString().trim() !== '')
+                    ? parseFloat(system)
+                    : NaN;
+
+                // Auto-fetch missing/invalid consistency or system scores from attendance & worklogs
+                if (isNaN(consistencyVal) || isNaN(systemVal)) {
+                    const autoMetrics = await computeAutomatedMetrics(targetUser.id, parseInt(month), parseInt(year));
+                    if (isNaN(consistencyVal)) {
+                        consistencyVal = autoMetrics.consistency;
+                    }
+                    if (isNaN(systemVal)) {
+                        systemVal = autoMetrics.system;
+                    }
+                }
+
+                const effVal = parseFloat(efficiency) || 0;
+                const qualVal = parseFloat(quality) || 0;
+                const behVal = parseFloat(behaviour) || 0;
+
+                const totalScore = parseFloat((effVal + consistencyVal + qualVal + systemVal + behVal).toFixed(2));
 
                 await prisma.performanceScore.upsert({
                     where: {
@@ -202,11 +239,11 @@ const importPerformanceScores = async (req, res) => {
                         }
                     },
                     update: {
-                        efficiency: parseFloat(efficiency) || 0,
-                        consistency: parseFloat(consistency) || 0,
-                        quality: parseFloat(quality) || 0,
-                        system: parseFloat(system) || 0,
-                        behaviour: parseFloat(behaviour) || 0,
+                        efficiency: effVal,
+                        consistency: consistencyVal,
+                        quality: qualVal,
+                        system: systemVal,
+                        behaviour: behVal,
                         totalScore,
                         remarks,
                         updatedById: req.user.id
@@ -215,11 +252,11 @@ const importPerformanceScores = async (req, res) => {
                         userId: targetUser.id,
                         month: parseInt(month),
                         year: parseInt(year),
-                        efficiency: parseFloat(efficiency) || 0,
-                        consistency: parseFloat(consistency) || 0,
-                        quality: parseFloat(quality) || 0,
-                        system: parseFloat(system) || 0,
-                        behaviour: parseFloat(behaviour) || 0,
+                        efficiency: effVal,
+                        consistency: consistencyVal,
+                        quality: qualVal,
+                        system: systemVal,
+                        behaviour: behVal,
                         totalScore,
                         remarks,
                         updatedById: req.user.id

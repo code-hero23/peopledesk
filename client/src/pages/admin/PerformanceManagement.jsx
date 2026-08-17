@@ -145,7 +145,7 @@ const PerformanceManagement = () => {
 
     const downloadTemplate = () => {
         const headers = "Email, Month, Year, Efficiency, Consistency, Quality, System, Behaviour, Remarks";
-        const sample = "employee@example.com, 4, 2026, 18, 25, 15, 10, 12, Excellent work";
+        const sample = "employee@example.com, 4, 2026, 18, , 15, , 12, Leave Consistency and System blank to auto-fetch";
         const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + sample;
         const encodedUri = encodeURI(csvContent);
         const link = document.createElement("a");
