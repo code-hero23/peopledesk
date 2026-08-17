@@ -1,3 +1,6 @@
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
 // Helper to generate automatic remarks based on total score
 const generateAutoRemark = (totalScore) => {
     const score = parseFloat(totalScore) || 0;
@@ -162,10 +165,15 @@ const calculateAutomatedMetrics = async (req, res) => {
 // @access  Private (Admin, HR, BH)
 const getPerformanceHistory = async (req, res) => {
     const { userId } = req.params;
+    const targetId = parseInt(userId);
+
+    if (!targetId || isNaN(targetId)) {
+        return res.json([]);
+    }
 
     try {
         const history = await prisma.performanceScore.findMany({
-            where: { userId: parseInt(userId) },
+            where: { userId: targetId },
             orderBy: [
                 { year: 'desc' },
                 { month: 'desc' }
@@ -175,7 +183,7 @@ const getPerformanceHistory = async (req, res) => {
             }
         });
 
-        res.json(history);
+        res.json(history || []);
     } catch (error) {
         console.error('Error fetching performance history:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -187,19 +195,21 @@ const getPerformanceHistory = async (req, res) => {
 // @access  Private
 const getMyPerformance = async (req, res) => {
     try {
-        if (!req.user || !req.user.id) {
+        const targetId = req.user?.id ? parseInt(req.user.id) : NaN;
+
+        if (!targetId || isNaN(targetId)) {
             return res.status(401).json({ message: 'User authorization required' });
         }
 
         const scores = await prisma.performanceScore.findMany({
-            where: { userId: parseInt(req.user.id) },
+            where: { userId: targetId },
             orderBy: [
                 { year: 'desc' },
                 { month: 'desc' }
             ]
         });
 
-        res.json(scores);
+        res.json(scores || []);
     } catch (error) {
         console.error('Error fetching own performance:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
