@@ -187,8 +187,12 @@ const getPerformanceHistory = async (req, res) => {
 // @access  Private
 const getMyPerformance = async (req, res) => {
     try {
+        if (!req.user || !req.user.id) {
+            return res.status(401).json({ message: 'User authorization required' });
+        }
+
         const scores = await prisma.performanceScore.findMany({
-            where: { userId: req.user.id },
+            where: { userId: parseInt(req.user.id) },
             orderBy: [
                 { year: 'desc' },
                 { month: 'desc' }
