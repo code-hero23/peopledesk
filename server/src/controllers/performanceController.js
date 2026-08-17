@@ -162,6 +162,13 @@ const getMyPerformance = async (req, res) => {
     }
 };
 
+// Helper to find value from row object with flexible key matching
+const getVal = (obj, pattern) => {
+    if (!obj) return undefined;
+    const key = Object.keys(obj).find(k => k.toLowerCase().includes(pattern));
+    return key ? obj[key] : undefined;
+};
+
 // @desc    Bulk import performance scores
 // @route   POST /api/performance/import
 // @access  Private (Admin, HR)
@@ -180,16 +187,16 @@ const importPerformanceScores = async (req, res) => {
         };
 
         for (const data of scores) {
-            const email = data.email || data.Email;
-            const month = data.month || data.Month;
-            const year = data.year || data.Year;
-            const efficiency = data.efficiency ?? data.Efficiency;
-            const quality = data.quality ?? data.Quality;
-            const behaviour = data.behaviour ?? data.Behaviour ?? data.behavior ?? data.Behavior;
-            const remarks = data.remarks ?? data.Remarks ?? '';
+            const email = data.email || data.Email || getVal(data, 'mail');
+            const month = data.month || data.Month || getVal(data, 'month');
+            const year = data.year || data.Year || getVal(data, 'year');
+            const efficiency = data.efficiency ?? data.Efficiency ?? getVal(data, 'eff');
+            const quality = data.quality ?? data.Quality ?? getVal(data, 'qual');
+            const behaviour = data.behaviour ?? data.Behaviour ?? getVal(data, 'behav');
+            const remarks = data.remarks ?? data.Remarks ?? getVal(data, 'rem') ?? '';
 
-            let consistency = data.consistency ?? data.Consistency ?? data['consistency (30)'] ?? data['consis'];
-            let system = data.system ?? data.System ?? data['system (pd)'] ?? data['system (15)'] ?? data['sys'];
+            let consistencyRaw = data.consistency ?? data.Consistency ?? getVal(data, 'consis');
+            let systemRaw = data.system ?? data.System ?? getVal(data, 'sys');
 
             try {
                 if (!email || !month || !year) {
@@ -198,28 +205,29 @@ const importPerformanceScores = async (req, res) => {
 
                 // Find user by email (case-insensitive)
                 const targetUser = await prisma.user.findFirst({
-                    where: { email: { equals: email.trim(), mode: 'insensitive' } }
+                    where: { email: { equals: email.toString().trim(), mode: 'insensitive' } }
                 });
 
                 if (!targetUser) {
                     throw new Error(`User not found for email: ${email}`);
                 }
 
-                let consistencyVal = (consistency !== undefined && consistency !== null && consistency.toString().trim() !== '')
-                    ? parseFloat(consistency)
+                let consistencyVal = (consistencyRaw !== undefined && consistencyRaw !== null && consistencyRaw.toString().trim() !== '')
+                    ? parseFloat(consistencyRaw)
                     : NaN;
 
-                let systemVal = (system !== undefined && system !== null && system.toString().trim() !== '')
-                    ? parseFloat(system)
+                let systemVal = (systemRaw !== undefined && systemRaw !== null && systemRaw.toString().trim() !== '')
+                    ? parseFloat(systemRaw)
                     : NaN;
 
-                // Auto-fetch missing/invalid consistency or system scores from attendance & worklogs
-                if (isNaN(consistencyVal) || isNaN(systemVal)) {
+                // Auto-fetch missing, invalid, or 0 consistency/system scores from attendance & worklogs
+                if (isNaN(consistencyVal) || consistencyVal === 0 || isNaN(systemVal) || systemVal === 0) {
                     const autoMetrics = await computeAutomatedMetrics(targetUser.id, parseInt(month), parseInt(year));
-                    if (isNaN(consistencyVal)) {
+                    
+                    if (isNaN(consistencyVal) || consistencyVal === 0) {
                         consistencyVal = autoMetrics.consistency;
                     }
-                    if (isNaN(systemVal)) {
+                    if (isNaN(systemVal) || systemVal === 0) {
                         systemVal = autoMetrics.system;
                     }
                 }
@@ -245,7 +253,7 @@ const importPerformanceScores = async (req, res) => {
                         system: systemVal,
                         behaviour: behVal,
                         totalScore,
-                        remarks,
+                        remarks: remarks.toString(),
                         updatedById: req.user.id
                     },
                     create: {
@@ -258,7 +266,7 @@ const importPerformanceScores = async (req, res) => {
                         system: systemVal,
                         behaviour: behVal,
                         totalScore,
-                        remarks,
+                        remarks: remarks.toString(),
                         updatedById: req.user.id
                     }
                 });
