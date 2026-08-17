@@ -465,13 +465,23 @@ const PerformanceManagement = () => {
                                 </div>
 
                                 <div className="space-y-1 md:col-span-2">
-                                    <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest pl-1">Remarks / Feedback</label>
+                                    <div className="flex justify-between items-center pl-1">
+                                        <label className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Remarks / Feedback</label>
+                                        <span className="text-[9px] font-bold text-primary/70 italic">Auto-generated if left blank</span>
+                                    </div>
                                     <textarea 
                                         rows={2}
                                         value={scores.remarks}
                                         onChange={(e) => setScores({ ...scores, remarks: e.target.value })}
                                         className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl px-4 py-2.5 font-medium outline-none focus:ring-2 focus:ring-primary text-sm"
-                                        placeholder="Add feedback for the employee..."
+                                        placeholder={
+                                            totalScorePreview >= 90 ? 'Outstanding overall performance! Exceptional output, consistency, and quality.' :
+                                            totalScorePreview >= 80 ? 'Excellent overall performance! Consistently meets and exceeds expectations.' :
+                                            totalScorePreview >= 70 ? 'Good overall performance. Solid work quality with steady attendance and logs.' :
+                                            totalScorePreview >= 60 ? 'Satisfactory performance. Scope for improvement in worklog consistency and efficiency.' :
+                                            totalScorePreview >= 50 ? 'Needs improvement. Please focus on regular attendance and daily worklogs.' :
+                                            'Requires immediate improvement across key performance categories.'
+                                        }
                                     />
                                 </div>
                             </div>

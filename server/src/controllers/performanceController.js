@@ -1,5 +1,13 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+// Helper to generate automatic remarks based on total score
+const generateAutoRemark = (totalScore) => {
+    const score = parseFloat(totalScore) || 0;
+    if (score >= 90) return 'Outstanding overall performance! Exceptional output, consistency, and quality.';
+    if (score >= 80) return 'Excellent overall performance! Consistently meets and exceeds expectations.';
+    if (score >= 70) return 'Good overall performance. Solid work quality with steady attendance and logs.';
+    if (score >= 60) return 'Satisfactory performance. Scope for improvement in worklog consistency and efficiency.';
+    if (score >= 50) return 'Needs improvement. Please focus on regular attendance and daily worklogs.';
+    return 'Requires immediate improvement across key performance categories.';
+};
 
 // @desc    Upsert performance score for an employee
 // @route   POST /api/performance/set
@@ -20,6 +28,10 @@ const setEmployeeScore = async (req, res) => {
 
         const totalScore = (efficiency || 0) + (consistency || 0) + (quality || 0) + (system || 0) + (behaviour || 0);
 
+        const finalRemarks = (remarks && remarks.toString().trim() !== '' && !remarks.toString().includes('Leave Consistency'))
+            ? remarks.toString().trim()
+            : generateAutoRemark(totalScore);
+
         const score = await prisma.performanceScore.upsert({
             where: {
                 userId_month_year: {
@@ -35,7 +47,7 @@ const setEmployeeScore = async (req, res) => {
                 system: parseFloat(system),
                 behaviour: parseFloat(behaviour),
                 totalScore,
-                remarks,
+                remarks: finalRemarks,
                 updatedById: req.user.id
             },
             create: {
@@ -48,7 +60,7 @@ const setEmployeeScore = async (req, res) => {
                 system: parseFloat(system),
                 behaviour: parseFloat(behaviour),
                 totalScore,
-                remarks,
+                remarks: finalRemarks,
                 updatedById: req.user.id
             }
         });
@@ -266,6 +278,10 @@ const importPerformanceScores = async (req, res) => {
 
                 const totalScore = parseFloat((effVal + consistencyVal + qualVal + systemVal + behVal).toFixed(2));
 
+                const finalRemarks = (remarks && remarks.toString().trim() !== '' && !remarks.toString().includes('Leave Consistency'))
+                    ? remarks.toString().trim()
+                    : generateAutoRemark(totalScore);
+
                 await prisma.performanceScore.upsert({
                     where: {
                         userId_month_year: {
@@ -281,7 +297,7 @@ const importPerformanceScores = async (req, res) => {
                         system: systemVal,
                         behaviour: behVal,
                         totalScore,
-                        remarks: remarks.toString(),
+                        remarks: finalRemarks,
                         updatedById: req.user.id
                     },
                     create: {
@@ -294,7 +310,7 @@ const importPerformanceScores = async (req, res) => {
                         system: systemVal,
                         behaviour: behVal,
                         totalScore,
-                        remarks: remarks.toString(),
+                        remarks: finalRemarks,
                         updatedById: req.user.id
                     }
                 });
