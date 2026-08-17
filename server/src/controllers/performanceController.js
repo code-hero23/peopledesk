@@ -62,37 +62,65 @@ const setEmployeeScore = async (req, res) => {
 
 // Helper to calculate automated metrics for an employee
 const computeAutomatedMetrics = async (userId, month, year) => {
-    const startDate = new Date(year, month - 1, 1);
-    const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
+    const m = parseInt(month);
+    const y = parseInt(year);
 
-    // 1. System (PD): (Present Days / 26) * 15
-    const presentDays = await prisma.attendance.count({
-        where: {
-            userId: parseInt(userId),
-            date: { gte: startDate, lte: endDate },
-            status: 'PRESENT'
-        }
-    });
+    // 26th-25th cycle for target month M: 26th of (M-1) to 25th of M
+    const cycleStart = new Date(Date.UTC(y, m - 2, 26, 0, 0, 0, 0));
+    const cycleEnd = new Date(Date.UTC(y, m - 1, 25, 23, 59, 59, 999));
 
+    // Calendar month M: 1st of M to last day of M
+    const calStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
+    const calEnd = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
+
+    // Query attendance in both cycle and calendar ranges to take higher count
+    const [attCycle, attCal] = await Promise.all([
+        prisma.attendance.count({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: cycleStart, lte: cycleEnd },
+                status: 'PRESENT'
+            }
+        }),
+        prisma.attendance.count({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: calStart, lte: calEnd },
+                status: 'PRESENT'
+            }
+        })
+    ]);
+
+    const presentDays = Math.max(attCycle, attCal);
     const systemScore = Math.min(15, (presentDays / 26) * 15);
 
-    // 2. Consistency: (Days with Worklogs / 26) * 30
-    const worklogDates = await prisma.workLog.groupBy({
-        by: ['date'],
-        where: {
-            userId: parseInt(userId),
-            date: { gte: startDate, lte: endDate }
-        }
-    });
+    // Query worklog dates in both cycle and calendar ranges
+    const [wlCycle, wlCal] = await Promise.all([
+        prisma.workLog.groupBy({
+            by: ['date'],
+            where: {
+                userId: parseInt(userId),
+                date: { gte: cycleStart, lte: cycleEnd }
+            }
+        }),
+        prisma.workLog.groupBy({
+            by: ['date'],
+            where: {
+                userId: parseInt(userId),
+                date: { gte: calStart, lte: calEnd }
+            }
+        })
+    ]);
 
-    const consistencyScore = Math.min(30, (worklogDates.length / 26) * 30);
+    const worklogDays = Math.max(wlCycle.length, wlCal.length);
+    const consistencyScore = Math.min(30, (worklogDays / 26) * 30);
 
     return {
         system: parseFloat(systemScore.toFixed(2)),
         consistency: parseFloat(consistencyScore.toFixed(2)),
         counts: {
             presentDays,
-            worklogDays: worklogDates.length
+            worklogDays
         }
     };
 };
