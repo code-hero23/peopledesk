@@ -166,6 +166,36 @@ class WhatsAppService {
         // Params: {{1}} = Name, {{2}} = Break Type (Tea/Lunch), {{3}} = Limit Minutes
         return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes], [], 'en');
     }
+
+    /**
+     * Send Exceeded Leave Alert to BH and HR
+     */
+    async sendExceededLeaveAlert(to, userName, userRole, reason, daysExceeded) {
+        // Template: leave_request_template
+        // Params: {{1}} = Name, {{2}} = Role, {{3}} = Reason, {{4}} = Days Exceeded
+        return this.sendTemplateMessage(
+            to, 
+            'leave_request_template', 
+            [userName, userRole, reason, String(daysExceeded)], 
+            [], 
+            'en'
+        );
+    }
+
+    /**
+     * Send Exceeded Permission Alert to BH and HR
+     */
+    async sendExceededPermissionAlert(to, userName, userRole, reason, startTime, endTime, permissionsExceeded) {
+        // Template: permission_reuqest_template
+        // Params: {{1}} = Name, {{2}} = Role, {{3}} = Reason, {{4}} = Start Time, {{5}} = End Time, {{6}} = Count Exceeded
+        return this.sendTemplateMessage(
+            to, 
+            'permission_reuqest_template', 
+            [userName, userRole, reason, startTime, endTime, String(permissionsExceeded)], 
+            [], 
+            'en'
+        );
+    }
 }
 
 module.exports = new WhatsAppService();

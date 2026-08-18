@@ -2,6 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getCycleStartDateIST, getCycleEndDateIST, parseRobustDate } = require('../utils/dateHelpers');
 const { sendEmail } = require('../utils/emailService');
+const whatsappService = require('../utils/WhatsAppService');
 
 // @desc    Get all Business Heads
 // @route   GET /api/requests/business-heads
@@ -74,16 +75,11 @@ const createLeaveRequest = async (req, res) => {
         }
 
         let isExceededLimit = false;
+        let maxExceededDays = 0;
 
         for (const cycle of cyclesToCheck) {
             // Calculate how many days of THIS request fall into THIS cycle
             const daysInThisCycle = getDaysInRange(requestStart, requestEnd, cycle.start, cycle.end, type);
-
-            // If the request itself has > 4 days in a single cycle
-            if (daysInThisCycle > 4) {
-                isExceededLimit = true;
-                break;
-            }
 
             // Get existing leaves in THIS cycle
             const existingInCycle = await prisma.leaveRequest.findMany({
@@ -102,9 +98,13 @@ const createLeaveRequest = async (req, res) => {
                 return sum + getDaysInRange(r.startDate, r.endDate, cycle.start, cycle.end, r.type);
             }, 0);
 
-            if ((existingDaysInCycle + daysInThisCycle) > 4) {
+            const totalInCycle = existingDaysInCycle + daysInThisCycle;
+            if (totalInCycle > 4) {
                 isExceededLimit = true;
-                break;
+                const exceeded = totalInCycle - 4;
+                if (exceeded > maxExceededDays) {
+                    maxExceededDays = exceeded;
+                }
             }
         }
 
@@ -139,6 +139,44 @@ const createLeaveRequest = async (req, res) => {
                 isExceededLimit
             },
         });
+
+        // Send WhatsApp alerts if limit is exceeded
+        if (isExceededLimit) {
+            try {
+                const bhId = targetBhId ? parseInt(targetBhId) : req.user.reportingBhId;
+                let bhPhone = null;
+                if (bhId) {
+                    const bhUser = await prisma.user.findUnique({
+                        where: { id: bhId },
+                        select: { phone: true }
+                    });
+                    bhPhone = bhUser?.phone;
+                }
+
+                const activeHrs = await prisma.user.findMany({
+                    where: { role: 'HR', status: 'ACTIVE' },
+                    select: { phone: true }
+                });
+
+                const recipients = new Set();
+                if (bhPhone) recipients.add(bhPhone);
+                activeHrs.forEach(hr => {
+                    if (hr.phone) recipients.add(hr.phone);
+                });
+
+                for (const phone of recipients) {
+                    await whatsappService.sendExceededLeaveAlert(
+                        phone,
+                        req.user.name || 'Employee',
+                        req.user.role || 'EMPLOYEE',
+                        reason,
+                        maxExceededDays
+                    );
+                }
+            } catch (wsErr) {
+                console.error('Error sending exceeded leave WhatsApp alerts:', wsErr);
+            }
+        }
 
         // Trigger excessive request notification check
         // await checkAndNotifyExcessiveRequests(userId, parseRobustDate(startDate));
@@ -378,6 +416,48 @@ const createPermissionRequest = async (req, res) => {
                 isExceededLimit
             },
         });
+
+        // Send WhatsApp alerts if limit is exceeded
+        if (isExceededLimit) {
+            try {
+                const bhId = targetBhId ? parseInt(targetBhId) : req.user.reportingBhId;
+                let bhPhone = null;
+                if (bhId) {
+                    const bhUser = await prisma.user.findUnique({
+                        where: { id: bhId },
+                        select: { phone: true }
+                    });
+                    bhPhone = bhUser?.phone;
+                }
+
+                const activeHrs = await prisma.user.findMany({
+                    where: { role: 'HR', status: 'ACTIVE' },
+                    select: { phone: true }
+                });
+
+                const recipients = new Set();
+                if (bhPhone) recipients.add(bhPhone);
+                activeHrs.forEach(hr => {
+                    if (hr.phone) recipients.add(hr.phone);
+                });
+
+                const exceededCount = (permCount + 1) - 4;
+
+                for (const phone of recipients) {
+                    await whatsappService.sendExceededPermissionAlert(
+                        phone,
+                        req.user.name || 'Employee',
+                        req.user.role || 'EMPLOYEE',
+                        reason,
+                        startTime,
+                        endTime,
+                        exceededCount
+                    );
+                }
+            } catch (wsErr) {
+                console.error('Error sending exceeded permission WhatsApp alerts:', wsErr);
+            }
+        }
 
         // Trigger excessive request notification check
         // await checkAndNotifyExcessiveRequests(userId, parseRobustDate(date));
