@@ -5,6 +5,7 @@
 set -e
 
 echo "📥 Updating code from GitHub..."
+git stash
 git pull origin main
 
 echo "🛠️ Updating Server..."

@@ -62,17 +62,17 @@ const MyKPIScoreboard = () => {
                    <p className="text-slate-500 font-medium">Performance summary for {new Date(0, currentScore.month - 1).toLocaleString('default', { month: 'long' })} {currentScore.year}</p>
                 </div>
 
-                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800">
-                    {scores.slice(0, 3).map((s, idx) => (
+                <div className="flex items-center gap-2 bg-white dark:bg-slate-900 p-1.5 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-x-auto max-w-full scrollbar-none">
+                    {scores.map((s, idx) => (
                         <button
                             key={`tab-${s.id}`}
                             onClick={() => setSelectedMonth(idx)}
-                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all
+                            className={`px-4 py-2 rounded-xl text-xs font-black uppercase transition-all whitespace-nowrap
                                 ${selectedMonth === idx 
                                     ? 'bg-primary text-white shadow-lg' 
                                     : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'}`}
                         >
-                            {new Date(0, s.month-1).toLocaleString('default', { month: 'short' })}
+                            {new Date(0, s.month-1).toLocaleString('default', { month: 'short' })} {s.year}
                         </button>
                     ))}
                 </div>

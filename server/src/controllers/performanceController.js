@@ -1,6 +1,17 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+// Helper to generate automatic remarks based on total score
+const generateAutoRemark = (totalScore) => {
+    const score = parseFloat(totalScore) || 0;
+    if (score >= 90) return 'Outstanding overall performance! Exceptional output, consistency, and quality.';
+    if (score >= 80) return 'Excellent overall performance! Consistently meets and exceeds expectations.';
+    if (score >= 70) return 'Good overall performance. Solid work quality with steady attendance and logs.';
+    if (score >= 60) return 'Satisfactory performance. Scope for improvement in worklog consistency and efficiency.';
+    if (score >= 50) return 'Needs improvement. Please focus on regular attendance and daily worklogs.';
+    return 'Requires immediate improvement across key performance categories.';
+};
+
 // @desc    Upsert performance score for an employee
 // @route   POST /api/performance/set
 // @access  Private (Admin, HR)
@@ -20,6 +31,10 @@ const setEmployeeScore = async (req, res) => {
 
         const totalScore = (efficiency || 0) + (consistency || 0) + (quality || 0) + (system || 0) + (behaviour || 0);
 
+        const finalRemarks = (remarks && remarks.toString().trim() !== '' && !remarks.toString().includes('Leave Consistency'))
+            ? remarks.toString().trim()
+            : generateAutoRemark(totalScore);
+
         const score = await prisma.performanceScore.upsert({
             where: {
                 userId_month_year: {
@@ -35,7 +50,7 @@ const setEmployeeScore = async (req, res) => {
                 system: parseFloat(system),
                 behaviour: parseFloat(behaviour),
                 totalScore,
-                remarks,
+                remarks: finalRemarks,
                 updatedById: req.user.id
             },
             create: {
@@ -48,7 +63,7 @@ const setEmployeeScore = async (req, res) => {
                 system: parseFloat(system),
                 behaviour: parseFloat(behaviour),
                 totalScore,
-                remarks,
+                remarks: finalRemarks,
                 updatedById: req.user.id
             }
         });
@@ -58,6 +73,71 @@ const setEmployeeScore = async (req, res) => {
         console.error('Error setting performance score:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
+};
+
+// Helper to calculate automated metrics for an employee
+const computeAutomatedMetrics = async (userId, month, year) => {
+    const m = parseInt(month);
+    const y = parseInt(year);
+
+    // 26th-25th cycle for target month M: 26th of (M-1) to 25th of M
+    const cycleStart = new Date(Date.UTC(y, m - 2, 26, 0, 0, 0, 0));
+    const cycleEnd = new Date(Date.UTC(y, m - 1, 25, 23, 59, 59, 999));
+
+    // Calendar month M: 1st of M to last day of M
+    const calStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
+    const calEnd = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
+
+    // Query attendance in both cycle and calendar ranges to take higher count
+    const [attCycle, attCal] = await Promise.all([
+        prisma.attendance.count({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: cycleStart, lte: cycleEnd },
+                status: 'PRESENT'
+            }
+        }),
+        prisma.attendance.count({
+            where: {
+                userId: parseInt(userId),
+                date: { gte: calStart, lte: calEnd },
+                status: 'PRESENT'
+            }
+        })
+    ]);
+
+    const presentDays = Math.max(attCycle, attCal);
+    const systemScore = Math.min(15, (presentDays / 26) * 15);
+
+    // Query worklog dates in both cycle and calendar ranges
+    const [wlCycle, wlCal] = await Promise.all([
+        prisma.workLog.groupBy({
+            by: ['date'],
+            where: {
+                userId: parseInt(userId),
+                date: { gte: cycleStart, lte: cycleEnd }
+            }
+        }),
+        prisma.workLog.groupBy({
+            by: ['date'],
+            where: {
+                userId: parseInt(userId),
+                date: { gte: calStart, lte: calEnd }
+            }
+        })
+    ]);
+
+    const worklogDays = Math.max(wlCycle.length, wlCal.length);
+    const consistencyScore = Math.min(30, (worklogDays / 26) * 30);
+
+    return {
+        system: parseFloat(systemScore.toFixed(2)),
+        consistency: parseFloat(consistencyScore.toFixed(2)),
+        counts: {
+            presentDays,
+            worklogDays
+        }
+    };
 };
 
 // @desc    Calculate automated metrics for an employee
@@ -72,40 +152,8 @@ const calculateAutomatedMetrics = async (req, res) => {
     }
 
     try {
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0, 23, 59, 59); // Last day of month
-
-        // 1. System (PD): (Present Days / 26) * 15
-        const presentDays = await prisma.attendance.count({
-            where: {
-                userId: parseInt(userId),
-                date: { gte: startDate, lte: endDate },
-                status: 'PRESENT'
-            }
-        });
-
-        const systemScore = Math.min(15, (presentDays / 26) * 15);
-
-        // 2. Consistency: (Days with Worklogs / 26) * 30
-        // Use groupBy to get unique dates
-        const worklogDates = await prisma.workLog.groupBy({
-            by: ['date'],
-            where: {
-                userId: parseInt(userId),
-                date: { gte: startDate, lte: endDate }
-            }
-        });
-
-        const consistencyScore = Math.min(30, (worklogDates.length / 26) * 30);
-
-        res.json({
-            system: parseFloat(systemScore.toFixed(2)),
-            consistency: parseFloat(consistencyScore.toFixed(2)),
-            counts: {
-                presentDays,
-                worklogDays: worklogDates.length
-            }
-        });
+        const metrics = await computeAutomatedMetrics(userId, month, year);
+        res.json(metrics);
     } catch (error) {
         console.error('Error calculating metrics:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -117,10 +165,15 @@ const calculateAutomatedMetrics = async (req, res) => {
 // @access  Private (Admin, HR, BH)
 const getPerformanceHistory = async (req, res) => {
     const { userId } = req.params;
+    const targetId = parseInt(userId);
+
+    if (!targetId || isNaN(targetId)) {
+        return res.json([]);
+    }
 
     try {
         const history = await prisma.performanceScore.findMany({
-            where: { userId: parseInt(userId) },
+            where: { userId: targetId },
             orderBy: [
                 { year: 'desc' },
                 { month: 'desc' }
@@ -130,7 +183,7 @@ const getPerformanceHistory = async (req, res) => {
             }
         });
 
-        res.json(history);
+        res.json(history || []);
     } catch (error) {
         console.error('Error fetching performance history:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
@@ -142,19 +195,32 @@ const getPerformanceHistory = async (req, res) => {
 // @access  Private
 const getMyPerformance = async (req, res) => {
     try {
+        const targetId = req.user?.id ? parseInt(req.user.id) : NaN;
+
+        if (!targetId || isNaN(targetId)) {
+            return res.status(401).json({ message: 'User authorization required' });
+        }
+
         const scores = await prisma.performanceScore.findMany({
-            where: { userId: req.user.id },
+            where: { userId: targetId },
             orderBy: [
                 { year: 'desc' },
                 { month: 'desc' }
             ]
         });
 
-        res.json(scores);
+        res.json(scores || []);
     } catch (error) {
         console.error('Error fetching own performance:', error);
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
+};
+
+// Helper to find value from row object with flexible key matching
+const getVal = (obj, pattern) => {
+    if (!obj) return undefined;
+    const key = Object.keys(obj).find(k => k.toLowerCase().includes(pattern));
+    return key ? obj[key] : undefined;
 };
 
 // @desc    Bulk import performance scores
@@ -175,23 +241,60 @@ const importPerformanceScores = async (req, res) => {
         };
 
         for (const data of scores) {
-            const { email, month, year, efficiency, consistency, quality, system, behaviour, remarks } = data;
+            const email = data.email || data.Email || getVal(data, 'mail');
+            const month = data.month || data.Month || getVal(data, 'month');
+            const year = data.year || data.Year || getVal(data, 'year');
+            const efficiency = data.efficiency ?? data.Efficiency ?? getVal(data, 'eff');
+            const quality = data.quality ?? data.Quality ?? getVal(data, 'qual');
+            const behaviour = data.behaviour ?? data.Behaviour ?? getVal(data, 'behav');
+            const remarks = data.remarks ?? data.Remarks ?? getVal(data, 'rem') ?? '';
+
+            let consistencyRaw = data.consistency ?? data.Consistency ?? getVal(data, 'consis');
+            let systemRaw = data.system ?? data.System ?? getVal(data, 'sys');
 
             try {
                 if (!email || !month || !year) {
                     throw new Error(`Missing required fields for entry: ${email || 'unknown'}`);
                 }
 
-                // Find user by email
-                const targetUser = await prisma.user.findUnique({
-                    where: { email }
+                // Find user by email (case-insensitive)
+                const targetUser = await prisma.user.findFirst({
+                    where: { email: { equals: email.toString().trim(), mode: 'insensitive' } }
                 });
 
                 if (!targetUser) {
                     throw new Error(`User not found for email: ${email}`);
                 }
 
-                const totalScore = (parseFloat(efficiency) || 0) + (parseFloat(consistency) || 0) + (parseFloat(quality) || 0) + (parseFloat(system) || 0) + (parseFloat(behaviour) || 0);
+                let consistencyVal = (consistencyRaw !== undefined && consistencyRaw !== null && consistencyRaw.toString().trim() !== '')
+                    ? parseFloat(consistencyRaw)
+                    : NaN;
+
+                let systemVal = (systemRaw !== undefined && systemRaw !== null && systemRaw.toString().trim() !== '')
+                    ? parseFloat(systemRaw)
+                    : NaN;
+
+                // Auto-fetch missing, invalid, or 0 consistency/system scores from attendance & worklogs
+                if (isNaN(consistencyVal) || consistencyVal === 0 || isNaN(systemVal) || systemVal === 0) {
+                    const autoMetrics = await computeAutomatedMetrics(targetUser.id, parseInt(month), parseInt(year));
+                    
+                    if (isNaN(consistencyVal) || consistencyVal === 0) {
+                        consistencyVal = autoMetrics.consistency;
+                    }
+                    if (isNaN(systemVal) || systemVal === 0) {
+                        systemVal = autoMetrics.system;
+                    }
+                }
+
+                const effVal = parseFloat(efficiency) || 0;
+                const qualVal = parseFloat(quality) || 0;
+                const behVal = parseFloat(behaviour) || 0;
+
+                const totalScore = parseFloat((effVal + consistencyVal + qualVal + systemVal + behVal).toFixed(2));
+
+                const finalRemarks = (remarks && remarks.toString().trim() !== '' && !remarks.toString().includes('Leave Consistency'))
+                    ? remarks.toString().trim()
+                    : generateAutoRemark(totalScore);
 
                 await prisma.performanceScore.upsert({
                     where: {
@@ -202,26 +305,26 @@ const importPerformanceScores = async (req, res) => {
                         }
                     },
                     update: {
-                        efficiency: parseFloat(efficiency) || 0,
-                        consistency: parseFloat(consistency) || 0,
-                        quality: parseFloat(quality) || 0,
-                        system: parseFloat(system) || 0,
-                        behaviour: parseFloat(behaviour) || 0,
+                        efficiency: effVal,
+                        consistency: consistencyVal,
+                        quality: qualVal,
+                        system: systemVal,
+                        behaviour: behVal,
                         totalScore,
-                        remarks,
+                        remarks: finalRemarks,
                         updatedById: req.user.id
                     },
                     create: {
                         userId: targetUser.id,
                         month: parseInt(month),
                         year: parseInt(year),
-                        efficiency: parseFloat(efficiency) || 0,
-                        consistency: parseFloat(consistency) || 0,
-                        quality: parseFloat(quality) || 0,
-                        system: parseFloat(system) || 0,
-                        behaviour: parseFloat(behaviour) || 0,
+                        efficiency: effVal,
+                        consistency: consistencyVal,
+                        quality: qualVal,
+                        system: systemVal,
+                        behaviour: behVal,
                         totalScore,
-                        remarks,
+                        remarks: finalRemarks,
                         updatedById: req.user.id
                     }
                 });

@@ -138,8 +138,8 @@ const getTeamOverview = async (req, res) => {
         const start = startDate ? new Date(startDate) : getCycleStartDateIST();
         const end = endDate ? new Date(endDate) : getCycleEndDateIST();
 
-        const targetMonth = start.getMonth() + 1;
-        const targetYear = start.getFullYear();
+        const targetMonth = end.getMonth() + 1;
+        const targetYear = end.getFullYear();
 
         const employees = await prisma.user.findMany({
             where: { role: 'EMPLOYEE', status: 'ACTIVE' },
@@ -158,7 +158,14 @@ const getTeamOverview = async (req, res) => {
             });
 
             const perfScore = await prisma.performanceScore.findFirst({
-                where: { userId: emp.id, month: targetMonth, year: targetYear }
+                where: {
+                    userId: emp.id,
+                    OR: [
+                        { month: targetMonth, year: targetYear },
+                        { month: start.getMonth() + 1, year: start.getFullYear() }
+                    ]
+                },
+                orderBy: { updatedAt: 'desc' }
             });
 
             const uniqueDaysWithLogs = new Set(workLogsData.map(log => new Date(log.date).toDateString())).size;
