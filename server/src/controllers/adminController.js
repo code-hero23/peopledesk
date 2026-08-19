@@ -584,7 +584,7 @@ const getDailyWorkLogs = async (req, res) => {
         }
 
         // 1. Get all active users (needed for single-day "Not Submitted" view)
-        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
+        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
         } else if (req.user.role === 'BUSINESS_HEAD') {
@@ -689,7 +689,7 @@ const getDailyAttendance = async (req, res) => {
         const endOfDay = new Date(queryDate.setHours(23, 59, 59, 999));
 
         // 1. Get all active users
-        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
+        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
         } else if (req.user.role === 'BUSINESS_HEAD') {
@@ -1085,7 +1085,7 @@ const importEmployees = async (req, res) => {
                 let user = await prisma.user.findUnique({ where: { email } });
                 const userData = {
                     name,
-                    role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER'].includes(role) ? role : 'EMPLOYEE',
+                    role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER', 'WALL2WALL_EMPLOYEE'].includes(role) ? role : 'EMPLOYEE',
                     designation,
                     phone: phone ? phone.toString().replace(/\D/g, '') : undefined, // Sanitize to numbers only
                     allocatedSalary: ctc > 0 ? ctc : undefined,

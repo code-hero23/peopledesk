@@ -62,7 +62,7 @@ const exportWorkLogs = async (req, res) => {
     try {
         const { month, year, designation, userId, search, date, startDate: queryStartDate, endDate: queryEndDate } = req.query;
         let where = {};
-        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
+        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } };
 
         let startDate, endDate;
 
@@ -90,7 +90,7 @@ const exportWorkLogs = async (req, res) => {
             where.date = { gte: startDate, lte: endDate };
         }
 
-        if (req.user.role === 'EMPLOYEE') {
+        if (['EMPLOYEE', 'WALL2WALL_EMPLOYEE'].includes(req.user.role)) {
             where.userId = req.user.id;
             userWhere.id = req.user.id;
         } else if (userId) {
@@ -704,7 +704,7 @@ const exportPerformanceAnalytics = async (req, res) => {
 
         const employees = await prisma.user.findMany({
             where: {
-                role: 'EMPLOYEE',
+                role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] },
                 status: 'ACTIVE',
                 id: req.query.userId ? parseInt(req.query.userId) : undefined
             },
@@ -856,7 +856,7 @@ const exportIncentiveScorecard = async (req, res) => {
 
         const employees = await prisma.user.findMany({
             where: {
-                role: 'EMPLOYEE',
+                role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] },
                 status: 'ACTIVE',
                 id: req.query.userId ? parseInt(req.query.userId) : undefined
             },
@@ -1368,7 +1368,7 @@ const exportEmployeeContributionReport = async (req, res) => {
         }
 
         // Security check: Employees can only export their own reports
-        if (req.user.role === 'EMPLOYEE' && req.user.id !== parseInt(userId)) {
+        if (['EMPLOYEE', 'WALL2WALL_EMPLOYEE'].includes(req.user.role) && req.user.id !== parseInt(userId)) {
             return res.status(403).json({ message: 'Forbidden: You can only export your own report' });
         }
 
@@ -1775,7 +1775,7 @@ const exportEmployeeTaskSummary = async (req, res) => {
         }
 
         // Security check: Employees can only export their own reports
-        if (req.user.role === 'EMPLOYEE' && req.user.id !== parseInt(userId)) {
+        if (['EMPLOYEE', 'WALL2WALL_EMPLOYEE'].includes(req.user.role) && req.user.id !== parseInt(userId)) {
             return res.status(403).json({ message: 'Forbidden: You can only export your own report' });
         }
 
@@ -1856,7 +1856,7 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
         // Fetch all active employees (excluding ADMIN and system roles)
         const employees = await prisma.user.findMany({
             where: {
-                role: 'EMPLOYEE',
+                role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] },
                 status: 'ACTIVE'
             },
             select: { id: true, name: true, designation: true }
@@ -1926,7 +1926,7 @@ const exportProjectWiseReports = async (req, res) => {
         }
 
         // Security check: Employees can only export their own reports
-        if (req.user.role === 'EMPLOYEE' && req.user.id !== parseInt(userId)) {
+        if (['EMPLOYEE', 'WALL2WALL_EMPLOYEE'].includes(req.user.role) && req.user.id !== parseInt(userId)) {
             return res.status(403).json({ message: 'Forbidden: You can only export your own report' });
         }
 

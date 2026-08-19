@@ -1,4 +1,5 @@
 import React from 'react';
+import { useSelector } from 'react-redux';
 import AEWorkLogForm from './AEWorkLogForm';
 import CREWorkLogForm from './CREWorkLogForm';
 import FAWorkLogForm from './FAWorkLogForm';
@@ -11,9 +12,16 @@ import WorkLogForm from '../WorkLogForm';
 import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 
 const WorkLogFormSelector = ({ designation, onSuccess }) => {
+    const { user } = useSelector((state) => state.auth);
+
     if (!designation) return <WorkLogForm onSuccess={onSuccess} />;
 
     const upperDesignation = designation.toUpperCase();
+
+    // Special condition: If user is WALL2WALL_EMPLOYEE with FA designation, use LA Work Log Form
+    if (user?.role === 'WALL2WALL_EMPLOYEE' && (upperDesignation === 'FA' || upperDesignation === 'FA MANAGER')) {
+        return <LAWorkLogForm onSuccess={onSuccess} />;
+    }
 
     // 1. Check for dedicated, hardcoded component forms
     switch (upperDesignation) {

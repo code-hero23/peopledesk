@@ -567,6 +567,7 @@ enum Role {
   AE_MANAGER
   ACCOUNTS_MANAGER
   ANALYZER
+  WALL2WALL_EMPLOYEE
 }
 
 enum VoucherType {

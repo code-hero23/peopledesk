@@ -18,7 +18,7 @@ const initWorklogReminderCron = () => {
             const activeUsers = await prisma.user.findMany({
                 where: {
                     status: 'ACTIVE',
-                    role: 'EMPLOYEE'
+                    role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] }
                 }
             });
 

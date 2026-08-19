@@ -142,7 +142,7 @@ const getTeamOverview = async (req, res) => {
         const targetYear = end.getFullYear();
 
         const employees = await prisma.user.findMany({
-            where: { role: 'EMPLOYEE', status: 'ACTIVE' },
+            where: { role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] }, status: 'ACTIVE' },
             select: { id: true, name: true, designation: true }
         });
 

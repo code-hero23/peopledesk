@@ -391,6 +391,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                 disabled={isAeManager || isManager}
                             >
                                 <option value="EMPLOYEE">Employee</option>
+                                <option value="WALL2WALL_EMPLOYEE">Wall2Wall Employee</option>
                                 {!isAeManager && (
                                     <>
                                         <option value="BUSINESS_HEAD">Business Head</option>
@@ -421,7 +422,14 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                     onChange={(e) => setFormData({ ...formData, designation: e.target.value })}
                                     disabled={isAeManager || isManager}
                                 >
-                                    {isAeManager ? (
+                                    {formData.role === 'WALL2WALL_EMPLOYEE' ? (
+                                        <>
+                                            <option value="CLIENT-FACILITATOR">Client Facilitator (CLIENT-FACILITATOR)</option>
+                                            <option value="FA">Feasibility Architect (FA)</option>
+                                            <option value="VENDOR-MANAGEMENT">Vendor Management (VENDOR-MANAGEMENT)</option>
+                                            <option value="LA">Loading Architect (LA)</option>
+                                        </>
+                                    ) : isAeManager ? (
                                         <option value="AE">Application Engineer (AE)</option>
                                     ) : (
                                         <>
@@ -472,7 +480,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                         </div>
                     )}
 
-                    {(formData.role === 'EMPLOYEE' || !formData.role) && (
+                    {(formData.role === 'EMPLOYEE' || formData.role === 'WALL2WALL_EMPLOYEE' || !formData.role) && (
                         <div>
                             <label className="block text-sm font-medium text-slate-700 mb-1">Reporting BH</label>
                             <select

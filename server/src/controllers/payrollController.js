@@ -21,7 +21,7 @@ const generatePayrollReport = async (req, res) => {
         const endDate = new Date(y, m - 1, 25, 23, 59, 59);
         const targetYear = y;
 
-        let userWhere = { status: 'ACTIVE', role: 'EMPLOYEE' };
+        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
         }

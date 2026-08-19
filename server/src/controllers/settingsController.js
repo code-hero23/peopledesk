@@ -42,7 +42,7 @@ const updateSetting = async (req, res) => {
             if (key === 'isGlobalCallAnalyticsEnabled') {
                 const isEnabled = normalizedValue === 'true';
                 await tx.user.updateMany({
-                    where: { role: 'EMPLOYEE' },
+                    where: { role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } },
                     data: { callAnalyticsViewEnabled: isEnabled },
                 });
             }

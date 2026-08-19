@@ -6,9 +6,15 @@ async function main() {
   
 
   
+  // Ensure Role enum contains WALL2WALL_EMPLOYEE
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'WALL2WALL_EMPLOYEE'`);
+    console.log('Role enum updated with "WALL2WALL_EMPLOYEE" if not exists.');
+  } catch (err) {
+    console.warn('Note on Role enum update:', err.message);
+  }
+
   // Adding User columns
-
-
   try {
     await prisma.$executeRawUnsafe(`ALTER TABLE "User" ADD COLUMN IF NOT EXISTS "callAnalyticsViewEnabled" BOOLEAN DEFAULT false`);
     console.log('Column "callAnalyticsViewEnabled" added or already exists.');

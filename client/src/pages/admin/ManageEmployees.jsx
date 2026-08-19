@@ -251,6 +251,15 @@ const ManageEmployees = () => {
                                             <span className="inline-block px-2 py-1 bg-indigo-100 text-indigo-700 text-xs font-bold rounded">
                                                 CALL ANALYZER
                                             </span>
+                                        ) : emp.role === 'WALL2WALL_EMPLOYEE' ? (
+                                            <div className="flex flex-col gap-1">
+                                                <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded w-fit">
+                                                    {emp.designation}
+                                                </span>
+                                                <span className="inline-block px-1.5 py-0.5 bg-amber-500/10 text-amber-700 text-[9px] font-black rounded border border-amber-200/50 w-fit">
+                                                    WALL2WALL
+                                                </span>
+                                            </div>
                                         ) : (
                                             <span className="inline-block px-2 py-1 bg-slate-100 text-slate-700 text-xs font-bold rounded">
                                                 {emp.designation}
