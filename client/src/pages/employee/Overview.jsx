@@ -89,7 +89,17 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
             <AnimatePresence mode="wait">
                 {activeBreak ? (
                     <motion.div key="break-animation" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.5, ease: "anticipate" }} className="absolute inset-0 z-30">
-                        <img src="/break.gif" alt="On Break" className="w-full h-full object-contain bg-slate-950" />
+                        <img 
+                            src={
+                                activeBreak.breakType === 'LUNCH' 
+                                    ? '/lunch-break.gif' 
+                                    : activeBreak.breakType === 'TEA' 
+                                        ? '/tea-break.gif' 
+                                        : '/break.gif'
+                            } 
+                            alt={`On ${activeBreak.breakType} Break`} 
+                            className="w-full h-full object-cover bg-slate-950" 
+                        />
                         <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
                             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-black/40 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/10">
                                 <Coffee size={14} className="text-amber-400 animate-pulse" />
@@ -1307,8 +1317,8 @@ const Overview = () => {
                     <Modal isOpen onClose={() => setActiveModal(null)} title="Take Break">
                         <div className="grid grid-cols-2 gap-4 p-4">
                             {[
-                                { id: 'TEA', icon: Coffee, title: 'Tea', color: 'indigo' },
-                                { id: 'LUNCH', icon: Utensils, title: 'Lunch', color: 'rose' },
+                                { id: 'TEA', icon: Coffee, title: 'Tea', color: 'indigo', image: '/tea-break.gif' },
+                                { id: 'LUNCH', icon: Utensils, title: 'Lunch', color: 'rose', image: '/lunch-break.gif' },
                                 { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client', color: 'emerald' },
                                 { id: 'BH_MEETING', icon: MessageSquare, title: 'BH', color: 'amber' }
                             ].map((t) => (
@@ -1328,11 +1338,17 @@ const Overview = () => {
                                             }
                                         });
                                     }}
-                                    className="flex flex-col items-center gap-3 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-600 group"
+                                    className="flex flex-col items-center gap-3 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-600 group relative overflow-hidden"
                                 >
-                                    <div className={`p-4 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform`}>
-                                        <t.icon size={32} />
-                                    </div>
+                                    {t.image ? (
+                                        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md group-hover:scale-110 transition-transform bg-slate-950">
+                                            <img src={t.image} alt={t.title} className="w-full h-full object-cover" />
+                                        </div>
+                                    ) : (
+                                        <div className={`p-4 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform`}>
+                                            <t.icon size={32} />
+                                        </div>
+                                    )}
                                     <span className="font-bold text-slate-700 dark:text-slate-300">{t.title}</span>
                                 </button>
                             ))}
