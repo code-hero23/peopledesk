@@ -279,12 +279,17 @@ const AdminCallReports = () => {
     };
 
     const employeeMetrics = callStats.reduce((acc, log) => {
-        const key = log.empId;
+        const key = log.empId || (typeof log.user === 'object' ? log.user?.id : log.userId) || 'unknown';
+        const rawName = typeof log.user === 'object' ? log.user?.name : (log.user || log.userName);
+        const userName = typeof rawName === 'string' ? rawName : "Unknown Personnel";
+        const rawDesg = typeof log.user === 'object' ? log.user?.designation : (log.designation || 'OTHER');
+        const userDesignation = typeof rawDesg === 'string' ? rawDesg : 'OTHER';
+
         if (!acc[key]) {
             acc[key] = {
-                name: log.user || "Unknown Personnel",
+                name: userName,
                 empId: log.empId,
-                designation: log.designation || 'OTHER',
+                designation: userDesignation,
                 totalCalls: 0,
                 incoming: 0,
                 outgoing: 0,
@@ -299,12 +304,15 @@ const AdminCallReports = () => {
             if (logTime > currTime) {
                 acc[key].lastSync = log.lastSync;
             }
+            if (acc[key].name === "Unknown Personnel" && userName !== "Unknown Personnel") {
+                acc[key].name = userName;
+            }
         }
 
         const calls = log.calls || [];
         const normExcluded = (excludedNumbers || []).map(normalize);
         const filteredCalls = calls.filter(c => {
-            if (!c.number) return false;
+            if (!c || !c.number) return false;
             return !normExcluded.includes(normalize(c.number));
         });
         
@@ -322,17 +330,20 @@ const AdminCallReports = () => {
     }, {});
 
     const metricsArray = Object.values(employeeMetrics).sort((a, b) => b.totalCalls - a.totalCalls);
-    const filteredMetrics = metricsArray.filter(m => (m.name || "").toLowerCase().includes(searchTerm.toLowerCase()));
-    const creMetrics = filteredMetrics.filter((m) => isCreFamilyDesignation(m.designation));
-    const faMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('FA'));
-    const laMetrics = filteredMetrics.filter((m) => (m.designation || '').toUpperCase().includes('LA'));
+    const filteredMetrics = metricsArray.filter(m => (typeof m.name === 'string' ? m.name : "Unknown Personnel").toLowerCase().includes((searchTerm || '').toLowerCase()));
+    const creMetrics = filteredMetrics.filter((m) => isCreFamilyDesignation(typeof m.designation === 'string' ? m.designation : ''));
+    const faMetrics = filteredMetrics.filter((m) => (typeof m.designation === 'string' ? m.designation : '').toUpperCase().includes('FA'));
+    const laMetrics = filteredMetrics.filter((m) => (typeof m.designation === 'string' ? m.designation : '').toUpperCase().includes('LA'));
 
     // Chart Data
-    const barData = metricsArray.slice(0, 10).map(m => ({
-        name: (m.name || 'Unknown').split(' ')[0],
-        Calls: m.totalCalls,
-        TalkTime: Math.round(m.duration / 60)
-    }));
+    const barData = metricsArray.slice(0, 10).map(m => {
+        const safeName = typeof m.name === 'string' ? m.name : "Unknown";
+        return {
+            name: safeName.split(' ')[0],
+            Calls: m.totalCalls,
+            TalkTime: Math.round(m.duration / 60)
+        };
+    });
 
     // Global Stats Aggregation
     const globalStats = {
@@ -677,10 +688,10 @@ const AdminCallReports = () => {
                                                 <td className="px-10 py-6">
                                                     <div className="flex items-center gap-4">
                                                         <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                            {(metrics.name || "U").charAt(0)}
+                                                            {(typeof metrics.name === 'string' ? metrics.name : "U").charAt(0)}
                                                         </div>
                                                         <div className="flex flex-col">
-                                                            <span className="text-sm font-black text-slate-800">{metrics.name}</span>
+                                                            <span className="text-sm font-black text-slate-800">{typeof metrics.name === 'string' ? metrics.name : "Unknown Personnel"}</span>
                                                             <div className="flex items-center gap-2">
                                                                 <span className="text-[10px] text-slate-400 font-bold uppercase">{metrics.empId}</span>
                                                                  {metrics.lastSync && (new Date() - new Date(metrics.lastSync)) < 30 * 60 * 1000 ? (
@@ -875,9 +886,9 @@ const AdminCallReports = () => {
                             {/* Profile & Pie Chart */}
                             <div className="lg:col-span-4 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-2xl flex flex-col items-center">
                                 <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black mb-4 shadow-xl shadow-blue-200">
-                                    {(selectedEmployee.name || "U").charAt(0)}
+                                    {(typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "U").charAt(0)}
                                 </div>
-                                <h2 className="text-3xl font-black text-slate-800 tracking-tight">{selectedEmployee.name}</h2>
+                                <h2 className="text-3xl font-black text-slate-800 tracking-tight">{typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "Unknown Personnel"}</h2>
                                 <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
 
                                  <div className="w-full space-y-4">
