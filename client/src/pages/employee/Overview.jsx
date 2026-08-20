@@ -95,7 +95,9 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                     ? '/lunch-break.gif' 
                                     : activeBreak.breakType === 'TEA' 
                                         ? '/tea-break.gif' 
-                                        : '/break.gif'
+                                        : activeBreak.breakType === 'CLIENT_MEETING'
+                                            ? '/client-meeting-break.gif'
+                                            : '/break.gif'
                             } 
                             alt={`On ${activeBreak.breakType} Break`} 
                             className="w-full h-full object-cover bg-slate-950" 
@@ -1319,7 +1321,7 @@ const Overview = () => {
                             {[
                                 { id: 'TEA', icon: Coffee, title: 'Tea', color: 'indigo', image: '/tea-break.gif' },
                                 { id: 'LUNCH', icon: Utensils, title: 'Lunch', color: 'rose', image: '/lunch-break.gif' },
-                                { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client', color: 'emerald' },
+                                { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client', color: 'emerald', image: '/client-meeting-break.gif' },
                                 { id: 'BH_MEETING', icon: MessageSquare, title: 'BH', color: 'amber' }
                             ].map((t) => (
                                 <button
