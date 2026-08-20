@@ -639,6 +639,8 @@ model PerformanceScore {
   quality      Float    @default(0) // Weight: 20
   system       Float    @default(0) // Weight: 15 (Automated)
   behaviour    Float    @default(0) // Weight: 15
+  attendance   Float?   @default(0) // Legacy
+  productivity Float?   @default(0) // Legacy
   totalScore   Float    @default(0) // (E+C+Q+S+B)
   remarks      String?
   updatedById  Int
