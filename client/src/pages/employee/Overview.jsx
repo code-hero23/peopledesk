@@ -88,7 +88,33 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
             </div>
             <AnimatePresence mode="wait">
                 {activeBreak ? (
-                    <motion.div key="break-animation" initial={{ opacity: 0, scale: 1.1 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.5, ease: "anticipate" }} className="absolute inset-0 z-30">
+                    <motion.div 
+                        key="break-animation" 
+                        initial={{ opacity: 0, scale: 1.05 }} 
+                        animate={{ opacity: 1, scale: 1 }} 
+                        exit={{ opacity: 0, scale: 0.95 }} 
+                        transition={{ duration: 0.5, ease: "anticipate" }} 
+                        className="absolute inset-0 z-30 overflow-hidden bg-slate-950 flex items-center justify-center"
+                    >
+                        {/* Ambient Blurred Backdrop */}
+                        <img 
+                            src={
+                                activeBreak.breakType === 'LUNCH' 
+                                    ? '/lunch-break.gif' 
+                                    : activeBreak.breakType === 'TEA' 
+                                        ? '/tea-break.gif' 
+                                        : activeBreak.breakType === 'CLIENT_MEETING'
+                                            ? '/client-meeting-break.gif'
+                                            : activeBreak.breakType === 'BH_MEETING'
+                                                ? '/bh-meeting-break.gif'
+                                                : '/break.gif'
+                            } 
+                            alt="" 
+                            className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-40" 
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-slate-950/60 pointer-events-none" />
+
+                        {/* Crisp Uncropped Mascot */}
                         <img 
                             src={
                                 activeBreak.breakType === 'LUNCH' 
@@ -102,10 +128,10 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                                 : '/break.gif'
                             } 
                             alt={`On ${activeBreak.breakType} Break`} 
-                            className="w-full h-full object-cover bg-slate-950" 
+                            className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]" 
                         />
-                        <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 to-transparent flex flex-col justify-end p-4">
-                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-black/40 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/10">
+                        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4">
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-black/60 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/15 shadow-xl">
                                 <Coffee size={14} className="text-amber-400 animate-pulse" />
                                 <span className="text-[10px] font-black text-white uppercase tracking-widest">RELAXING: {activeBreak.breakType}</span>
                             </motion.div>
@@ -906,8 +932,22 @@ const Overview = () => {
                             <div className="bg-white/95 dark:bg-slate-900 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4 transition-colors">
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
-                                        <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl">
-                                            <Coffee size={24} className="animate-bounce" />
+                                        <div className="w-14 h-14 bg-slate-950 rounded-2xl overflow-hidden shadow-lg border border-amber-400/40 flex items-center justify-center">
+                                            <img 
+                                                src={
+                                                    activeBreak.breakType === 'LUNCH' 
+                                                        ? '/lunch-break.gif' 
+                                                        : activeBreak.breakType === 'TEA' 
+                                                            ? '/tea-break.gif' 
+                                                            : activeBreak.breakType === 'CLIENT_MEETING'
+                                                                ? '/client-meeting-break.gif'
+                                                                : activeBreak.breakType === 'BH_MEETING'
+                                                                    ? '/bh-meeting-break.gif'
+                                                                    : '/break.gif'
+                                                } 
+                                                alt="" 
+                                                className="w-full h-full object-contain p-0.5 filter drop-shadow" 
+                                            />
                                         </div>
                                         <span className="absolute -top-1 -right-1 flex h-4 w-4">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -1321,18 +1361,18 @@ const Overview = () => {
                     <Modal isOpen onClose={() => setActiveModal(null)} title="Take Break">
                         <div className="grid grid-cols-2 gap-4 p-4">
                             {[
-                                { id: 'TEA', icon: Coffee, title: 'Tea', color: 'indigo', image: '/tea-break.gif' },
-                                { id: 'LUNCH', icon: Utensils, title: 'Lunch', color: 'rose', image: '/lunch-break.gif' },
-                                { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client', color: 'emerald', image: '/client-meeting-break.gif' },
-                                { id: 'BH_MEETING', icon: MessageSquare, title: 'BH', color: 'amber', image: '/bh-meeting-break.gif' }
+                                { id: 'TEA', icon: Coffee, title: 'Tea Break', color: 'indigo', image: '/tea-break.gif' },
+                                { id: 'LUNCH', icon: Utensils, title: 'Lunch Break', color: 'rose', image: '/lunch-break.gif' },
+                                { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client Meeting', color: 'emerald', image: '/client-meeting-break.gif' },
+                                { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'amber', image: '/bh-meeting-break.gif' }
                             ].map((t) => (
                                 <button
                                     key={t.id}
                                     onClick={() => {
                                         setConfirmationConfig({
                                             isOpen: true,
-                                            title: `Start ${t.title} Break`,
-                                            message: `Are you sure you want to take a ${t.title} break now?`,
+                                            title: `Start ${t.title}`,
+                                            message: `Are you sure you want to start a ${t.title} now?`,
                                             type: 'info',
                                             onConfirm: () => {
                                                 dispatch(pauseAttendance({ breakType: t.id })).then(() => {
@@ -1342,18 +1382,21 @@ const Overview = () => {
                                             }
                                         });
                                     }}
-                                    className="flex flex-col items-center gap-3 p-6 bg-slate-50 dark:bg-slate-800 rounded-3xl hover:bg-slate-100 dark:hover:bg-slate-700 transition-all border border-transparent hover:border-slate-200 dark:hover:border-slate-600 group relative overflow-hidden"
+                                    className="group relative flex flex-col items-center p-3.5 bg-slate-50 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 rounded-3xl transition-all duration-300 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/60 hover:shadow-xl hover:shadow-amber-500/10 overflow-hidden text-center"
                                 >
                                     {t.image ? (
-                                        <div className="w-16 h-16 rounded-2xl overflow-hidden shadow-md group-hover:scale-110 transition-transform bg-slate-950">
-                                            <img src={t.image} alt={t.title} className="w-full h-full object-cover" />
+                                        <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-950 mb-3 shadow-inner group-hover:scale-[1.03] transition-transform duration-300 flex items-center justify-center">
+                                            {/* Ambient Background Glow */}
+                                            <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover blur-md scale-125 opacity-40 group-hover:opacity-60 transition-opacity" />
+                                            {/* Foreground Mascot */}
+                                            <img src={t.image} alt={t.title} className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" />
                                         </div>
                                     ) : (
-                                        <div className={`p-4 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform`}>
-                                            <t.icon size={32} />
+                                        <div className={`p-5 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform mb-3`}>
+                                            <t.icon size={36} />
                                         </div>
                                     )}
-                                    <span className="font-bold text-slate-700 dark:text-slate-300">{t.title}</span>
+                                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">{t.title}</span>
                                 </button>
                             ))}
                         </div>
