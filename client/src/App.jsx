@@ -39,6 +39,9 @@ import PWAFresher from './components/PWAFresher';
 import SupportButton from './components/common/SupportButton';
 import EmployeeAttendanceDetail from './pages/admin/EmployeeAttendanceDetail';
 
+import PublicEventHub from './pages/public/PublicEventHub';
+import PublicGameRegistration from './pages/public/PublicGameRegistration';
+
 import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
 
 function App() {
@@ -48,7 +51,12 @@ function App() {
       <ToastContainer position="top-right" autoClose={3000} />
       <Router>
         <Routes>
+          {/* Public Zero-Login Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/games-hub" element={<PublicEventHub />} />
+          <Route path="/events-hub" element={<PublicEventHub />} />
+          <Route path="/register" element={<PublicGameRegistration />} />
+          <Route path="/register/:id" element={<PublicGameRegistration />} />
 
           <Route path="" element={<PrivateRoute />}>
             <Route element={<Layout />}>

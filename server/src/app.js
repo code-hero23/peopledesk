@@ -105,6 +105,7 @@ app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
 app.use('/api/performance', require('./routes/performanceRoutes'));
 app.use('/api/helpdesk', require('./routes/helpdeskRoutes'));
 app.use('/api/seating', require('./routes/seatingRoutes'));
+app.use('/api/public-events', require('./routes/publicEventRoutes'));
 
 app.get('/api', (req, res) => {
     res.json({ message: 'Welcome to PeopleDesk API', status: 'Running' });

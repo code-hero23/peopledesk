@@ -698,3 +698,27 @@ model SeatAssignment {
   user       User?    @relation(fields: [userId], references: [id])
   updatedAt  DateTime @updatedAt
 }
+
+model PublicEvent {
+  id          String                @id @default(cuid())
+  slug        String                @unique
+  title       String
+  description String?
+  games       Json                  // [{"name": "Chess", "playerCount": "2", "emoji": "♟️"}, ...]
+  isActive    Boolean               @default(true)
+  createdAt   DateTime              @default(now())
+  updatedAt   DateTime              @updatedAt
+  responses   PublicEventResponse[]
+}
+
+model PublicEventResponse {
+  id            String      @id @default(cuid())
+  eventId       String
+  name          String
+  selectedGames Json        // ["Chess", "Carrom", ...]
+  createdAt     DateTime    @default(now())
+  event         PublicEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+}
+
