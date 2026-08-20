@@ -166,10 +166,7 @@ const PublicGameRegistration = () => {
 
                 {/* Header Banner */}
                 <div className="text-center space-y-2 relative">
-                    <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-red-50 border border-red-200/80 text-red-700 text-xs font-black uppercase tracking-widest mb-1 shadow-sm">
-                        <Trophy size={14} className="text-red-600" />
-                        <span>PeopleDesk Events</span>
-                    </div>
+                    
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 leading-tight">
                         {eventData.title}
                     </h1>
@@ -369,11 +366,7 @@ const PublicGameRegistration = () => {
                     )}
                 </AnimatePresence>
 
-                {/* Footer Note */}
-                <div className="text-center text-slate-400 text-xs flex items-center justify-center gap-2">
-                    <Sparkles size={14} className="text-red-500" />
-                    <span>Zero Login Required • PeopleDesk Event Portal</span>
-                </div>
+    
             </div>
         </div>
     );

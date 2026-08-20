@@ -51,7 +51,7 @@ const PublicEventHub = () => {
     const [copiedLink, setCopiedLink] = useState(false);
 
     const [newEventData, setNewEventData] = useState({
-        title: 'Office Games Tournament 2026',
+        title: 'Office Games',
         description: 'Select your favorite games to participate in the upcoming tournament!',
         games: PRESET_GAMES_DEFAULT
     });
@@ -225,53 +225,7 @@ const PublicEventHub = () => {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-red-600 selection:text-white pb-20">
 
-            {/* Top Navigation Bar */}
-            <header className="border-b border-slate-200/80 bg-white sticky top-0 z-40 shadow-xs">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                        <div className="p-2.5 bg-red-600 rounded-2xl text-white shadow-md shadow-red-600/20">
-                            <Trophy size={24} />
-                        </div>
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <h1 className="text-xl font-black tracking-tight text-slate-900">
-                                    Games & Sports Hub
-                                </h1>
-                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
-                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
-                                    PeopleDesk
-                                </span>
-                            </div>
-                            <p className="text-xs text-slate-500">Live participant tracking & multi-sheet Excel generator</p>
-                        </div>
-                    </div>
-
-                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
-                        {/* Event Selector Dropdown if multiple exist */}
-                        {events.length > 1 && (
-                            <select
-                                value={selectedEventId || ''}
-                                onChange={(e) => setSelectedEventId(e.target.value)}
-                                className="bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold rounded-2xl px-3.5 py-2.5 outline-none focus:border-red-600"
-                            >
-                                {events.map((ev) => (
-                                    <option key={ev.id} value={ev.id}>
-                                        {ev.title} ({ev.totalResponses} registered)
-                                    </option>
-                                ))}
-                            </select>
-                        )}
-
-                        <button
-                            onClick={() => setIsCreateModalOpen(true)}
-                            className="bg-red-600 hover:bg-red-700 text-white font-bold text-xs px-4 py-2.5 rounded-2xl flex items-center gap-2 shadow-md shadow-red-600/20 transition-all active:scale-95 flex-shrink-0"
-                        >
-                            <Plus size={16} />
-                            <span>Generate New Link</span>
-                        </button>
-                    </div>
-                </div>
-            </header>
+         
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
@@ -282,12 +236,7 @@ const PublicEventHub = () => {
                         <div className="absolute top-0 right-0 w-80 h-80 bg-red-600/10 rounded-full blur-[100px] pointer-events-none -z-10" />
 
                         <div className="space-y-1.5 flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                                <span className="text-[10px] font-black uppercase tracking-widest text-red-300 bg-red-500/20 px-2.5 py-0.5 rounded-full border border-red-500/30">
-                                    Public Registration Link
-                                </span>
-                                <span className="text-xs text-slate-300">• Share on WhatsApp or Email (No Login)</span>
-                            </div>
+                         
                             <h2 className="text-2xl font-black text-white truncate">
                                 {eventDetail.event.title}
                             </h2>

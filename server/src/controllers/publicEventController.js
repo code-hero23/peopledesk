@@ -75,10 +75,10 @@ exports.getEvents = async (req, res) => {
         if (events.length === 0) {
             const defaultEvent = await prisma.publicEvent.create({
                 data: {
-                    title: 'Office Games Tournament 2026',
+                    title: 'Office Games ',
                     description: 'Select the games you want to participate in and join the fun!',
                     games: DEFAULT_GAMES,
-                    slug: 'A7K9M2Q4X8P1L6Z3'
+                    slug: 'office-games-tournament-2026'
                 },
                 include: {
                     _count: { select: { responses: true } }
