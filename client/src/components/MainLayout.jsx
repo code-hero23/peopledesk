@@ -77,7 +77,7 @@ const Layout = () => {
                 </header>
 
                 <main className={`flex-1 overflow-y-auto ${isDecoraAI ? 'p-0' : 'p-6 md:p-8'}`}>
-                    {!['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && !isDecoraAI && <NoticeBoard />}
+                    {!isDecoraAI && <NoticeBoard />}
                     <Outlet />
                 </main>
             </div>

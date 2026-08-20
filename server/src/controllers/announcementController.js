@@ -26,8 +26,10 @@ exports.getAnnouncements = async (req, res) => {
                 createdAt: 'desc'
             }
         });
+
         res.status(200).json(announcements);
     } catch (error) {
+        console.error('Error fetching announcements:', error);
         res.status(500).json({ message: 'Error fetching announcements', error: error.message });
     }
 };
@@ -36,7 +38,14 @@ exports.getAnnouncements = async (req, res) => {
 // @route   POST /api/announcements
 // @access  Private (Admin/HR/BH)
 exports.createAnnouncement = async (req, res) => {
-    const { title, content, type, priority, expiresAt } = req.body;
+    const {
+        title,
+        content,
+        type,
+        priority,
+        expiresAt
+    } = req.body;
+
     try {
         const announcement = await prisma.announcement.create({
             data: {
@@ -46,10 +55,19 @@ exports.createAnnouncement = async (req, res) => {
                 priority: priority || 'LOW',
                 expiresAt: expiresAt ? new Date(expiresAt) : null,
                 authorId: req.user.id
+            },
+            include: {
+                author: {
+                    select: {
+                        name: true,
+                        role: true
+                    }
+                }
             }
         });
         res.status(201).json(announcement);
     } catch (error) {
+        console.error('Error creating announcement:', error);
         res.status(500).json({ message: 'Error creating announcement', error: error.message });
     }
 };
@@ -59,7 +77,15 @@ exports.createAnnouncement = async (req, res) => {
 // @access  Private (Admin/HR/BH)
 exports.updateAnnouncement = async (req, res) => {
     const { id } = req.params;
-    const { title, content, type, priority, isActive, expiresAt } = req.body;
+    const {
+        title,
+        content,
+        type,
+        priority,
+        isActive,
+        expiresAt
+    } = req.body;
+
     try {
         const announcement = await prisma.announcement.update({
             where: { id: parseInt(id) },
@@ -74,6 +100,7 @@ exports.updateAnnouncement = async (req, res) => {
         });
         res.status(200).json(announcement);
     } catch (error) {
+        console.error('Error updating announcement:', error);
         res.status(500).json({ message: 'Error updating announcement', error: error.message });
     }
 };
@@ -90,6 +117,7 @@ exports.deleteAnnouncement = async (req, res) => {
         });
         res.status(200).json({ message: 'Announcement deactivated successfully' });
     } catch (error) {
+        console.error('Error deleting announcement:', error);
         res.status(500).json({ message: 'Error deleting announcement', error: error.message });
     }
 };

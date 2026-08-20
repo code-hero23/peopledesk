@@ -8,6 +8,10 @@ import {
   Info,
   Calendar,
   Clock,
+  ScrollText,
+  AlertCircle,
+  Trophy,
+  Sparkles,
 } from "lucide-react";
 import { formatDate } from "../../utils/dateUtils";
 import axios from "axios";
@@ -17,7 +21,7 @@ const NoticeBoard = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
-  const API_URL = import.meta.env.VITE_API_BASE_URL;
+  const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 
   useEffect(() => {
     fetchAnnouncements();
@@ -25,24 +29,26 @@ const NoticeBoard = () => {
 
   const fetchAnnouncements = async () => {
     try {
-      const user = JSON.parse(localStorage.getItem("user"));
+      const user = JSON.parse(localStorage.getItem("user") || "{}");
       const token = user?.token;
       if (!token) return;
 
       const res = await axios.get(`${API_URL}/announcements`, {
         headers: { Authorization: `Bearer ${token}` },
       });
-      setAnnouncements(res.data);
+      setAnnouncements(Array.isArray(res.data) ? res.data : []);
       setIsLoading(false);
     } catch (error) {
       console.error("Error fetching announcements:", error);
+      setAnnouncements([]);
       setIsLoading(false);
     }
   };
 
-  if (isLoading || announcements.length === 0) return null;
+  if (isLoading || !Array.isArray(announcements) || announcements.length === 0) return null;
 
-  const currentNotice = announcements[currentIndex];
+  const currentNotice = announcements[currentIndex] || announcements[0];
+  if (!currentNotice) return null;
 
   const getIcon = (type) => {
     switch (type) {
@@ -51,7 +57,9 @@ const NoticeBoard = () => {
       case "URGENT":
         return <AlertCircle className="w-5 h-5 text-red-400" />;
       case "EVENT":
-        return <Calendar className="w-5 h-5" />;
+        return <Trophy className="w-5 h-5 text-yellow-300" />;
+      case "NEWS":
+        return <Sparkles className="w-5 h-5 text-blue-300" />;
       default:
         return <Megaphone className="w-5 h-5" />;
     }
@@ -90,7 +98,7 @@ const NoticeBoard = () => {
             href={part}
             target="_blank"
             rel="noopener noreferrer"
-            className="text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30 transition-colors"
+            className="text-blue-400 hover:text-blue-300 underline underline-offset-4 decoration-blue-400/30 transition-colors font-medium"
             onClick={(e) => e.stopPropagation()}
           >
             {part}
@@ -169,7 +177,7 @@ const NoticeBoard = () => {
 
             {/* Mobile Description */}
             <div className="md:hidden w-full">
-              <p className="text-slate-400 text-xs leading-relaxed line-clamp-4 whitespace-pre-wrap mb-4 px-1">
+              <p className="text-slate-400 text-xs leading-relaxed line-clamp-4 whitespace-pre-wrap mb-3 px-1">
                 {renderContent(currentNotice.content)}
               </p>
             </div>
