@@ -52,7 +52,7 @@ const createVisitorRecord = async (req, res) => {
             });
         }
 
-        const creId = req.user.id;
+        const creId = req.body.creId ? Number(req.body.creId) : req.user.id;
 
         // Fetch User models for recipients
         const userIds = [creId, faId, laId, bhId].filter(Boolean).map(id => Number(id));

@@ -63,6 +63,7 @@ const VisitorRecordBook = () => {
         showroom: 'MTRS',
         dateOfVisit: new Date().toISOString().split('T')[0],
         timeOfEntry: getCurrentTime(),
+        creId: user?.id || '',
         faId: '',
         laId: '',
         bhId: '',
@@ -85,7 +86,14 @@ const VisitorRecordBook = () => {
         }
     };
 
-    // Filter staff members specifically for FA, LA, and BH roles/designations
+    // Filter staff members specifically for CRE, FA, LA, and BH roles/designations
+    const creList = staffList.filter(st => {
+        const des = (st.designation || '').toUpperCase();
+        const role = (st.role || '').toUpperCase();
+        return des === 'CRE' || des.includes('CUSTOMER RELATION') || des.includes('CRE ') || role === 'CRE' || role === 'FRONT_DESK_MANAGER';
+    });
+    const displayCREList = creList.length > 0 ? creList : staffList;
+
     const faList = staffList.filter(st => {
         const des = (st.designation || '').toUpperCase();
         return des === 'FA' || des.includes('FEASIBILITY') || des.includes('FA ');
@@ -408,14 +416,20 @@ const VisitorRecordBook = () => {
                                 {/* CRE Name */}
                                 <div>
                                     <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
-                                        CRE (Recorded By)
+                                        CRE Name (Recorded By)
                                     </label>
-                                    <input
-                                        type="text"
-                                        disabled
-                                        value={user?.name || 'Current CRE'}
-                                        className="w-full px-4 py-3 min-h-[46px] bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl text-sm font-semibold text-slate-600 dark:text-slate-400 cursor-not-allowed"
-                                    />
+                                    <select
+                                        value={formData.creId || user?.id || ''}
+                                        onChange={(e) => setFormData({ ...formData, creId: e.target.value })}
+                                        className="w-full px-4 py-3 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    >
+                                        <option value="">Select CRE Name...</option>
+                                        {displayCREList.map((st) => (
+                                            <option key={`cre-${st.id}`} value={st.id}>
+                                                {st.name} {st.designation ? `(${st.designation})` : ''}
+                                            </option>
+                                        ))}
+                                    </select>
                                 </div>
 
                                 {/* FA Name */}
