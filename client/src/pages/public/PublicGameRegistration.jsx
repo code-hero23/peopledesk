@@ -165,10 +165,25 @@ const PublicGameRegistration = () => {
             <div className="max-w-2xl mx-auto w-full space-y-6 my-auto py-4">
 
                 {/* Header Banner */}
-                <div className="text-center space-y-2 relative">
-                    
-                    <h1 className="text-3xl sm:text-4xl md:text-5xl font-black tracking-tight text-slate-900 leading-tight">
-                        {eventData.title}
+                <div className="text-center space-y-3 relative">
+                    <img 
+                        src="/cookscape_logo.jpeg" 
+                        alt="Cookscape Logo" 
+                        onError={(e) => {
+                            if (e.target.src.endsWith('.jpeg')) {
+                                e.target.src = '/cookscape_logo.png';
+                            }
+                        }}
+                        className="h-14 sm:h-16 mx-auto object-contain" 
+                    />
+
+                    <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-red-50 border border-red-200/80 text-red-700 text-xs font-black uppercase tracking-widest shadow-xs">
+                        <Trophy size={14} className="text-red-600" />
+                        <span>Registration</span>
+                    </div>
+
+                    <h1 className="text-3xl sm:text-4xl font-black tracking-tight text-slate-900 leading-tight">
+                        {eventData.title || 'Games Registration'}
                     </h1>
                     {eventData.description && (
                         <p className="text-slate-500 text-sm max-w-md mx-auto leading-relaxed">
@@ -354,13 +369,6 @@ const PublicGameRegistration = () => {
                                 >
                                     Register Another Person
                                 </button>
-                                <Link
-                                    to="/events-hub"
-                                    className="px-6 py-3 bg-slate-900 hover:bg-black text-white rounded-2xl font-bold text-xs flex items-center justify-center gap-2 transition-all shadow-md shadow-slate-900/20"
-                                >
-                                    <Trophy size={14} />
-                                    <span>View Live Event Hub</span>
-                                </Link>
                             </div>
                         </motion.div>
                     )}

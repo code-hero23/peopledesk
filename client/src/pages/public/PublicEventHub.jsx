@@ -51,7 +51,7 @@ const PublicEventHub = () => {
     const [copiedLink, setCopiedLink] = useState(false);
 
     const [newEventData, setNewEventData] = useState({
-        title: 'Office Games',
+        title: 'Games Registration',
         description: 'Select your favorite games to participate in the upcoming tournament!',
         games: PRESET_GAMES_DEFAULT
     });
@@ -225,7 +225,53 @@ const PublicEventHub = () => {
     return (
         <div className="min-h-screen bg-slate-50 text-slate-900 font-sans selection:bg-red-600 selection:text-white pb-20">
 
-         
+            {/* Top Navigation Bar */}
+            <header className="border-b border-slate-200/80 bg-white sticky top-0 z-40 shadow-xs">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3.5 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <img 
+                            src="/cookscape_logo.jpeg" 
+                            alt="Cookscape Logo" 
+                            onError={(e) => {
+                                if (e.target.src.endsWith('.jpeg')) {
+                                    e.target.src = '/cookscape_logo.png';
+                                }
+                            }}
+                            className="h-10 sm:h-11 object-contain" 
+                        />
+                        <div className="h-6 w-px bg-slate-200" />
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-lg sm:text-xl font-black tracking-tight text-slate-900">
+                                    Registration Hub
+                                </h1>
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-red-50 text-red-700 border border-red-200">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-red-600 animate-pulse" />
+                                    Live
+                                </span>
+                            </div>
+                            <p className="text-xs text-slate-500">Live participant tracking & Excel export</p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                        {events.length > 1 && (
+                            <select
+                                value={selectedEventId || ''}
+                                onChange={(e) => setSelectedEventId(e.target.value)}
+                                className="bg-slate-50 border border-slate-200 text-slate-900 text-xs font-bold rounded-2xl px-3.5 py-2.5 outline-none focus:border-red-600"
+                            >
+                                {events.map((ev) => (
+                                    <option key={ev.id} value={ev.id}>
+                                        {ev.title} ({ev.totalResponses} registered)
+                                    </option>
+                                ))}
+                            </select>
+                        )}
+
+                    </div>
+                </div>
+            </header>
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-8">
 
