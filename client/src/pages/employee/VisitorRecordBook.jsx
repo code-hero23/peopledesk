@@ -46,13 +46,20 @@ const VisitorRecordBook = () => {
     const [endDate, setEndDate] = useState('');
 
     // Form State
+    const getCurrentTime = () => {
+        const d = new Date();
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
+        return `${hours}:${minutes}`;
+    };
+
     const [formData, setFormData] = useState({
         clientName: '',
         phoneNumber: '',
         reasonOfVisit: 'Initial',
         showroom: 'MTRS',
         dateOfVisit: new Date().toISOString().split('T')[0],
-        timeOfEntry: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        timeOfEntry: getCurrentTime(),
         faId: '',
         laId: '',
         bhId: '',
@@ -74,6 +81,26 @@ const VisitorRecordBook = () => {
             console.error('Error fetching staff list:', err);
         }
     };
+
+    // Filter staff members specifically for FA, LA, and BH roles/designations
+    const faList = staffList.filter(st => {
+        const des = (st.designation || '').toUpperCase();
+        return des === 'FA' || des.includes('FEASIBILITY') || des.includes('FA ');
+    });
+    const displayFAList = faList.length > 0 ? faList : staffList;
+
+    const laList = staffList.filter(st => {
+        const des = (st.designation || '').toUpperCase();
+        return des === 'LA' || des.includes('LOADING') || des.includes('LA ');
+    });
+    const displayLAList = laList.length > 0 ? laList : staffList;
+
+    const bhList = staffList.filter(st => {
+        const des = (st.designation || '').toUpperCase();
+        const role = (st.role || '').toUpperCase();
+        return role === 'BUSINESS_HEAD' || des === 'BH' || des.includes('BUSINESS HEAD') || des.includes('BH ');
+    });
+    const displayBHList = bhList.length > 0 ? bhList : staffList;
 
     const fetchVisitorRecords = async () => {
         setLoading(true);
@@ -317,13 +344,13 @@ const VisitorRecordBook = () => {
                             {/* Time of Entry */}
                             <div>
                                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                                    Time of Entry
+                                    Time of Entry *
                                 </label>
                                 <div className="relative">
                                     <Clock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                                     <input
-                                        type="text"
-                                        placeholder="e.g. 10:30 AM"
+                                        type="time"
+                                        required
                                         value={formData.timeOfEntry}
                                         onChange={(e) => setFormData({ ...formData, timeOfEntry: e.target.value })}
                                         className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
@@ -360,8 +387,8 @@ const VisitorRecordBook = () => {
                                         onChange={(e) => setFormData({ ...formData, faId: e.target.value })}
                                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
-                                        <option value="">Select FA Architect...</option>
-                                        {staffList.map((st) => (
+                                        <option value="">Select FA (Feasibility Architect)...</option>
+                                        {displayFAList.map((st) => (
                                             <option key={`fa-${st.id}`} value={st.id}>
                                                 {st.name} {st.designation ? `(${st.designation})` : ''}
                                             </option>
@@ -379,8 +406,8 @@ const VisitorRecordBook = () => {
                                         onChange={(e) => setFormData({ ...formData, laId: e.target.value })}
                                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
-                                        <option value="">Select Loading Architect...</option>
-                                        {staffList.map((st) => (
+                                        <option value="">Select LA (Loading Architect)...</option>
+                                        {displayLAList.map((st) => (
                                             <option key={`la-${st.id}`} value={st.id}>
                                                 {st.name} {st.designation ? `(${st.designation})` : ''}
                                             </option>
@@ -398,10 +425,10 @@ const VisitorRecordBook = () => {
                                         onChange={(e) => setFormData({ ...formData, bhId: e.target.value })}
                                         className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
-                                        <option value="">Select Business Head...</option>
-                                        {staffList.map((st) => (
+                                        <option value="">Select BH (Business Head)...</option>
+                                        {displayBHList.map((st) => (
                                             <option key={`bh-${st.id}`} value={st.id}>
-                                                {st.name} {st.role === 'BUSINESS_HEAD' ? '(BH)' : ''}
+                                                {st.name} {st.designation ? `(${st.designation})` : st.role === 'BUSINESS_HEAD' ? '(BH)' : ''}
                                             </option>
                                         ))}
                                     </select>
