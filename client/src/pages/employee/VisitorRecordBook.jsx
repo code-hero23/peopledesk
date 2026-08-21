@@ -5,7 +5,8 @@ import { toast } from 'react-toastify';
 import {
     UserCheck, BookOpen, Send, RefreshCw, Search, Filter,
     Calendar, Clock, Building, User, Phone, FileText, CheckCircle,
-    XCircle, AlertCircle, Download, MessageSquare
+    XCircle, AlertCircle, Download, MessageSquare, Trash2,
+    ChevronLeft, ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -39,11 +40,13 @@ const VisitorRecordBook = () => {
     const [submitting, setSubmitting] = useState(false);
     const [resendingId, setResendingId] = useState(null);
 
-    // Filters
+    // Filters & Pagination
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedShowroomFilter, setSelectedShowroomFilter] = useState('ALL');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
+    const [currentPage, setCurrentPage] = useState(1);
+    const [itemsPerPage] = useState(10);
 
     // Form State
     const getCurrentTime = () => {
@@ -116,6 +119,7 @@ const VisitorRecordBook = () => {
             const res = await axios.get(`${baseUrl}/visitors?${queryParams.toString()}`, getAuthHeader());
             if (res.data.success) {
                 setRecords(res.data.records || []);
+                setCurrentPage(1);
             }
         } catch (err) {
             console.error('Error fetching visitor records:', err);
@@ -184,6 +188,21 @@ const VisitorRecordBook = () => {
         }
     };
 
+    const handleDeleteRecord = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this visitor record?')) return;
+
+        try {
+            const res = await axios.delete(`${baseUrl}/visitors/${id}`, getAuthHeader());
+            if (res.data.success) {
+                toast.success('Visitor record deleted successfully.');
+                fetchVisitorRecords();
+            }
+        } catch (err) {
+            console.error('Error deleting record:', err);
+            toast.error(err.response?.data?.error || 'Failed to delete record.');
+        }
+    };
+
     const exportToCSV = () => {
         if (records.length === 0) return toast.info('No data to export.');
         
@@ -210,6 +229,12 @@ const VisitorRecordBook = () => {
         a.download = `Visitor_Records_${new Date().toISOString().split('T')[0]}.csv`;
         a.click();
     };
+
+    // Pagination Slicing
+    const totalPages = Math.ceil(records.length / itemsPerPage) || 1;
+    const indexOfLastRecord = currentPage * itemsPerPage;
+    const indexOfFirstRecord = indexOfLastRecord - itemsPerPage;
+    const currentRecords = records.slice(indexOfFirstRecord, indexOfLastRecord);
 
     return (
         <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 text-slate-800 dark:text-slate-100 transition-colors">
@@ -545,97 +570,142 @@ const VisitorRecordBook = () => {
                                 No visitor records found matching criteria.
                             </div>
                         ) : (
-                            <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                                {records.map((r) => (
-                                    <div key={r.id} className="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                            <div className="flex items-center gap-2">
-                                                <span className="font-semibold text-slate-900 dark:text-white text-base">
-                                                    {r.clientName}
-                                                </span>
-                                                <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                    📞 {r.phoneNumber}
-                                                </span>
-                                                <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
-                                                    {r.showroom}
-                                                </span>
-                                            </div>
-
-                                            <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
-                                                <span className="flex items-center gap-1">
-                                                    <Calendar className="w-3.5 h-3.5" />
-                                                    {new Date(r.dateOfVisit).toLocaleDateString('en-IN', {
-                                                        day: '2-digit', month: 'short', year: 'numeric'
-                                                    })}
-                                                </span>
-                                                <span>•</span>
-                                                <span className="flex items-center gap-1">
-                                                    <Clock className="w-3.5 h-3.5" />
-                                                    {r.timeOfEntry}
-                                                </span>
-                                            </div>
-                                        </div>
-
-                                        <div className="mb-2">
-                                            <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 inline-block">
-                                                📌 Reason: {r.reasonOfVisit}
-                                            </span>
-                                        </div>
-
-                                        {/* Assigned Team Grid */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3 p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl text-xs">
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">CRE</span>
-                                                <span className="font-medium text-slate-700 dark:text-slate-200">{r.cre?.name || 'N/A'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">FA</span>
-                                                <span className="font-medium text-slate-700 dark:text-slate-200">{r.fa?.name || 'N/A'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">LA</span>
-                                                <span className="font-medium text-slate-700 dark:text-slate-200">{r.la?.name || 'N/A'}</span>
-                                            </div>
-                                            <div>
-                                                <span className="text-slate-400 block text-[10px] uppercase font-semibold">BH</span>
-                                                <span className="font-medium text-slate-700 dark:text-slate-200">{r.bh?.name || 'N/A'}</span>
-                                            </div>
-                                        </div>
-
-                                        {r.notes && (
-                                            <p className="text-xs text-slate-500 dark:text-slate-400 italic mb-3">
-                                                Note: "{r.notes}"
-                                            </p>
-                                        )}
-
-                                        {/* WhatsApp Status & Resend */}
-                                        <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60">
-                                            <div className="flex items-center gap-1.5">
-                                                {r.whatsappSent ? (
-                                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                                        <CheckCircle className="w-3.5 h-3.5" />
-                                                        WhatsApp Alerts Dispatched
+                            <>
+                                <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                                    {currentRecords.map((r) => (
+                                        <div key={r.id} className="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-slate-900 dark:text-white text-base">
+                                                        {r.clientName}
                                                     </span>
-                                                ) : (
-                                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                                                        <XCircle className="w-3.5 h-3.5" />
-                                                        WhatsApp Pending / Missing Credentials
+                                                    <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                        📞 {r.phoneNumber}
                                                     </span>
-                                                )}
+                                                    <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
+                                                        {r.showroom}
+                                                    </span>
+                                                </div>
+
+                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                    <span className="flex items-center gap-1">
+                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        {new Date(r.dateOfVisit).toLocaleDateString('en-IN', {
+                                                            day: '2-digit', month: 'short', year: 'numeric'
+                                                        })}
+                                                    </span>
+                                                    <span>•</span>
+                                                    <span className="flex items-center gap-1">
+                                                        <Clock className="w-3.5 h-3.5" />
+                                                        {r.timeOfEntry}
+                                                    </span>
+                                                </div>
                                             </div>
 
+                                            <div className="mb-2">
+                                                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 inline-block">
+                                                    📌 Reason: {r.reasonOfVisit}
+                                                </span>
+                                            </div>
+
+                                            {/* Assigned Team Grid */}
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3 p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl text-xs">
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">CRE</span>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.cre?.name || 'N/A'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">FA</span>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.fa?.name || 'N/A'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">LA</span>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.la?.name || 'N/A'}</span>
+                                                </div>
+                                                <div>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">BH</span>
+                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.bh?.name || 'N/A'}</span>
+                                                </div>
+                                            </div>
+
+                                            {r.notes && (
+                                                <p className="text-xs text-slate-500 dark:text-slate-400 italic mb-3">
+                                                    Note: "{r.notes}"
+                                                </p>
+                                            )}
+
+                                            {/* Action Bar (WhatsApp & Admin Delete) */}
+                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                                                <div className="flex items-center gap-1.5">
+                                                    {r.whatsappSent ? (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                                                            <CheckCircle className="w-3.5 h-3.5" />
+                                                            WhatsApp Alerts Dispatched
+                                                        </span>
+                                                    ) : (
+                                                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
+                                                            <XCircle className="w-3.5 h-3.5" />
+                                                            WhatsApp Pending / Missing Credentials
+                                                        </span>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    <button
+                                                        onClick={() => handleResendWhatsApp(r.id)}
+                                                        disabled={resendingId === r.id}
+                                                        className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                                                    >
+                                                        <MessageSquare className="w-3.5 h-3.5" />
+                                                        {resendingId === r.id ? 'Resending...' : 'Resend WhatsApp'}
+                                                    </button>
+
+                                                    {user?.role === 'ADMIN' && (
+                                                        <button
+                                                            onClick={() => handleDeleteRecord(r.id)}
+                                                            className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 font-medium px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                                                            title="Delete Record (Admin Only)"
+                                                        >
+                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            Delete
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+
+                                {/* Pagination Controls */}
+                                {records.length > 0 && (
+                                    <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                        <div>
+                                            Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{indexOfFirstRecord + 1}</span> to <span className="font-semibold text-slate-800 dark:text-slate-200">{Math.min(indexOfLastRecord, records.length)}</span> of <span className="font-semibold text-slate-800 dark:text-slate-200">{records.length}</span> records
+                                        </div>
+                                        <div className="flex items-center gap-2">
                                             <button
-                                                onClick={() => handleResendWhatsApp(r.id)}
-                                                disabled={resendingId === r.id}
-                                                className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                                                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                                                disabled={currentPage === 1}
+                                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition"
+                                                title="Previous Page"
                                             >
-                                                <MessageSquare className="w-3.5 h-3.5" />
-                                                {resendingId === r.id ? 'Resending...' : 'Resend WhatsApp'}
+                                                <ChevronLeft className="w-4 h-4" />
+                                            </button>
+                                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                                                Page {currentPage} of {totalPages}
+                                            </span>
+                                            <button
+                                                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                                                disabled={currentPage === totalPages}
+                                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition"
+                                                title="Next Page"
+                                            >
+                                                <ChevronRight className="w-4 h-4" />
                                             </button>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                )}
+                            </>
                         )}
                     </div>
                 </div>

@@ -282,9 +282,47 @@ const resendVisitorWhatsApp = async (req, res) => {
     }
 };
 
+/**
+ * Delete a visitor record (ADMIN ONLY)
+ */
+const deleteVisitorRecord = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (req.user.role !== 'ADMIN') {
+            return res.status(403).json({
+                success: false,
+                error: 'Access denied. Only Admins can delete visitor records.'
+            });
+        }
+
+        const existingRecord = await prisma.visitorRecord.findUnique({
+            where: { id: Number(id) }
+        });
+
+        if (!existingRecord) {
+            return res.status(404).json({ success: false, error: 'Visitor record not found.' });
+        }
+
+        await prisma.visitorRecord.delete({
+            where: { id: Number(id) }
+        });
+
+        res.json({
+            success: true,
+            message: 'Visitor record deleted successfully.'
+        });
+    } catch (error) {
+        console.error('Error deleting visitor record:', error);
+        res.status(500).json({ success: false, error: error.message });
+    }
+};
+
 module.exports = {
     getStaffList,
     createVisitorRecord,
     getVisitorRecords,
-    resendVisitorWhatsApp
+    resendVisitorWhatsApp,
+    deleteVisitorRecord
 };
+
