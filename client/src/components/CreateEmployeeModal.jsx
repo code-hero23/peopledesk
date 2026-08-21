@@ -399,6 +399,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                         <option value="ACCOUNTS_MANAGER">Accounts Manager</option>
                                         <option value="AE_MANAGER">AE Manager</option>
                                         <option value="ANALYZER">Call Analyzer</option>
+                                        <option value="FRONT_DESK_MANAGER">Front Desk Manager</option>
                                         <option value="ADMIN">Administrator</option>
                                     </>
                                 )}

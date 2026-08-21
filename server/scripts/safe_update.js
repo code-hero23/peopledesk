@@ -6,10 +6,11 @@ async function main() {
   
 
   
-  // Ensure Role enum contains WALL2WALL_EMPLOYEE
+  // Ensure Role enum contains WALL2WALL_EMPLOYEE & FRONT_DESK_MANAGER
   try {
     await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'WALL2WALL_EMPLOYEE'`);
-    console.log('Role enum updated with "WALL2WALL_EMPLOYEE" if not exists.');
+    await prisma.$executeRawUnsafe(`ALTER TYPE "Role" ADD VALUE IF NOT EXISTS 'FRONT_DESK_MANAGER'`);
+    console.log('Role enum updated with "WALL2WALL_EMPLOYEE" and "FRONT_DESK_MANAGER" if not exists.');
   } catch (err) {
     console.warn('Note on Role enum update:', err.message);
   }

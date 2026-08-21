@@ -246,6 +246,17 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" indent />
                         </NavGroup>
                     </>
+                ) : user?.role === 'FRONT_DESK_MANAGER' ? (
+                    <>
+                        <div className="mb-4">
+                            {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Front Desk Workspace</p>}
+                            <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
+                        </div>
+
+                        <NavGroup id="utilities" label="Utilities" icon={Settings}>
+                            <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" indent />
+                        </NavGroup>
+                    </>
                 ) : (
                     <>
                         <div className="mb-4">

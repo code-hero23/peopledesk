@@ -20,7 +20,9 @@ export const EmployeeGuard = () => {
 export const RootRedirect = () => {
     const { user } = useSelector((state) => state.auth);
 
-    if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
+    if (user && user.role === 'FRONT_DESK_MANAGER') {
+        return <Navigate to="/dashboard/visitors-record" replace />;
+    } else if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
         return <Navigate to="/admin-dashboard" replace />;
     } else if (user && user.role === 'ACCOUNTS_MANAGER') {
         return <Navigate to="/admin/vouchers" replace />;

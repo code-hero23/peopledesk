@@ -1090,7 +1090,7 @@ const importEmployees = async (req, res) => {
                 let user = await prisma.user.findUnique({ where: { email } });
                 const userData = {
                     name,
-                    role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER', 'WALL2WALL_EMPLOYEE'].includes(role) ? role : 'EMPLOYEE',
+                    role: ['EMPLOYEE', 'HR', 'BUSINESS_HEAD', 'ADMIN', 'AE_MANAGER', 'WALL2WALL_EMPLOYEE', 'FRONT_DESK_MANAGER'].includes(role) ? role : 'EMPLOYEE',
                     designation,
                     phone: phone ? phone.toString().replace(/\D/g, '') : undefined, // Sanitize to numbers only
                     allocatedSalary: ctc > 0 ? ctc : undefined,
