@@ -252,10 +252,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Front Desk Workspace</p>}
                             <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
                         </div>
-
-                        <NavGroup id="utilities" label="Utilities" icon={Settings}>
-                            <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" indent />
-                        </NavGroup>
                     </>
                 ) : (
                     <>

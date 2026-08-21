@@ -1,9 +1,10 @@
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useSelector } from 'react-redux';
 
 // Redirects Admins away from Employee routes
 export const EmployeeGuard = () => {
     const { user } = useSelector((state) => state.auth);
+    const location = useLocation();
 
     if (user && user.role === 'ANALYZER') {
         return <Navigate to="/admin/call-reports" replace />;
@@ -11,6 +12,10 @@ export const EmployeeGuard = () => {
 
     if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(user.role)) {
         return <Navigate to="/admin-dashboard" replace />;
+    }
+
+    if (user && user.role === 'FRONT_DESK_MANAGER' && location.pathname !== '/dashboard/visitors-record') {
+        return <Navigate to="/dashboard/visitors-record" replace />;
     }
 
     return <Outlet />;
