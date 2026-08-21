@@ -23,6 +23,7 @@ import {
     Home,
     Phone,
     Sparkles,
+    BookOpen,
     LifeBuoy,
     X,
     ChevronDown,
@@ -208,6 +209,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
+                            <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" indent />
                             {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                                 <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" indent />
                             )}
@@ -262,6 +264,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {user?.callAnalyticsViewEnabled && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
+                             <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
                              <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI scoreboard" />
                             <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
                             {user?.designation === 'ACCOUNT' && (

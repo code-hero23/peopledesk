@@ -53,6 +53,10 @@ model User {
   performanceScores            PerformanceScore[]
   tickets                      HelpdeskTicket[]
   seatAssignments              SeatAssignment[]
+  creVisitorRecords            VisitorRecord[]        @relation("VisitorRecord_CRE")
+  faVisitorRecords             VisitorRecord[]        @relation("VisitorRecord_FA")
+  laVisitorRecords             VisitorRecord[]        @relation("VisitorRecord_LA")
+  bhVisitorRecords             VisitorRecord[]        @relation("VisitorRecord_BH")
 }
 
 model CallSyncDevice {
@@ -722,5 +726,33 @@ model PublicEventResponse {
   event         PublicEvent @relation(fields: [eventId], references: [id], onDelete: Cascade)
 
   @@index([eventId])
+}
+
+model VisitorRecord {
+  id            Int      @id @default(autoincrement())
+  clientName    String
+  phoneNumber   String
+  reasonOfVisit String
+  showroom      String
+  dateOfVisit   DateTime
+  timeOfEntry   String
+  
+  creId         Int
+  cre           User     @relation("VisitorRecord_CRE", fields: [creId], references: [id])
+  
+  faId          Int?
+  fa            User?    @relation("VisitorRecord_FA", fields: [faId], references: [id])
+  
+  laId          Int?
+  la            User?    @relation("VisitorRecord_LA", fields: [laId], references: [id])
+  
+  bhId          Int?
+  bh            User?    @relation("VisitorRecord_BH", fields: [bhId], references: [id])
+
+  whatsappSent  Boolean  @default(false)
+  whatsappLog   String?
+  notes         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 }
 

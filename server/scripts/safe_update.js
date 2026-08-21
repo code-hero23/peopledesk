@@ -258,6 +258,38 @@ async function main() {
     console.error('Error in Seating schema sync:', err.message);
   }
 
+  // Adding VisitorRecord Table
+  try {
+    console.log('Syncing VisitorRecord schema...');
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "VisitorRecord" (
+          "id" SERIAL PRIMARY KEY,
+          "clientName" TEXT NOT NULL,
+          "phoneNumber" TEXT NOT NULL,
+          "reasonOfVisit" TEXT NOT NULL,
+          "showroom" TEXT NOT NULL,
+          "dateOfVisit" TIMESTAMP(3) NOT NULL,
+          "timeOfEntry" TEXT NOT NULL,
+          "creId" INTEGER NOT NULL,
+          "faId" INTEGER,
+          "laId" INTEGER,
+          "bhId" INTEGER,
+          "whatsappSent" BOOLEAN NOT NULL DEFAULT false,
+          "whatsappLog" TEXT,
+          "notes" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "VisitorRecord_creId_fkey" FOREIGN KEY ("creId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE,
+          CONSTRAINT "VisitorRecord_faId_fkey" FOREIGN KEY ("faId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+          CONSTRAINT "VisitorRecord_laId_fkey" FOREIGN KEY ("laId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE,
+          CONSTRAINT "VisitorRecord_bhId_fkey" FOREIGN KEY ("bhId") REFERENCES "User"("id") ON DELETE SET NULL ON UPDATE CASCADE
+      )
+    `);
+    console.log('VisitorRecord table created or already exists.');
+  } catch (err) {
+    console.error('Error in VisitorRecord schema sync:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 

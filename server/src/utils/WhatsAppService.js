@@ -196,6 +196,114 @@ class WhatsAppService {
             'en'
         );
     }
+
+    /**
+     * Send freeform Text Message (works for active conversation session / 24h window)
+     */
+    async sendTextMessage(to, textContent) {
+        if (!this.accessToken || !this.phoneNumberId) {
+            console.warn('WhatsApp API credentials missing. Skipping text notification.');
+            return { success: false, error: 'WhatsApp API credentials missing' };
+        }
+
+        const sanitizedTo = this.sanitizePhoneNumber(to);
+        if (!sanitizedTo) {
+            console.warn(`Invalid phone number for text message: ${to}`);
+            return { success: false, error: 'Invalid phone number' };
+        }
+
+        try {
+            const data = {
+                messaging_product: 'whatsapp',
+                to: sanitizedTo,
+                type: 'text',
+                text: {
+                    body: textContent
+                }
+            };
+
+            const response = await axios.post(this.baseUrl, data, {
+                headers: {
+                    'Authorization': `Bearer ${this.accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            console.log(`WhatsApp: Text message enqueued for ${sanitizedTo}. Message ID: ${response.data.messages?.[0]?.id}`);
+            return { success: true, data: response.data };
+        } catch (error) {
+            const errorMsg = error.response ? JSON.stringify(error.response.data) : error.message;
+            console.error(`Error sending WhatsApp text message to ${to}:`, errorMsg);
+            return { success: false, error: errorMsg };
+        }
+    }
+
+    /**
+     * Send Visitor Record Notification to Stakeholder (CRE, FA, LA, BH)
+     */
+    async sendVisitorRecordNotification(to, details) {
+        const {
+            clientName,
+            phoneNumber,
+            reasonOfVisit,
+            showroom,
+            dateOfVisit,
+            timeOfEntry,
+            creName,
+            faName,
+            laName,
+            bhName
+        } = details;
+
+        const formattedDate = new Date(dateOfVisit).toLocaleDateString('en-IN', {
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric'
+        });
+
+        const bodyParams = [
+            clientName || 'N/A',
+            phoneNumber || 'N/A',
+            showroom || 'N/A',
+            reasonOfVisit || 'N/A',
+            `${formattedDate} ${timeOfEntry || ''}`,
+            creName || 'N/A',
+            faName || 'N/A',
+            laName || 'N/A',
+            bhName || 'N/A'
+        ];
+
+        // 1. Try sending via pre-approved template first
+        const templateResult = await this.sendTemplateMessage(
+            to,
+            'visitor_record_alert',
+            bodyParams,
+            [],
+            'en'
+        );
+
+        if (templateResult.success) {
+            return templateResult;
+        }
+
+        // 2. Fallback to freeform text message format if template is not yet active or fails
+        const textSummary = `🏢 *CLIENT VISIT RECORDED*
+--------------------------
+👤 *Client Name:* ${clientName}
+📞 *Phone:* ${phoneNumber}
+📍 *Showroom:* ${showroom}
+📌 *Reason:* ${reasonOfVisit}
+📅 *Date & Time:* ${formattedDate} at ${timeOfEntry}
+
+👥 *Assigned Team:*
+• *CRE:* ${creName || 'N/A'}
+• *FA (Feasibility Architect):* ${faName || 'N/A'}
+• *LA (Loading Architect):* ${laName || 'N/A'}
+• *BH (Business Head):* ${bhName || 'N/A'}`;
+
+        return this.sendTextMessage(to, textSummary);
+    }
 }
 
 module.exports = new WhatsAppService();
+

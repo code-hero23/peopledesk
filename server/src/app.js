@@ -102,6 +102,7 @@ app.use('/api/carpenter', require('./routes/carpenterRoutes'));
 
 app.use('/api/notifications', require('./routes/notificationRoutes'));
 app.use('/api/whatsapp', require('./routes/whatsappRoutes'));
+app.use('/api/visitors', require('./routes/visitorRoutes'));
 app.use('/api/performance', require('./routes/performanceRoutes'));
 app.use('/api/helpdesk', require('./routes/helpdeskRoutes'));
 app.use('/api/seating', require('./routes/seatingRoutes'));
