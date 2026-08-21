@@ -24,7 +24,7 @@ const SHOWROOM_OPTIONS = ['MTRS', 'OMR', 'PORUR', 'COIMBATORE'];
 
 const VisitorRecordBook = () => {
     const { user, token } = useSelector((state) => state.auth);
-    const baseUrl = import.meta.env.VITE_API_URL || 'http://localhost:5001/api';
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
     const getAuthHeader = () => ({
         headers: { Authorization: `Bearer ${token || localStorage.getItem('token')}` }
