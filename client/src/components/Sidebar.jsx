@@ -191,13 +191,15 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
             {/* Navigation */}
             <nav className="flex-1 p-3 space-y-1 mt-2 overflow-y-auto scrollbar-hide">
-                <div className="mb-4">
-                    {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Core</p>}
-                    <NavItem to={isAdmin ? "/admin-dashboard" : "/dashboard"} icon={LayoutDashboard} label="Dashboard" exact />
-                    {isAdmin && ['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                        <NavItem to="/admin/approvals" icon={FileCheck} label="Pending Approvals" />
-                    )}
-                </div>
+                {user?.role !== 'FRONT_DESK_MANAGER' && (
+                    <div className="mb-4">
+                        {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Core</p>}
+                        <NavItem to={isAdmin ? "/admin-dashboard" : "/dashboard"} icon={LayoutDashboard} label="Dashboard" exact />
+                        {isAdmin && ['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                            <NavItem to="/admin/approvals" icon={FileCheck} label="Pending Approvals" />
+                        )}
+                    </div>
+                )}
 
                 {isAdmin ? (
                     <>
