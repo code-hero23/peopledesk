@@ -209,7 +209,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
-                            <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" indent />
+                            <NavItem to="/admin/visitors-record" icon={BookOpen} label="Visitors Book" indent />
                             {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                                 <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" indent />
                             )}

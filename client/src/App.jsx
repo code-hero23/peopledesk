@@ -83,6 +83,7 @@ function App() {
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/vouchers" element={<VoucherManagement />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />
+              <Route path="/admin/visitors-record" element={<VisitorRecordBook />} />
               <Route path="/admin/employees" element={<ManageEmployees />} />
               <Route path="/admin/employees/:id/attendance" element={<EmployeeAttendanceDetail />} />
               <Route path="/admin/worklogs" element={<WorkLogs />} />
