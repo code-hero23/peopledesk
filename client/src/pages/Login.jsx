@@ -8,7 +8,8 @@ import { Capacitor } from '@capacitor/core';
 import CallSyncDeviceSetup from '../components/CallSyncDeviceSetup';
 
 function Login() {
-    if (Capacitor.isNativePlatform()) return <CallSyncDeviceSetup />;
+    const [showCallSyncSetup, setShowCallSyncSetup] = useState(Capacitor.isNativePlatform());
+
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -25,9 +26,11 @@ function Login() {
 
     useEffect(() => {
         if (isSuccess || user) {
-            if (['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
+            if (user?.role === 'FRONT_DESK_MANAGER') {
+                navigate('/dashboard/visitors-record', { replace: true });
+            } else if (['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role)) {
                 navigate('/admin-dashboard', { replace: true });
-            } else if (user.role === 'ACCOUNTS_MANAGER') {
+            } else if (user?.role === 'ACCOUNTS_MANAGER') {
                 navigate('/admin/vouchers');
             } else {
                 navigate('/dashboard');
@@ -36,6 +39,22 @@ function Login() {
 
         dispatch(reset());
     }, [user, isSuccess, navigate, dispatch]);
+
+    if (showCallSyncSetup && Capacitor.isNativePlatform()) {
+        return (
+            <div className="relative min-h-screen bg-slate-950">
+                <CallSyncDeviceSetup />
+                <div className="fixed bottom-4 left-0 right-0 text-center z-50">
+                    <button
+                        onClick={() => setShowCallSyncSetup(false)}
+                        className="text-xs font-semibold text-slate-400 hover:text-white underline px-4 py-2 rounded-full bg-slate-900/80 backdrop-blur border border-white/10 shadow-lg"
+                    >
+                        Switch to Staff Account Login
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     // Error Display Logic
     const isBlockedError = isError && message && message.toLowerCase().includes('blocked');
