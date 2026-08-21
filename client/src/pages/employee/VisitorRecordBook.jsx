@@ -23,12 +23,15 @@ const REASON_OPTIONS = [
 const SHOWROOM_OPTIONS = ['MTRS', 'OMR', 'PORUR', 'COIMBATORE'];
 
 const VisitorRecordBook = () => {
-    const { user, token } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.auth);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
-    const getAuthHeader = () => ({
-        headers: { Authorization: `Bearer ${token || localStorage.getItem('token')}` }
-    });
+    const getAuthHeader = () => {
+        const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
+        return {
+            headers: { Authorization: `Bearer ${token}` }
+        };
+    };
 
     const [staffList, setStaffList] = useState([]);
     const [records, setRecords] = useState([]);
