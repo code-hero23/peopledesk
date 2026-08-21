@@ -6,7 +6,7 @@ import {
     UserCheck, BookOpen, Send, RefreshCw, Search, Filter,
     Calendar, Clock, Building, User, Phone, FileText, CheckCircle,
     XCircle, AlertCircle, Download, MessageSquare, Trash2,
-    ChevronLeft, ChevronRight
+    ChevronLeft, ChevronRight, Sparkles, Check
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -148,7 +148,7 @@ const VisitorRecordBook = () => {
         try {
             const res = await axios.post(`${baseUrl}/visitors`, formData, getAuthHeader());
             if (res.data.success) {
-                toast.success('Visitor Record Saved & WhatsApp notifications enqueued!');
+                toast.success('Visitor Record saved & WhatsApp alerts sent!');
                 // Reset Form
                 setFormData({
                     clientName: '',
@@ -156,7 +156,7 @@ const VisitorRecordBook = () => {
                     reasonOfVisit: 'Initial',
                     showroom: 'MTRS',
                     dateOfVisit: new Date().toISOString().split('T')[0],
-                    timeOfEntry: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+                    timeOfEntry: getCurrentTime(),
                     faId: '',
                     laId: '',
                     bhId: '',
@@ -177,7 +177,7 @@ const VisitorRecordBook = () => {
         try {
             const res = await axios.post(`${baseUrl}/visitors/${id}/resend-whatsapp`, {}, getAuthHeader());
             if (res.data.success) {
-                toast.success('WhatsApp alert resent!');
+                toast.success('WhatsApp alert resent successfully!');
                 fetchVisitorRecords();
             }
         } catch (err) {
@@ -205,7 +205,7 @@ const VisitorRecordBook = () => {
 
     const exportToCSV = () => {
         if (records.length === 0) return toast.info('No data to export.');
-        
+
         const headers = ['ID,Client Name,Phone Number,Reason,Showroom,Date of Visit,Time of Entry,CRE,FA,LA,BH,WhatsApp Sent\n'];
         const rows = records.map(r => [
             r.id,
@@ -237,93 +237,131 @@ const VisitorRecordBook = () => {
     const currentRecords = records.slice(indexOfFirstRecord, indexOfLastRecord);
 
     return (
-        <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 lg:p-8 text-slate-800 dark:text-slate-100 transition-colors">
-            {/* Header Banner */}
-            <div className="max-w-7xl mx-auto mb-8">
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
+        <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-3 sm:p-5 lg:p-8 text-slate-800 dark:text-slate-100 transition-colors select-none">
+            {/* Header Banner - Optimized for Touch Tablets */}
+            <div className="max-w-7xl mx-auto mb-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md">
                     <div className="flex items-center gap-4">
-                        <div className="p-3 bg-red-500/10 dark:bg-red-500/20 text-red-600 dark:text-red-400 rounded-xl">
-                            <BookOpen className="w-8 h-8" />
+                        <div className="p-3.5 bg-gradient-to-br from-red-500 to-rose-700 text-white rounded-2xl shadow-lg shadow-red-500/20 flex-shrink-0">
+                            <BookOpen className="w-7 h-7 sm:w-8 sm:h-8" />
                         </div>
                         <div>
-                            <h1 className="text-2xl font-bold tracking-tight text-slate-900 dark:text-white">
-                                Visitors Record Book
-                            </h1>
-                            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                                Record client visits & dispatch automated WhatsApp notifications to CRE, FA, LA, and BH.
+                            <div className="flex items-center gap-2">
+                                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 dark:text-white">
+                                    Visitors Record Book
+                                </h1>
+                                <span className="px-2.5 py-0.5 text-xs font-bold rounded-full bg-red-100 text-red-700 dark:bg-red-950/80 dark:text-red-300">
+                                    FRONT DESK
+                                </span>
+                            </div>
+                            <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                                Log client arrivals & trigger instant WhatsApp alerts to CRE, FA, LA, & BH.
                             </p>
                         </div>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <span className="px-3 py-1.5 rounded-full text-xs font-semibold bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300">
-                            CRE Workspace
-                        </span>
+
+                    <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-center">
                         <button
                             onClick={exportToCSV}
-                            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-sm font-medium rounded-xl transition"
+                            className="min-h-[46px] px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold rounded-2xl transition-all active:scale-95 flex items-center gap-2 shadow-sm touch-manipulation"
                         >
-                            <Download className="w-4 h-4" />
+                            <Download className="w-4 h-4 text-red-600 dark:text-red-400" />
                             Export CSV
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-8">
-                {/* Left Column: Form to Enter Client Visit */}
+            {/* Main 2-Column Responsive Layout */}
+            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+                
+                {/* Left Column: Form to Log Client Visit (Touchscreen Optimized) */}
                 <div className="lg:col-span-5">
-                    <div className="bg-white dark:bg-slate-900 p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm sticky top-6">
-                        <h2 className="text-lg font-semibold text-slate-900 dark:text-white mb-5 flex items-center gap-2">
-                            <UserCheck className="w-5 h-5 text-red-600" />
-                            New Client Visit Entry
-                        </h2>
+                    <div className="bg-white dark:bg-slate-900 p-5 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md sticky top-6">
+                        <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
+                            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
+                                <UserCheck className="w-5 h-5 text-red-600 dark:text-red-400" />
+                                New Visitor Arrival
+                            </h2>
+                            <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-widest bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-lg">
+                                Touch Form
+                            </span>
+                        </div>
 
-                        <form onSubmit={handleFormSubmit} className="space-y-4">
+                        <form onSubmit={handleFormSubmit} className="space-y-4 sm:space-y-5">
+                            
                             {/* Client Name */}
                             <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                                    Client Name *
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                                    Client Name <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <User className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                    <User className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
                                     <input
                                         type="text"
                                         required
-                                        placeholder="e.g. Rahul Sharma"
+                                        placeholder="e.g. Anand Kumar"
                                         value={formData.clientName}
                                         onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full pl-11 pr-4 py-3.5 min-h-[50px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
                                     />
                                 </div>
                             </div>
 
                             {/* Phone Number */}
                             <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                                    Phone Number *
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                                    Phone Number <span className="text-red-500">*</span>
                                 </label>
                                 <div className="relative">
-                                    <Phone className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                    <Phone className="w-5 h-5 absolute left-3.5 top-3.5 text-slate-400" />
                                     <input
                                         type="tel"
                                         required
                                         placeholder="e.g. 9876543210"
                                         value={formData.phoneNumber}
                                         onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
-                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full pl-11 pr-4 py-3.5 min-h-[50px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-base sm:text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500 focus:bg-white dark:focus:bg-slate-800 transition-all"
                                     />
+                                </div>
+                            </div>
+
+                            {/* Showroom Quick Tap Selector Pills */}
+                            <div>
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                                    Showroom Location <span className="text-red-500">*</span>
+                                </label>
+                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                                    {SHOWROOM_OPTIONS.map((sh) => {
+                                        const isSelected = formData.showroom === sh;
+                                        return (
+                                            <button
+                                                type="button"
+                                                key={`sh-${sh}`}
+                                                onClick={() => setFormData({ ...formData, showroom: sh })}
+                                                className={`min-h-[46px] py-2.5 px-3 rounded-2xl font-bold text-xs sm:text-sm transition-all flex items-center justify-center gap-1.5 touch-manipulation active:scale-95 ${
+                                                    isSelected
+                                                        ? 'bg-red-600 text-white shadow-md shadow-red-500/25 ring-2 ring-red-600'
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                                                }`}
+                                            >
+                                                {isSelected && <Check className="w-4 h-4" />}
+                                                {sh}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
                             {/* Reason of Visit */}
                             <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                                    Reason of Visit *
+                                <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                                    Reason of Visit <span className="text-red-500">*</span>
                                 </label>
                                 <select
                                     value={formData.reasonOfVisit}
                                     onChange={(e) => setFormData({ ...formData, reasonOfVisit: e.target.value })}
-                                    className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full px-4 py-3.5 min-h-[50px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-base sm:text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-red-500"
                                 >
                                     {REASON_OPTIONS.map((opt) => (
                                         <option key={opt} value={opt}>
@@ -333,84 +371,62 @@ const VisitorRecordBook = () => {
                                 </select>
                             </div>
 
-                            {/* Showroom & Date */}
+                            {/* Date & Time Entry (2 Columns) */}
                             <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                                        Showroom *
-                                    </label>
-                                    <div className="relative">
-                                        <Building className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
-                                        <select
-                                            value={formData.showroom}
-                                            onChange={(e) => setFormData({ ...formData, showroom: e.target.value })}
-                                            className="w-full pl-9 pr-2 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                        >
-                                            {SHOWROOM_OPTIONS.map((s) => (
-                                                <option key={s} value={s}>{s}</option>
-                                            ))}
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <div>
-                                    <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
                                         Date of Visit
                                     </label>
                                     <input
                                         type="date"
                                         value={formData.dateOfVisit}
                                         onChange={(e) => setFormData({ ...formData, dateOfVisit: e.target.value })}
-                                        className="w-full px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-3 py-3.5 min-h-[50px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                                     />
                                 </div>
-                            </div>
 
-                            {/* Time of Entry */}
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
-                                    Time of Entry *
-                                </label>
-                                <div className="relative">
-                                    <Clock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                                <div>
+                                    <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-2">
+                                        Time of Entry <span className="text-red-500">*</span>
+                                    </label>
                                     <input
                                         type="time"
                                         required
                                         value={formData.timeOfEntry}
                                         onChange={(e) => setFormData({ ...formData, timeOfEntry: e.target.value })}
-                                        className="w-full pl-9 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-3 py-3.5 min-h-[50px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                                     />
                                 </div>
                             </div>
 
-                            {/* Stakeholders Section */}
-                            <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-3">
-                                <span className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider block">
-                                    Assigned Team Members
+                            {/* Team Stakeholders Dropdowns */}
+                            <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-3.5">
+                                <span className="text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest block">
+                                    Notify Team Members
                                 </span>
 
                                 {/* CRE Name */}
                                 <div>
-                                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
-                                        CRE Name (Recorded By)
+                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
+                                        CRE (Recorded By)
                                     </label>
                                     <input
                                         type="text"
                                         disabled
                                         value={user?.name || 'Current CRE'}
-                                        className="w-full px-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-500 dark:text-slate-400 cursor-not-allowed"
+                                        className="w-full px-4 py-3 min-h-[46px] bg-slate-100 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 rounded-2xl text-sm font-semibold text-slate-600 dark:text-slate-400 cursor-not-allowed"
                                     />
                                 </div>
 
                                 {/* FA Name */}
                                 <div>
-                                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         FA (Feasibility Architect)
                                     </label>
                                     <select
                                         value={formData.faId}
                                         onChange={(e) => setFormData({ ...formData, faId: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-4 py-3 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
                                         <option value="">Select FA (Feasibility Architect)...</option>
                                         {displayFAList.map((st) => (
@@ -423,13 +439,13 @@ const VisitorRecordBook = () => {
 
                                 {/* LA Name */}
                                 <div>
-                                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         LA (Loading Architect)
                                     </label>
                                     <select
                                         value={formData.laId}
                                         onChange={(e) => setFormData({ ...formData, laId: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-4 py-3 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
                                         <option value="">Select LA (Loading Architect)...</option>
                                         {displayLAList.map((st) => (
@@ -442,52 +458,39 @@ const VisitorRecordBook = () => {
 
                                 {/* BH Name */}
                                 <div>
-                                    <label className="block text-xs text-slate-500 dark:text-slate-400 mb-1">
+                                    <label className="block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1">
                                         BH (Business Head)
                                     </label>
                                     <select
                                         value={formData.bhId}
                                         onChange={(e) => setFormData({ ...formData, bhId: e.target.value })}
-                                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                        className="w-full px-4 py-3 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-sm font-medium focus:outline-none focus:ring-2 focus:ring-red-500"
                                     >
                                         <option value="">Select BH (Business Head)...</option>
                                         {displayBHList.map((st) => (
                                             <option key={`bh-${st.id}`} value={st.id}>
-                                                {st.name} {st.designation ? `(${st.designation})` : st.role === 'BUSINESS_HEAD' ? '(BH)' : ''}
+                                                {st.name} {st.designation ? `(${st.designation})` : ''}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                             </div>
 
-                            {/* Notes */}
-                            <div>
-                                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1">
-                                    Notes / Special Instructions
-                                </label>
-                                <textarea
-                                    rows={2}
-                                    placeholder="Add any specific client requirement or meeting note..."
-                                    value={formData.notes}
-                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                />
-                            </div>
-
+                            {/* Big Touch-Screen Submit CTA Button */}
                             <button
                                 type="submit"
                                 disabled={submitting}
-                                className="w-full py-3 px-4 bg-red-600 hover:bg-red-700 text-white font-medium rounded-xl shadow-md hover:shadow-lg transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
+                                className="w-full min-h-[56px] mt-4 py-3.5 px-6 bg-gradient-to-r from-red-600 via-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 active:scale-[0.98] text-white font-bold text-base rounded-2xl shadow-xl shadow-red-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2 touch-manipulation cursor-pointer"
                             >
                                 {submitting ? (
                                     <>
-                                        <RefreshCw className="w-4 h-4 animate-spin" />
-                                        Saving & Dispatching WhatsApp...
+                                        <RefreshCw className="w-5 h-5 animate-spin" />
+                                        <span>Saving & Dispatching WhatsApp...</span>
                                     </>
                                 ) : (
                                     <>
-                                        <Send className="w-4 h-4" />
-                                        Save Record & Notify Team
+                                        <Send className="w-5 h-5" />
+                                        <span>SAVE VISIT & SEND WHATSAPP ALERTS</span>
                                     </>
                                 )}
                             </button>
@@ -495,136 +498,162 @@ const VisitorRecordBook = () => {
                     </div>
                 </div>
 
-                {/* Right Column: Visit History & Search */}
-                <div className="lg:col-span-7 space-y-6">
-                    {/* Filters bar */}
-                    <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm">
-                        <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <div className="relative col-span-1 sm:col-span-3">
-                                <Search className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
+                {/* Right Column: Search, Filters, & Record History List */}
+                <div className="lg:col-span-7">
+                    
+                    {/* Filters & Search Header Card */}
+                    <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md mb-6">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-base">
+                                <Filter className="w-4 h-4 text-red-600" />
+                                Search & Filter Records
+                            </h3>
+
+                            {/* Showroom Filter Tap Chips */}
+                            <div className="flex flex-wrap items-center gap-1.5">
+                                {['ALL', ...SHOWROOM_OPTIONS].map((sh) => (
+                                    <button
+                                        key={`flt-${sh}`}
+                                        type="button"
+                                        onClick={() => {
+                                            setSelectedShowroomFilter(sh);
+                                            fetchVisitorRecords();
+                                        }}
+                                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all touch-manipulation active:scale-95 ${
+                                            selectedShowroomFilter === sh
+                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                                        }`}
+                                    >
+                                        {sh}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Search & Date Filter Bar */}
+                        <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                            <div className="sm:col-span-6 relative">
+                                <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
                                 <input
                                     type="text"
-                                    placeholder="Search client name, phone number, or reason..."
+                                    placeholder="Search by client name, phone, or reason..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full pl-10 pr-4 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                                 />
                             </div>
 
-                            <div>
-                                <select
-                                    value={selectedShowroomFilter}
-                                    onChange={(e) => setSelectedShowroomFilter(e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                >
-                                    <option value="ALL">All Showrooms</option>
-                                    {SHOWROOM_OPTIONS.map((s) => (
-                                        <option key={`f-${s}`} value={s}>{s}</option>
-                                    ))}
-                                </select>
-                            </div>
-
-                            <div>
+                            <div className="sm:col-span-4 grid grid-cols-2 gap-2">
                                 <input
                                     type="date"
                                     value={startDate}
                                     onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    className="w-full px-2.5 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none"
+                                />
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => setEndDate(e.target.value)}
+                                    className="w-full px-2.5 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none"
                                 />
                             </div>
 
-                            <button
-                                type="submit"
-                                className="py-2 px-4 bg-slate-800 hover:bg-slate-900 dark:bg-slate-700 dark:hover:bg-slate-600 text-white font-medium text-sm rounded-xl transition flex items-center justify-center gap-2"
-                            >
-                                <Filter className="w-4 h-4" />
-                                Filter Logs
-                            </button>
+                            <div className="sm:col-span-2">
+                                <button
+                                    type="submit"
+                                    className="w-full min-h-[46px] py-2.5 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-red-600 dark:hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-2xl transition active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation"
+                                >
+                                    <Search className="w-4 h-4" />
+                                    Filter
+                                </button>
+                            </div>
                         </form>
                     </div>
 
-                    {/* Records List */}
-                    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden">
-                        <div className="p-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                            <h3 className="font-semibold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                    {/* Visitor History Record Cards */}
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md overflow-hidden">
+                        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
                                 <BookOpen className="w-4 h-4 text-red-600" />
-                                Client Visit History ({records.length})
+                                Client Visit Logs ({records.length})
                             </h3>
                             <button
                                 onClick={fetchVisitorRecords}
-                                className="p-2 text-slate-500 hover:text-slate-800 dark:hover:text-white transition"
+                                className="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition flex items-center gap-1.5 text-xs font-bold active:scale-95 touch-manipulation"
                                 title="Refresh"
                             >
                                 <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                                Refresh
                             </button>
                         </div>
 
                         {loading ? (
                             <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                                <RefreshCw className="w-6 h-6 animate-spin mx-auto mb-2 text-red-600" />
-                                Loading visitor records...
+                                <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3 text-red-600" />
+                                <p className="font-semibold text-sm">Loading visitor records...</p>
                             </div>
                         ) : records.length === 0 ? (
                             <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                                <AlertCircle className="w-8 h-8 mx-auto mb-2 opacity-50" />
-                                No visitor records found matching criteria.
+                                <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-40 text-red-500" />
+                                <p className="font-bold text-sm">No visitor records found matching criteria.</p>
                             </div>
                         ) : (
                             <>
                                 <div className="divide-y divide-slate-200 dark:divide-slate-800">
                                     {currentRecords.map((r) => (
-                                        <div key={r.id} className="p-4 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 transition">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-2">
-                                                <div className="flex items-center gap-2">
-                                                    <span className="font-semibold text-slate-900 dark:text-white text-base">
+                                        <div key={r.id} className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <span className="font-black text-slate-900 dark:text-white text-base">
                                                         {r.clientName}
                                                     </span>
-                                                    <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                    <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
                                                         📞 {r.phoneNumber}
                                                     </span>
-                                                    <span className="px-2 py-0.5 text-xs font-semibold rounded-md bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-400">
+                                                    <span className="px-2.5 py-1 text-xs font-black rounded-xl bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300">
                                                         {r.showroom}
                                                     </span>
                                                 </div>
 
-                                                <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+                                                <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
                                                     <span className="flex items-center gap-1">
-                                                        <Calendar className="w-3.5 h-3.5" />
+                                                        <Calendar className="w-3.5 h-3.5 text-red-500" />
                                                         {new Date(r.dateOfVisit).toLocaleDateString('en-IN', {
                                                             day: '2-digit', month: 'short', year: 'numeric'
                                                         })}
                                                     </span>
                                                     <span>•</span>
                                                     <span className="flex items-center gap-1">
-                                                        <Clock className="w-3.5 h-3.5" />
+                                                        <Clock className="w-3.5 h-3.5 text-red-500" />
                                                         {r.timeOfEntry}
                                                     </span>
                                                 </div>
                                             </div>
 
-                                            <div className="mb-2">
-                                                <span className="text-xs font-medium px-2.5 py-1 rounded-full bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 inline-block">
+                                            <div className="mb-3">
+                                                <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 inline-block">
                                                     📌 Reason: {r.reasonOfVisit}
                                                 </span>
                                             </div>
 
                                             {/* Assigned Team Grid */}
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 my-3 p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl text-xs">
+                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl text-xs">
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">CRE</span>
-                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.cre?.name || 'N/A'}</span>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">CRE</span>
+                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.cre?.name || 'N/A'}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">FA</span>
-                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.fa?.name || 'N/A'}</span>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">FA</span>
+                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.fa?.name || 'N/A'}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">LA</span>
-                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.la?.name || 'N/A'}</span>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">LA</span>
+                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.la?.name || 'N/A'}</span>
                                                 </div>
                                                 <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-semibold">BH</span>
-                                                    <span className="font-medium text-slate-700 dark:text-slate-200">{r.bh?.name || 'N/A'}</span>
+                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">BH</span>
+                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.bh?.name || 'N/A'}</span>
                                                 </div>
                                             </div>
 
@@ -635,17 +664,17 @@ const VisitorRecordBook = () => {
                                             )}
 
                                             {/* Action Bar (WhatsApp & Admin Delete) */}
-                                            <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800/60">
+                                            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80">
                                                 <div className="flex items-center gap-1.5">
                                                     {r.whatsappSent ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                                                            <CheckCircle className="w-3.5 h-3.5" />
-                                                            WhatsApp Alerts Dispatched
+                                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            WhatsApp Dispatched
                                                         </span>
                                                     ) : (
-                                                        <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600 dark:text-amber-400">
-                                                            <XCircle className="w-3.5 h-3.5" />
-                                                            WhatsApp Pending / Missing Credentials
+                                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                                            <XCircle className="w-4 h-4" />
+                                                            WhatsApp Pending
                                                         </span>
                                                     )}
                                                 </div>
@@ -654,19 +683,19 @@ const VisitorRecordBook = () => {
                                                     <button
                                                         onClick={() => handleResendWhatsApp(r.id)}
                                                         disabled={resendingId === r.id}
-                                                        className="flex items-center gap-1 text-xs text-red-600 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 font-medium px-2 py-1 rounded-lg hover:bg-red-50 dark:hover:bg-red-950/40 transition"
+                                                        className="min-h-[40px] px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5 touch-manipulation"
                                                     >
-                                                        <MessageSquare className="w-3.5 h-3.5" />
+                                                        <MessageSquare className="w-4 h-4" />
                                                         {resendingId === r.id ? 'Resending...' : 'Resend WhatsApp'}
                                                     </button>
 
                                                     {user?.role === 'ADMIN' && (
                                                         <button
                                                             onClick={() => handleDeleteRecord(r.id)}
-                                                            className="flex items-center gap-1 text-xs text-rose-600 hover:text-rose-700 dark:text-rose-400 dark:hover:text-rose-300 font-medium px-2.5 py-1 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/40 transition"
+                                                            className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5 touch-manipulation"
                                                             title="Delete Record (Admin Only)"
                                                         >
-                                                            <Trash2 className="w-3.5 h-3.5" />
+                                                            <Trash2 className="w-4 h-4" />
                                                             Delete
                                                         </button>
                                                     )}
@@ -676,31 +705,31 @@ const VisitorRecordBook = () => {
                                     ))}
                                 </div>
 
-                                {/* Pagination Controls */}
+                                {/* Touchscreen-Friendly Pagination Controls */}
                                 {records.length > 0 && (
-                                    <div className="p-4 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-slate-500 dark:text-slate-400">
+                                    <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
                                         <div>
-                                            Showing <span className="font-semibold text-slate-800 dark:text-slate-200">{indexOfFirstRecord + 1}</span> to <span className="font-semibold text-slate-800 dark:text-slate-200">{Math.min(indexOfLastRecord, records.length)}</span> of <span className="font-semibold text-slate-800 dark:text-slate-200">{records.length}</span> records
+                                            Showing <span className="font-black text-slate-900 dark:text-white">{indexOfFirstRecord + 1}</span> to <span className="font-black text-slate-900 dark:text-white">{Math.min(indexOfLastRecord, records.length)}</span> of <span className="font-black text-slate-900 dark:text-white">{records.length}</span> records
                                         </div>
-                                        <div className="flex items-center gap-2">
+                                        <div className="flex items-center gap-3">
                                             <button
                                                 onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
                                                 disabled={currentPage === 1}
-                                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition"
+                                                className="w-11 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition active:scale-95 flex items-center justify-center touch-manipulation"
                                                 title="Previous Page"
                                             >
-                                                <ChevronLeft className="w-4 h-4" />
+                                                <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
                                             </button>
-                                            <span className="font-medium text-slate-700 dark:text-slate-300">
+                                            <span className="font-bold text-sm text-slate-800 dark:text-slate-200">
                                                 Page {currentPage} of {totalPages}
                                             </span>
                                             <button
                                                 onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
                                                 disabled={currentPage === totalPages}
-                                                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 disabled:opacity-40 transition"
+                                                className="w-11 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition active:scale-95 flex items-center justify-center touch-manipulation"
                                                 title="Next Page"
                                             >
-                                                <ChevronRight className="w-4 h-4" />
+                                                <ChevronRight className="w-5 h-5 text-slate-700 dark:text-slate-200" />
                                             </button>
                                         </div>
                                     </div>
