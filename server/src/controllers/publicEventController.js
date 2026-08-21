@@ -61,6 +61,20 @@ exports.createEvent = async (req, res) => {
 // @access  Public (No Login)
 exports.getEvents = async (req, res) => {
     try {
+        // Auto-cleanup any old titles in the database
+        await prisma.publicEvent.updateMany({
+            where: {
+                OR: [
+                    { title: { contains: 'Office Games', mode: 'insensitive' } },
+                    { title: { contains: 'Office Registration', mode: 'insensitive' } },
+                    { title: { contains: 'Tournament 2026', mode: 'insensitive' } }
+                ]
+            },
+            data: {
+                title: 'Games Registration'
+            }
+        });
+
         let events = await prisma.publicEvent.findMany({
             where: { isActive: true },
             include: {
@@ -122,6 +136,16 @@ exports.getEventById = async (req, res) => {
 
         if (!event) {
             return res.status(404).json({ message: 'Event not found' });
+        }
+
+        // Clean title if old
+        let displayTitle = event.title;
+        if (/office games|tournament 2026|office registration/i.test(displayTitle)) {
+            displayTitle = 'Games Registration';
+            await prisma.publicEvent.update({
+                where: { id: event.id },
+                data: { title: 'Games Registration' }
+            }).catch(() => {});
         }
 
         // Compute game breakdown counts
