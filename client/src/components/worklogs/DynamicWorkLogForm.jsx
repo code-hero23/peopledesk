@@ -7,6 +7,33 @@ import ConfirmationModal from '../ConfirmationModal';
 import { Plus, Trash2, Layers, CheckSquare, List, Clock, TrendingUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const getStatusSelectStyle = (val) => {
+    if (!val) return 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200';
+    const upper = String(val).toUpperCase();
+    if (upper.includes('COMPLETED') || upper === 'YES') {
+        return 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700 font-bold';
+    }
+    if (upper.includes('PROGRESS')) {
+        return 'bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700 font-bold';
+    }
+    if (upper.includes('YET') || upper.includes('PENDING') || upper === 'NO') {
+        return 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700 font-bold';
+    }
+    if (upper.includes('HOLD') || upper.includes('BLOCKED')) {
+        return 'bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700 font-bold';
+    }
+    return 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200';
+};
+
+const getStatusDotClass = (val) => {
+    if (!val) return '';
+    const upper = String(val).toUpperCase();
+    if (upper.includes('COMPLETED') || upper === 'YES') return 'bg-emerald-500 ring-2 ring-emerald-200';
+    if (upper.includes('PROGRESS')) return 'bg-blue-500 ring-2 ring-blue-200';
+    if (upper.includes('HOLD') || upper.includes('BLOCKED')) return 'bg-rose-500 ring-2 ring-rose-200';
+    return 'bg-amber-500 ring-2 ring-amber-200';
+};
+
 const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const dispatch = useDispatch();
     const { isLoading, todayLog } = useSelector((state) => state.employee);
@@ -39,12 +66,30 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
         const initial = {};
         
         // Try to load existing data from todayLog (Persistence)
-        const existingData = todayLog?.customFields || {};
+        let existingData = todayLog?.customFields || {};
+        if (typeof existingData === 'string') {
+            try {
+                existingData = JSON.parse(existingData);
+            } catch (e) {
+                existingData = {};
+            }
+        }
 
         activeTables.forEach((table, index) => {
-            if (existingData[table.label]) {
-                // If we have existing data for this table, use it
-                initial[index] = existingData[table.label].map(row => ({ ...row, _id: row._id || crypto.randomUUID() }));
+            if (existingData[table.label] && Array.isArray(existingData[table.label]) && existingData[table.label].length > 0) {
+                if (table.predefinedRows && !table.allowAddRows) {
+                    initial[index] = table.predefinedRows.map((pRow, rIdx) => ({
+                        ...pRow,
+                        ...(existingData[table.label][rIdx] || {}),
+                        _id: existingData[table.label][rIdx]?._id || crypto.randomUUID()
+                    }));
+                } else {
+                    initial[index] = existingData[table.label].map((row, rIdx) => ({
+                        ...(table.predefinedRows?.[rIdx] || {}),
+                        ...row,
+                        _id: row._id || crypto.randomUUID()
+                    }));
+                }
             } else {
                 // Otherwise initialize empty rows
                 initial[index] = table.predefinedRows
@@ -93,10 +138,11 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     };
 
     const removeRow = (tableIndex, rowIndex) => {
-        if (activeTables[tableIndex].predefinedRows) return;
+        const table = activeTables[tableIndex];
+        if (table.predefinedRows && !table.allowAddRows) return;
         setTableData(prev => {
-            if (prev[tableIndex].length <= 1) return prev;
-            const newTable = prev[tableIndex].filter((_, i) => i !== rowIndex);
+            if (prev[tableIndex]?.length <= 1 && !table.allowAddRows) return prev;
+            const newTable = (prev[tableIndex] || []).filter((_, i) => i !== rowIndex);
             return { ...prev, [tableIndex]: newTable };
         });
     };
@@ -181,89 +227,105 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 </div>
             </div>
 
-            {activeTables.map((table, tableIndex) => (
-                <div key={tableIndex} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700">
-                    <div className="flex items-center gap-2 mb-4 pb-2 border-b border-slate-50 dark:border-slate-800 transition-colors">
-                        <div className={`p-2 rounded-lg transition-colors ${!isTodayOpen ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'}`}>
-                            <List size={18} />
-                        </div>
-                        <h4 className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">{table.label}</h4>
-                    </div>
-
-                    {/* Table Header */}
-                    <div className="hidden md:flex gap-4 mb-2 px-4 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-wider transition-colors">
-                        {table.fields.map(field => (
-                            <div key={field.name} className="flex-1">{field.label}</div>
-                        ))}
-                        {!table.predefinedRows && <div className="w-10"></div>}
-                    </div>
-
-                    <div className="space-y-3">
-                        <AnimatePresence>
-                            {tableData[tableIndex]?.map((row, rowIndex) => (
-                                <motion.div
-                                    key={row._id}
-                                    initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}
-                                    className="flex flex-col md:flex-row gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 group hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all"
+            {activeTables.map((table, tableIndex) => {
+                const canAddRows = table.allowAddRows || !table.predefinedRows;
+                const rows = tableData[tableIndex] || [];
+                return (
+                    <div key={tableIndex} className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 shadow-sm transition-all hover:shadow-md dark:hover:border-slate-700 overflow-x-auto">
+                        <div className="flex items-center justify-between mb-4 pb-2 border-b border-slate-50 dark:border-slate-800 transition-colors">
+                            <div className="flex items-center gap-2">
+                                <div className={`p-2 rounded-lg transition-colors ${!isTodayOpen ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'}`}>
+                                    <List size={18} />
+                                </div>
+                                <h4 className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">{table.label}</h4>
+                            </div>
+                            {canAddRows && (
+                                <button
+                                    type="button"
+                                    onClick={() => addRow(tableIndex)}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl transition-all border border-indigo-100 dark:border-indigo-800 shadow-sm active:scale-95 cursor-pointer"
+                                    title={`Add new row to ${table.label}`}
                                 >
-                                    {table.fields.map(field => (
-                                        <div key={field.name} className="flex-1">
-                                            <label className="md:hidden text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 block">{field.label}</label>
-                                            {field.type === 'select' ? (
-                                                <div className="relative">
-                                                    <select
+                                    <Plus size={14} className="stroke-[3]" />
+                                    <span>Add</span>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Table Header */}
+                        <div className="hidden md:flex gap-4 mb-2 px-4 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-wider transition-colors">
+                            {table.fields.map(field => (
+                                <div key={field.name} className="flex-1">{field.label}</div>
+                            ))}
+                            {canAddRows && <div className="w-8"></div>}
+                        </div>
+
+                        <div className="space-y-3">
+                            <AnimatePresence>
+                                {rows.map((row, rowIndex) => (
+                                    <motion.div
+                                        key={row._id}
+                                        initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, height: 0 }}
+                                        className="flex flex-col md:flex-row gap-3 bg-slate-50 dark:bg-slate-800/50 p-3 rounded-xl border border-slate-100 dark:border-slate-800 group hover:bg-white dark:hover:bg-slate-800 hover:border-indigo-100 dark:hover:border-indigo-900/50 transition-all items-stretch md:items-center"
+                                    >
+                                        {table.fields.map(field => (
+                                            <div key={field.name} className="flex-1">
+                                                <label className="md:hidden text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 block">{field.label}</label>
+                                                {field.type === 'select' ? (
+                                                    <div className="relative">
+                                                        <select
+                                                            value={row[field.name] || ''}
+                                                            onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
+                                                            className={`w-full px-3 py-2 text-sm font-semibold border rounded-lg focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 outline-none appearance-none cursor-pointer transition-all ${
+                                                                field.name === 'status'
+                                                                    ? getStatusSelectStyle(row[field.name])
+                                                                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200'
+                                                            }`}
+                                                        >
+                                                            <option value="" className="bg-white dark:bg-slate-900 text-slate-400">Select...</option>
+                                                            {field.options?.map(opt => (
+                                                                <option key={opt} value={opt} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold">{opt}</option>
+                                                            ))}
+                                                        </select>
+                                                        {field.name === 'status' && row[field.name] && (
+                                                            <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
+                                                                <span className={`w-2 h-2 rounded-full ${getStatusDotClass(row[field.name])}`} />
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                ) : (
+                                                    <input
+                                                        type={field.type}
                                                         value={row[field.name] || ''}
                                                         onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
-                                                        className="w-full px-3 py-2 text-sm font-semibold border border-slate-200 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 focus:border-indigo-300 dark:focus:border-indigo-700 outline-none bg-white dark:bg-slate-800 appearance-none cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition-all"
-                                                    >
-                                                        <option value="" className="dark:bg-slate-900 text-slate-400">Select...</option>
-                                                        {field.options?.map(opt => (
-                                                            <option key={opt} value={opt} className="dark:bg-slate-900">{opt}</option>
-                                                        ))}
-                                                    </select>
-                                                </div>
-                                            ) : (
-                                                <input
-                                                    type={field.type}
-                                                    value={row[field.name] || ''}
-                                                    onChange={(e) => handleRowChange(tableIndex, rowIndex, field.name, e.target.value)}
-                                                    placeholder={field.label}
-                                                    disabled={field.disabled}
-                                                    className={`w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600
-                                                        ${field.disabled
-                                                            ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-600'
-                                                            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 focus:border-indigo-300 dark:focus:border-indigo-700 text-slate-700 dark:text-slate-200'}
-                                                    `}
-                                                />
-                                            )}
-                                        </div>
-                                    ))}
-                                    {!table.predefinedRows && (
-                                        <button
-                                            type="button"
-                                            onClick={() => removeRow(tableIndex, rowIndex)}
-                                            className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors self-end md:self-auto"
-                                            title="Delete Row"
-                                        >
-                                            <Trash2 size={18} />
-                                        </button>
-                                    )}
-                                </motion.div>
-                            ))}
-                        </AnimatePresence>
+                                                        placeholder={field.placeholder || field.label}
+                                                        disabled={field.disabled}
+                                                        className={`w-full px-3 py-2 text-sm font-semibold border rounded-lg outline-none transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600
+                                                            ${field.disabled
+                                                                ? 'bg-slate-100 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-600'
+                                                                : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 focus:ring-2 focus:ring-indigo-100 dark:focus:ring-indigo-900/40 focus:border-indigo-300 dark:focus:border-indigo-700 text-slate-700 dark:text-slate-200'}
+                                                        `}
+                                                    />
+                                                )}
+                                            </div>
+                                        ))}
+                                        {canAddRows && rows.length > 1 && (
+                                            <button
+                                                type="button"
+                                                onClick={() => removeRow(tableIndex, rowIndex)}
+                                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors self-end md:self-auto cursor-pointer"
+                                                title="Delete Row"
+                                            >
+                                                <Trash2 size={18} />
+                                            </button>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </AnimatePresence>
+                        </div>
                     </div>
-
-                    {!table.predefinedRows && (
-                        <button
-                            type="button"
-                            onClick={() => addRow(tableIndex)}
-                            className={`mt-4 w-full py-3 border-2 border-dashed ${!isTodayOpen ? 'border-indigo-200 dark:border-indigo-900/30 text-indigo-500 dark:text-indigo-400 hover:border-indigo-400' : 'border-emerald-200 dark:border-emerald-900/30 text-emerald-500 dark:text-emerald-400 hover:border-emerald-400'} rounded-xl font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide`}
-                        >
-                            <Plus size={16} /> Add Entry
-                        </button>
-                    )}
-                </div>
-            ))}
+                );
+            })}
 
             {isTodayOpen && (
                 <div className="bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-2xl border border-blue-100 dark:border-blue-900/30 space-y-3 transition-colors">

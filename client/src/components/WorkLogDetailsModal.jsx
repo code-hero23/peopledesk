@@ -366,7 +366,34 @@ const renderTable = (title, data) => {
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 transition-colors">
                         {data.map((row, i) => (
                             <tr key={i} className="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
-                                {headers.map(h => <td key={h} className="px-4 py-3 border-r border-slate-100 dark:border-slate-800 last:border-r-0 text-slate-700 dark:text-slate-300 font-bold">{row[h]}</td>)}
+                                {headers.map(h => {
+                                    const val = row[h];
+                                    if (h.toLowerCase() === 'status' && val) {
+                                        const upperVal = String(val).toUpperCase();
+                                        let badgeClass = "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700";
+                                        if (upperVal.includes('COMPLETED') || upperVal === 'YES') {
+                                            badgeClass = "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800";
+                                        } else if (upperVal.includes('PROGRESS')) {
+                                            badgeClass = "bg-blue-50 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300 border-blue-200 dark:border-blue-800";
+                                        } else if (upperVal.includes('YET') || upperVal.includes('PENDING') || upperVal === 'NO') {
+                                            badgeClass = "bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border-amber-200 dark:border-amber-800";
+                                        } else if (upperVal.includes('HOLD') || upperVal.includes('BLOCKED')) {
+                                            badgeClass = "bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300 border-rose-200 dark:border-rose-800";
+                                        }
+                                        return (
+                                            <td key={h} className="px-4 py-3 border-r border-slate-100 dark:border-slate-800 last:border-r-0">
+                                                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+                                                    {val}
+                                                </span>
+                                            </td>
+                                        );
+                                    }
+                                    return (
+                                        <td key={h} className="px-4 py-3 border-r border-slate-100 dark:border-slate-800 last:border-r-0 text-slate-700 dark:text-slate-300 font-bold">
+                                            {val || '-'}
+                                        </td>
+                                    );
+                                })}
                             </tr>
                         ))}
                     </tbody>

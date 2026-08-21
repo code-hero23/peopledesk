@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-const Modal = ({ title, onClose, children, showClose = true, closeOnClickOutside = true }) => {
+const Modal = ({ title, onClose, children, showClose = true, closeOnClickOutside = true, maxWidth = "max-w-2xl" }) => {
     // Close on Escape key
     useEffect(() => {
         const handleEsc = (e) => {
@@ -16,7 +16,7 @@ const Modal = ({ title, onClose, children, showClose = true, closeOnClickOutside
             onClick={() => closeOnClickOutside && onClose()}
         >
             <div
-                className="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto transform transition-all scale-100 flex flex-col border dark:border-slate-800"
+                className={`bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full ${maxWidth} max-h-[90vh] overflow-y-auto transform transition-all scale-100 flex flex-col border dark:border-slate-800`}
                 onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside modal
             >
                 <div className="flex justify-between items-center p-6 border-b border-slate-100 dark:border-slate-800 sticky top-0 bg-white dark:bg-slate-900 z-10 transition-colors">

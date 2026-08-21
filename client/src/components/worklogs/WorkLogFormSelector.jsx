@@ -47,6 +47,10 @@ const WorkLogFormSelector = ({ designation, onSuccess }) => {
         case 'OFFICE ADMIN':
         case 'ADMIN':
             return <DynamicWorkLogForm onSuccess={onSuccess} role="OFFICE-ADMINISTRATION" />;
+        case 'VENDOR MANAGEMENT':
+        case 'VENDOR-MANAGEMENT':
+        case 'VENDOR':
+            return <DynamicWorkLogForm onSuccess={onSuccess} role="VENDOR-MANAGEMENT" />;
     }
 
     // 2. Check if there's a dynamic config for this designation.

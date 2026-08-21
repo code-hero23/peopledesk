@@ -64,15 +64,54 @@ export const WORK_LOG_CONFIG = {
         ]
     },
     "VENDOR-MANAGEMENT": {
-        title: "Vendor Management Report",
+        title: "Vendor Management Daily Report",
         tables: [
             {
-                label: "Vendor Tasks",
+                label: "Installation Sheet Update",
+                allowAddRows: true,
                 fields: [
-                    { name: "task", label: "Task", type: "text" },
-                    { name: "status", label: "Status", type: "select", options: ["Pending", "In Progress", "Completed"] },
-                    { name: "remarks", label: "Remarks", type: "text" },
-                    { name: "bh_works", label: "BH Works", type: "text" }
+                    { name: "task", label: "Check / Task", type: "text", placeholder: "e.g. Group update" },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] },
+                    { name: "remarks", label: "Remarks / Details", type: "text", placeholder: "Remarks / Details" }
+                ],
+                predefinedRows: [
+                    { task: "Group update" }
+                ]
+            },
+            {
+                label: "Payment Sheet Update",
+                allowAddRows: true,
+                fields: [
+                    { name: "task", label: "Check / Task", type: "text", placeholder: "e.g. Payment from client" },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] },
+                    { name: "remarks", label: "Remarks / Details", type: "text", placeholder: "Remarks / Details" }
+                ],
+                predefinedRows: [
+                    { task: "Payment from client" }
+                ]
+            },
+            {
+                label: "Vendor Follow Up",
+                allowAddRows: true,
+                fields: [
+                    { name: "task", label: "Check / Task", type: "text", placeholder: "e.g. Vendor quotation" },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] },
+                    { name: "remarks", label: "Remarks / Site Count", type: "text", placeholder: "Remarks / Site Count" }
+                ],
+                predefinedRows: [
+                    { task: "Vendor quotation" }
+                ]
+            },
+            {
+                label: "Quotation Approval",
+                allowAddRows: true,
+                fields: [
+                    { name: "task", label: "Check / Task", type: "text", placeholder: "e.g. Quotation approval" },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] },
+                    { name: "remarks", label: "No. of Quotations / Remarks", type: "text", placeholder: "No. of Quotations / Remarks" }
+                ],
+                predefinedRows: [
+                    { task: "Quotation approval" }
                 ]
             }
         ]

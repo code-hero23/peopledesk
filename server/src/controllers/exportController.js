@@ -18,10 +18,19 @@ const formatValue = (val) => {
     if (Array.isArray(val)) {
         return val.map(item => {
             if (typeof item === 'object' && item !== null) {
-                // If it's a typical task/log item like {description: "...", status: "..."}
-                const desc = item.description || item.task || item.projectName || item.clientName || '';
-                const extra = item.status || item.count || '';
-                return `${desc}${extra ? ` (${extra})` : ''}`;
+                const desc = item.description || item.task || item.item || item.metric || item.projectName || item.clientName || '';
+                const parts = [];
+                if (item.timing) parts.push(`Time: ${item.timing}`);
+                if (item.status) parts.push(`Status: ${item.status}`);
+                if (item.siteOrClient) parts.push(`Site/Client: ${item.siteOrClient}`);
+                if (item.amountOrClient) parts.push(`Details: ${item.amountOrClient}`);
+                if (item.vendorOrSite) parts.push(`Vendor/Site: ${item.vendorOrSite}`);
+                if (item.quotationCount) parts.push(`Quotes: ${item.quotationCount}`);
+                if (item.count) parts.push(`Count: ${item.count}`);
+                if (item.details) parts.push(item.details);
+                if (item.remarks) parts.push(`Remarks: ${item.remarks}`);
+                const extra = parts.join(' | ');
+                return `${desc}${extra ? ` [${extra}]` : ''}`;
             }
             return String(item);
         }).filter(Boolean).join('; ');
