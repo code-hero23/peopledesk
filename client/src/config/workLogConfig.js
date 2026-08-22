@@ -113,6 +113,18 @@ export const WORK_LOG_CONFIG = {
                 predefinedRows: [
                     { task: "Quotation approval" }
                 ]
+            },
+            {
+                label: "Attendance",
+                allowAddRows: true,
+                fields: [
+                    { name: "task", label: "Check / Task", type: "text", placeholder: "e.g. Attendance in operation" },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] },
+                    { name: "remarks", label: "Remarks / Details", type: "text", placeholder: "Remarks / Details" }
+                ],
+                predefinedRows: [
+                    { task: "Attendance in operation" }
+                ]
             }
         ]
     },
