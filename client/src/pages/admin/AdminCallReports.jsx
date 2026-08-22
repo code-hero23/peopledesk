@@ -961,8 +961,23 @@ const AdminCallReports = () => {
                                                 </tr>
                                             </thead>
                                             <tbody className="divide-y divide-slate-50">
-                                                {employeeFilteredLogs
-                                                    .sort((a, b) => b.date - a.date)
+                                                {[...employeeFilteredLogs]
+                                                    .sort((a, b) => {
+                                                        const normA = normalize(a.number);
+                                                        const normB = normalize(b.number);
+                                                        const countA = numberCallCounts[normA] || 0;
+                                                        const countB = numberCallCounts[normB] || 0;
+                                                        const freqA = countA > 3 ? 1 : 0;
+                                                        const freqB = countB > 3 ? 1 : 0;
+
+                                                        // Sort frequent (>3 calls) numbers to top first
+                                                        if (freqA !== freqB) return freqB - freqA;
+
+                                                        // Secondary sort by timestamp descending
+                                                        const timeA = new Date(a.date).getTime() || 0;
+                                                        const timeB = new Date(b.date).getTime() || 0;
+                                                        return timeB - timeA;
+                                                    })
                                                     .map((call, idx) => {
                                                         const normNum = normalize(call.number);
                                                         const callCount = numberCallCounts[normNum] || 0;
@@ -973,7 +988,7 @@ const AdminCallReports = () => {
                                                                 key={idx} 
                                                                 className={`transition-colors ${
                                                                     isFrequent 
-                                                                        ? 'bg-amber-50/60 hover:bg-amber-100/60 border-l-4 border-l-amber-500' 
+                                                                        ? 'bg-amber-100/70 hover:bg-amber-100/90 border-l-4 border-l-amber-500 font-bold' 
                                                                         : 'hover:bg-slate-50/50'
                                                                 }`}
                                                             >
