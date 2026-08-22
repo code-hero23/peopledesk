@@ -50,7 +50,7 @@ const FloatingMascot = () => {
                             <img
                                 src="/floating-mascot.gif"
                                 alt="Mascot"
-                                className="w-28 h-28 md:w-36 md:h-36 object-contain pointer-events-none drop-shadow-2xl"
+                                className="w-44 h-44 md:w-60 md:h-60 object-contain pointer-events-none drop-shadow-2xl"
                             />
 
                             {/* Ambient Glowing Aura */}
