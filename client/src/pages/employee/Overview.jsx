@@ -94,7 +94,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                         animate={{ opacity: 1, scale: 1 }} 
                         exit={{ opacity: 0, scale: 0.95 }} 
                         transition={{ duration: 0.5, ease: "anticipate" }} 
-                        className="absolute inset-0 z-30 overflow-hidden bg-slate-950 flex items-center justify-center"
+                        className="absolute inset-0 z-30 overflow-hidden bg-gradient-to-br from-cyan-900/90 via-slate-900/90 to-cyan-950/95 flex items-center justify-center"
                     >
                         {/* Ambient Blurred Backdrop */}
                         <img 
@@ -110,9 +110,9 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                                 : '/break.gif'
                             } 
                             alt="" 
-                            className="absolute inset-0 w-full h-full object-cover blur-xl scale-125 opacity-40" 
+                            className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-30" 
                         />
-                        <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-slate-950/60 pointer-events-none" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
 
                         {/* Crisp Uncropped Mascot Animation (Supports Transparent Video and GIF) */}
                         {(() => {
