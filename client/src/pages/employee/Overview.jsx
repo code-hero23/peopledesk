@@ -94,27 +94,9 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                         animate={{ opacity: 1, scale: 1 }} 
                         exit={{ opacity: 0, scale: 0.95 }} 
                         transition={{ duration: 0.5, ease: "anticipate" }} 
-                        className="absolute inset-0 z-30 overflow-hidden bg-gradient-to-br from-cyan-900/90 via-slate-900/90 to-cyan-950/95 flex items-center justify-center"
+                        className="absolute inset-0 z-30 overflow-hidden bg-white flex items-center justify-center p-2"
                     >
-                        {/* Ambient Blurred Backdrop */}
-                        <img 
-                            src={
-                                activeBreak.breakType === 'LUNCH' 
-                                    ? '/lunch-break.gif' 
-                                    : activeBreak.breakType === 'TEA' 
-                                        ? '/tea-break.gif' 
-                                        : activeBreak.breakType === 'CLIENT_MEETING'
-                                            ? '/client-meeting-break.gif'
-                                            : activeBreak.breakType === 'BH_MEETING'
-                                                ? '/bh-meeting-break.gif'
-                                                : '/break.gif'
-                            } 
-                            alt="" 
-                            className="absolute inset-0 w-full h-full object-cover blur-md scale-110 opacity-30" 
-                        />
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20 pointer-events-none" />
-
-                        {/* Crisp Uncropped Mascot Animation (Supports Transparent Video and GIF) */}
+                        {/* Crisp Uncropped Mascot Animation */}
                         {(() => {
                             const breakSrc = activeBreak.breakType === 'LUNCH' 
                                 ? '/lunch-break.gif' 
@@ -136,7 +118,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                         loop
                                         muted
                                         playsInline
-                                        className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]"
+                                        className="relative z-10 w-full h-full object-contain filter drop-shadow-md"
                                     />
                                 );
                             }
@@ -145,12 +127,12 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                 <img 
                                     src={breakSrc} 
                                     alt={`On ${activeBreak.breakType} Break`} 
-                                    className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]" 
+                                    className="relative z-10 w-full h-full object-contain filter drop-shadow-md" 
                                 />
                             );
                         })()}
-                        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4">
-                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-black/60 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/15 shadow-xl">
+                        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent flex flex-col justify-end p-4">
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/20 shadow-xl">
                                 <Coffee size={14} className="text-amber-400 animate-pulse" />
                                 <span className="text-[10px] font-black text-white uppercase tracking-widest">RELAXING: {activeBreak.breakType}</span>
                             </motion.div>
@@ -951,7 +933,7 @@ const Overview = () => {
                             <div className="bg-white/95 dark:bg-slate-900 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4 transition-colors">
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
-                                        <div className="w-14 h-14 bg-slate-950 rounded-2xl overflow-hidden shadow-lg border border-amber-400/40 flex items-center justify-center">
+                                        <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-amber-400/40 flex items-center justify-center">
                                             {(() => {
                                                 const breakSrc = activeBreak.breakType === 'LUNCH' 
                                                     ? '/lunch-break.gif' 
