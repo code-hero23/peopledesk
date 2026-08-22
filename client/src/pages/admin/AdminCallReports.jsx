@@ -7,7 +7,7 @@ import {
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, ChevronRight, Activity, Smartphone,
     PieChart as PieChartIcon, BarChart3, TrendingUp, Users,
-    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon, Mail
+    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon, Mail, Flame
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -984,11 +984,13 @@ const AdminCallReports = () => {
                                                         const isFrequent = callCount > 3;
 
                                                         return (
-                                                            <tr 
+                                                            <motion.tr 
                                                                 key={idx} 
-                                                                className={`transition-colors ${
+                                                                initial={isFrequent ? { scale: 0.99 } : false}
+                                                                animate={isFrequent ? { scale: 1 } : false}
+                                                                className={`transition-all duration-300 relative ${
                                                                     isFrequent 
-                                                                        ? 'bg-amber-100/70 hover:bg-amber-100/90 border-l-4 border-l-amber-500 font-bold' 
+                                                                        ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 hover:from-amber-500/25 hover:to-orange-500/15 border-l-4 border-l-amber-500 shadow-sm font-bold' 
                                                                         : 'hover:bg-slate-50/50'
                                                                 }`}
                                                             >
@@ -1002,14 +1004,19 @@ const AdminCallReports = () => {
                                                                 </td>
                                                                 <td className="px-8 py-4">
                                                                     <div className="flex flex-col items-start gap-1">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <span className={`text-sm font-black ${isFrequent ? 'text-amber-900' : 'text-slate-800'}`}>
+                                                                        <div className="flex items-center gap-2 flex-wrap">
+                                                                            <span className={`text-sm font-black ${isFrequent ? 'text-amber-900 drop-shadow-sm' : 'text-slate-800'}`}>
                                                                                 {call.number}
                                                                             </span>
                                                                             {isFrequent && (
-                                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-500 text-white uppercase tracking-wider shadow-sm">
-                                                                                    {callCount} Calls
-                                                                                </span>
+                                                                                <motion.span 
+                                                                                    animate={{ scale: [1, 1.06, 1] }}
+                                                                                    transition={{ repeat: Infinity, duration: 2 }}
+                                                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white uppercase tracking-wider shadow-md shadow-orange-500/30 border border-amber-300/40"
+                                                                                >
+                                                                                    <Flame size={11} className="animate-bounce text-yellow-200" />
+                                                                                    <span>Frequent ({callCount} Calls)</span>
+                                                                                </motion.span>
                                                                             )}
                                                                         </div>
                                                                         <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
@@ -1033,7 +1040,7 @@ const AdminCallReports = () => {
                                                                         {call.duration}s
                                                                     </span>
                                                                 </td>
-                                                            </tr>
+                                                            </motion.tr>
                                                         );
                                                     })}
                                             </tbody>
