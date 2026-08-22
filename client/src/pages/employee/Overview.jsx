@@ -119,7 +119,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                             const breakSrc = activeBreak.breakType === 'LUNCH' 
                                 ? '/lunch-break.gif' 
                                 : activeBreak.breakType === 'TEA' 
-                                    ? '/tea-break.mp4' 
+                                    ? '/tea-break.gif' 
                                     : activeBreak.breakType === 'CLIENT_MEETING'
                                         ? '/client-meeting-break.gif'
                                         : activeBreak.breakType === 'BH_MEETING'
@@ -136,7 +136,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                         loop
                                         muted
                                         playsInline
-                                        className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.05] mix-blend-screen"
+                                        className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]"
                                     />
                                 );
                             }
@@ -956,7 +956,7 @@ const Overview = () => {
                                                 const breakSrc = activeBreak.breakType === 'LUNCH' 
                                                     ? '/lunch-break.gif' 
                                                     : activeBreak.breakType === 'TEA' 
-                                                        ? '/tea-break.mp4' 
+                                                        ? '/tea-break.gif' 
                                                         : activeBreak.breakType === 'CLIENT_MEETING'
                                                             ? '/client-meeting-break.gif'
                                                             : activeBreak.breakType === 'BH_MEETING'
@@ -971,7 +971,7 @@ const Overview = () => {
                                                             loop
                                                             muted
                                                             playsInline
-                                                            className="w-full h-full object-contain p-0.5 filter drop-shadow mix-blend-screen"
+                                                            className="w-full h-full object-contain p-0.5 filter drop-shadow"
                                                         />
                                                     );
                                                 }
