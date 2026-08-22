@@ -9,6 +9,7 @@ import SupportButton from './common/SupportButton';
 import NoticeBoard from './common/NoticeBoard';
 import Sidebar from './Sidebar';
 import HourlyAlarm from './common/HourlyAlarm';
+import FloatingMascot from './common/FloatingMascot';
 
 const Layout = () => {
     const navigate = useNavigate();
@@ -86,6 +87,7 @@ const Layout = () => {
             <InstallApp />
             <SupportButton />
             <HourlyAlarm />
+            <FloatingMascot />
         </div>
     );
 };
