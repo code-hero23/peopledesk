@@ -833,6 +833,14 @@ const AdminCallReports = () => {
                         return getCallSimLabel(c).toLowerCase() === simFilter.toLowerCase();
                     });
 
+                const numberCallCounts = employeeFilteredLogs.reduce((acc, c) => {
+                    const norm = normalize(c.number);
+                    if (norm) {
+                        acc[norm] = (acc[norm] || 0) + 1;
+                    }
+                    return acc;
+                }, {});
+
                 const localMetrics = {
                     total: employeeFilteredLogs.length,
                     incoming: employeeFilteredLogs.filter(c => c.type === 'INCOMING').length,
@@ -909,7 +917,7 @@ const AdminCallReports = () => {
                                                     ))}
                                                 </Pie>
                                                 <Tooltip
-                                                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                                                    contentStyle={{ borderRadius: '16px', border: 'none', shadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
                                                 />
                                                 <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900' }} />
                                             </PieChart>
@@ -955,42 +963,64 @@ const AdminCallReports = () => {
                                             <tbody className="divide-y divide-slate-50">
                                                 {employeeFilteredLogs
                                                     .sort((a, b) => b.date - a.date)
-                                                    .map((call, idx) => (
-                                                        <tr key={idx} className="hover:bg-slate-50/50 transition-colors">
-                                                            <td className="px-8 py-4">
-                                                                <div className="flex items-center gap-3">
-                                                                    <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                                                                        {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
+                                                    .map((call, idx) => {
+                                                        const normNum = normalize(call.number);
+                                                        const callCount = numberCallCounts[normNum] || 0;
+                                                        const isFrequent = callCount > 3;
+
+                                                        return (
+                                                            <tr 
+                                                                key={idx} 
+                                                                className={`transition-colors ${
+                                                                    isFrequent 
+                                                                        ? 'bg-amber-50/60 hover:bg-amber-100/60 border-l-4 border-l-amber-500' 
+                                                                        : 'hover:bg-slate-50/50'
+                                                                }`}
+                                                            >
+                                                                <td className="px-8 py-4">
+                                                                    <div className="flex items-center gap-3">
+                                                                        <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                            {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
+                                                                        </div>
+                                                                        <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
                                                                     </div>
-                                                                    <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-8 py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-sm font-black text-slate-800">{call.number}</span>
-                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-8 py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-black text-slate-700">
-                                                                        {call.simLabel || (call.simSlot ? `SIM ${call.simSlot}` : 'N/A')}
+                                                                </td>
+                                                                <td className="px-8 py-4">
+                                                                    <div className="flex flex-col items-start gap-1">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={`text-sm font-black ${isFrequent ? 'text-amber-900' : 'text-slate-800'}`}>
+                                                                                {call.number}
+                                                                            </span>
+                                                                            {isFrequent && (
+                                                                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-black bg-amber-500 text-white uppercase tracking-wider shadow-sm">
+                                                                                    {callCount} Calls
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-8 py-4">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs font-black text-slate-700">
+                                                                            {call.simLabel || (call.simSlot ? `SIM ${call.simSlot}` : 'N/A')}
+                                                                        </span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-8 py-4">
+                                                                    <div className="flex flex-col">
+                                                                        <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
+                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                                                                    </div>
+                                                                </td>
+                                                                <td className="px-8 py-4 text-right">
+                                                                    <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                                        {call.duration}s
                                                                     </span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-8 py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
-                                                                    <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                </div>
-                                                            </td>
-                                                            <td className="px-8 py-4 text-right">
-                                                                <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
-                                                                    {call.duration}s
-                                                                </span>
-                                                            </td>
-                                                        </tr>
-                                                    ))}
+                                                                </td>
+                                                            </tr>
+                                                        );
+                                                    })}
                                             </tbody>
                                         </table>
                                     </div>
