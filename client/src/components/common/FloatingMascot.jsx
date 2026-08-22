@@ -21,15 +21,11 @@ const FloatingMascot = () => {
                 className="fixed bottom-6 right-6 z-[9999] pointer-events-auto flex flex-col items-end select-none cursor-grab active:cursor-grabbing"
             >
                 {!isMinimized ? (
-                    <motion.div 
-                        className="relative group flex flex-col items-end"
-                        animate={{ y: [0, -6, 0] }}
-                        transition={{ repeat: Infinity, duration: 3, ease: 'easeInOut' }}
-                    >
+                    <div className="relative group flex flex-col items-end">
                         {/* Action Control Buttons & Drag Handle */}
-                        <div className="flex items-center gap-1.5 mb-1 opacity-0 group-hover:opacity-100 transition-all duration-300 transform translate-y-1 group-hover:translate-y-0">
-                            <div className="flex items-center gap-1 px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-slate-900/80 text-white rounded-full backdrop-blur-md border border-white/20 shadow-lg">
-                                <GripHorizontal size={10} className="text-amber-400" />
+                        <div className="flex items-center gap-1.5 mb-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                            <div className="flex items-center gap-1 px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-slate-900/90 text-white rounded-full backdrop-blur-md border border-white/20 shadow-xl">
+                                <GripHorizontal size={12} className="text-amber-400" />
                                 <span>Drag Me</span>
                             </div>
                             <button
@@ -37,7 +33,7 @@ const FloatingMascot = () => {
                                     e.stopPropagation();
                                     setIsMinimized(true);
                                 }}
-                                className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider bg-slate-900/80 hover:bg-slate-900 text-white rounded-full backdrop-blur-md border border-white/20 shadow-lg transition-transform active:scale-95"
+                                className="px-2.5 py-1 text-[10px] font-black uppercase tracking-wider bg-slate-900/90 hover:bg-slate-900 text-white rounded-full backdrop-blur-md border border-white/20 shadow-xl transition-transform active:scale-95"
                                 title="Minimize"
                             >
                                 Minimize
@@ -47,29 +43,22 @@ const FloatingMascot = () => {
                                     e.stopPropagation();
                                     setIsVisible(false);
                                 }}
-                                className="p-1 bg-red-500/80 hover:bg-red-600 text-white rounded-full backdrop-blur-md shadow-lg transition-transform active:scale-95"
+                                className="p-1.5 bg-red-500/90 hover:bg-red-600 text-white rounded-full backdrop-blur-md shadow-xl transition-transform active:scale-95"
                                 title="Close"
                             >
-                                <X size={10} />
+                                <X size={12} />
                             </button>
                         </div>
 
-                        {/* Interactive Floating Card */}
-                        <motion.div 
-                            className="relative cursor-grab active:cursor-grabbing filter drop-shadow-[0_15px_35px_rgba(0,0,0,0.3)]"
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                        >
+                        {/* Interactive Large Floating Card */}
+                        <div className="relative cursor-grab active:cursor-grabbing">
                             <img
                                 src="/floating-mascot.gif"
                                 alt="Mascot"
-                                className="w-44 h-44 md:w-60 md:h-60 object-contain pointer-events-none drop-shadow-2xl"
+                                className="w-64 h-64 md:w-96 md:h-96 object-contain pointer-events-none drop-shadow-2xl translate-z-0"
                             />
-
-                            {/* Ambient Glowing Aura */}
-                            <div className="absolute inset-0 -z-10 bg-gradient-to-tr from-amber-400/20 via-orange-500/20 to-red-500/20 rounded-full blur-xl animate-pulse" />
-                        </motion.div>
-                    </motion.div>
+                        </div>
+                    </div>
                 ) : (
                     /* Minimized Bubble State */
                     <motion.button
