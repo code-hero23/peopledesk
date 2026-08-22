@@ -114,22 +114,41 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-950/30 to-slate-950/60 pointer-events-none" />
 
-                        {/* Crisp Uncropped Mascot */}
-                        <img 
-                            src={
-                                activeBreak.breakType === 'LUNCH' 
-                                    ? '/lunch-break.gif' 
-                                    : activeBreak.breakType === 'TEA' 
-                                        ? '/tea-break.gif' 
-                                        : activeBreak.breakType === 'CLIENT_MEETING'
-                                            ? '/client-meeting-break.gif'
-                                            : activeBreak.breakType === 'BH_MEETING'
-                                                ? '/bh-meeting-break.gif'
-                                                : '/break.gif'
-                            } 
-                            alt={`On ${activeBreak.breakType} Break`} 
-                            className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]" 
-                        />
+                        {/* Crisp Uncropped Mascot Animation (Supports Transparent Video and GIF) */}
+                        {(() => {
+                            const breakSrc = activeBreak.breakType === 'LUNCH' 
+                                ? '/lunch-break.gif' 
+                                : activeBreak.breakType === 'TEA' 
+                                    ? '/tea-break.mp4' 
+                                    : activeBreak.breakType === 'CLIENT_MEETING'
+                                        ? '/client-meeting-break.gif'
+                                        : activeBreak.breakType === 'BH_MEETING'
+                                            ? '/bh-meeting-break.gif'
+                                            : '/break.gif';
+
+                            const isVideo = breakSrc.endsWith('.mp4') || breakSrc.endsWith('.webm');
+
+                            if (isVideo) {
+                                return (
+                                    <video
+                                        src={breakSrc}
+                                        autoPlay
+                                        loop
+                                        muted
+                                        playsInline
+                                        className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]"
+                                    />
+                                );
+                            }
+
+                            return (
+                                <img 
+                                    src={breakSrc} 
+                                    alt={`On ${activeBreak.breakType} Break`} 
+                                    className="relative z-10 w-full h-full object-contain p-2 filter drop-shadow-[0_12px_24px_rgba(0,0,0,0.85)] brightness-[1.03]" 
+                                />
+                            );
+                        })()}
                         <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-black/90 via-black/40 to-transparent flex flex-col justify-end p-4">
                             <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-black/60 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/15 shadow-xl">
                                 <Coffee size={14} className="text-amber-400 animate-pulse" />
@@ -933,21 +952,38 @@ const Overview = () => {
                                 <div className="flex items-center gap-4">
                                     <div className="relative">
                                         <div className="w-14 h-14 bg-slate-950 rounded-2xl overflow-hidden shadow-lg border border-amber-400/40 flex items-center justify-center">
-                                            <img 
-                                                src={
-                                                    activeBreak.breakType === 'LUNCH' 
-                                                        ? '/lunch-break.gif' 
-                                                        : activeBreak.breakType === 'TEA' 
-                                                            ? '/tea-break.gif' 
-                                                            : activeBreak.breakType === 'CLIENT_MEETING'
-                                                                ? '/client-meeting-break.gif'
-                                                                : activeBreak.breakType === 'BH_MEETING'
-                                                                    ? '/bh-meeting-break.gif'
-                                                                    : '/break.gif'
-                                                } 
-                                                alt="" 
-                                                className="w-full h-full object-contain p-0.5 filter drop-shadow" 
-                                            />
+                                            {(() => {
+                                                const breakSrc = activeBreak.breakType === 'LUNCH' 
+                                                    ? '/lunch-break.gif' 
+                                                    : activeBreak.breakType === 'TEA' 
+                                                        ? '/tea-break.mp4' 
+                                                        : activeBreak.breakType === 'CLIENT_MEETING'
+                                                            ? '/client-meeting-break.gif'
+                                                            : activeBreak.breakType === 'BH_MEETING'
+                                                                ? '/bh-meeting-break.gif'
+                                                                : '/break.gif';
+
+                                                if (breakSrc.endsWith('.mp4') || breakSrc.endsWith('.webm')) {
+                                                    return (
+                                                        <video
+                                                            src={breakSrc}
+                                                            autoPlay
+                                                            loop
+                                                            muted
+                                                            playsInline
+                                                            className="w-full h-full object-contain p-0.5 filter drop-shadow"
+                                                        />
+                                                    );
+                                                }
+
+                                                return (
+                                                    <img 
+                                                        src={breakSrc} 
+                                                        alt="" 
+                                                        className="w-full h-full object-contain p-0.5 filter drop-shadow" 
+                                                    />
+                                                );
+                                            })()}
                                         </div>
                                         <span className="absolute -top-1 -right-1 flex h-4 w-4">
                                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
