@@ -131,10 +131,10 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                 />
                             );
                         })()}
-                        <div className="absolute inset-x-0 bottom-0 z-20 bg-gradient-to-t from-slate-900/60 via-slate-900/10 to-transparent flex flex-col justify-end p-4">
-                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-slate-900/80 backdrop-blur-md self-start px-3 py-1.5 rounded-xl border border-white/20 shadow-xl">
-                                <Coffee size={14} className="text-amber-400 animate-pulse" />
-                                <span className="text-[10px] font-black text-white uppercase tracking-widest">RELAXING: {activeBreak.breakType}</span>
+                        <div className="absolute inset-x-0 bottom-2 z-20 flex justify-center pointer-events-none">
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 shadow-md">
+                                <Coffee size={14} className="text-amber-500 animate-pulse" />
+                                <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">RELAXING: {activeBreak.breakType}</span>
                             </motion.div>
                         </div>
                     </motion.div>
