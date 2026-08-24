@@ -50,11 +50,13 @@ const Helpdesk = () => {
                 type: 'ISSUE',
                 category: 'OTHER'
             });
+            dispatch(reset());
         }
         if (isError && message) {
             toast.error(message);
+            dispatch(reset());
         }
-    }, [isSuccess, isError, message]);
+    }, [isSuccess, isError, message, isModalOpen, dispatch]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });

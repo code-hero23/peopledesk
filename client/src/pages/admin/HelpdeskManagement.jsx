@@ -63,11 +63,13 @@ const HelpdeskManagement = () => {
             setSelectedTicket(null);
             setRemarks('');
             setNewStatus('');
+            dispatch(reset());
         }
         if (isError && message) {
             toast.error(message);
+            dispatch(reset());
         }
-    }, [isSuccess, isError, message, selectedTicket]);
+    }, [isSuccess, isError, message, selectedTicket, dispatch]);
 
     const handleUpdate = (e) => {
         e.preventDefault();
