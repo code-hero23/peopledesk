@@ -76,7 +76,8 @@ const PopupManagement = () => {
             setMessage({ type: 'success', text: 'GIF / Image uploaded successfully!' });
         } catch (error) {
             console.error(error);
-            setMessage({ type: 'error', text: 'Upload failed. Please try again.' });
+            const errText = error.response?.data?.message || 'Upload failed. Please try again.';
+            setMessage({ type: 'error', text: errText });
         } finally {
             setIsUploading(false);
         }
@@ -92,7 +93,9 @@ const PopupManagement = () => {
             });
             setMessage({ type: 'success', text: 'Configuration saved successfully!' });
         } catch (error) {
-            setMessage({ type: 'error', text: 'Failed to save configuration.' });
+            console.error(error);
+            const errText = error.response?.data?.message || 'Failed to save configuration.';
+            setMessage({ type: 'error', text: errText });
         } finally {
             setIsSaving(false);
         }

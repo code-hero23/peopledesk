@@ -32,10 +32,10 @@ const upload = multer({
 });
 
 router.get('/', protect, popupController.getPopupConfig);
-router.post('/', protect, authorize('ADMIN'), popupController.updatePopupConfig);
+router.post('/', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR'), popupController.updatePopupConfig);
 
 // Dedicated route for image upload
-router.post('/upload', protect, authorize('ADMIN'), upload.single('image'), (req, res) => {
+router.post('/upload', protect, authorize('ADMIN', 'BUSINESS_HEAD', 'HR'), upload.single('image'), (req, res) => {
     if (!req.file) {
         return res.status(400).json({ message: 'Please upload a file' });
     }
