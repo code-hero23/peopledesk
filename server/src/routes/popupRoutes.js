@@ -19,14 +19,14 @@ const upload = multer({
     storage: storage,
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
     fileFilter: (req, file, cb) => {
-        const filetypes = /jpeg|jpg|png|webp/;
+        const filetypes = /jpeg|jpg|png|webp|gif/;
         const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
-        const mimetype = filetypes.test(file.mimetype);
+        const mimetype = filetypes.test(file.mimetype) || file.mimetype === 'image/gif';
 
         if (extname && mimetype) {
             return cb(null, true);
         } else {
-            cb(new Error('Error: Images only! (PNG, JPG, WEBP)'));
+            cb(new Error('Error: Images only! (PNG, JPG, WEBP, GIF)'));
         }
     }
 });

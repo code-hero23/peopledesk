@@ -45,10 +45,10 @@ const PopupManagement = () => {
         const file = e.target.files[0];
         if (!file) return;
 
-        // Valid types: PNG, JPG, JPEG, WEBP
-        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp'];
+        // Valid types: PNG, JPG, JPEG, WEBP, GIF
+        const validTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/webp', 'image/gif'];
         if (!validTypes.includes(file.type)) {
-            setMessage({ type: 'error', text: 'Please upload a PNG, JPG, or WEBP image.' });
+            setMessage({ type: 'error', text: 'Please upload a PNG, JPG, WEBP, or GIF image.' });
             return;
         }
 
@@ -73,7 +73,7 @@ const PopupManagement = () => {
             });
             setConfig({ ...config, imageUrl: res.data.imageUrl });
             setPreviewImage(`${API_URL}${res.data.imageUrl}`);
-            setMessage({ type: 'success', text: 'Image uploaded successfully!' });
+            setMessage({ type: 'success', text: 'GIF / Image uploaded successfully!' });
         } catch (error) {
             console.error(error);
             setMessage({ type: 'error', text: 'Upload failed. Please try again.' });
@@ -144,7 +144,7 @@ const PopupManagement = () => {
                                         </div>
                                     </div>
                                 )}
-                                <input type="file" className="hidden" accept="image/png, image/jpeg, image/jpg, image/webp" onChange={handleImageUpload} />
+                                <input type="file" className="hidden" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" onChange={handleImageUpload} />
                             </label>
                         </div>
 
