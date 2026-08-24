@@ -9,7 +9,8 @@ const InspirationalPopup = () => {
     const [isVisible, setIsVisible] = useState(false);
     const location = useLocation();
 
-    const API_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+    const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const SERVER_URL = API_URL.replace(/\/api$/, '');
 
     useEffect(() => {
         // Don't show on login page or admin management page
@@ -172,7 +173,7 @@ const InspirationalPopup = () => {
                             {config.imageUrl && (
                                 <div className="hidden sm:block w-[180px] relative flex-shrink-0 mt-auto self-end">
                                     <motion.img
-                                        src={`${API_URL}${config.imageUrl}`}
+                                        src={config.imageUrl.startsWith('http') ? config.imageUrl : `${SERVER_URL}${config.imageUrl}`}
                                         alt={config.author}
                                         className="w-full h-[240px] object-cover object-top mask-image-gradient"
                                         style={{
@@ -192,7 +193,7 @@ const InspirationalPopup = () => {
 
                             {/* Mobile Image (Now on right for mobile too due to order) */}
                             <div className={`sm:hidden w-16 h-16 rounded-2xl overflow-hidden border-2 ${isBirthday ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-blue-500/30'} m-5 flex-shrink-0 self-start`}>
-                                <img src={`${API_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
+                                <img src={config.imageUrl.startsWith('http') ? config.imageUrl : `${SERVER_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
                             </div>
 
                             {/* Close Button - Always visible for better UX, especially on mobile */}

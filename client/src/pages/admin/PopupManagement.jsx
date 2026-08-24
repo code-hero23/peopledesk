@@ -16,7 +16,8 @@ const PopupManagement = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [message, setMessage] = useState({ type: '', text: '' });
 
-    const API_URL = import.meta.env.VITE_API_BASE_URL;
+    const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const SERVER_URL = API_URL.replace(/\/api$/, '');
 
     useEffect(() => {
         fetchConfig();
@@ -33,7 +34,8 @@ const PopupManagement = () => {
             if (res.data) {
                 setConfig(res.data);
                 if (res.data.imageUrl) {
-                    setPreviewImage(`${API_URL}${res.data.imageUrl}`);
+                    const fullImg = res.data.imageUrl.startsWith('http') ? res.data.imageUrl : `${SERVER_URL}${res.data.imageUrl}`;
+                    setPreviewImage(fullImg);
                 }
             }
         } catch (error) {
@@ -72,7 +74,8 @@ const PopupManagement = () => {
                 }
             });
             setConfig({ ...config, imageUrl: res.data.imageUrl });
-            setPreviewImage(`${API_URL}${res.data.imageUrl}`);
+            const uploadedFullImg = res.data.imageUrl.startsWith('http') ? res.data.imageUrl : `${SERVER_URL}${res.data.imageUrl}`;
+            setPreviewImage(uploadedFullImg);
             setMessage({ type: 'success', text: 'GIF / Image uploaded successfully!' });
         } catch (error) {
             console.error(error);
