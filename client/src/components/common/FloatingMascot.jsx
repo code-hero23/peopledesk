@@ -1,10 +1,34 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, GripHorizontal } from 'lucide-react';
+import axios from 'axios';
 
 const FloatingMascot = () => {
     const [isVisible, setIsVisible] = useState(true);
     const [isMinimized, setIsMinimized] = useState(false);
+    const [mascotSrc, setMascotSrc] = useState('/floating-mascot.gif');
+
+    const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+    const SERVER_URL = API_URL.replace(/\/api$/, '');
+
+    useEffect(() => {
+        const fetchMascot = async () => {
+            try {
+                const user = JSON.parse(localStorage.getItem('user'));
+                const token = user?.token;
+                const res = await axios.get(`${API_URL}/popup`, {
+                    headers: token ? { Authorization: `Bearer ${token}` } : {}
+                });
+                if (res.data && res.data.imageUrl) {
+                    const fullImg = res.data.imageUrl.startsWith('http') ? res.data.imageUrl : `${SERVER_URL}${res.data.imageUrl}`;
+                    setMascotSrc(fullImg);
+                }
+            } catch (err) {
+                console.warn('Could not fetch custom floating mascot config, using default.');
+            }
+        };
+        fetchMascot();
+    }, []);
 
     if (!isVisible) return null;
 
@@ -53,7 +77,7 @@ const FloatingMascot = () => {
                         {/* Interactive Large Floating Card */}
                         <div className="relative cursor-grab active:cursor-grabbing">
                             <img
-                                src="/floating-mascot.gif"
+                                src={mascotSrc}
                                 alt="Mascot"
                                 className="w-64 h-64 md:w-96 md:h-96 object-contain pointer-events-none drop-shadow-2xl translate-z-0"
                             />
@@ -69,7 +93,7 @@ const FloatingMascot = () => {
                         title="Show Mascot (Click to expand, drag to move)"
                     >
                         <img
-                            src="/floating-mascot.gif"
+                            src={mascotSrc}
                             alt="Mascot Mini"
                             className="w-full h-full object-contain pointer-events-none"
                         />
