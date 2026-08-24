@@ -31,7 +31,8 @@ import {
     ShieldCheck,
     Armchair,
     Boxes,
-    Award
+    Award,
+    Sparkle
 } from 'lucide-react';
 import ThemeSelector from './common/ThemeSelector';
 
@@ -82,7 +83,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     const handleRefresh = () => window.location.reload();
 
     // ─── Nav Item ────────────────────────────────────────────────────────────
-    const NavItem = ({ to, icon: Icon, label, exact = false, indent = false }) => {
+    const NavItem = ({ to, icon: Icon, label, exact = false, indent = false, badge = null }) => {
         const active = exact
             ? location.pathname === to
             : location.pathname === to || location.pathname.startsWith(to + '/');
@@ -92,25 +93,43 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                 to={to}
                 onClick={onMobileClose}
                 title={isCollapsed ? label : ''}
-                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all duration-200 group relative mb-0.5
-                    ${active ? 'bg-primary text-white shadow-md' : 'text-slate-400 hover:bg-slate-800 hover:text-white'}
-                    ${isCollapsed ? 'justify-center' : ''}
-                    ${indent && !isCollapsed ? 'ml-4' : ''}
-                `}
+                className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-xs tracking-wide transition-all duration-300 mb-1 select-none ${
+                    active
+                        ? 'bg-gradient-to-r from-red-600 to-red-700 text-white font-bold shadow-lg shadow-red-600/25 border border-red-500/30'
+                        : 'text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent'
+                } ${isCollapsed ? 'justify-center px-2' : ''} ${indent && !isCollapsed ? 'ml-3' : ''}`}
             >
+                {/* Glow bar indicator for active state */}
+                {active && (
+                    <motion.div
+                        layoutId="activeGlowBar"
+                        className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-red-400 rounded-r-full shadow-[0_0_12px_#ef4444]"
+                        transition={{ type: 'spring', stiffness: 300, damping: 30 }}
+                    />
+                )}
+
                 <Icon
-                    size={isCollapsed ? 22 : 18}
-                    className={`flex-shrink-0 ${active ? 'text-white' : 'text-slate-500 group-hover:text-white'}`}
+                    size={isCollapsed ? 20 : 17}
+                    className={`flex-shrink-0 transition-transform duration-300 group-hover:scale-110 ${
+                        active ? 'text-white drop-shadow-[0_0_8px_rgba(255,255,255,0.6)]' : 'text-slate-400 group-hover:text-red-400'
+                    }`}
                 />
 
                 {!isCollapsed && (
-                    <span className="font-medium text-[13.5px] whitespace-nowrap overflow-hidden opacity-100 transition-all duration-300">
+                    <span className="truncate flex-1">
                         {label}
                     </span>
                 )}
 
+                {!isCollapsed && badge && (
+                    <span className="px-2 py-0.5 text-[9px] font-black uppercase tracking-wider rounded-md bg-red-500/20 text-red-400 border border-red-500/30">
+                        {badge}
+                    </span>
+                )}
+
+                {/* Tooltip for collapsed view */}
                 {isCollapsed && (
-                    <div className="absolute left-full ml-2 px-2 py-1 bg-slate-800 text-white text-xs rounded opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 whitespace-nowrap">
+                    <div className="absolute left-full ml-3 px-3 py-1.5 bg-slate-900/95 backdrop-blur-xl text-white text-xs font-semibold rounded-lg shadow-2xl border border-white/10 opacity-0 group-hover:opacity-100 pointer-events-none transition-all duration-200 z-50 whitespace-nowrap">
                         {label}
                     </div>
                 )}
@@ -122,19 +141,21 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     const NavGroup = ({ id, label, icon: Icon, children }) => {
         const isOpen = openGroups[id];
         
-        if (isCollapsed) return <div className="space-y-1 py-2 border-t border-slate-800/50">{children}</div>;
+        if (isCollapsed) return <div className="space-y-1 py-2 border-t border-white/5">{children}</div>;
 
         return (
-            <div className="mb-2">
+            <div className="mb-3">
                 <button
                     onClick={() => toggleGroup(id)}
-                    className="w-full flex items-center justify-between px-3 py-2 text-slate-500 hover:text-slate-300 transition-colors uppercase text-[10px] font-bold tracking-widest group"
+                    className="w-full flex items-center justify-between px-3.5 py-2 text-slate-400 hover:text-slate-200 transition-colors uppercase text-[10px] font-black tracking-[0.18em] group rounded-lg hover:bg-white/[0.03]"
                 >
-                    <div className="flex items-center gap-2">
-                        <Icon size={14} className="text-slate-600 group-hover:text-slate-400" />
+                    <div className="flex items-center gap-2.5">
+                        <div className="p-1 rounded-md bg-white/5 group-hover:bg-red-600/10 transition-colors">
+                            <Icon size={13} className="text-slate-400 group-hover:text-red-400" />
+                        </div>
                         <span>{label}</span>
                     </div>
-                    <ChevronDown size={14} className={`transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
+                    <ChevronDown size={13} className={`text-slate-400 transition-transform duration-300 ${isOpen ? '' : '-rotate-90'}`} />
                 </button>
                 <AnimatePresence initial={false}>
                     {isOpen && (
@@ -142,10 +163,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             initial={{ height: 0, opacity: 0 }}
                             animate={{ height: 'auto', opacity: 1 }}
                             exit={{ height: 0, opacity: 0 }}
-                            transition={{ duration: 0.3, ease: 'easeInOut' }}
+                            transition={{ duration: 0.25, ease: 'easeInOut' }}
                             className="overflow-hidden"
                         >
-                            <div className="pt-1">{children}</div>
+                            <div className="pt-1.5 pl-1.5 border-l border-white/5 ml-4 space-y-0.5">{children}</div>
                         </motion.div>
                     )}
                 </AnimatePresence>
@@ -158,8 +179,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
     return (
         <aside
-            className={`bg-slate-950 text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-2xl
-                fixed md:relative z-[70] h-full border-r border-slate-900
+            className={`bg-[#0a0a0c] text-white flex-shrink-0 flex flex-col transition-all duration-300 ease-in-out shadow-2xl
+                fixed md:relative z-[70] h-full border-r border-white/5 backdrop-blur-3xl font-sans
                 ${isMobileOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'}
                 ${isCollapsed ? 'w-20' : 'w-64'}
             `}
@@ -167,36 +188,38 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             {/* Desktop collapse toggle */}
             <button
                 onClick={() => setIsCollapsed(!isCollapsed)}
-                className="hidden md:flex absolute -right-3 top-10 bg-primary text-white p-1 rounded-full shadow-lg hover:opacity-90 transition-opacity z-30 border-2 border-slate-950"
+                className="hidden md:flex absolute -right-3.5 top-8 bg-slate-900 border border-white/20 text-slate-300 hover:text-white hover:bg-red-600 p-1.5 rounded-full shadow-2xl transition-all duration-300 z-30 group"
+                title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
             >
-                {isCollapsed ? <ChevronRight size={14} /> : <ChevronLeft size={14} />}
+                {isCollapsed ? <ChevronRight size={13} className="group-hover:translate-x-0.5 transition-transform" /> : <ChevronLeft size={13} className="group-hover:-translate-x-0.5 transition-transform" />}
             </button>
 
             {/* Mobile close button */}
             <button
                 onClick={onMobileClose}
-                className="md:hidden absolute top-4 right-4 text-slate-400 hover:text-white"
+                className="md:hidden absolute top-4 right-4 p-2 rounded-xl bg-white/5 text-slate-400 hover:text-white"
             >
-                <X size={24} />
+                <X size={20} />
             </button>
 
-            {/* Logo */}
-            <div className={`p-4 border-b border-slate-900 flex items-center justify-center transition-all duration-300 ${isCollapsed ? 'h-20' : 'h-24'} overflow-hidden`}>
+            {/* Header Logo */}
+            <div className={`p-4 border-b border-white/5 flex items-center justify-center transition-all duration-300 relative ${isCollapsed ? 'h-20' : 'h-24'} overflow-hidden`}>
+                <div className="absolute inset-0 bg-gradient-to-b from-red-600/5 to-transparent pointer-events-none" />
                 <img
                     src="/orbix-logo.png"
                     alt="PeopleDesk"
-                    className={`object-contain transition-all duration-300 ${isCollapsed ? 'h-10 w-10' : 'h-auto w-3/4 max-h-16 filter brightness-110'}`}
+                    className={`object-contain transition-all duration-300 filter drop-shadow-[0_0_12px_rgba(239,68,68,0.2)] ${isCollapsed ? 'h-10 w-10' : 'h-auto w-4/5 max-h-14'}`}
                 />
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-3 space-y-1 mt-2 overflow-y-auto scrollbar-hide">
+            {/* Navigation Section */}
+            <nav className="flex-1 p-3 space-y-1 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20">
                 {user?.role !== 'FRONT_DESK_MANAGER' && (
                     <div className="mb-4">
-                        {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Core</p>}
+                        {!isCollapsed && <p className="px-3 py-2 text-[9px] text-slate-400 font-black uppercase tracking-[0.22em]">Main Workspace</p>}
                         <NavItem to={isAdmin ? "/admin-dashboard" : "/dashboard"} icon={LayoutDashboard} label="Dashboard" exact />
                         {isAdmin && ['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
-                            <NavItem to="/admin/approvals" icon={FileCheck} label="Pending Approvals" />
+                            <NavItem to="/admin/approvals" icon={FileCheck} label="Pending Approvals" badge="Live" />
                         )}
                     </div>
                 )}
@@ -251,14 +274,14 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                 ) : user?.role === 'FRONT_DESK_MANAGER' ? (
                     <>
                         <div className="mb-4">
-                            {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">Front Desk Workspace</p>}
+                            {!isCollapsed && <p className="px-3 py-2 text-[9px] text-slate-400 font-black uppercase tracking-[0.22em]">Front Desk</p>}
                             <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
                         </div>
                     </>
                 ) : (
                     <>
                         <div className="mb-4">
-                            {!isCollapsed && <p className="px-3 py-2 text-[10px] text-slate-500 font-bold uppercase tracking-widest">My Workspace</p>}
+                            {!isCollapsed && <p className="px-3 py-2 text-[9px] text-slate-400 font-black uppercase tracking-[0.22em]">My Workspace</p>}
                             <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                             <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
@@ -273,8 +296,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {user?.callAnalyticsViewEnabled && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
-                             <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
-                             <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI scoreboard" />
+                            <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
+                            <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI Scoreboard" />
                             <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
                             {user?.designation === 'ACCOUNT' && (
                                 <NavItem to="/admin/attendance" icon={CalendarClock} label="Company Attendance" />
@@ -290,42 +313,45 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             </nav>
 
             {/* Theme Selector Integration */}
-            <div className="px-4 py-2 border-t border-slate-900 bg-slate-950/50">
+            <div className="px-3 py-2 border-t border-white/5 bg-black/40">
                 <ThemeSelector isCollapsed={isCollapsed} />
             </div>
 
-            {/* User Profile + Actions */}
-            <div className={`p-4 border-t border-slate-900 bg-slate-950 flex flex-col gap-2`}>
-                <div className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : 'px-2'}`}>
-                    <div className="w-9 h-9 rounded-lg bg-primary flex items-center justify-center font-bold text-white shadow-lg flex-shrink-0 animate-pulse-slow">
-                        {user?.name?.charAt(0) || '?'}
+            {/* User Profile Footer Card */}
+            <div className="p-3 border-t border-white/5 bg-[#0e0e12] flex flex-col gap-2.5">
+                <div className={`flex items-center gap-3 transition-all duration-300 ${isCollapsed ? 'justify-center px-0' : 'px-1.5 py-1'}`}>
+                    <div className="relative flex-shrink-0">
+                        <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-red-600 to-amber-500 flex items-center justify-center font-black text-white text-sm shadow-md shadow-red-600/30 ring-2 ring-white/10">
+                            {user?.name?.charAt(0)?.toUpperCase() || '?'}
+                        </div>
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 rounded-full ring-2 ring-[#0a0a0c]" />
                     </div>
                     {!isCollapsed && (
-                        <div className="overflow-hidden">
-                            <p className="text-[13px] font-semibold truncate text-white">{user?.name}</p>
-                            <p className="text-[10px] text-slate-500 uppercase tracking-tight truncate">
+                        <div className="overflow-hidden flex-1">
+                            <p className="text-[12.5px] font-extrabold truncate text-white tracking-tight">{user?.name}</p>
+                            <p className="text-[9.5px] font-bold text-red-400 uppercase tracking-widest truncate">
                                 {isAdmin
-                                    ? (user?.role === 'BUSINESS_HEAD' ? user?.designation : user?.role.replace(/_/g, ' '))
+                                    ? (user?.role === 'BUSINESS_HEAD' ? user?.designation : user?.role?.replace(/_/g, ' '))
                                     : user?.designation}
                             </p>
                         </div>
                     )}
                 </div>
 
-                <div className="flex gap-2">
+                <div className="flex gap-2 pt-1 border-t border-white/5">
                     <button
                         onClick={handleRefresh}
-                        title="Refresh App"
-                        className={`flex-1 flex items-center gap-2 bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white py-2 rounded-lg transition-all duration-200 group justify-center border border-slate-800/50`}
+                        title="Refresh Application"
+                        className="flex-1 flex items-center gap-2 bg-white/[0.04] hover:bg-white/10 text-slate-400 hover:text-white py-2 rounded-xl transition-all duration-200 group justify-center border border-white/5"
                     >
-                        <RefreshCw size={16} className="group-hover:rotate-180 transition-transform duration-700" />
+                        <RefreshCw size={14} className="group-hover:rotate-180 transition-transform duration-700 text-slate-400 group-hover:text-red-400" />
                     </button>
                     <button
                         onClick={onLogout}
                         title="Sign Out"
-                        className={`flex-1 flex items-center gap-2 bg-slate-900 hover:bg-red-600/20 hover:text-red-500 text-slate-400 py-2 rounded-lg transition-all duration-200 group justify-center border border-slate-800/50`}
+                        className="flex-1 flex items-center gap-2 bg-white/[0.04] hover:bg-red-600/20 hover:border-red-500/30 text-slate-400 hover:text-red-400 py-2 rounded-xl transition-all duration-200 group justify-center border border-white/5"
                     >
-                        <LogOut size={16} className="group-hover:translate-x-1 transition-transform" />
+                        <LogOut size={14} className="group-hover:translate-x-0.5 transition-transform text-slate-400 group-hover:text-red-400" />
                     </button>
                 </div>
             </div>
