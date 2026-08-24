@@ -58,8 +58,8 @@ const ThemeProvider = ({ children }) => {
       }
 
       /* Dark Mode Global Surface Overrides */
-      .dark .bg-white { background-color: var(--bg-card) !important; }
-      .dark .bg-slate-50, .dark .bg-gray-50, .dark .bg-zinc-50, .dark .bg-slate-100, .dark .bg-gray-100 { 
+      .dark .bg-white:not(aside, aside *) { background-color: var(--bg-card) !important; }
+      .dark .bg-slate-50:not(aside, aside *), .dark .bg-gray-50:not(aside, aside *), .dark .bg-zinc-50:not(aside, aside *), .dark .bg-slate-100:not(aside, aside *), .dark .bg-gray-100:not(aside, aside *) { 
         background-color: var(--bg-surface) !important; 
       }
       .dark .bg-slate-50\\/50, .dark .bg-gray-50\\/50 { background-color: rgba(15, 23, 42, 0.5) !important; }
