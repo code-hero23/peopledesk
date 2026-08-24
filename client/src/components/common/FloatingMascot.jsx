@@ -79,6 +79,7 @@ const FloatingMascot = () => {
                             <img
                                 src={mascotSrc}
                                 alt="Mascot"
+                                onError={() => setMascotSrc('/floating-mascot.gif')}
                                 className="w-64 h-64 md:w-96 md:h-96 object-contain pointer-events-none drop-shadow-2xl translate-z-0"
                             />
                         </div>
@@ -95,6 +96,7 @@ const FloatingMascot = () => {
                         <img
                             src={mascotSrc}
                             alt="Mascot Mini"
+                            onError={() => setMascotSrc('/floating-mascot.gif')}
                             className="w-full h-full object-contain pointer-events-none"
                         />
                         <span className="absolute -top-1 -right-1 flex h-3 w-3">
