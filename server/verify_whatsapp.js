@@ -28,7 +28,7 @@ async function testConnection() {
     try {
         let result;
         if (template === 'hello_world') {
-            result = await whatsappService.sendTemplateMessage(recipient, 'hello_world', [], 'en_US');
+            result = await whatsappService.sendTemplateMessage(recipient, 'hello_world', [], [], 'en_US');
         } else if (template === 'missed_logout_alert') {
             result = await whatsappService.sendMissedLogoutNotification(recipient, 'Test Employee');
         } else if (template === 'missed_worklog_alert') {
@@ -37,8 +37,21 @@ async function testConnection() {
             result = await whatsappService.sendLateLoginAlert(recipient, 'Test Employee', 3);
         } else if (template === 'break_exceed_alert') {
             result = await whatsappService.sendBreakExceedanceAlert(recipient, 'Test Employee', 'Tea Break', 15);
+        } else if (template === 'visitor_record_alert') {
+            result = await whatsappService.sendVisitorRecordNotification(recipient, {
+                clientName: 'Test Client',
+                phoneNumber: '9876543210',
+                reasonOfVisit: 'Design Consultation',
+                showroom: 'Main Showroom',
+                dateOfVisit: new Date(),
+                timeOfEntry: '10:30 AM',
+                creName: 'Preethi (CRE)',
+                faName: 'Haseena (FA)',
+                laName: 'Sridhar (LA)',
+                bhName: 'Cookscape (BH)'
+            });
         } else {
-            console.error('❌ Unknown template. Use: hello_world, missed_logout_alert, missed_worklog_alert, or late_login_alert');
+            console.error('❌ Unknown template. Use: hello_world, missed_logout_alert, missed_worklog_alert, late_login_alert, break_exceed_alert, or visitor_record_alert');
             return;
         }
         
