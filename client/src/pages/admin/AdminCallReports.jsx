@@ -750,11 +750,11 @@ const AdminCallReports = () => {
                                                                     {metrics.lastSync && (new Date() - new Date(metrics.lastSync)) < 30 * 60 * 1000 ? (
                                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-md border border-emerald-200 dark:border-emerald-800 text-[8px] font-bold uppercase tracking-wider">
                                                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                                                                            LIVE
+                                                                            LIVE • {new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                                                                         </span>
                                                                     ) : (
                                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md text-[8px] font-bold uppercase tracking-wider">
-                                                                            OFFLINE
+                                                                            OFFLINE • {metrics.lastSync ? new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'NEVER'}
                                                                         </span>
                                                                     )}
                                                                 </div>
@@ -949,8 +949,13 @@ const AdminCallReports = () => {
                                 <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight text-center">
                                     {typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "Unknown Personnel"}
                                 </h2>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-6">
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-6 text-center">
                                     {selectedEmployee.empId} • {selectedEmployee.designation || 'Personnel'}
+                                    {selectedEmployee.lastSync && (
+                                        <span className="block mt-1 text-[9px] text-blue-500 font-mono">
+                                            LAST SYNC: {new Date(selectedEmployee.lastSync).toLocaleString('en-GB', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: 'short' })}
+                                        </span>
+                                    )}
                                 </p>
 
                                 <div className="w-full space-y-4">
