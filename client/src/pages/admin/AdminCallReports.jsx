@@ -1280,4 +1280,3 @@ const MetricBox = ({ label, value, color, icon: Icon }) => {
 };
 
 export default AdminCallReports;
-inCallReports;
