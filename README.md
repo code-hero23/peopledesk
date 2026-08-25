@@ -94,7 +94,7 @@ PeopleDesk is a comprehensive, real-time Human Resource Management (HRM) system 
 - For API reference: [API_DOCS.md](file:///C:/Users/aravi/Pictures/people-desk/API_DOCS.md)
 - For contribution: [CONTRIBUTING.md](file:///C:/Users/aravi/Pictures/people-desk/CONTRIBUTING.md)
 
----
+--- 
 
 ## 📄 License
 Copyright (c) 2026. All rights reserved.

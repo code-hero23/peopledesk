@@ -7,7 +7,8 @@ import {
     Calendar, Clock, User, Hash, Search, Filter,
     RefreshCw, ChevronRight, Activity, Smartphone,
     PieChart as PieChartIcon, BarChart3, TrendingUp, Users,
-    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon, Mail, Flame
+    ArrowLeft, Download, Settings, Save, Info, X as CloseIcon, Mail, Flame,
+    Sparkles, Zap, ShieldCheck, CheckCircle2, AlertCircle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -86,8 +87,6 @@ const AdminCallReports = () => {
             setSyncStatusData(data);
 
             const elapsedTime = Date.now() - startTime;
-            // Employee Android devices check for sync requests every 60s.
-            // Poll for up to 3 minutes (180,000ms) or until all devices reply.
             if (data.pendingDevices === 0 || elapsedTime >= 180000) {
                 setIsPollingSync(false);
                 setIsRequestingAllSync(false);
@@ -150,7 +149,6 @@ const AdminCallReports = () => {
         }
     };
 
-    // Clean up timer when modal closes
     useEffect(() => {
         if (!showSyncModal && pollTimeoutRef.current) {
             clearTimeout(pollTimeoutRef.current);
@@ -159,6 +157,74 @@ const AdminCallReports = () => {
             setIsRequestingAllSync(false);
         }
     }, [showSyncModal]);
+
+    // Data Processing
+    const normalize = (num) => String(num || "").replace(/\D/g, "").slice(-10);
+    const normalizeDesignation = (value) => String(value || '').toUpperCase();
+    const isCreFamilyDesignation = (value) => {
+        const designation = normalizeDesignation(value);
+        return (
+            designation.includes('CRE') ||
+            designation.includes('RELATIONSHIP') ||
+            designation.includes('CLIENT-CARE') ||
+            designation.includes('CLIENT CARE') ||
+            designation.includes('CUSTOMER-RELATIONSHIP') ||
+            designation.includes('CUSTOMER REL')
+        );
+    };
+
+    const employeeMetrics = callStats.reduce((acc, log) => {
+        const key = log.empId || (typeof log.user === 'object' ? log.user?.id : log.userId) || 'unknown';
+        const rawName = typeof log.user === 'object' ? log.user?.name : (log.user || log.userName);
+        const userName = typeof rawName === 'string' ? rawName : "Unknown Personnel";
+        const rawDesg = typeof log.user === 'object' ? log.user?.designation : (log.designation || 'OTHER');
+        const userDesignation = typeof rawDesg === 'string' ? rawDesg : 'OTHER';
+
+        if (!acc[key]) {
+            acc[key] = {
+                name: userName,
+                empId: log.empId,
+                designation: userDesignation,
+                totalCalls: 0,
+                incoming: 0,
+                outgoing: 0,
+                missed: 0,
+                duration: 0,
+                lastSync: log.lastSync,
+                logs: []
+            };
+        } else {
+            const logTime = log.lastSync ? new Date(log.lastSync).getTime() : 0;
+            const currTime = acc[key].lastSync ? new Date(acc[key].lastSync).getTime() : 0;
+            if (logTime > currTime) {
+                acc[key].lastSync = log.lastSync;
+            }
+            if (acc[key].name === "Unknown Personnel" && userName !== "Unknown Personnel") {
+                acc[key].name = userName;
+            }
+        }
+
+        const calls = log.calls || [];
+        const normExcluded = (excludedNumbers || []).map(normalize);
+        const filteredCalls = calls.filter(c => {
+            if (!c || !c.number) return false;
+            return !normExcluded.includes(normalize(c.number));
+        });
+        
+        acc[key].totalCalls += filteredCalls.length;
+        acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date })));
+
+        filteredCalls.forEach(c => {
+            if (c.type === 'INCOMING') acc[key].incoming++;
+            if (c.type === 'OUTGOING') acc[key].outgoing++;
+            if (c.type === 'MISSED' || c.type === 'REJECTED') acc[key].missed++;
+            acc[key].duration += (c.duration || 0);
+        });
+
+        return acc;
+    }, {});
+
+    const metricsArray = Object.values(employeeMetrics).sort((a, b) => b.totalCalls - a.totalCalls);
 
     // Auto-sync drill-down data when stats update
     useEffect(() => {
@@ -263,73 +329,6 @@ const AdminCallReports = () => {
         }
     };
 
-    // Data Processing
-    const normalize = (num) => String(num || "").replace(/\D/g, "").slice(-10);
-    const normalizeDesignation = (value) => String(value || '').toUpperCase();
-    const isCreFamilyDesignation = (value) => {
-        const designation = normalizeDesignation(value);
-        return (
-            designation.includes('CRE') ||
-            designation.includes('RELATIONSHIP') ||
-            designation.includes('CLIENT-CARE') ||
-            designation.includes('CLIENT CARE') ||
-            designation.includes('CUSTOMER-RELATIONSHIP') ||
-            designation.includes('CUSTOMER REL')
-        );
-    };
-
-    const employeeMetrics = callStats.reduce((acc, log) => {
-        const key = log.empId || (typeof log.user === 'object' ? log.user?.id : log.userId) || 'unknown';
-        const rawName = typeof log.user === 'object' ? log.user?.name : (log.user || log.userName);
-        const userName = typeof rawName === 'string' ? rawName : "Unknown Personnel";
-        const rawDesg = typeof log.user === 'object' ? log.user?.designation : (log.designation || 'OTHER');
-        const userDesignation = typeof rawDesg === 'string' ? rawDesg : 'OTHER';
-
-        if (!acc[key]) {
-            acc[key] = {
-                name: userName,
-                empId: log.empId,
-                designation: userDesignation,
-                totalCalls: 0,
-                incoming: 0,
-                outgoing: 0,
-                missed: 0,
-                duration: 0,
-                lastSync: log.lastSync,
-                logs: []
-            };
-        } else {
-            const logTime = log.lastSync ? new Date(log.lastSync).getTime() : 0;
-            const currTime = acc[key].lastSync ? new Date(acc[key].lastSync).getTime() : 0;
-            if (logTime > currTime) {
-                acc[key].lastSync = log.lastSync;
-            }
-            if (acc[key].name === "Unknown Personnel" && userName !== "Unknown Personnel") {
-                acc[key].name = userName;
-            }
-        }
-
-        const calls = log.calls || [];
-        const normExcluded = (excludedNumbers || []).map(normalize);
-        const filteredCalls = calls.filter(c => {
-            if (!c || !c.number) return false;
-            return !normExcluded.includes(normalize(c.number));
-        });
-        
-        acc[key].totalCalls += filteredCalls.length;
-        acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date }))); // Keep raw logs for table
-
-        filteredCalls.forEach(c => {
-            if (c.type === 'INCOMING') acc[key].incoming++;
-            if (c.type === 'OUTGOING') acc[key].outgoing++;
-            if (c.type === 'MISSED' || c.type === 'REJECTED') acc[key].missed++;
-            acc[key].duration += (c.duration || 0);
-        });
-
-        return acc;
-    }, {});
-
-    const metricsArray = Object.values(employeeMetrics).sort((a, b) => b.totalCalls - a.totalCalls);
     const filteredMetrics = metricsArray.filter(m => (typeof m.name === 'string' ? m.name : "Unknown Personnel").toLowerCase().includes((searchTerm || '').toLowerCase()));
     const creMetrics = filteredMetrics.filter((m) => isCreFamilyDesignation(typeof m.designation === 'string' ? m.designation : ''));
     const faMetrics = filteredMetrics.filter((m) => (typeof m.designation === 'string' ? m.designation : '').toUpperCase().includes('FA'));
@@ -376,19 +375,10 @@ const AdminCallReports = () => {
     });
 
     const globalPieData = [
-        { name: 'Incoming', value: globalStats.incoming, color: '#10b981' }, // emerald-500
-        { name: 'Outgoing', value: globalStats.outgoing, color: '#3b82f6' }, // blue-500
-        { name: 'Missed', value: globalStats.missed, color: '#f43f5e' }, // rose-500
-        { name: 'Rejected', value: globalStats.rejected, color: '#f59e0b' } // amber-500
-    ].filter(d => d.value > 0);
-
-    const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
-
-    const getPieData = (metrics) => [
-        { name: 'Incoming', value: metrics.incoming, color: '#10b981' },
-        { name: 'Outgoing', value: metrics.outgoing, color: '#3b82f6' },
-        { name: 'Missed', value: metrics.missed, color: '#f43f5e' },
-        { name: 'Rejected', value: metrics.rejected, color: '#f59e0b' }
+        { name: 'Incoming', value: globalStats.incoming, color: '#10b981' },
+        { name: 'Outgoing', value: globalStats.outgoing, color: '#3b82f6' },
+        { name: 'Missed', value: globalStats.missed, color: '#f43f5e' },
+        { name: 'Rejected', value: globalStats.rejected, color: '#f59e0b' }
     ].filter(d => d.value > 0);
 
     const formatDuration = (seconds) => {
@@ -400,156 +390,177 @@ const AdminCallReports = () => {
         return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
 
-    useEffect(() => {
-        if (callStats && callStats.length > 0) {
-            console.log(`[Admin Debug] Received ${callStats.length} call log sets.`);
-            console.log("[Admin Debug] First entry sample:", callStats[0]);
-        } else if (!isLoading) {
-            console.log("[Admin Debug] No call stats available for the selected range.");
-        }
-    }, [callStats, isLoading]);
-
     if (isLoading && callStats.length === 0) {
         return (
-            <div className="flex flex-col items-center justify-center min-h-[500px] space-y-4">
-                <div className="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                <p className="text-slate-400 font-black uppercase text-[10px] tracking-widest">Aggregating Global Intelligence...</p>
+            <div className="flex flex-col items-center justify-center min-h-[550px] space-y-6">
+                <div className="relative flex items-center justify-center">
+                    <div className="w-16 h-16 border-4 border-blue-500/20 border-t-blue-600 rounded-full animate-spin"></div>
+                    <Activity size={24} className="text-blue-600 absolute animate-pulse" />
+                </div>
+                <div className="text-center space-y-1">
+                    <h3 className="text-sm font-black text-slate-800 dark:text-slate-200 uppercase tracking-widest">Aggregating Call Intelligence</h3>
+                    <p className="text-xs text-slate-400 font-medium">Fetching real-time call logs and device synchronization metrics...</p>
+                </div>
             </div>
         );
     }
 
     return (
         <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 pb-32">
-            <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 bg-slate-900 p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-20 -mt-20"></div>
+            {/* Executive Header Banner */}
+            <header className="relative bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] text-white shadow-2xl border border-slate-800/80 overflow-hidden">
+                {/* Background ambient glow shapes */}
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
 
-                <div className="relative z-10 space-y-2">
-                    <div className="flex items-center gap-4">
-                        <div className="p-3 bg-blue-500 rounded-2xl shadow-lg ring-4 ring-blue-500/20">
-                            <BarChart3 className="text-white" size={24} />
+                <div className="relative z-10 flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    {/* Title Block */}
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg shadow-blue-500/25 ring-4 ring-white/10">
+                                <BarChart3 className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">Call Analytics</h1>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center gap-1">
+                                        <Sparkles size={10} className="animate-pulse" /> LIVE
+                                    </span>
+                                </div>
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.25em] mt-0.5">
+                                    CRE & Client Care Intelligence Hub
+                                </p>
+                            </div>
                         </div>
-                        <h1 className="text-4xl font-black tracking-tighter">Command Analytics</h1>
-                    </div>
-                    <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.4em] ml-1">CRE / Client Care Performance & Engagement Ledger</p>
-                </div>
-
-                <div className="flex flex-wrap items-center gap-4 relative z-10">
-                    <div className="flex items-center gap-3 bg-slate-800 p-2 rounded-2xl border border-slate-700">
-                        <Calendar size={16} className="text-blue-400 ml-2" />
-                        <input
-                            type="date" value={dateRange.startDate}
-                            onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
-                            className="bg-transparent text-xs font-bold text-white outline-none [color-scheme:dark]"
-                        />
-                        <span className="text-slate-500 font-black text-[10px]">TO</span>
-                        <input
-                            type="date" value={dateRange.endDate}
-                            onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
-                            className="bg-transparent text-xs font-bold text-white outline-none [color-scheme:dark]"
-                        />
                     </div>
 
-                    <div className="flex items-center gap-3 bg-slate-800 p-2 px-4 rounded-2xl border border-slate-700">
-                        <Activity size={16} className="text-blue-400" />
-                        <span className="text-xs font-black text-white uppercase tracking-widest">Uploaded Logs</span>
+                    {/* Actions Toolbar */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        {/* Date Range Picker Pill */}
+                        <div className="flex items-center gap-2 bg-slate-900/90 p-2 px-3 rounded-2xl border border-slate-700/80 shadow-inner">
+                            <Calendar size={15} className="text-blue-400 shrink-0" />
+                            <input
+                                type="date"
+                                value={dateRange.startDate}
+                                onChange={(e) => setDateRange({ ...dateRange, startDate: e.target.value })}
+                                className="bg-transparent text-xs font-black text-slate-200 outline-none cursor-pointer [color-scheme:dark]"
+                            />
+                            <span className="text-slate-500 font-black text-[9px] uppercase px-1">TO</span>
+                            <input
+                                type="date"
+                                value={dateRange.endDate}
+                                onChange={(e) => setDateRange({ ...dateRange, endDate: e.target.value })}
+                                className="bg-transparent text-xs font-black text-slate-200 outline-none cursor-pointer [color-scheme:dark]"
+                            />
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                onClick={handleRequestAllSync}
+                                disabled={isRequestingAllSync}
+                                className="px-4 py-2.5 bg-gradient-to-r from-cyan-600 to-teal-600 hover:from-cyan-500 hover:to-teal-500 text-white rounded-2xl transition-all shadow-lg shadow-cyan-900/30 active:scale-95 flex items-center gap-2 font-bold text-xs disabled:opacity-50"
+                                title="Request Sync For All Enrolled Employees"
+                            >
+                                <Smartphone size={16} className={isRequestingAllSync ? 'animate-pulse' : ''} />
+                                <span className="text-[10px] font-black uppercase tracking-wider">
+                                    {isRequestingAllSync ? 'Syncing...' : 'Sync All'}
+                                </span>
+                            </button>
+
+                            <button
+                                onClick={handleExport}
+                                disabled={isExporting}
+                                className="p-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 rounded-2xl transition-all border border-slate-700/80 active:scale-95 flex items-center gap-1.5 font-bold text-xs disabled:opacity-50"
+                                title="Export Analytics to Excel"
+                            >
+                                <Download size={16} className={isExporting ? 'animate-bounce text-emerald-400' : 'text-emerald-400'} />
+                                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Export</span>
+                            </button>
+
+                            <button
+                                onClick={() => setShowEmailModal(true)}
+                                className="p-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 rounded-2xl transition-all border border-slate-700/80 active:scale-95 flex items-center gap-1.5 font-bold text-xs"
+                                title="Email Performance Report"
+                            >
+                                <Mail size={16} className="text-indigo-400" />
+                                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Email</span>
+                            </button>
+
+                            <button
+                                onClick={() => setShowExcludedSettings(true)}
+                                className="p-2.5 bg-slate-800/90 hover:bg-slate-700 text-slate-200 rounded-2xl transition-all border border-slate-700/80 active:scale-95 flex items-center gap-1.5 font-bold text-xs"
+                                title="Manage Excluded Numbers"
+                            >
+                                <Settings size={16} className="text-amber-400" />
+                                <span className="text-[10px] font-black uppercase tracking-wider hidden sm:inline">Exclusions</span>
+                            </button>
+
+                            <button
+                                onClick={handleRefresh}
+                                className="p-2.5 bg-slate-800/90 text-slate-300 hover:text-white hover:bg-slate-700 rounded-2xl transition-all border border-slate-700/80 active:scale-90"
+                                title="Refresh Data"
+                            >
+                                <RefreshCw size={16} className={isLoading ? 'animate-spin text-blue-400' : ''} />
+                            </button>
+                        </div>
                     </div>
-                    <button onClick={handleRefresh} className="p-4 bg-slate-800 text-slate-400 hover:text-white rounded-2xl transition-all border border-slate-700 active:scale-90">
-                        <RefreshCw size={18} className={isLoading ? 'animate-spin' : ''} />
-                    </button>
-
-                    <button
-                        onClick={handleRequestAllSync}
-                        disabled={isRequestingAllSync}
-                        className="p-4 bg-cyan-600 hover:bg-cyan-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2 disabled:opacity-50"
-                        title="Request Sync For All Enrolled Employees"
-                    >
-                        <Smartphone size={18} className={isRequestingAllSync ? 'animate-pulse' : ''} />
-                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">
-                            {isRequestingAllSync ? 'Requesting Sync...' : 'Sync All Employees'}
-                        </span>
-                    </button>
-                    
-                    <button 
-                        onClick={handleExport}
-                        disabled={isExporting}
-                        className="p-4 bg-emerald-600 hover:bg-emerald-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2 disabled:opacity-50"
-                        title="Export Analytics"
-                    >
-                        <Download size={18} className={isExporting ? 'animate-bounce' : ''} />
-                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">{isExporting ? 'Exporting...' : 'Export Analytics'}</span>
-                    </button>
-
-                    <button 
-                        onClick={() => setShowEmailModal(true)}
-                        className="p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2"
-                        title="Email Report"
-                    >
-                        <Mail size={18} />
-                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Send to Email</span>
-                    </button>
-
-                    <button 
-                        onClick={() => setShowExcludedSettings(true)}
-                        className="p-4 bg-blue-600 hover:bg-blue-500 text-white rounded-2xl transition-all shadow-xl active:scale-90 flex items-center gap-2"
-                        title="Manage Excluded Numbers"
-                    >
-                        <Settings size={18} />
-                        <span className="text-[10px] font-black uppercase tracking-widest hidden sm:inline">Exclusion List</span>
-                    </button>
                 </div>
             </header>
 
-            {/* Settings Modal */}
+            {/* Modal: Exclusion Settings */}
             <AnimatePresence>
                 {showExcludedSettings && (
                     <motion.div
                         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
-                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm"
+                        className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md"
                     >
                         <motion.div
-                            initial={{ scale: 0.95, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.95, opacity: 0 }}
-                            className="bg-white rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-2xl"
+                            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                            className="bg-white dark:bg-slate-900 rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl border border-slate-100 dark:border-slate-800"
                         >
-                            <div className="p-8 border-b border-slate-50 flex items-center justify-between bg-slate-50/50">
+                            <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-3 bg-blue-600 text-white rounded-2xl shadow-lg">
-                                        <Settings size={20} />
+                                    <div className="p-2.5 bg-amber-500 text-white rounded-2xl shadow-md">
+                                        <Settings size={18} />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-black text-slate-800 tracking-tight leading-none mb-1">Exclusion Ledger</h3>
+                                        <h3 className="text-base font-black text-slate-800 dark:text-slate-100 tracking-tight">Exclusion Ledger</h3>
                                         <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Internal Contact Filtering</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowExcludedSettings(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
-                                    <CloseIcon size={20} className="text-slate-400" />
+                                <button onClick={() => setShowExcludedSettings(false)} className="p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 rounded-xl transition-colors">
+                                    <CloseIcon size={18} />
                                 </button>
                             </div>
 
-                            <div className="p-8 space-y-6">
-                                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl flex gap-4">
-                                    <div className="mt-0.5 text-amber-600"><Info size={18} /></div>
-                                    <p className="text-xs font-bold text-amber-800 leading-relaxed">
-                                        Enter phone numbers separated by commas. These numbers will be <strong>excluded</strong> from "Unique Leads" calculations across all reports.
+                            <div className="p-6 space-y-5">
+                                <div className="p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-200/60 dark:border-amber-900/40 rounded-2xl flex gap-3 text-amber-800 dark:text-amber-300">
+                                    <Info size={18} className="shrink-0 mt-0.5" />
+                                    <p className="text-xs font-semibold leading-relaxed">
+                                        Enter phone numbers separated by commas. These numbers will be <strong>excluded</strong> from unique calculations across all reports.
                                     </p>
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">Employee Numbers</label>
+                                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Excluded Numbers List</label>
                                     <textarea
                                         value={tempExcludedNumbers}
                                         onChange={(e) => setTempExcludedNumbers(e.target.value)}
                                         placeholder="+919876543210, +919988776655..."
-                                        className="w-full h-40 bg-slate-50 border border-slate-100 rounded-2xl p-6 outline-none focus:ring-4 ring-blue-50 transition-all font-bold text-sm text-slate-700 resize-none shadow-inner"
+                                        className="w-full h-36 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 outline-none focus:ring-2 ring-blue-500/30 transition-all font-mono text-xs text-slate-700 dark:text-slate-200 resize-none"
                                     />
                                 </div>
 
                                 <button
                                     onClick={handleSaveSettings}
                                     disabled={isSavingSettings}
-                                    className="w-full py-5 bg-slate-900 text-white rounded-2xl font-black text-sm hover:bg-slate-800 transition-all shadow-xl shadow-slate-200 active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3"
+                                    className="w-full py-4 bg-slate-900 dark:bg-blue-600 text-white rounded-2xl font-black text-xs uppercase tracking-wider hover:bg-slate-800 dark:hover:bg-blue-500 transition-all shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                                 >
-                                    {isSavingSettings ? <RefreshCw className="animate-spin" size={18} /> : <Save size={18} />}
-                                    {isSavingSettings ? "COMMITTING CHANGES..." : "SYNC EXCLUSION LIST"}
+                                    {isSavingSettings ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+                                    {isSavingSettings ? "Saving Exclusion List..." : "Save Exclusions"}
                                 </button>
                             </div>
                         </motion.div>
@@ -559,193 +570,237 @@ const AdminCallReports = () => {
 
             {!selectedEmployee ? (
                 <>
-                    {/* Premium Analytics Section */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-8">
-                        {/* Summary Stats */}
-                        <div className="lg:col-span-5 grid grid-cols-2 gap-4">
+                    {/* Analytics Summary & Charts Section */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-12 gap-6">
+                        {/* KPI Metric Boxes */}
+                        <div className="lg:col-span-5 grid grid-cols-2 gap-3.5">
                             <MetricBox label="Global Volume" value={globalStats.total} color="blue" icon={Activity} />
                             <MetricBox label="Active Personnel" value={metricsArray.length} color="purple" icon={Users} />
-                            <MetricBox label="Incoming" value={globalStats.incoming} color="emerald" icon={PhoneIncoming} />
-                            <MetricBox label="Outgoing" value={globalStats.outgoing} color="sky" icon={PhoneOutgoing} />
-                            <MetricBox label="Missed" value={globalStats.missed} color="rose" icon={PhoneMissed} />
-                            <MetricBox label="Rejected" value={globalStats.rejected} color="amber" icon={PhoneMissed} />
+                            <MetricBox label="Incoming Calls" value={globalStats.incoming} color="emerald" icon={PhoneIncoming} />
+                            <MetricBox label="Outgoing Calls" value={globalStats.outgoing} color="sky" icon={PhoneOutgoing} />
+                            <MetricBox label="Missed Calls" value={globalStats.missed} color="rose" icon={PhoneMissed} />
+                            <MetricBox label="Rejected Calls" value={globalStats.rejected} color="amber" icon={PhoneMissed} />
                             <div className="col-span-2">
-                                <MetricBox label="Global Talk Time" value={formatDuration(globalStats.duration)} color="fuchsia" icon={Clock} />
+                                <MetricBox label="Total Talk Time" value={formatDuration(globalStats.duration)} color="fuchsia" icon={Clock} />
                             </div>
                         </div>
 
-                        {/* Visual Chart Card */}
-                        <div className="lg:col-span-3 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl relative overflow-hidden flex flex-col min-h-[350px]">
-                            <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest self-start mb-4">Global Distribution</h3>
-                            <div className="flex-1 w-full min-h-[220px]">
+                        {/* Visual Donut Chart Card */}
+                        <div className="lg:col-span-3 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-between min-h-[340px]">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-slate-800 dark:text-slate-200 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                    <PieChartIcon className="text-emerald-500" size={14} /> Global Breakdown
+                                </h3>
+                            </div>
+                            <div className="flex-1 w-full min-h-[220px] flex items-center justify-center">
                                 {(isMounted && globalPieData.length > 0) ? (
                                     <ResponsiveContainer width="100%" height={220} minWidth={0}>
-                                    <PieChart>
-                                        <Pie
-                                            data={globalPieData}
-                                            cx="50%" cy="50%"
-                                            innerRadius={50} outerRadius={80}
-                                            paddingAngle={5} dataKey="value"
-                                            stroke="none"
-                                        >
-                                            {globalPieData.map((entry, index) => (
-                                                <Cell key={`cell-${index}`} fill={entry.color} />
-                                            ))}
-                                        </Pie>
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                            itemStyle={{ fontWeight: 'black' }}
-                                        />
-                                        <Legend iconType="circle" wrapperStyle={{ fontSize: '9px', fontWeight: '900', letterSpacing: '0.1em' }} />
-                                    </PieChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full py-10">
-                                    <PieChartIcon className="text-slate-300" size={48} />
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Signals Detected</p>
-                                </div>
-                            )}
+                                        <PieChart>
+                                            <Pie
+                                                data={globalPieData}
+                                                cx="50%" cy="50%"
+                                                innerRadius={48} outerRadius={78}
+                                                paddingAngle={4} dataKey="value"
+                                                stroke="none"
+                                            >
+                                                {globalPieData.map((entry, index) => (
+                                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                                ))}
+                                            </Pie>
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                                    borderRadius: '12px',
+                                                    border: 'none',
+                                                    color: '#fff',
+                                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700'
+                                                }}
+                                            />
+                                            <Legend
+                                                iconType="circle"
+                                                iconSize={8}
+                                                wrapperStyle={{ fontSize: '10px', fontWeight: '800', letterSpacing: '0.05em' }}
+                                            />
+                                        </PieChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center opacity-50 space-y-2 py-8">
+                                        <PieChartIcon className="text-slate-300 dark:text-slate-600" size={40} />
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Signals Detected</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Top Performers Chart */}
-                        <div className="lg:col-span-4 bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-xl flex flex-col min-h-[350px]">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="text-slate-800 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
-                                    <BarChart3 className="text-blue-500" size={14} /> Top Performers
+                        {/* Top Performers Bar Chart Card */}
+                        <div className="lg:col-span-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col justify-between min-h-[340px]">
+                            <div className="flex items-center justify-between mb-2">
+                                <h3 className="text-slate-800 dark:text-slate-200 font-black uppercase text-[10px] tracking-widest flex items-center gap-2">
+                                    <BarChart3 className="text-blue-500" size={14} /> Top Performers (Volume)
                                 </h3>
                             </div>
                             <div className="flex-1 w-full min-h-[220px]">
-                         {barData.length > 0 ? (
-                             <ResponsiveContainer width="100%" height={220} minWidth={0}>
-                                    <BarChart data={barData}>
-                                        <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                                        <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
-                                        <YAxis axisLine={false} tickLine={false} width={30} tick={{ fontSize: 9, fontWeight: 'bold', fill: '#94a3b8' }} />
-                                        <Tooltip
-                                            contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                            cursor={{ fill: '#f8fafc' }}
-                                        />
-                                        <Bar dataKey="Calls" fill="#3b82f6" radius={[4, 4, 0, 0]} barSize={20} />
-                                    </BarChart>
-                                </ResponsiveContainer>
-                            ) : (
-                                <div className="flex flex-col items-center justify-center opacity-50 space-y-4 h-full py-10">
-                                    <BarChart3 className="text-slate-300" size={48} />
-                                    <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Performance Data</p>
-                                </div>
-                            )}
-                        </div>
+                                {barData.length > 0 ? (
+                                    <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                                        <BarChart data={barData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#334155" opacity={0.15} />
+                                            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '700', fill: '#94a3b8' }} />
+                                            <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 9, fontWeight: '700', fill: '#94a3b8' }} />
+                                            <Tooltip
+                                                contentStyle={{
+                                                    backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                                    borderRadius: '12px',
+                                                    border: 'none',
+                                                    color: '#fff',
+                                                    boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+                                                    fontSize: '11px',
+                                                    fontWeight: '700'
+                                                }}
+                                                cursor={{ fill: 'rgba(241, 245, 249, 0.08)' }}
+                                            />
+                                            <Bar dataKey="Calls" fill="#3b82f6" radius={[6, 6, 0, 0]} barSize={18} />
+                                        </BarChart>
+                                    </ResponsiveContainer>
+                                ) : (
+                                    <div className="flex flex-col items-center justify-center opacity-50 space-y-2 py-8">
+                                        <BarChart3 className="text-slate-300 dark:text-slate-600" size={40} />
+                                        <p className="text-[10px] font-black uppercase text-slate-400 tracking-widest text-center">No Performance Data</p>
+                                    </div>
+                                )}
+                            </div>
                         </div>
                     </div>
 
-                    {/* Employee Grid */}
-                    <div className="bg-white rounded-[3rem] border border-slate-100 overflow-hidden shadow-2xl">
-                        <div className="p-8 border-b border-slate-50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                            <h2 className="text-xl font-black text-slate-800 tracking-tight flex items-center gap-3">
-                                <div className="p-2 bg-blue-50 text-blue-600 rounded-xl"><Users size={18} /></div>
-                                Personnel Engagement Matrix
-                            </h2>
+                    {/* Personnel Engagement Matrix Table Card */}
+                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
+                        {/* Table Controls Header */}
+                        <div className="p-6 border-b border-slate-100 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4 bg-slate-50/40 dark:bg-slate-900/40">
+                            <div className="flex items-center gap-3">
+                                <div className="p-2.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded-2xl">
+                                    <Users size={20} />
+                                </div>
+                                <div>
+                                    <h2 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight">
+                                        Personnel Engagement Matrix
+                                    </h2>
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                        {filteredMetrics.length} Active Personnel Enrolled
+                                    </p>
+                                </div>
+                            </div>
                             <div className="relative group w-full md:w-80">
-                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={18} />
+                                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
                                 <input
                                     type="text"
-                                    placeholder="Isolate by name..."
+                                    placeholder="Filter personnel by name..."
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full bg-slate-50 pl-12 pr-4 py-3 rounded-2xl border border-slate-100 outline-none focus:ring-4 ring-blue-50 transition-all font-bold text-xs"
+                                    className="w-full bg-white dark:bg-slate-950 pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 ring-blue-500/30 transition-all font-bold text-xs text-slate-800 dark:text-slate-200"
                                 />
                             </div>
                         </div>
 
+                        {/* Table View */}
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left">
-                                <thead className="bg-slate-50/50">
+                            <table className="w-full text-left border-collapse">
+                                <thead className="bg-slate-100/60 dark:bg-slate-950/60 border-b border-slate-200/60 dark:border-slate-800/60">
                                     <tr>
-                                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Personnel</th>
-                                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Volume</th>
-                                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Distribution (I/O/M)</th>
-                                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest">Engagement</th>
-                                        <th className="px-10 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest text-right">Action</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Personnel</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Calls Volume</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Call Distribution (In / Out / Missed)</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Talk Duration</th>
+                                        <th className="px-6 py-4 text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Details</th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-slate-50">
+                                <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                     {[
-                                        { title: 'CRE / CLIENT CARE', employees: creMetrics },
-                                        { title: 'FA', employees: faMetrics },
-                                        { title: 'LA', employees: laMetrics }
+                                        { title: 'CRE / CLIENT CARE', employees: creMetrics, badgeColor: 'bg-blue-500' },
+                                        { title: 'FA', employees: faMetrics, badgeColor: 'bg-emerald-500' },
+                                        { title: 'LA', employees: laMetrics, badgeColor: 'bg-purple-500' }
                                     ].map((section) => (
                                         section.employees.length > 0 ? [
-                                            <tr key={`${section.title}-header`} className="bg-primary/10">
-                                                <td colSpan="5" className="px-10 py-5 border-y border-primary/20">
-                                                    <span className="text-primary text-base md:text-lg font-black uppercase tracking-[0.28em]">
-                                                        {section.title}
-                                                    </span>
+                                            <tr key={`${section.title}-header`} className="bg-slate-50/80 dark:bg-slate-950/80">
+                                                <td colSpan="5" className="px-6 py-3.5 border-y border-slate-200/60 dark:border-slate-800/60">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className={`w-2 h-2 rounded-full ${section.badgeColor}`}></span>
+                                                        <span className="text-xs font-black text-slate-700 dark:text-slate-300 uppercase tracking-widest">
+                                                            {section.title}
+                                                        </span>
+                                                        <span className="ml-1 px-2 py-0.5 rounded-full text-[9px] font-bold bg-slate-200/60 dark:bg-slate-800 text-slate-600 dark:text-slate-400">
+                                                            {section.employees.length}
+                                                        </span>
+                                                    </div>
                                                 </td>
                                             </tr>,
                                             ...section.employees.map((metrics) => (
-                                            <tr key={metrics.empId} className="group hover:bg-slate-50/50 transition-colors">
-                                                <td className="px-10 py-6">
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="w-10 h-10 bg-slate-100 rounded-full flex items-center justify-center font-black text-blue-600 group-hover:bg-blue-600 group-hover:text-white transition-all">
-                                                            {(typeof metrics.name === 'string' ? metrics.name : "U").charAt(0)}
-                                                        </div>
-                                                        <div className="flex flex-col">
-                                                            <span className="text-sm font-black text-slate-800">{typeof metrics.name === 'string' ? metrics.name : "Unknown Personnel"}</span>
-                                                            <div className="flex items-center gap-2">
-                                                                <span className="text-[10px] text-slate-400 font-bold uppercase">{metrics.empId}</span>
-                                                                 {metrics.lastSync && (new Date() - new Date(metrics.lastSync)) < 30 * 60 * 1000 ? (
-                                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-emerald-50 text-emerald-600 rounded-md ring-1 ring-emerald-100 animate-pulse">
-                                                                        <div className="w-1 h-1 rounded-full bg-emerald-500" />
-                                                                        <span className="text-[7px] font-black uppercase tracking-widest">LIVE • {new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                    </div>
-                                                                ) : (
-                                                                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-rose-50 text-rose-600 rounded-md ring-1 ring-rose-100">
-                                                                        <div className="w-1 h-1 rounded-full bg-rose-400" />
-                                                                        <span className="text-[7px] font-black uppercase tracking-widest">OFFLINE • {metrics.lastSync ? new Date(metrics.lastSync).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'NEVER'}</span>
-                                                                    </div>
-                                                                )}
+                                                <tr key={metrics.empId} className="group hover:bg-blue-50/30 dark:hover:bg-slate-800/30 transition-colors">
+                                                    <td className="px-6 py-4">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black text-white text-xs shadow-md shrink-0">
+                                                                {(typeof metrics.name === 'string' ? metrics.name : "U").charAt(0)}
+                                                            </div>
+                                                            <div className="flex flex-col">
+                                                                <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                                                    {typeof metrics.name === 'string' ? metrics.name : "Unknown Personnel"}
+                                                                </span>
+                                                                <div className="flex items-center gap-2 mt-0.5">
+                                                                    <span className="text-[10px] font-mono text-slate-400">{metrics.empId}</span>
+                                                                    {metrics.lastSync && (new Date() - new Date(metrics.lastSync)) < 30 * 60 * 1000 ? (
+                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 rounded-md border border-emerald-200 dark:border-emerald-800 text-[8px] font-bold uppercase tracking-wider">
+                                                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                                                                            LIVE
+                                                                        </span>
+                                                                    ) : (
+                                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-md text-[8px] font-bold uppercase tracking-wider">
+                                                                            OFFLINE
+                                                                        </span>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         </div>
-                                                    </div>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <span className="text-lg font-black text-slate-800 tracking-tight">{metrics.totalCalls}</span>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <div className="flex gap-1.5 h-1.5 w-32 bg-slate-100 rounded-full overflow-hidden">
-                                                        <div className="bg-emerald-500 h-full" style={{ width: `${(metrics.incoming / metrics.totalCalls) * 100}%` }}></div>
-                                                        <div className="bg-blue-500 h-full" style={{ width: `${(metrics.outgoing / metrics.totalCalls) * 100}%` }}></div>
-                                                        <div className="bg-rose-500 h-full" style={{ width: `${(metrics.missed / metrics.totalCalls) * 100}%` }}></div>
-                                                    </div>
-                                                    <div className="flex gap-3 mt-2 text-[8px] font-black uppercase text-slate-400">
-                                                        <span>{metrics.incoming} In</span>
-                                                        <span>{metrics.outgoing} Out</span>
-                                                        <span>{metrics.missed} Misc</span>
-                                                    </div>
-                                                </td>
-                                                <td className="px-10 py-6">
-                                                    <span className="text-xs font-black text-slate-600 flex items-center gap-1.5">
-                                                        <Clock size={12} className="text-blue-400" />
-                                                        {formatDuration(metrics.duration)}
-                                                    </span>
-                                                </td>
-                                                <td className="px-10 py-6 text-right">
-                                                    <button
-                                                        onClick={() => setSelectedEmployee(metrics)}
-                                                        className="p-3 bg-white border border-slate-100 text-slate-400 hover:text-blue-600 hover:border-blue-200 rounded-xl transition-all shadow-sm active:scale-90"
-                                                    >
-                                                        <ChevronRight size={18} />
-                                                    </button>
-                                                </td>
-                                            </tr>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <span className="text-sm font-black text-slate-800 dark:text-slate-100">{metrics.totalCalls}</span>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="w-40 space-y-1.5">
+                                                            <div className="flex gap-0.5 h-2 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5">
+                                                                <div className="bg-emerald-500 rounded-l-full h-full transition-all" style={{ width: `${metrics.totalCalls > 0 ? (metrics.incoming / metrics.totalCalls) * 100 : 0}%` }}></div>
+                                                                <div className="bg-blue-500 h-full transition-all" style={{ width: `${metrics.totalCalls > 0 ? (metrics.outgoing / metrics.totalCalls) * 100 : 0}%` }}></div>
+                                                                <div className="bg-rose-500 rounded-r-full h-full transition-all" style={{ width: `${metrics.totalCalls > 0 ? (metrics.missed / metrics.totalCalls) * 100 : 0}%` }}></div>
+                                                            </div>
+                                                            <div className="flex justify-between text-[9px] font-bold text-slate-500 dark:text-slate-400">
+                                                                <span className="text-emerald-600 dark:text-emerald-400">{metrics.incoming} In</span>
+                                                                <span className="text-blue-600 dark:text-blue-400">{metrics.outgoing} Out</span>
+                                                                <span className="text-rose-600 dark:text-rose-400">{metrics.missed} Missed</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4">
+                                                        <div className="inline-flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-300">
+                                                            <Clock size={13} className="text-blue-500" />
+                                                            {formatDuration(metrics.duration)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="px-6 py-4 text-right">
+                                                        <button
+                                                            onClick={() => setSelectedEmployee(metrics)}
+                                                            className="p-2 bg-slate-100 dark:bg-slate-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 text-slate-500 rounded-xl transition-all active:scale-95"
+                                                            title="Inspect Employee Call Logs"
+                                                        >
+                                                            <ChevronRight size={16} />
+                                                        </button>
+                                                    </td>
+                                                </tr>
                                             ))
                                         ] : null
                                     ))}
                                     {creMetrics.length === 0 && faMetrics.length === 0 && laMetrics.length === 0 && (
                                         <tr>
-                                            <td colSpan="5" className="px-10 py-10 text-center text-sm font-bold text-slate-400">
-                                                No CRE, Client Care, FA, or LA employees found.
+                                            <td colSpan="5" className="px-6 py-12 text-center text-xs font-bold text-slate-400">
+                                                No matching employees found for current search criteria.
                                             </td>
                                         </tr>
                                     )}
@@ -754,56 +809,52 @@ const AdminCallReports = () => {
                         </div>
                     </div>
 
-                    {/* Email Modal */}
+                    {/* Modal: Email Report */}
                     <AnimatePresence>
                         {showEmailModal && (
-                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-md">
+                            <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md">
                                 <motion.div
-                                    initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                                    initial={{ opacity: 0, scale: 0.95, y: 15 }}
                                     animate={{ opacity: 1, scale: 1, y: 0 }}
-                                    exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                                    className="bg-white rounded-[3rem] p-10 max-w-lg w-full shadow-2xl border border-slate-100 relative overflow-hidden"
+                                    exit={{ opacity: 0, scale: 0.95, y: 15 }}
+                                    className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-2xl border border-slate-100 dark:border-slate-800 relative overflow-hidden"
                                 >
-                                    <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"></div>
                                     <button 
                                         onClick={() => setShowEmailModal(false)}
-                                        className="absolute top-6 right-6 p-2 text-slate-400 hover:text-slate-800 transition-colors"
+                                        className="absolute top-5 right-5 p-2 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors"
                                     >
-                                        <CloseIcon size={24} />
+                                        <CloseIcon size={18} />
                                     </button>
 
-                                    <div className="flex flex-col items-center text-center space-y-6">
-                                        <div className="w-20 h-20 bg-indigo-50 rounded-[2rem] flex items-center justify-center text-indigo-600 shadow-inner">
-                                            <Mail size={40} />
+                                    <div className="flex flex-col items-center text-center space-y-4">
+                                        <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/60 rounded-2xl flex items-center justify-center text-indigo-600 dark:text-indigo-400">
+                                            <Mail size={28} />
                                         </div>
-                                        <div className="space-y-2">
-                                            <h2 className="text-3xl font-black text-slate-800 tracking-tight">Transmission Station</h2>
-                                            <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest">Email Call Performance Report</p>
+                                        <div className="space-y-1">
+                                            <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight">Email Analytics Report</h2>
+                                            <p className="text-slate-400 font-medium text-xs">Dispatch formatted summary to destination address</p>
                                         </div>
 
-                                        <div className="w-full space-y-4">
-                                            <div className="relative">
-                                                <input 
-                                                    type="email"
-                                                    value={emailAddress}
-                                                    onChange={(e) => setEmailAddress(e.target.value)}
-                                                    placeholder="Enter destination email..."
-                                                    className="w-full pl-6 pr-6 py-5 bg-slate-50 border-2 border-slate-100 rounded-3xl text-sm font-bold text-slate-800 placeholder:text-slate-300 focus:outline-none focus:border-indigo-500 transition-all shadow-inner"
-                                                />
-                                            </div>
+                                        <div className="w-full space-y-3 pt-2">
+                                            <input 
+                                                type="email"
+                                                value={emailAddress}
+                                                onChange={(e) => setEmailAddress(e.target.value)}
+                                                placeholder="Enter recipient email..."
+                                                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-800 dark:text-slate-200 outline-none focus:ring-2 ring-indigo-500/30 transition-all"
+                                            />
                                             <button 
                                                 onClick={handleEmailReport}
                                                 disabled={isEmailing}
-                                                className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-3xl font-black uppercase text-xs tracking-[0.2em] shadow-xl shadow-indigo-100 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
+                                                className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black uppercase text-xs tracking-wider shadow-lg active:scale-95 disabled:opacity-50 flex items-center justify-center gap-2"
                                             >
                                                 {isEmailing ? (
-                                                    <><RefreshCw className="animate-spin" size={16} /> Transmitting...</>
+                                                    <><RefreshCw className="animate-spin" size={14} /> Transmitting...</>
                                                 ) : (
-                                                    <><Activity size={16} /> Broadcast Report</>
+                                                    <><Activity size={14} /> Send Email Report</>
                                                 )}
                                             </button>
                                         </div>
-                                        <p className="text-[9px] font-black text-slate-300 uppercase tracking-widest">Encrypted Data Stream • Secure Protocol</p>
                                     </div>
                                 </motion.div>
                             </div>
@@ -811,7 +862,6 @@ const AdminCallReports = () => {
                     </AnimatePresence>
                 </>
             ) : (() => {
-                // Dynamic SIM labels resolution helper
                 const getCallSimLabel = (c) => {
                     const label = String(c.simLabel || "").trim();
                     if (label && label.toLowerCase() !== 'unknown' && label.toLowerCase() !== 'null') {
@@ -859,30 +909,30 @@ const AdminCallReports = () => {
 
                 return (
                     <motion.div
-                        initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
-                        className="space-y-8"
+                        initial={{ opacity: 0, scale: 0.98 }} animate={{ opacity: 1, scale: 1 }}
+                        className="space-y-6"
                     >
-                        {/* Drill-down Header */}
+                        {/* Drill-down Header Toolbar */}
                         <div className="flex items-center justify-between gap-4 flex-wrap">
                             <button
                                 onClick={() => {
                                     setSelectedEmployee(null);
-                                    setSimFilter('ALL'); // Reset filter when backing out
+                                    setSimFilter('ALL');
                                 }}
-                                className="flex items-center gap-2 text-slate-500 hover:text-slate-800 font-black uppercase text-[10px] tracking-widest transition-colors bg-white px-6 py-3 rounded-2xl border border-slate-100 shadow-sm"
+                                className="flex items-center gap-2 text-slate-600 dark:text-slate-300 hover:text-blue-600 font-black text-xs uppercase tracking-wider bg-white dark:bg-slate-900 px-5 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all"
                             >
-                                <ArrowLeft size={14} /> Back to Command
+                                <ArrowLeft size={16} /> Back to Command Matrix
                             </button>
 
-                            <div className="flex items-center gap-2 bg-white px-4 py-2.5 rounded-2xl border border-slate-100 shadow-sm">
+                            <div className="flex items-center gap-2 bg-white dark:bg-slate-900 px-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
                                 <Filter size={14} className="text-blue-500" />
-                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">SIM Target:</span>
+                                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">SIM Filter:</span>
                                 <select
                                     value={simFilter}
                                     onChange={(e) => setSimFilter(e.target.value)}
-                                    className="bg-transparent text-xs font-black text-slate-700 outline-none border-none cursor-pointer"
+                                    className="bg-transparent text-xs font-black text-slate-800 dark:text-slate-200 outline-none cursor-pointer"
                                 >
-                                    <option value="ALL">All SIMs</option>
+                                    <option value="ALL">All SIM Slots</option>
                                     {uniqueLabels.map(label => (
                                         <option key={label} value={label}>{label}</option>
                                     ))}
@@ -890,77 +940,92 @@ const AdminCallReports = () => {
                             </div>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                            {/* Profile & Pie Chart */}
-                            <div className="lg:col-span-4 bg-white p-8 rounded-[3.5rem] border border-slate-100 shadow-2xl flex flex-col items-center">
-                                <div className="w-32 h-32 bg-blue-600 rounded-[2.5rem] flex items-center justify-center text-white text-4xl font-black mb-4 shadow-xl shadow-blue-200">
+                        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                            {/* Left Side: Employee Profile & Donut */}
+                            <div className="lg:col-span-4 bg-white dark:bg-slate-900 p-6 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col items-center">
+                                <div className="w-20 h-20 bg-gradient-to-tr from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center text-white text-2xl font-black mb-3 shadow-lg shadow-blue-500/20">
                                     {(typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "U").charAt(0)}
                                 </div>
-                                <h2 className="text-3xl font-black text-slate-800 tracking-tight">{typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "Unknown Personnel"}</h2>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-8">Performance DNA</p>
+                                <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight text-center">
+                                    {typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "Unknown Personnel"}
+                                </h2>
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-6">
+                                    {selectedEmployee.empId} • {selectedEmployee.designation || 'Personnel'}
+                                </p>
 
-                                 <div className="w-full space-y-4">
-                                     <div className="h-[250px] w-full">
-                                         {(isMounted && selectedEmployee) && (
-                                             <ResponsiveContainer width="100%" height={250} minWidth={0}>
-                                            <PieChart>
-                                                <Pie
-                                                    data={localPieData}
-                                                    cx="50%" cy="50%"
-                                                    innerRadius={60} outerRadius={80}
-                                                    paddingAngle={5}
-                                                    dataKey="value"
-                                                    stroke="none"
-                                                >
-                                                    {localPieData.map((entry, index) => (
-                                                        <Cell key={`cell-${index}`} fill={entry.color} />
-                                                    ))}
-                                                </Pie>
-                                                <Tooltip
-                                                    contentStyle={{ borderRadius: '16px', border: 'none', shadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
-                                                />
-                                                <Legend verticalAlign="bottom" iconType="circle" wrapperStyle={{ fontSize: '10px', fontWeight: '900' }} />
-                                            </PieChart>
-                                        </ResponsiveContainer>
-                                    )}
-                                </div>
+                                <div className="w-full space-y-4">
+                                    <div className="h-[220px] w-full">
+                                        {(isMounted && selectedEmployee) && (
+                                            <ResponsiveContainer width="100%" height={220} minWidth={0}>
+                                                <PieChart>
+                                                    <Pie
+                                                        data={localPieData}
+                                                        cx="50%" cy="50%"
+                                                        innerRadius={50} outerRadius={72}
+                                                        paddingAngle={4}
+                                                        dataKey="value"
+                                                        stroke="none"
+                                                    >
+                                                        {localPieData.map((entry, index) => (
+                                                            <Cell key={`cell-${index}`} fill={entry.color} />
+                                                        ))}
+                                                    </Pie>
+                                                    <Tooltip
+                                                        contentStyle={{
+                                                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                                                            borderRadius: '12px',
+                                                            border: 'none',
+                                                            color: '#fff',
+                                                            boxShadow: '0 10px 25px -5px rgba(0,0,0,0.3)',
+                                                            fontSize: '11px',
+                                                            fontWeight: '700'
+                                                        }}
+                                                    />
+                                                    <Legend verticalAlign="bottom" iconType="circle" iconSize={8} wrapperStyle={{ fontSize: '10px', fontWeight: '800' }} />
+                                                </PieChart>
+                                            </ResponsiveContainer>
+                                        )}
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Analysis Metrics Grid */}
-                            <div className="lg:col-span-8 space-y-8">
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                                    <MetricBox label="Identified" value={localMetrics.total} color="blue" icon={Hash} />
+                            {/* Right Side: Metrics Grid + Raw Call Logs Table */}
+                            <div className="lg:col-span-8 space-y-6">
+                                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                    <MetricBox label="Logged Calls" value={localMetrics.total} color="blue" icon={Hash} />
                                     <MetricBox label="Incoming" value={localMetrics.incoming} color="emerald" icon={PhoneIncoming} />
                                     <MetricBox label="Outgoing" value={localMetrics.outgoing} color="sky" icon={PhoneOutgoing} />
                                     <MetricBox label="Missed" value={localMetrics.missed} color="rose" icon={PhoneMissed} />
-                                    <MetricBox label="Unattended Outgoing" value={localMetrics.unattendedOutgoing} color="amber" icon={PhoneOff} />
+                                    <MetricBox label="Unattended" value={localMetrics.unattendedOutgoing} color="amber" icon={PhoneOff} />
                                     <MetricBox label="Unique Leads" value={localMetrics.uniqueLeads} color="indigo" icon={User} />
-                                    <MetricBox label="Session Time" value={formatDuration(localMetrics.duration)} color="fuchsia" icon={Clock} />
+                                    <div className="col-span-2 sm:col-span-3">
+                                        <MetricBox label="Session Duration" value={formatDuration(localMetrics.duration)} color="fuchsia" icon={Clock} />
+                                    </div>
                                 </div>
 
-                                {/* Recent Activity Log */}
-                                <div className="bg-white rounded-[3.5rem] border border-slate-100 shadow-2xl overflow-hidden flex flex-col">
-                                    <div className="p-8 border-b border-slate-50 flex items-center justify-between">
-                                        <h3 className="font-black text-slate-800 uppercase text-xs tracking-widest flex items-center gap-3">
-                                            <Activity className="text-blue-500" size={16} /> Raw Log Transmission
+                                {/* Raw Call Logs Table */}
+                                <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden flex flex-col">
+                                    <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between bg-slate-50/40 dark:bg-slate-900/40">
+                                        <h3 className="font-black text-slate-800 dark:text-slate-100 text-xs uppercase tracking-widest flex items-center gap-2">
+                                            <Activity className="text-blue-500" size={16} /> Call Transmission Logs
                                         </h3>
-                                        <div className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                            Total Records: {employeeFilteredLogs.length}
-                                        </div>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                                            Total: {employeeFilteredLogs.length} Records
+                                        </span>
                                     </div>
-                                    <div className="overflow-x-auto max-h-[500px] overflow-y-auto">
-                                        <table className="w-full text-left">
-                                            <thead className="bg-slate-50/50 sticky top-0 z-10">
+
+                                    <div className="overflow-x-auto max-h-[480px] overflow-y-auto">
+                                        <table className="w-full text-left border-collapse">
+                                            <thead className="bg-slate-100/60 dark:bg-slate-950/60 sticky top-0 z-10 border-b border-slate-200/60 dark:border-slate-800/60">
                                                 <tr>
-                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Descriptor</th>
-                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Identifier</th>
-                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">SIM</th>
-                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest">Timeline</th>
-                                                    <th className="px-8 py-5 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Impact</th>
+                                                    <th className="px-6 py-3.5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Type</th>
+                                                    <th className="px-6 py-3.5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Phone / Contact</th>
+                                                    <th className="px-6 py-3.5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">SIM Slot</th>
+                                                    <th className="px-6 py-3.5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Timestamp</th>
+                                                    <th className="px-6 py-3.5 text-[9px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-right">Duration</th>
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-50">
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                                 {[...employeeFilteredLogs]
                                                     .sort((a, b) => {
                                                         const normA = normalize(a.number);
@@ -970,10 +1035,8 @@ const AdminCallReports = () => {
                                                         const freqA = countA > 3 ? 1 : 0;
                                                         const freqB = countB > 3 ? 1 : 0;
 
-                                                        // Sort frequent (>3 calls) numbers to top first
                                                         if (freqA !== freqB) return freqB - freqA;
 
-                                                        // Secondary sort by timestamp descending
                                                         const timeA = new Date(a.date).getTime() || 0;
                                                         const timeB = new Date(b.date).getTime() || 0;
                                                         return timeB - timeA;
@@ -984,63 +1047,54 @@ const AdminCallReports = () => {
                                                         const isFrequent = callCount > 3;
 
                                                         return (
-                                                            <motion.tr 
+                                                            <tr 
                                                                 key={idx} 
-                                                                initial={isFrequent ? { scale: 0.99 } : false}
-                                                                animate={isFrequent ? { scale: 1 } : false}
-                                                                className={`transition-all duration-300 relative ${
+                                                                className={`transition-colors ${
                                                                     isFrequent 
-                                                                        ? 'bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-amber-500/5 hover:from-amber-500/25 hover:to-orange-500/15 border-l-4 border-l-amber-500 shadow-sm font-bold' 
-                                                                        : 'hover:bg-slate-50/50'
+                                                                        ? 'bg-amber-500/10 hover:bg-amber-500/15 border-l-4 border-l-amber-500' 
+                                                                        : 'hover:bg-slate-50/50 dark:hover:bg-slate-800/40'
                                                                 }`}
                                                             >
-                                                                <td className="px-8 py-4">
-                                                                    <div className="flex items-center gap-3">
-                                                                        <div className={`p-1.5 rounded-lg ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                                                                <td className="px-6 py-3.5">
+                                                                    <div className="flex items-center gap-2">
+                                                                        <div className={`p-1 rounded-md ${call.type === 'OUTGOING' ? 'bg-blue-50 text-blue-600' : call.type === 'INCOMING' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
                                                                             {call.type === 'OUTGOING' ? <PhoneOutgoing size={12} /> : call.type === 'INCOMING' ? <PhoneIncoming size={12} /> : <PhoneMissed size={12} />}
                                                                         </div>
-                                                                        <span className="text-[10px] font-black uppercase text-slate-600">{call.type}</span>
+                                                                        <span className="text-[10px] font-black uppercase text-slate-700 dark:text-slate-300">{call.type}</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-8 py-4">
-                                                                    <div className="flex flex-col items-start gap-1">
-                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                            <span className={`text-sm font-black ${isFrequent ? 'text-amber-900 drop-shadow-sm' : 'text-slate-800'}`}>
+                                                                <td className="px-6 py-3.5">
+                                                                    <div className="flex flex-col">
+                                                                        <div className="flex items-center gap-2">
+                                                                            <span className={`text-xs font-black ${isFrequent ? 'text-amber-900 dark:text-amber-300' : 'text-slate-800 dark:text-slate-200'}`}>
                                                                                 {call.number}
                                                                             </span>
                                                                             {isFrequent && (
-                                                                                <motion.span 
-                                                                                    animate={{ scale: [1, 1.06, 1] }}
-                                                                                    transition={{ repeat: Infinity, duration: 2 }}
-                                                                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[9px] font-black bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white uppercase tracking-wider shadow-md shadow-orange-500/30 border border-amber-300/40"
-                                                                                >
-                                                                                    <Flame size={11} className="animate-bounce text-yellow-200" />
-                                                                                    <span>Frequent ({callCount} Calls)</span>
-                                                                                </motion.span>
+                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[8px] font-black bg-gradient-to-r from-amber-500 to-orange-500 text-white uppercase tracking-wider shadow-sm">
+                                                                                    <Flame size={10} /> Frequent ({callCount})
+                                                                                </span>
                                                                             )}
                                                                         </div>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{call.name || "UNKNOWN"}</span>
+                                                                        <span className="text-[9px] font-semibold text-slate-400 uppercase">{call.name || "UNKNOWN CONTACT"}</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-8 py-4">
+                                                                <td className="px-6 py-3.5">
+                                                                    <span className="text-xs font-bold text-slate-600 dark:text-slate-400">
+                                                                        {call.simLabel || (call.simSlot ? `SIM ${call.simSlot}` : 'N/A')}
+                                                                    </span>
+                                                                </td>
+                                                                <td className="px-6 py-3.5">
                                                                     <div className="flex flex-col">
-                                                                        <span className="text-xs font-black text-slate-700">
-                                                                            {call.simLabel || (call.simSlot ? `SIM ${call.simSlot}` : 'N/A')}
-                                                                        </span>
+                                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{new Date(call.date).toLocaleDateString('en-GB')}</span>
+                                                                        <span className="text-[9px] font-semibold text-slate-400">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                                                                     </div>
                                                                 </td>
-                                                                <td className="px-8 py-4">
-                                                                    <div className="flex flex-col">
-                                                                        <span className="text-xs font-black text-slate-700">{new Date(call.date).toLocaleDateString('en-GB')}</span>
-                                                                        <span className="text-[9px] font-bold text-slate-400 uppercase">{new Date(call.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                                                                    </div>
-                                                                </td>
-                                                                <td className="px-8 py-4 text-right">
-                                                                    <span className={`text-[10px] font-black transition-all ${call.duration > 0 ? 'text-emerald-500' : 'text-slate-300'}`}>
+                                                                <td className="px-6 py-3.5 text-right">
+                                                                    <span className={`text-xs font-black ${call.duration > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
                                                                         {call.duration}s
                                                                     </span>
                                                                 </td>
-                                                            </motion.tr>
+                                                            </tr>
                                                         );
                                                     })}
                                             </tbody>
@@ -1053,46 +1107,42 @@ const AdminCallReports = () => {
                 );
             })()}
 
-            {/* Live Sync Progress Modal */}
+            {/* Modal: Live Device Sync Progress */}
             <AnimatePresence>
                 {showSyncModal && (
                     <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
-                            exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl text-white space-y-6"
+                            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
+                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl text-white space-y-5"
                         >
                             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-3 rounded-2xl border transition-all ${
+                                    <div className={`p-2.5 rounded-2xl border transition-all ${
                                         isPollingSync 
                                             ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' 
                                             : syncStatusData && syncStatusData.pendingDevices === 0 
                                             ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' 
                                             : 'bg-amber-500/10 text-amber-400 border-amber-500/20'
                                     }`}>
-                                        <Smartphone className={isPollingSync ? 'animate-pulse' : ''} size={24} />
+                                        <Smartphone className={isPollingSync ? 'animate-pulse' : ''} size={22} />
                                     </div>
                                     <div>
-                                        <h3 className="text-lg font-black tracking-tight">
+                                        <h3 className="text-base font-black tracking-tight">
                                             {isPollingSync 
-                                                ? 'Live Employee Call Log Sync' 
+                                                ? 'Live Employee Device Sync' 
                                                 : syncStatusData && syncStatusData.pendingDevices === 0 
                                                 ? '✓ All Devices Synced' 
                                                 : 'Sync Request Active'}
                                         </h3>
                                         <p className="text-xs text-slate-400">
                                             {isPollingSync 
-                                                ? 'Triggering and receiving call logs from all employee phones...' 
+                                                ? 'Polling and syncing call logs from enrolled employee phones...' 
                                                 : syncStatusData && syncStatusData.pendingDevices === 0 
-                                                ? 'Call logs successfully received from all employee devices' 
-                                                : 'Sync request is active. Employee Android devices poll for requests every 1 min.'}
+                                                ? 'Call logs successfully received from all devices' 
+                                                : 'Sync request sent. Devices check in automatically every minute.'}
                                         </p>
                                     </div>
                                 </div>
@@ -1100,26 +1150,26 @@ const AdminCallReports = () => {
                                     onClick={() => setShowSyncModal(false)}
                                     className="p-2 text-slate-400 hover:text-white rounded-xl hover:bg-slate-800 transition-colors"
                                 >
-                                    <CloseIcon size={20} />
+                                    <CloseIcon size={18} />
                                 </button>
                             </div>
 
                             {/* Progress Section */}
-                            <div className="space-y-3 bg-slate-950/50 p-4 rounded-2xl border border-slate-800/80">
+                            <div className="space-y-2 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
                                 <div className="flex justify-between items-center text-xs font-bold">
                                     <span className="text-slate-300">
                                         {isPollingSync 
-                                            ? 'Syncing call logs from devices...' 
+                                            ? 'Syncing in progress...' 
                                             : syncStatusData && syncStatusData.pendingDevices === 0 
                                             ? '✓ All Employees Synced' 
-                                            : 'Waiting for remaining devices to check in...'}
+                                            : 'Waiting for remaining devices...'}
                                     </span>
-                                    <span className="text-cyan-400 font-mono">
+                                    <span className="text-cyan-400 font-mono text-xs">
                                         {syncStatusData ? `${syncStatusData.syncedDevices} / ${syncStatusData.totalDevices} Synced` : 'Connecting...'}
                                     </span>
                                 </div>
 
-                                <div className="w-full bg-slate-800 h-3 rounded-full overflow-hidden p-0.5">
+                                <div className="w-full bg-slate-800 h-2.5 rounded-full overflow-hidden p-0.5">
                                     <motion.div
                                         className={`h-full rounded-full transition-all duration-500 ${
                                             syncStatusData && syncStatusData.pendingDevices === 0 
@@ -1135,45 +1185,26 @@ const AdminCallReports = () => {
                                 </div>
                             </div>
 
-                            {/* Info Helper Banner */}
-                            <div className="bg-cyan-950/30 border border-cyan-500/20 p-3 rounded-2xl flex items-start gap-2.5 text-[11px] text-cyan-200/90 leading-relaxed">
-                                <Info size={16} className="text-cyan-400 shrink-0 mt-0.5" />
-                                <div>
-                                    <span className="font-semibold text-white">How Background Sync Works:</span> Remote sync requests are active on the server. Employee Android phones check in automatically when connected to the network. Devices that haven't checked in yet show <span className="text-amber-400 font-semibold">Pending Check-in</span> and will sync when active.
-                                </div>
-                            </div>
-
                             {/* Devices List */}
-                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
+                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
                                 {syncStatusData?.devices?.map((dev) => (
-                                    <div key={dev.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-800 text-xs hover:border-slate-700 transition-all">
+                                    <div key={dev.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-800/80 text-xs hover:border-slate-700 transition-all">
                                         <div className="flex items-center gap-3">
-                                            <User size={16} className="text-slate-400" />
+                                            <User size={15} className="text-slate-400 shrink-0" />
                                             <div>
-                                                <div className="font-bold text-white">{dev.user?.name || 'Employee'}</div>
+                                                <div className="font-bold text-white text-xs">{dev.user?.name || 'Employee'}</div>
                                                 <div className="text-[10px] text-slate-400">
                                                     {dev.deviceName || 'Android Device'} • SIM {dev.officialSim}
-                                                    {dev.lastSuccessAt && (
-                                                        <span className="ml-2 text-slate-400 font-mono">
-                                                            (Last: {new Date(dev.lastSuccessAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})
-                                                        </span>
-                                                    )}
                                                 </div>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-2">
                                             {dev.requestPending ? (
-                                                isPollingSync ? (
-                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5">
-                                                        <RefreshCw size={10} className="animate-spin" /> Syncing...
-                                                    </span>
-                                                ) : (
-                                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1.5" title="Device has an active request and will sync on next check-in">
-                                                        <Clock size={10} /> Pending Check-in
-                                                    </span>
-                                                )
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                                    <Clock size={10} /> Pending
+                                                </span>
                                             ) : (
-                                                <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
                                                     ✓ Synced
                                                 </span>
                                             )}
@@ -1181,7 +1212,7 @@ const AdminCallReports = () => {
                                             <button
                                                 onClick={() => handleRequestSingleDeviceSync(dev.user?.id, dev.user?.name)}
                                                 title={`Re-trigger sync signal for ${dev.user?.name || 'employee'}`}
-                                                className="p-1.5 text-slate-400 hover:text-cyan-400 rounded-lg hover:bg-slate-700/60 transition-colors"
+                                                className="p-1 text-slate-400 hover:text-cyan-400 rounded-lg hover:bg-slate-700 transition-colors"
                                             >
                                                 <RefreshCw size={12} />
                                             </button>
@@ -1191,45 +1222,28 @@ const AdminCallReports = () => {
 
                                 {(!syncStatusData || syncStatusData.devices?.length === 0) && (
                                     <div className="text-center py-6 text-slate-500 text-xs">
-                                        <RefreshCw size={18} className="animate-spin mx-auto mb-2 opacity-50" />
-                                        Waiting for status update from employee devices...
+                                        <RefreshCw size={16} className="animate-spin mx-auto mb-2 opacity-50" />
+                                        Waiting for status update...
                                     </div>
                                 )}
                             </div>
 
                             {/* Footer Actions */}
                             <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={fetchBulkStatusOnce}
-                                        disabled={isRefreshingStatus}
-                                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-semibold rounded-xl border border-slate-700/60 transition-all flex items-center gap-2"
-                                    >
-                                        <RefreshCw size={14} className={isRefreshingStatus ? 'animate-spin' : ''} />
-                                        Refresh Status
-                                    </button>
-
-                                    {!isPollingSync && syncStatusData && syncStatusData.pendingDevices > 0 && (
-                                        <button
-                                            onClick={() => {
-                                                setIsPollingSync(true);
-                                                const token = JSON.parse(localStorage.getItem('user')).token;
-                                                const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
-                                                pollBulkStatus(token, baseUrl, Date.now());
-                                            }}
-                                            className="px-3.5 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-semibold rounded-xl border border-cyan-500/30 transition-all flex items-center gap-2"
-                                        >
-                                            <Activity size={14} className="animate-pulse" />
-                                            Resume Polling
-                                        </button>
-                                    )}
-                                </div>
+                                <button
+                                    onClick={fetchBulkStatusOnce}
+                                    disabled={isRefreshingStatus}
+                                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-semibold rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5"
+                                >
+                                    <RefreshCw size={13} className={isRefreshingStatus ? 'animate-spin' : ''} />
+                                    Refresh Status
+                                </button>
 
                                 <button
                                     onClick={() => setShowSyncModal(false)}
-                                    className="px-5 py-2.5 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
+                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
                                 >
-                                    Close & View Reports
+                                    Close Dialog
                                 </button>
                             </div>
                         </motion.div>
@@ -1242,27 +1256,28 @@ const AdminCallReports = () => {
 
 const MetricBox = ({ label, value, color, icon: Icon }) => {
     const colorMap = {
-        emerald: 'bg-emerald-50 text-emerald-600 border-emerald-100',
-        blue: 'bg-blue-50 text-blue-600 border-blue-100',
-        amber: 'bg-amber-50 text-amber-600 border-amber-100',
-        purple: 'bg-purple-50 text-purple-600 border-purple-100',
-        rose: 'bg-rose-50 text-rose-600 border-rose-100',
-        sky: 'bg-sky-50 text-sky-600 border-sky-100',
-        indigo: 'bg-indigo-50 text-indigo-600 border-indigo-100',
-        fuchsia: 'bg-fuchsia-50 text-fuchsia-600 border-fuchsia-100',
+        emerald: 'bg-emerald-50/80 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border-emerald-100 dark:border-emerald-900/40',
+        blue: 'bg-blue-50/80 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border-blue-100 dark:border-blue-900/40',
+        amber: 'bg-amber-50/80 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border-amber-100 dark:border-amber-900/40',
+        purple: 'bg-purple-50/80 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border-purple-100 dark:border-purple-900/40',
+        rose: 'bg-rose-50/80 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border-rose-100 dark:border-rose-900/40',
+        sky: 'bg-sky-50/80 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border-sky-100 dark:border-sky-900/40',
+        indigo: 'bg-indigo-50/80 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border-indigo-100 dark:border-indigo-900/40',
+        fuchsia: 'bg-fuchsia-50/80 dark:bg-fuchsia-950/40 text-fuchsia-600 dark:text-fuchsia-400 border-fuchsia-100 dark:border-fuchsia-900/40',
     };
 
     return (
-        <div className={`p-5 rounded-[2rem] border shadow-xl flex items-center justify-between group hover:-translate-y-1 transition-all duration-300 ${colorMap[color]}`}>
-            <div className="space-y-1">
-                <span className="text-[9px] font-black uppercase tracking-widest opacity-80">{label}</span>
-                <p className="text-2xl font-black tracking-tighter">{value}</p>
+        <div className={`p-4 md:p-5 rounded-2xl border shadow-sm flex items-center justify-between group hover:-translate-y-0.5 transition-all duration-200 ${colorMap[color]}`}>
+            <div className="space-y-0.5">
+                <span className="text-[9px] font-black uppercase tracking-widest opacity-75">{label}</span>
+                <p className="text-xl md:text-2xl font-black tracking-tight">{value}</p>
             </div>
-            <div className="w-10 h-10 bg-white/50 rounded-2xl flex items-center justify-center transition-all group-hover:scale-110">
-                <Icon size={20} className="opacity-90" />
+            <div className="w-9 h-9 bg-white/70 dark:bg-slate-900/70 rounded-xl flex items-center justify-center transition-all group-hover:scale-110 shadow-sm shrink-0">
+                <Icon size={18} className="opacity-90" />
             </div>
         </div>
     );
 };
 
 export default AdminCallReports;
+inCallReports;
