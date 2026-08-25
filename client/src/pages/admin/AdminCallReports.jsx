@@ -41,7 +41,38 @@ const AdminCallReports = () => {
     const [isPollingSync, setIsPollingSync] = useState(false);
     const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
     const [simFilter, setSimFilter] = useState('ALL');
+    const [syncModalTab, setSyncModalTab] = useState('ALL');
     const pollTimeoutRef = useRef(null);
+
+    const formatDeviceName = (rawName) => {
+        if (!rawName) return 'Android Device';
+        const str = String(rawName).trim();
+        if (!str.includes('Mozilla/') && !str.includes('AppleWebKit') && !str.includes('Build/')) {
+            return str;
+        }
+
+        const androidMatch = str.match(/Android\s+([\d.]+)/i);
+        const androidVer = androidMatch ? `Android ${androidMatch[1]}` : 'Android';
+
+        let model = '';
+        const buildMatch = str.match(/;\s*([^;]+?)\s+Build\//i);
+        if (buildMatch && buildMatch[1]) {
+            model = buildMatch[1].trim();
+        } else {
+            const deviceMatch = str.match(/\(([^)]+)\)/);
+            if (deviceMatch && deviceMatch[1]) {
+                const parts = deviceMatch[1].split(';').map(s => s.trim());
+                const candidate = parts.find(p => !p.startsWith('Linux') && !p.startsWith('Android') && !p.startsWith('wv'));
+                if (candidate) model = candidate;
+            }
+        }
+
+        if (model) {
+            return `${androidVer} • ${model}`;
+        }
+
+        return `${androidVer} Device`;
+    };
 
     useEffect(() => {
         setIsMounted(true);
@@ -1120,12 +1151,13 @@ const AdminCallReports = () => {
                         className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
                     >
                         <motion.div
-                            initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }} exit={{ scale: 0.9, opacity: 0 }}
-                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-xl w-full shadow-2xl text-white space-y-5"
+                            initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-2xl w-full shadow-2xl text-white space-y-5"
                         >
+                            {/* Modal Header */}
                             <div className="flex items-center justify-between border-b border-slate-800 pb-4">
                                 <div className="flex items-center gap-3">
-                                    <div className={`p-2.5 rounded-2xl border transition-all ${
+                                    <div className={`p-3 rounded-2xl border transition-all ${
                                         isPollingSync 
                                             ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' 
                                             : syncStatusData && syncStatusData.pendingDevices === 0 
@@ -1135,19 +1167,26 @@ const AdminCallReports = () => {
                                         <Smartphone className={isPollingSync ? 'animate-pulse' : ''} size={22} />
                                     </div>
                                     <div>
-                                        <h3 className="text-base font-black tracking-tight">
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-base font-black tracking-tight">
+                                                {isPollingSync 
+                                                    ? 'Live Employee Device Sync' 
+                                                    : syncStatusData && syncStatusData.pendingDevices === 0 
+                                                    ? '✓ All Devices Synced' 
+                                                    : 'Sync Request Active'}
+                                            </h3>
+                                            {isPollingSync && (
+                                                <span className="px-2 py-0.5 rounded-full text-[8px] font-black uppercase tracking-wider bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 flex items-center gap-1">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping"></span> POLLING
+                                                </span>
+                                            )}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-0.5">
                                             {isPollingSync 
-                                                ? 'Live Employee Device Sync' 
+                                                ? 'Broadcasting signal and syncing call logs from employee devices...' 
                                                 : syncStatusData && syncStatusData.pendingDevices === 0 
-                                                ? '✓ All Devices Synced' 
-                                                : 'Sync Request Active'}
-                                        </h3>
-                                        <p className="text-xs text-slate-400">
-                                            {isPollingSync 
-                                                ? 'Polling and syncing call logs from enrolled employee phones...' 
-                                                : syncStatusData && syncStatusData.pendingDevices === 0 
-                                                ? 'Call logs successfully received from all devices' 
-                                                : 'Sync request sent. Devices check in automatically every minute.'}
+                                                ? 'Call logs successfully uploaded from all enrolled employee phones' 
+                                                : 'Sync signal active on server. Devices check in automatically every minute.'}
                                         </p>
                                     </div>
                                 </div>
@@ -1159,17 +1198,18 @@ const AdminCallReports = () => {
                                 </button>
                             </div>
 
-                            {/* Progress Section */}
-                            <div className="space-y-2 bg-slate-950/60 p-4 rounded-2xl border border-slate-800">
+                            {/* Overall Progress Section */}
+                            <div className="space-y-2.5 bg-slate-950/70 p-4 rounded-2xl border border-slate-800/90">
                                 <div className="flex justify-between items-center text-xs font-bold">
-                                    <span className="text-slate-300">
+                                    <span className="text-slate-300 flex items-center gap-1.5">
+                                        <Activity size={14} className="text-cyan-400" />
                                         {isPollingSync 
-                                            ? 'Syncing in progress...' 
+                                            ? 'Device synchronization in progress...' 
                                             : syncStatusData && syncStatusData.pendingDevices === 0 
-                                            ? '✓ All Employees Synced' 
-                                            : 'Waiting for remaining devices...'}
+                                            ? '✓ Complete' 
+                                            : 'Waiting for devices check-in'}
                                     </span>
-                                    <span className="text-cyan-400 font-mono text-xs">
+                                    <span className="text-cyan-400 font-mono text-xs font-black">
                                         {syncStatusData ? `${syncStatusData.syncedDevices} / ${syncStatusData.totalDevices} Synced` : 'Connecting...'}
                                     </span>
                                 </div>
@@ -1190,63 +1230,144 @@ const AdminCallReports = () => {
                                 </div>
                             </div>
 
+                            {/* Status Filter Tabs */}
+                            <div className="flex items-center justify-between gap-2 border-b border-slate-800 pb-2 pt-1">
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        onClick={() => setSyncModalTab('ALL')}
+                                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                                            syncModalTab === 'ALL'
+                                                ? 'bg-slate-800 text-white border border-slate-700'
+                                                : 'text-slate-400 hover:text-slate-200'
+                                        }`}
+                                    >
+                                        All Devices ({syncStatusData?.devices?.length || 0})
+                                    </button>
+                                    <button
+                                        onClick={() => setSyncModalTab('SYNCED')}
+                                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                                            syncModalTab === 'SYNCED'
+                                                ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-800/80'
+                                                : 'text-slate-400 hover:text-emerald-400'
+                                        }`}
+                                    >
+                                        Synced ({syncStatusData?.syncedDevices || 0})
+                                    </button>
+                                    <button
+                                        onClick={() => setSyncModalTab('PENDING')}
+                                        className={`px-3 py-1 rounded-xl text-xs font-bold transition-all ${
+                                            syncModalTab === 'PENDING'
+                                                ? 'bg-amber-950/60 text-amber-300 border border-amber-800/80'
+                                                : 'text-slate-400 hover:text-amber-400'
+                                        }`}
+                                    >
+                                        Pending ({syncStatusData?.pendingDevices || 0})
+                                    </button>
+                                </div>
+
+                                <button
+                                    onClick={fetchBulkStatusOnce}
+                                    disabled={isRefreshingStatus}
+                                    className="p-1.5 text-slate-400 hover:text-cyan-400 rounded-lg hover:bg-slate-800 transition-colors"
+                                    title="Refresh Status"
+                                >
+                                    <RefreshCw size={14} className={isRefreshingStatus ? 'animate-spin' : ''} />
+                                </button>
+                            </div>
+
                             {/* Devices List */}
-                            <div className="space-y-2 max-h-56 overflow-y-auto pr-1">
-                                {syncStatusData?.devices?.map((dev) => (
-                                    <div key={dev.id} className="flex items-center justify-between p-3 bg-slate-800/50 rounded-xl border border-slate-800/80 text-xs hover:border-slate-700 transition-all">
-                                        <div className="flex items-center gap-3">
-                                            <User size={15} className="text-slate-400 shrink-0" />
-                                            <div>
-                                                <div className="font-bold text-white text-xs">{dev.user?.name || 'Employee'}</div>
-                                                <div className="text-[10px] text-slate-400">
-                                                    {dev.deviceName || 'Android Device'} • SIM {dev.officialSim}
+                            <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                                {syncStatusData?.devices
+                                    ?.filter(dev => {
+                                        if (syncModalTab === 'SYNCED') return !dev.requestPending;
+                                        if (syncModalTab === 'PENDING') return dev.requestPending;
+                                        return true;
+                                    })
+                                    ?.map((dev) => {
+                                        const cleanDevice = formatDeviceName(dev.deviceName);
+                                        const initial = (dev.user?.name || 'E').charAt(0).toUpperCase();
+
+                                        return (
+                                            <div key={dev.id} className="flex items-center justify-between p-3.5 bg-slate-800/40 rounded-2xl border border-slate-800 hover:border-slate-700/80 transition-all group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center font-black text-white text-xs shadow-md shrink-0">
+                                                        {initial}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-white text-xs">{dev.user?.name || 'Employee'}</span>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            <span className="text-[10px] font-medium text-slate-400">
+                                                                {cleanDevice}
+                                                            </span>
+                                                            <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-800 text-cyan-300 border border-slate-700">
+                                                                SIM {dev.officialSim}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex items-center gap-2">
+                                                    {dev.requestPending ? (
+                                                        <span className="px-2.5 py-1 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
+                                                            <Clock size={10} /> Pending
+                                                        </span>
+                                                    ) : (
+                                                        <span className="px-2.5 py-1 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                                                            <CheckCircle2 size={10} /> Synced
+                                                        </span>
+                                                    )}
+
+                                                    <button
+                                                        onClick={() => handleRequestSingleDeviceSync(dev.user?.id, dev.user?.name)}
+                                                        title={`Re-trigger sync signal for ${dev.user?.name || 'employee'}`}
+                                                        className="p-2 text-slate-400 hover:text-cyan-400 hover:bg-slate-700/60 rounded-xl transition-all active:scale-95"
+                                                    >
+                                                        <RefreshCw size={13} />
+                                                    </button>
                                                 </div>
                                             </div>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            {dev.requestPending ? (
-                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center gap-1">
-                                                    <Clock size={10} /> Pending
-                                                </span>
-                                            ) : (
-                                                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
-                                                    ✓ Synced
-                                                </span>
-                                            )}
-
-                                            <button
-                                                onClick={() => handleRequestSingleDeviceSync(dev.user?.id, dev.user?.name)}
-                                                title={`Re-trigger sync signal for ${dev.user?.name || 'employee'}`}
-                                                className="p-1 text-slate-400 hover:text-cyan-400 rounded-lg hover:bg-slate-700 transition-colors"
-                                            >
-                                                <RefreshCw size={12} />
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                                        );
+                                    })}
 
                                 {(!syncStatusData || syncStatusData.devices?.length === 0) && (
-                                    <div className="text-center py-6 text-slate-500 text-xs">
-                                        <RefreshCw size={16} className="animate-spin mx-auto mb-2 opacity-50" />
-                                        Waiting for status update...
+                                    <div className="text-center py-8 text-slate-500 text-xs space-y-2">
+                                        <RefreshCw size={20} className="animate-spin mx-auto opacity-50 text-cyan-400" />
+                                        <p>Waiting for status response from employee devices...</p>
                                     </div>
                                 )}
                             </div>
 
                             {/* Footer Actions */}
-                            <div className="flex items-center justify-between pt-2 border-t border-slate-800">
-                                <button
-                                    onClick={fetchBulkStatusOnce}
-                                    disabled={isRefreshingStatus}
-                                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-semibold rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5"
-                                >
-                                    <RefreshCw size={13} className={isRefreshingStatus ? 'animate-spin' : ''} />
-                                    Refresh Status
-                                </button>
+                            <div className="flex items-center justify-between pt-3 border-t border-slate-800">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={fetchBulkStatusOnce}
+                                        disabled={isRefreshingStatus}
+                                        className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 disabled:opacity-50 text-slate-300 hover:text-white text-xs font-semibold rounded-xl border border-slate-700/60 transition-all flex items-center gap-1.5"
+                                    >
+                                        <RefreshCw size={13} className={isRefreshingStatus ? 'animate-spin' : ''} />
+                                        Refresh Status
+                                    </button>
+
+                                    {!isPollingSync && syncStatusData && syncStatusData.pendingDevices > 0 && (
+                                        <button
+                                            onClick={() => {
+                                                setIsPollingSync(true);
+                                                const token = JSON.parse(localStorage.getItem('user')).token;
+                                                const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
+                                                pollBulkStatus(token, baseUrl, Date.now());
+                                            }}
+                                            className="px-3.5 py-2 bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-400 text-xs font-semibold rounded-xl border border-cyan-500/30 transition-all flex items-center gap-1.5"
+                                        >
+                                            <Activity size={13} className="animate-pulse" />
+                                            Resume Sync Polling
+                                        </button>
+                                    )}
+                                </div>
 
                                 <button
                                     onClick={() => setShowSyncModal(false)}
-                                    className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
+                                    className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
                                 >
                                     Close Dialog
                                 </button>
