@@ -1,8 +1,11 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
-
-import { Search, Calendar, X, ExternalLink } from 'lucide-react';
+import { 
+    Search, Calendar, X, ExternalLink, Camera, CheckCircle2, XCircle, 
+    UserCheck, Image as ImageIcon, Sparkles, RefreshCw, Download, ZoomIn, 
+    ShieldCheck, Filter, Clock, Users, ArrowUpRight
+} from 'lucide-react';
 import { formatTime } from '../../utils/dateUtils';
 
 const AttendanceVerification = () => {
@@ -11,8 +14,9 @@ const AttendanceVerification = () => {
     const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
 
-    // Search
+    // Search & Filter Tabs
     const [searchTerm, setSearchTerm] = useState('');
+    const [filterTab, setFilterTab] = useState('ALL'); // ALL, WITH_PHOTOS, PRESENT, ABSENT
 
     // Modal
     const [selectedPhoto, setSelectedPhoto] = useState(null);
@@ -45,134 +49,314 @@ const AttendanceVerification = () => {
         if (!path) return null;
         try {
             const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            // Remove trailing slash from apiBase
             const cleanBase = apiBase.endsWith('/') ? apiBase.slice(0, -1) : apiBase;
-
-            // Ensure path starts with /
             const cleanPath = path.startsWith('/') ? path : `/${path}`;
-
-            // Result: http://domain.com/api/uploads/filename.jpg
             return `${cleanBase}${cleanPath}`;
         } catch (err) {
             console.error('URL parse error:', err);
-            return path; // Fallback
+            return path;
         }
     };
 
-    const filteredReport = report.filter(item =>
-        item.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.user.email.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filter Logic
+    const filteredReport = report.filter(item => {
+        const matchesSearch = item.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            item.user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        
+        if (!matchesSearch) return false;
+
+        const hasPhotos = item.sessions?.some(s => s.checkInPhoto || s.checkoutPhoto);
+
+        if (filterTab === 'WITH_PHOTOS') return hasPhotos;
+        if (filterTab === 'PRESENT') return item.status === 'PRESENT';
+        if (filterTab === 'ABSENT') return item.status === 'ABSENT';
+
+        return true;
+    });
+
+    // KPI Metrics Calculations
+    const totalEmployees = report.length;
+    const presentCount = report.filter(r => r.status === 'PRESENT').length;
+    const absentCount = report.filter(r => r.status === 'ABSENT').length;
+    
+    let totalPhotosCount = 0;
+    let employeesWithPhotosCount = 0;
+
+    report.forEach(item => {
+        let itemHasPhoto = false;
+        if (item.sessions && item.sessions.length > 0) {
+            item.sessions.forEach(s => {
+                if (s.checkInPhoto) { totalPhotosCount++; itemHasPhoto = true; }
+                if (s.checkoutPhoto) { totalPhotosCount++; itemHasPhoto = true; }
+            });
+        }
+        if (itemHasPhoto) employeesWithPhotosCount++;
+    });
+
+    const photoCoverage = presentCount > 0 
+        ? Math.round((employeesWithPhotosCount / presentCount) * 100) 
+        : 0;
 
     return (
-        <div className="p-6">
-            <div className="flex justify-between items-center mb-6">
-                <h1 className="text-2xl font-bold text-slate-800">Attendance Verification</h1>
-                <div className="flex space-x-4">
-                    <div className="relative">
-                        <input
-                            type="text"
-                            placeholder="Search employee..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                        <Search className="w-5 h-5 text-gray-400 absolute left-3 top-2.5" />
+        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 pb-32">
+            {/* Executive Header Banner */}
+            <header className="relative bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] text-white shadow-2xl border border-slate-800/80 overflow-hidden">
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg shadow-blue-500/25 ring-4 ring-white/10">
+                                <Camera className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">Attendance Verification</h1>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center gap-1">
+                                        <Sparkles size={10} className="animate-pulse" /> EVIDENTIAL AUDIT
+                                    </span>
+                                </div>
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.25em] mt-0.5">
+                                    Photo Evidence Audit & Check-in Verification
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <div className="flex items-center space-x-2 bg-white border rounded-lg px-4 py-2">
-                        <Calendar className="w-5 h-5 text-gray-500" />
-                        <input
-                            type="date"
-                            value={date}
-                            onChange={(e) => setDate(e.target.value)}
-                            className="bg-transparent focus:outline-none text-sm"
-                        />
+
+                    {/* Date Selector Pill & Refresh */}
+                    <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 p-2.5 px-4 rounded-2xl shadow-inner">
+                            <Calendar size={16} className="text-blue-400 shrink-0" />
+                            <span className="text-[10px] font-black text-slate-400 uppercase">DATE</span>
+                            <input
+                                type="date"
+                                value={date}
+                                onChange={(e) => setDate(e.target.value)}
+                                className="bg-transparent text-xs font-black text-white outline-none cursor-pointer"
+                            />
+                        </div>
+
+                        <button
+                            onClick={fetchReport}
+                            disabled={loading}
+                            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all border border-white/10 active:scale-95 disabled:opacity-50"
+                            title="Refresh Report"
+                        >
+                            <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* KPI Metric Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                        <Users size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total Employees</p>
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-0.5">{totalEmployees}</h3>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                        <UserCheck size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Present Today</p>
+                        <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{presentCount}</h3>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                        <ImageIcon size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Verified Photos</p>
+                        <h3 className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5">{totalPhotosCount}</h3>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                        <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Photo Coverage</p>
+                        <h3 className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5">{photoCoverage}%</h3>
                     </div>
                 </div>
             </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            {/* Filter Tabs & Search Controls */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-xl shadow-slate-200/50 dark:shadow-none flex flex-col md:flex-row md:items-center justify-between gap-4">
+                {/* Search Bar */}
+                <div className="relative group w-full md:w-80">
+                    <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                    <input
+                        type="text"
+                        placeholder="Search employee name or email..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="w-full pl-10 pr-4 py-2 rounded-2xl border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 ring-blue-500/30 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-800 dark:text-slate-200 transition-all"
+                    />
+                </div>
+
+                {/* Filter Tabs */}
+                <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    {[
+                        { id: 'ALL', label: `All Records (${report.length})` },
+                        { id: 'WITH_PHOTOS', label: `With Photos (${employeesWithPhotosCount})` },
+                        { id: 'PRESENT', label: `Present (${presentCount})` },
+                        { id: 'ABSENT', label: `Absent (${absentCount})` }
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setFilterTab(tab.id)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                filterTab === tab.id
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Attendance & Session Evidence Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse">
-                        <thead>
-                            <tr className="bg-slate-50 border-b border-slate-200">
-                                <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Employee</th>
-                                <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Status</th>
-                                <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Sessions</th>
-                                <th className="px-6 py-4 font-semibold text-slate-600 text-sm">Designation</th>
+                    <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-100/60 dark:bg-slate-950/60 border-b border-slate-200/60 dark:border-slate-800/60">
+                            <tr>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Employee</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Session Evidence & Photos</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Designation</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                             {loading ? (
                                 <tr>
-                                    <td colSpan="4" className="text-center py-8 text-gray-500">Loading...</td>
+                                    <td colSpan="4" className="text-center py-16 text-slate-400 font-bold uppercase tracking-widest">
+                                        <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-blue-500 opacity-60" />
+                                        Loading Photo Verification Records...
+                                    </td>
                                 </tr>
                             ) : filteredReport.length === 0 ? (
                                 <tr>
-                                    <td colSpan="4" className="text-center py-8 text-gray-500">No records found</td>
+                                    <td colSpan="4" className="text-center py-16 text-slate-400 font-bold text-xs italic">
+                                        No attendance verification records found matching your filters.
+                                    </td>
                                 </tr>
                             ) : (
                                 filteredReport.map((item, index) => (
-                                    <tr key={index} className="hover:bg-slate-50 transition-colors">
-                                        <td className="px-6 py-4">
-                                            <div>
-                                                <div className="font-medium text-slate-900">{item.user.name}</div>
-                                                <div className="text-sm text-slate-500">{item.user.email}</div>
+                                    <tr key={`row-${item.user.id || index}`} className="hover:bg-blue-50/30 dark:hover:bg-slate-800/30 transition-colors">
+                                        {/* Employee Info */}
+                                        <td className="px-6 py-4 align-top">
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black text-white text-sm shadow-md shrink-0">
+                                                    {(item.user.name || "E").charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex flex-col">
+                                                    <span className="font-black text-slate-800 dark:text-slate-100 text-xs">{item.user.name}</span>
+                                                    <span className="text-[10px] text-slate-400 font-medium">{item.user.email}</span>
+                                                </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${item.status === 'PRESENT' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                                }`}>
+
+                                        {/* Status */}
+                                        <td className="px-6 py-4 align-top text-center">
+                                            <span className={`inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider ${
+                                                item.status === 'PRESENT'
+                                                    ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                                    : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                                            }`}>
                                                 {item.status}
                                             </span>
                                         </td>
-                                        <td className="px-6 py-4">
-                                            {item.sessions.length > 0 ? (
-                                                <div className="space-y-4">
+
+                                        {/* Sessions Evidence */}
+                                        <td className="px-6 py-4 align-top">
+                                            {item.sessions && item.sessions.length > 0 ? (
+                                                <div className="space-y-3">
                                                     {item.sessions.map((session, sIdx) => {
                                                         const inUrl = getPhotoUrl(session.checkInPhoto);
                                                         const outUrl = getPhotoUrl(session.checkoutPhoto);
 
                                                         return (
-                                                            <div key={sIdx} className="bg-gray-50 p-2 rounded-lg border border-gray-100">
-                                                                <div className="text-xs font-semibold text-gray-500 mb-2">
-                                                                    Session {sIdx + 1}:
-                                                                    <span className="ml-2 text-slate-700">
-                                                                        {formatTime(session.timeIn)} -
-                                                                        {session.timeOut ? formatTime(session.timeOut) : ' Active'}
-                                                                    </span>
+                                                            <div key={sIdx} className="bg-slate-50 dark:bg-slate-950 p-3 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+                                                                <div className="flex items-center justify-between text-[11px] font-black text-slate-600 dark:text-slate-400 mb-2.5">
+                                                                    <div className="flex items-center gap-1.5">
+                                                                        <Clock size={12} className="text-blue-500" />
+                                                                        <span>Session {sIdx + 1}:</span>
+                                                                        <span className="text-slate-800 dark:text-slate-200 font-mono">
+                                                                            {formatTime(session.timeIn)} – {session.timeOut ? formatTime(session.timeOut) : 'Active'}
+                                                                        </span>
+                                                                    </div>
                                                                 </div>
-                                                                <div className="flex space-x-4">
+
+                                                                <div className="flex items-center gap-4">
+                                                                    {/* Check In Photo */}
                                                                     {inUrl ? (
                                                                         <div
-                                                                            className="cursor-pointer group relative"
-                                                                            onClick={() => setSelectedPhoto({ url: inUrl, title: `${item.user.name} - Check In` })}
+                                                                            className="cursor-pointer group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm"
+                                                                            onClick={() => setSelectedPhoto({ 
+                                                                                url: inUrl, 
+                                                                                title: `${item.user.name} - Check In Photo`,
+                                                                                time: formatTime(session.timeIn),
+                                                                                type: 'Check In'
+                                                                            })}
                                                                         >
-                                                                            <img src={inUrl} alt="In" className="w-16 h-16 object-cover rounded-md border border-gray-200" />
-                                                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-md flex items-center justify-center">
-                                                                                <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100" />
+                                                                            <img src={inUrl} alt="Check In" className="w-20 h-20 object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                                            <div className="absolute inset-0 bg-slate-950/40 group-hover:bg-slate-950/60 transition-all flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                                                                                <ZoomIn size={18} />
+                                                                                <span className="text-[9px] font-bold mt-1">View</span>
                                                                             </div>
-                                                                            <p className="text-[10px] text-center mt-1 text-gray-500">Check In</p>
+                                                                            <div className="absolute bottom-0 inset-x-0 bg-slate-950/75 py-0.5 text-center">
+                                                                                <span className="text-[8px] font-black text-emerald-400 uppercase tracking-widest">In Photo</span>
+                                                                            </div>
                                                                         </div>
                                                                     ) : (
-                                                                        <div className="w-16 h-16 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center text-xs text-gray-400">No Photo</div>
+                                                                        <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center text-[10px] text-slate-400 gap-1">
+                                                                            <Camera size={16} />
+                                                                            <span>No Photo</span>
+                                                                        </div>
                                                                     )}
 
+                                                                    {/* Check Out Photo */}
                                                                     {outUrl ? (
                                                                         <div
-                                                                            className="cursor-pointer group relative"
-                                                                            onClick={() => setSelectedPhoto({ url: outUrl, title: `${item.user.name} - Check Out` })}
+                                                                            className="cursor-pointer group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm"
+                                                                            onClick={() => setSelectedPhoto({ 
+                                                                                url: outUrl, 
+                                                                                title: `${item.user.name} - Check Out Photo`,
+                                                                                time: session.timeOut ? formatTime(session.timeOut) : 'Active',
+                                                                                type: 'Check Out'
+                                                                            })}
                                                                         >
-                                                                            <img src={outUrl} alt="Out" className="w-16 h-16 object-cover rounded-md border border-gray-200" />
-                                                                            <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-20 transition-all rounded-md flex items-center justify-center">
-                                                                                <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100" />
+                                                                            <img src={outUrl} alt="Check Out" className="w-20 h-20 object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                                            <div className="absolute inset-0 bg-slate-950/40 group-hover:bg-slate-950/60 transition-all flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100">
+                                                                                <ZoomIn size={18} />
+                                                                                <span className="text-[9px] font-bold mt-1">View</span>
                                                                             </div>
-                                                                            <p className="text-[10px] text-center mt-1 text-gray-500">Check Out</p>
+                                                                            <div className="absolute bottom-0 inset-x-0 bg-slate-950/75 py-0.5 text-center">
+                                                                                <span className="text-[8px] font-black text-rose-400 uppercase tracking-widest">Out Photo</span>
+                                                                            </div>
                                                                         </div>
                                                                     ) : (
-                                                                        session.timeOut ?
-                                                                            <div className="w-16 h-16 bg-gray-100 rounded-md border border-gray-200 flex items-center justify-center text-xs text-gray-400">No Photo</div> :
-                                                                            null
+                                                                        session.timeOut ? (
+                                                                            <div className="w-20 h-20 bg-slate-100 dark:bg-slate-900 rounded-2xl border border-dashed border-slate-300 dark:border-slate-800 flex flex-col items-center justify-center text-[10px] text-slate-400 gap-1">
+                                                                                <Camera size={16} />
+                                                                                <span>No Photo</span>
+                                                                            </div>
+                                                                        ) : null
                                                                     )}
                                                                 </div>
                                                             </div>
@@ -180,11 +364,13 @@ const AttendanceVerification = () => {
                                                     })}
                                                 </div>
                                             ) : (
-                                                <span className="text-gray-400">-</span>
+                                                <span className="text-slate-400 dark:text-slate-600 font-bold italic">No active sessions</span>
                                             )}
                                         </td>
-                                        <td className="px-6 py-4 text-sm text-slate-600">
-                                            {item.user.designation}
+
+                                        {/* Designation */}
+                                        <td className="px-6 py-4 align-top font-bold text-slate-600 dark:text-slate-400 uppercase text-[11px]">
+                                            {item.user.designation || "EMPLOYEE"}
                                         </td>
                                     </tr>
                                 ))
@@ -194,23 +380,51 @@ const AttendanceVerification = () => {
                 </div>
             </div>
 
-            {/* Photo Modal */}
+            {/* Photo Evidence Fullscreen Glass Modal */}
             {selectedPhoto && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-90 p-4" onClick={() => setSelectedPhoto(null)}>
-                    <div className="relative max-w-4xl w-full max-h-[90vh] flex flex-col items-center">
-                        <button
-                            className="absolute top-0 right-0 m-4 text-white hover:text-gray-300 z-50 p-2 bg-black bg-opacity-50 rounded-full"
-                            onClick={() => setSelectedPhoto(null)}
-                        >
-                            <X className="w-8 h-8" />
-                        </button>
-                        <img
-                            src={selectedPhoto.url}
-                            alt="Evidence"
-                            className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                        <p className="text-white mt-4 font-medium text-lg">{selectedPhoto.title}</p>
+                <div 
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/90 backdrop-blur-md p-4 animate-fade-in"
+                    onClick={() => setSelectedPhoto(null)}
+                >
+                    <div 
+                        className="relative max-w-4xl w-full bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col items-center p-6 space-y-4"
+                        onClick={(e) => e.stopPropagation()}
+                    >
+                        {/* Modal Controls Header */}
+                        <div className="w-full flex items-center justify-between border-b border-slate-800 pb-4">
+                            <div>
+                                <h3 className="text-lg font-black text-white">{selectedPhoto.title}</h3>
+                                <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                                    Timestamp: <span className="text-blue-400 font-mono">{selectedPhoto.time}</span>
+                                </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <a 
+                                    href={selectedPhoto.url} 
+                                    target="_blank" 
+                                    rel="noreferrer"
+                                    className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl transition-all flex items-center gap-1.5 text-xs font-bold"
+                                >
+                                    <ExternalLink size={14} />
+                                    <span>Original</span>
+                                </a>
+                                <button
+                                    onClick={() => setSelectedPhoto(null)}
+                                    className="p-2.5 bg-slate-800 hover:bg-rose-600 text-slate-300 hover:text-white rounded-xl transition-all"
+                                >
+                                    <X size={18} />
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Image Frame */}
+                        <div className="relative max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl bg-black border border-slate-800">
+                            <img
+                                src={selectedPhoto.url}
+                                alt="Verification Evidence"
+                                className="max-w-full max-h-[70vh] object-contain rounded-2xl shadow-2xl"
+                            />
+                        </div>
                     </div>
                 </div>
             )}
@@ -219,3 +433,4 @@ const AttendanceVerification = () => {
 };
 
 export default AttendanceVerification;
+
