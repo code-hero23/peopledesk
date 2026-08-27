@@ -239,6 +239,8 @@ async function main() {
   try {
     console.log('Syncing Seating schema...');
     await prisma.$executeRawUnsafe(`ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "seatId" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "siteName" TEXT`);
+    await prisma.$executeRawUnsafe(`ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "checkoutSiteName" TEXT`);
 
     await prisma.$executeRawUnsafe(`
       CREATE TABLE IF NOT EXISTS "SeatAssignment" (
