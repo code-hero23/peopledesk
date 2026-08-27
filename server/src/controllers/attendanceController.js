@@ -64,7 +64,8 @@ const markAttendance = async (req, res) => {
                 checkInPhoto: req.file ? `/uploads/${req.file.filename}` : null,
                 deviceInfo: req.body.deviceInfo || req.headers['user-agent'],
                 ipAddress: req.ip || req.connection.remoteAddress,
-                seatId: userSeat ? userSeat.seatId : null
+                seatId: userSeat ? userSeat.seatId : null,
+                siteName: req.body.siteName || null
             },
         });
 
@@ -118,7 +119,8 @@ const checkoutAttendance = async (req, res) => {
                 checkoutTime: new Date(),
                 checkoutPhoto: req.file ? `/uploads/${req.file.filename}` : null,
                 checkoutDeviceInfo: req.body.deviceInfo || req.headers['user-agent'],
-                checkoutIpAddress: req.ip || req.connection.remoteAddress
+                checkoutIpAddress: req.ip || req.connection.remoteAddress,
+                checkoutSiteName: req.body.siteName || req.body.checkoutSiteName || null
             },
         });
 

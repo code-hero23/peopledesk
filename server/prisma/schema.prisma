@@ -146,6 +146,8 @@ model Attendance {
   checkoutDeviceInfo String?
   checkoutIpAddress  String?
   seatId             String?
+  siteName           String?
+  checkoutSiteName   String?
   user               User       @relation(fields: [userId], references: [id])
   breaks             BreakLog[]
 

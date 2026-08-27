@@ -214,6 +214,7 @@ const Overview = () => {
     const [leaveModalTitle, setLeaveModalTitle] = useState('Update Leave');
     const [permissionModalTitle, setPermissionModalTitle] = useState('Update Permission');
     const [showCheckInModal, setShowCheckInModal] = useState(false);
+    const [siteNameInput, setSiteNameInput] = useState('');
     const [isCheckingOut, setIsCheckingOut] = useState(false);
     const [photo, setPhoto] = useState(null);
     const [isAutoPermission, setIsAutoPermission] = useState(false);
@@ -1547,7 +1548,21 @@ const Overview = () => {
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCheckingOut ? 'Session End Verification' : 'Session Start Verification'}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => setShowCheckInModal(false)} className="p-3 hover:bg-slate-100 rounded-2xl transition-all hover:rotate-90"><X size={20} className="text-slate-400" /></button>
+                                <button onClick={() => { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); }} className="p-3 hover:bg-slate-100 rounded-2xl transition-all hover:rotate-90"><X size={20} className="text-slate-400" /></button>
+                            </div>
+
+                            {/* Site Name Input Field */}
+                            <div className="px-6 sm:px-8 py-4 bg-indigo-50/60 border-b border-indigo-100/50 shrink-0">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-900 mb-1.5 flex items-center gap-1.5">
+                                    <Building2 size={14} className="text-indigo-600" /> Site Name / Location <span className="text-rose-500">*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={siteNameInput}
+                                    onChange={(e) => setSiteNameInput(e.target.value)}
+                                    placeholder="e.g. Prestige Estates - Villa 402 / Site A"
+                                    className="w-full px-4 py-2.5 rounded-xl border border-indigo-200/80 bg-white text-xs font-bold text-slate-900 outline-none focus:ring-2 ring-indigo-500/30 transition-all placeholder:text-slate-400 placeholder:font-medium"
+                                />
                             </div>
 
                             {/* Camera Area - Flexible height */}
@@ -1616,7 +1631,9 @@ const Overview = () => {
                                         <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.8)] animate-pulse" />
                                         <div className="flex-1">
                                             <p className="text-[10px] font-black text-white/60 uppercase tracking-widest leading-none mb-1">Live Location Verified</p>
-                                            <p className="text-xs font-bold text-white truncate drop-shadow-sm">{location.address || 'Locating site...'}</p>
+                                            <p className="text-xs font-bold text-white truncate drop-shadow-sm">
+                                                {siteNameInput.trim() ? `[${siteNameInput.trim()}] ` : ''}{location.address || 'Locating site...'}
+                                            </p>
                                         </div>
                                     </motion.div>
                                 </div>
@@ -1629,6 +1646,10 @@ const Overview = () => {
                                             disabled={!cameraState.active || location.error || !location.lat}
                                             onClick={(e) => {
                                                 e.stopPropagation();
+                                                if (!siteNameInput.trim()) {
+                                                    toast.error("Please enter the Site Name before taking a photo.");
+                                                    return;
+                                                }
                                                 const v = videoRef.current;
                                                 const c = document.createElement('canvas');
                                                 c.width = v.videoWidth; c.height = v.videoHeight;
@@ -1650,7 +1671,8 @@ const Overview = () => {
                                                 const now = new Date();
                                                 const dateStr = now.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
                                                 const timeStr = now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-                                                ctx.fillText(`${dateStr} | ${timeStr}`, 40, c.height - (overlayHeight * 0.65));
+                                                const headerText = siteNameInput.trim() ? `SITE: ${siteNameInput.trim()} | ${dateStr} | ${timeStr}` : `${dateStr} | ${timeStr}`;
+                                                ctx.fillText(headerText, 40, c.height - (overlayHeight * 0.65));
                                                 
                                                 ctx.font = `500 ${fontSizeSmall}px Inter, sans-serif`;
                                                 ctx.fillText(`📍 ${location.address || 'Location Unavailable'}`, 40, c.height - (overlayHeight * 0.3));
@@ -1677,7 +1699,7 @@ const Overview = () => {
                                         </div>
                                         <motion.button 
                                             whileHover={{ y: -2 }}
-                                            onClick={() => setShowCheckInModal(false)}
+                                            onClick={() => { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); }}
                                             className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:text-rose-500 transition-colors"
                                         >
                                             Cancel & Go Back
@@ -1688,16 +1710,23 @@ const Overview = () => {
                                         <motion.button 
                                             whileHover={{ scale: 1.02, y: -2 }} whileTap={{ scale: 0.98 }}
                                             onClick={() => {
+                                                if (!siteNameInput.trim()) {
+                                                    toast.error("Please enter the Site Name before confirming.");
+                                                    return;
+                                                }
                                                 const formData = new FormData();
                                                 const blob = dataURLtoBlob(photo);
                                                 if (!blob) { toast.error("Processing failed"); return; }
                                                 formData.append('photo', blob, 'photo.jpg');
+                                                formData.append('siteName', siteNameInput.trim());
                                                 formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE | ' : ''}${navigator.userAgent}`);
                                                 const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
                                                 dispatch(action).then((res) => {
                                                     if (!res.error) {
                                                         dispatch(getAttendanceStatus());
-                                                        setPhoto(null); setShowCheckInModal(false);
+                                                        setPhoto(null);
+                                                        setSiteNameInput('');
+                                                        setShowCheckInModal(false);
                                                     }
                                                 });
                                             }} 

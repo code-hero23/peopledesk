@@ -768,6 +768,8 @@ const getDailyAttendance = async (req, res) => {
                     ipAddress: record.ipAddress,
                     checkoutDeviceInfo: record.checkoutDeviceInfo,
                     checkoutIpAddress: record.checkoutIpAddress,
+                    siteName: record.siteName,
+                    checkoutSiteName: record.checkoutSiteName,
                     breaks: sessionBreaks
                 };
             });
