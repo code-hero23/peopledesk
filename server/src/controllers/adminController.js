@@ -583,10 +583,19 @@ const getDailyWorkLogs = async (req, res) => {
             end = new Date(queryDate.setHours(23, 59, 59, 999));
         }
 
-        // 1. Get all active users (needed for single-day "Not Submitted" view)
-        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } };
+        // 1. Get all active users (excluding AE users as AE attendance/photos are managed separately)
+        let userWhere = { 
+            status: 'ACTIVE', 
+            role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] },
+            NOT: [
+                { designation: { equals: 'AE', mode: 'insensitive' } },
+                { designation: { equals: 'AE MANAGER', mode: 'insensitive' } },
+                { role: 'AE_MANAGER' }
+            ]
+        };
         if (req.user.role === 'AE_MANAGER') {
             userWhere.designation = 'AE';
+            delete userWhere.NOT;
         } else if (req.user.role === 'BUSINESS_HEAD') {
             if (!req.user.isGlobalAccess) {
                 userWhere.reportingBhId = req.user.id;
@@ -603,6 +612,13 @@ const getDailyWorkLogs = async (req, res) => {
             date: {
                 gte: start,
                 lte: end
+            },
+            user: {
+                NOT: [
+                    { designation: { equals: 'AE', mode: 'insensitive' } },
+                    { designation: { equals: 'AE MANAGER', mode: 'insensitive' } },
+                    { role: 'AE_MANAGER' }
+                ]
             }
         };
 

@@ -18,8 +18,20 @@ const WorkLogs = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDesignation, setSelectedDesignation] = useState('');
 
+    const isAeUser = (userItem) => {
+        if (!userItem) return false;
+        const designation = (userItem.designation || '').trim().toUpperCase();
+        const role = (userItem.role || '').trim().toUpperCase();
+        return designation === 'AE' || designation === 'AE MANAGER' || role === 'AE_MANAGER';
+    };
+
     // Filtering Logic
     const filteredLogs = dailyWorkLogs.filter((record) => {
+        // Exclude AE / AE Manager users from WorkLogs
+        if (user?.role !== 'AE_MANAGER' && isAeUser(record.user)) {
+            return false;
+        }
+
         // Match Designation
         if (selectedDesignation && record.user.designation !== selectedDesignation) {
             return false;
@@ -355,7 +367,6 @@ const WorkLogs = () => {
                         <option value="LA">Loading Architect (LA)</option>
                         <option value="CRE">Customer Relationship Executive (CRE)</option>
                         <option value="FA">Feasibility Architect (FA)</option>
-                        <option value="AE">Application Engineer (AE)</option>
                         <option value="OFFICE-ADMINISTRATION">Office Administration</option>
                         <option value="ACCOUNT">Account</option>
                         <option value="LEAD-OPERATION">Lead Operation</option>
