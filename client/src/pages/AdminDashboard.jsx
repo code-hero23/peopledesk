@@ -163,14 +163,14 @@ const AdminDashboard = () => {
             color: 'from-green-500 to-teal-600',
             roles: ['BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ADMIN'],
         },
-        {
-            to: '/admin/wfh',
-            icon: <Home size={24} />,
-            label: 'WFH Management',
-            desc: 'Review and approve work-from-home requests.',
-            color: 'from-violet-500 to-purple-600',
-            roles: ['BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ADMIN'],
-        },
+        // {
+        //     to: '/admin/wfh',
+        //     icon: <Home size={24} />,
+        //     label: 'WFH Management',
+        //     desc: 'Review and approve work-from-home requests.',
+        //     color: 'from-violet-500 to-purple-600',
+        //     roles: ['BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ADMIN'],
+        // },
         {
             to: '/admin/worklogs',
             icon: <FileText size={24} />,

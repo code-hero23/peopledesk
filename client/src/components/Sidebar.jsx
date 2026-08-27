@@ -235,9 +235,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
                             <NavItem to="/admin/visitors-record" icon={BookOpen} label="Visitors Book" indent />
-                            {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
+                            {/* {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                                 <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" indent />
-                            )}
+                            )} */}
                             <NavItem to="/admin/analytics" icon={BarChart3} label="Performance Analytics" indent />
                             {(['ADMIN', 'BUSINESS_HEAD', 'HR', 'ANALYZER'].includes(user?.role) || user?.callAnalyticsViewEnabled) && (
                                 <NavItem to="/admin/call-reports" icon={Phone} label="Call Analytics" indent />

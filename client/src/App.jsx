@@ -93,7 +93,7 @@ function App() {
               <Route path="/admin/analytics" element={<PerformanceAnalytics />} />
               <Route path="/admin/announcements" element={<AnnouncementManagement />} />
               <Route path="/admin/salary-settings" element={<SalarySettings />} />
-              <Route path="/admin/wfh" element={<WFHManagement />} />
+              {/* <Route path="/admin/wfh" element={<WFHManagement />} /> */}
               <Route path="/admin/call-reports" element={<AdminCallReports />} />
               <Route path="/admin/performance" element={<PerformanceManagement />} />
               <Route path="/admin/helpdesk" element={<HelpdeskManagement />} />
