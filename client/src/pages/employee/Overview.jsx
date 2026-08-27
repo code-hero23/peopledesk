@@ -52,6 +52,11 @@ function dataURLtoBlob(dataurl) {
     }
 }
 
+const isAeAttendanceUser = (user) => {
+    const designation = (user?.designation || '').trim().toUpperCase();
+    return designation === 'AE' || designation === 'AE MANAGER' || user?.role === 'AE_MANAGER';
+};
+
 // Sub-component: Clock
 const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -232,7 +237,7 @@ const Overview = () => {
     const [isMandatoryWorkLog, setIsMandatoryWorkLog] = useState(false);
     // Explicitly add an error flag to block capture if needed
     const [location, setLocation] = useState({ lat: null, lng: null, address: 'Locating...', error: null });
-    const [cameraState, setCameraState] = useState({ active: false, error: null });
+    const [cameraState, setCameraState] = useState({ active: false, ready: false, error: null });
     const [showMandatorySimModal, setShowMandatorySimModal] = useState(false);
     const [availableSims, setAvailableSims] = useState([]);
     const [simLabels, setSimLabels] = useState({});
@@ -318,7 +323,7 @@ const Overview = () => {
 
     useEffect(() => {
         const deviceType = getDeviceType();
-        if (deviceType === 'mobile' || user?.designation === 'AE' || user?.designation === 'AE MANAGER') {
+        if (deviceType === 'mobile' || isAeAttendanceUser(user)) {
             setIsSiteLogin(true);
         }
     }, [user]);
@@ -609,10 +614,7 @@ const Overview = () => {
     const checkLatenessAndRedirect = useCallback(
         (checkInTimeRaw, isAuto = false) => {
             // AE roles follow the photo-based attendance flow and bypass this rule.
-            if (
-                user?.designation === 'AE' ||
-                user?.designation === 'AE MANAGER'
-            ) {
+            if (isAeAttendanceUser(user)) {
                 return false;
             }
 
@@ -785,8 +787,8 @@ const Overview = () => {
     // Camera Effect for AE
     useEffect(() => {
         let stream = null;
-        if (showCheckInModal && videoRef.current) {
-            setCameraState({ active: false, error: null });
+        if (showCheckInModal && !photo && videoRef.current) {
+            setCameraState({ active: false, ready: false, error: null });
             navigator.mediaDevices.getUserMedia({
                 video: {
                     facingMode: 'user',
@@ -799,12 +801,15 @@ const Overview = () => {
                     stream = s;
                     if (videoRef.current) {
                         videoRef.current.srcObject = s;
-                        setCameraState({ active: true, error: null });
+                        setCameraState({ active: true, ready: false, error: null });
+                        videoRef.current.play().catch(() => {
+                            setCameraState({ active: true, ready: false, error: null });
+                        });
                     }
                 })
                 .catch(err => {
                     console.error("Camera error:", err);
-                    setCameraState({ active: false, error: 'Camera access denied' });
+                    setCameraState({ active: false, ready: false, error: 'Camera access denied' });
                     toast.error("Could not access camera. Please allow permissions to check in.");
                 });
 
@@ -816,7 +821,7 @@ const Overview = () => {
                 stream.getTracks().forEach(track => track.stop());
             }
         };
-    }, [showCheckInModal, fetchLocation]);
+    }, [showCheckInModal, photo, fetchLocation]);
 
 
 
@@ -842,10 +847,7 @@ const Overview = () => {
                 setIsSiteLogin(isSiteLoginAction);
 
                 if (isCheckedIn) {
-                    if (
-                        user?.designation === 'AE' ||
-                        user?.designation === 'AE MANAGER'
-                    ) {
+                    if (isAeAttendanceUser(user)) {
                         setIsCheckingOut(true);
                         setShowCheckInModal(true);
                         return;
@@ -869,10 +871,7 @@ const Overview = () => {
                 }
 
                 // AE roles continue through photo verification.
-                if (
-                    user?.designation === 'AE' ||
-                    user?.designation === 'AE MANAGER'
-                ) {
+                if (isAeAttendanceUser(user)) {
                     setIsCheckingOut(false);
                     setShowCheckInModal(true);
                     return;
@@ -1572,7 +1571,24 @@ const Overview = () => {
                                         {/* Blurred Background for immersive feel */}
                                         <video ref={(el) => { if(el) el.srcObject = videoRef.current?.srcObject; }} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover blur-2xl opacity-40 scale-x-[-1]" />
                                         
-                                        <video ref={videoRef} autoPlay playsInline className="w-full h-full object-contain scale-x-[-1] relative z-10" onLoadedMetadata={() => videoRef.current?.play()} />
+                                        <video
+                                            ref={videoRef}
+                                            autoPlay
+                                            playsInline
+                                            muted
+                                            className="w-full h-full object-contain scale-x-[-1] relative z-10"
+                                            onLoadedMetadata={(event) => {
+                                                event.currentTarget.play().catch(() => {});
+                                                if (event.currentTarget.videoWidth && event.currentTarget.videoHeight) {
+                                                    setCameraState({ active: true, ready: true, error: null });
+                                                }
+                                            }}
+                                            onCanPlay={(event) => {
+                                                if (event.currentTarget.videoWidth && event.currentTarget.videoHeight) {
+                                                    setCameraState({ active: true, ready: true, error: null });
+                                                }
+                                            }}
+                                        />
                                         
                                         {/* Focus Ring Animation */}
                                         <motion.div 
@@ -1600,7 +1616,10 @@ const Overview = () => {
                                         <img src={photo} alt="Verification" className="w-full h-full object-contain relative z-10" />
                                         <motion.button 
                                             initial={{ scale: 0, rotate: -45 }} animate={{ scale: 1, rotate: 0 }}
-                                            onClick={() => setPhoto(null)} 
+                                            onClick={() => {
+                                                setCameraState({ active: false, ready: false, error: null });
+                                                setPhoto(null);
+                                            }}
                                             className="absolute top-6 right-6 p-4 bg-white/95 text-rose-500 rounded-2xl shadow-2xl border border-white hover:bg-rose-50 transition-all z-30"
                                         >
                                             <Trash2 size={24} />
@@ -1643,14 +1662,26 @@ const Overview = () => {
                                     <div className="absolute inset-x-0 bottom-10 flex justify-center items-center gap-8 pointer-events-none z-20">
                                         <motion.button
                                             whileTap={{ scale: 0.85 }}
-                                            disabled={!cameraState.active || location.error || !location.lat}
                                             onClick={(e) => {
                                                 e.stopPropagation();
                                                 if (!siteNameInput.trim()) {
                                                     toast.error("Please enter the Site Name before taking a photo.");
                                                     return;
                                                 }
+                                                if (location.error || !location.lat) {
+                                                    toast.error("Please enable GPS and wait for location before taking a photo.");
+                                                    fetchLocation();
+                                                    return;
+                                                }
+                                                if (!cameraState.active) {
+                                                    toast.error("Please allow camera access and wait for the preview to load.");
+                                                    return;
+                                                }
                                                 const v = videoRef.current;
+                                                if (!cameraState.ready || !v || v.readyState < 2 || !v.videoWidth || !v.videoHeight) {
+                                                    toast.error("Camera preview is still loading. Please try again in a moment.");
+                                                    return;
+                                                }
                                                 const c = document.createElement('canvas');
                                                 c.width = v.videoWidth; c.height = v.videoHeight;
                                                 const ctx = c.getContext('2d');
@@ -1679,7 +1710,7 @@ const Overview = () => {
                                                 
                                                 setPhoto(c.toDataURL('image/jpeg', 0.9));
                                             }}
-                                            className={`pointer-events-auto h-24 w-24 rounded-full border-[6px] border-white flex items-center justify-center p-1.5 shadow-2xl transition-all ${(!cameraState.active || location.error || !location.lat) ? 'opacity-50 scale-90 grayscale' : 'hover:scale-110 active:scale-95 bg-white/20'}`}
+                                            className={`pointer-events-auto h-24 w-24 rounded-full border-[6px] border-white flex items-center justify-center p-1.5 shadow-2xl transition-all ${(!cameraState.ready || location.error || !location.lat) ? 'opacity-50 scale-90 grayscale' : 'hover:scale-110 active:scale-95 bg-white/20'}`}
                                         >
                                             <div className="w-full h-full rounded-full bg-white shadow-[inset_0_2px_10px_rgba(0,0,0,0.1)] flex items-center justify-center">
                                                 <div className="w-16 h-16 rounded-full border-2 border-slate-100" />
@@ -1727,6 +1758,8 @@ const Overview = () => {
                                                         setPhoto(null);
                                                         setSiteNameInput('');
                                                         setShowCheckInModal(false);
+                                                    } else {
+                                                        toast.error(res.payload || "Attendance could not be submitted.");
                                                     }
                                                 });
                                             }} 
@@ -1736,7 +1769,10 @@ const Overview = () => {
                                         </motion.button>
                                         <motion.button 
                                             whileHover={{ scale: 1.05 }}
-                                            onClick={() => setPhoto(null)} 
+                                            onClick={() => {
+                                                setCameraState({ active: false, ready: false, error: null });
+                                                setPhoto(null);
+                                            }}
                                             className="px-10 py-6 bg-slate-100 text-slate-500 rounded-[2rem] font-bold hover:bg-slate-200 transition-colors flex items-center gap-2"
                                         >
                                             <History size={18} /> Retake

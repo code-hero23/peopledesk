@@ -1,6 +1,11 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
+const isAeAttendanceUser = (user) => {
+    const designation = (user?.designation || '').trim().toUpperCase();
+    return designation === 'AE' || designation === 'AE MANAGER' || user?.role === 'AE_MANAGER';
+};
+
 // @desc    Mark attendance for today
 // @route   POST /api/attendance
 // @access  Private (Employee)
@@ -27,7 +32,7 @@ const markAttendance = async (req, res) => {
         });
 
         // Current User Logic
-        const isAE = req.user.designation === 'AE';
+        const isAE = isAeAttendanceUser(req.user);
         const latestAttendance = existingAttendances[0];
 
         // Validations

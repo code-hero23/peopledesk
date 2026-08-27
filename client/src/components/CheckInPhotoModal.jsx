@@ -2,6 +2,11 @@ import { useState, useRef, useEffect } from 'react';
 import { Camera, X, CheckCircle, RefreshCcw } from 'lucide-react';
 import { useSelector } from 'react-redux';
 
+const isAeAttendanceUser = (user) => {
+    const designation = (user?.designation || '').trim().toUpperCase();
+    return designation === 'AE' || designation === 'AE MANAGER' || user?.role === 'AE_MANAGER';
+};
+
 const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut }) => {
     const { user } = useSelector((state) => state.auth);
     const [photo, setPhoto] = useState(null);
@@ -16,7 +21,7 @@ const CheckInPhotoModal = ({ isOpen, onClose, onSubmit, isLoading, isCheckingOut
     const [countdown, setCountdown] = useState(0);
     const [isLocationReady, setIsLocationReady] = useState(false);
 
-    const isAE = user?.designation === 'AE' || user?.role === 'AE';
+    const isAE = isAeAttendanceUser(user);
 
     // Start Camera & Get Location
     const startCamera = async () => {
