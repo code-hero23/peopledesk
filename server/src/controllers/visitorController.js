@@ -160,6 +160,12 @@ const createVisitorRecord = async (req, res) => {
  */
 const getVisitorRecords = async (req, res) => {
     try {
+        // History logs are hidden for standard employee roles
+        const allowedRoles = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'FRONT_DESK_MANAGER'];
+        if (req.user?.role && !allowedRoles.includes(req.user.role)) {
+            return res.json({ success: true, count: 0, records: [] });
+        }
+
         const { showroom, startDate, endDate, search } = req.query;
 
         const whereClause = {};

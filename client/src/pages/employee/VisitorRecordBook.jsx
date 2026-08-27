@@ -27,6 +27,9 @@ const VisitorRecordBook = () => {
     const { user } = useSelector((state) => state.auth);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
+    // History logs are hidden for standard employees
+    const canViewHistory = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'FRONT_DESK_MANAGER'].includes(user?.role);
+
     const getAuthHeader = () => {
         const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
         return {
@@ -72,8 +75,10 @@ const VisitorRecordBook = () => {
 
     useEffect(() => {
         fetchStaffList();
-        fetchVisitorRecords();
-    }, []);
+        if (canViewHistory) {
+            fetchVisitorRecords();
+        }
+    }, [canViewHistory]);
 
     const fetchStaffList = async () => {
         try {
@@ -268,23 +273,25 @@ const VisitorRecordBook = () => {
                         </div>
                     </div>
 
-                    <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-center">
-                        <button
-                            onClick={exportToCSV}
-                            className="min-h-[46px] px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold rounded-2xl transition-all active:scale-95 flex items-center gap-2 shadow-sm touch-manipulation"
-                        >
-                            <Download className="w-4 h-4 text-red-600 dark:text-red-400" />
-                            Export CSV
-                        </button>
-                    </div>
+                    {canViewHistory && (
+                        <div className="flex items-center gap-2 sm:gap-3 self-end sm:self-center">
+                            <button
+                                onClick={exportToCSV}
+                                className="min-h-[46px] px-4 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-800 dark:text-slate-200 text-xs sm:text-sm font-bold rounded-2xl transition-all active:scale-95 flex items-center gap-2 shadow-sm touch-manipulation"
+                            >
+                                <Download className="w-4 h-4 text-red-600 dark:text-red-400" />
+                                Export CSV
+                            </button>
+                        </div>
+                    )}
                 </div>
             </div>
 
-            {/* Main 2-Column Responsive Layout */}
-            <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+            {/* Main Responsive Layout */}
+            <div className={`max-w-7xl mx-auto ${canViewHistory ? 'grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8' : 'max-w-3xl'}`}>
                 
-                {/* Left Column: Form to Log Client Visit (Touchscreen Optimized) */}
-                <div className="lg:col-span-5">
+                {/* Left Column: Form to Log Client Visit */}
+                <div className={canViewHistory ? 'lg:col-span-5' : 'w-full'}>
                     <div className="bg-white dark:bg-slate-900 p-5 sm:p-7 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md sticky top-6">
                         <div className="flex items-center justify-between mb-6 pb-4 border-b border-slate-100 dark:border-slate-800">
                             <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2.5">
@@ -512,246 +519,248 @@ const VisitorRecordBook = () => {
                     </div>
                 </div>
 
-                {/* Right Column: Search, Filters, & Record History List */}
-                <div className="lg:col-span-7">
-                    
-                    {/* Filters & Search Header Card */}
-                    <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md mb-6">
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
-                            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-base">
-                                <Filter className="w-4 h-4 text-red-600" />
-                                Search & Filter Records
-                            </h3>
+                {/* Right Column: Search, Filters, & Record History List (Admin / Management Only) */}
+                {canViewHistory && (
+                    <div className="lg:col-span-7">
+                        
+                        {/* Filters & Search Header Card */}
+                        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md mb-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
+                                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-base">
+                                    <Filter className="w-4 h-4 text-red-600" />
+                                    Search & Filter Records
+                                </h3>
 
-                            {/* Showroom Filter Tap Chips */}
-                            <div className="flex flex-wrap items-center gap-1.5">
-                                {['ALL', ...SHOWROOM_OPTIONS].map((sh) => (
-                                    <button
-                                        key={`flt-${sh}`}
-                                        type="button"
-                                        onClick={() => {
-                                            setSelectedShowroomFilter(sh);
-                                            fetchVisitorRecords();
-                                        }}
-                                        className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all touch-manipulation active:scale-95 ${
-                                            selectedShowroomFilter === sh
-                                                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
-                                                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
-                                        }`}
-                                    >
-                                        {sh}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Search & Date Filter Bar */}
-                        <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
-                            <div className="sm:col-span-6 relative">
-                                <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
-                                <input
-                                    type="text"
-                                    placeholder="Search by client name, phone, or reason..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full pl-10 pr-4 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                                />
-                            </div>
-
-                            <div className="sm:col-span-4 grid grid-cols-2 gap-2">
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => setStartDate(e.target.value)}
-                                    className="w-full px-2.5 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none"
-                                />
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => setEndDate(e.target.value)}
-                                    className="w-full px-2.5 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none"
-                                />
-                            </div>
-
-                            <div className="sm:col-span-2">
-                                <button
-                                    type="submit"
-                                    className="w-full min-h-[46px] py-2.5 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-red-600 dark:hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-2xl transition active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation"
-                                >
-                                    <Search className="w-4 h-4" />
-                                    Filter
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-
-                    {/* Visitor History Record Cards */}
-                    <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md overflow-hidden">
-                        <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                            <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
-                                <BookOpen className="w-4 h-4 text-red-600" />
-                                Client Visit Logs ({records.length})
-                            </h3>
-                            <button
-                                onClick={fetchVisitorRecords}
-                                className="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition flex items-center gap-1.5 text-xs font-bold active:scale-95 touch-manipulation"
-                                title="Refresh"
-                            >
-                                <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </button>
-                        </div>
-
-                        {loading ? (
-                            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                                <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3 text-red-600" />
-                                <p className="font-semibold text-sm">Loading visitor records...</p>
-                            </div>
-                        ) : records.length === 0 ? (
-                            <div className="p-12 text-center text-slate-500 dark:text-slate-400">
-                                <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-40 text-red-500" />
-                                <p className="font-bold text-sm">No visitor records found matching criteria.</p>
-                            </div>
-                        ) : (
-                            <>
-                                <div className="divide-y divide-slate-200 dark:divide-slate-800">
-                                    {currentRecords.map((r) => (
-                                        <div key={r.id} className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
-                                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
-                                                <div className="flex flex-wrap items-center gap-2">
-                                                    <span className="font-black text-slate-900 dark:text-white text-base">
-                                                        {r.clientName}
-                                                    </span>
-                                                    <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                                                        📞 {r.phoneNumber}
-                                                    </span>
-                                                    <span className="px-2.5 py-1 text-xs font-black rounded-xl bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300">
-                                                        {r.showroom}
-                                                    </span>
-                                                </div>
-
-                                                <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
-                                                    <span className="flex items-center gap-1">
-                                                        <Calendar className="w-3.5 h-3.5 text-red-500" />
-                                                        {new Date(r.dateOfVisit).toLocaleDateString('en-IN', {
-                                                            day: '2-digit', month: 'short', year: 'numeric'
-                                                        })}
-                                                    </span>
-                                                    <span>•</span>
-                                                    <span className="flex items-center gap-1">
-                                                        <Clock className="w-3.5 h-3.5 text-red-500" />
-                                                        {r.timeOfEntry}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            <div className="mb-3">
-                                                <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 inline-block">
-                                                    📌 Reason: {r.reasonOfVisit}
-                                                </span>
-                                            </div>
-
-                                            {/* Assigned Team Grid */}
-                                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl text-xs">
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">CRE</span>
-                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.cre?.name || 'N/A'}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">FA</span>
-                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.fa?.name || 'N/A'}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">LA</span>
-                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.la?.name || 'N/A'}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-400 block text-[10px] uppercase font-black">BH</span>
-                                                    <span className="font-bold text-slate-800 dark:text-slate-200">{r.bh?.name || 'N/A'}</span>
-                                                </div>
-                                            </div>
-
-                                            {r.notes && (
-                                                <p className="text-xs text-slate-500 dark:text-slate-400 italic mb-3">
-                                                    Note: "{r.notes}"
-                                                </p>
-                                            )}
-
-                                            {/* Action Bar (WhatsApp & Admin Delete) */}
-                                            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80">
-                                                <div className="flex items-center gap-1.5">
-                                                    {r.whatsappSent ? (
-                                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                                            <CheckCircle className="w-4 h-4" />
-                                                            WhatsApp Dispatched
-                                                        </span>
-                                                    ) : (
-                                                        <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
-                                                            <XCircle className="w-4 h-4" />
-                                                            WhatsApp Pending
-                                                        </span>
-                                                    )}
-                                                </div>
-
-                                                <div className="flex items-center gap-2">
-                                                    <button
-                                                        onClick={() => handleResendWhatsApp(r.id)}
-                                                        disabled={resendingId === r.id}
-                                                        className="min-h-[40px] px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5 touch-manipulation"
-                                                    >
-                                                        <MessageSquare className="w-4 h-4" />
-                                                        {resendingId === r.id ? 'Resending...' : 'Resend WhatsApp'}
-                                                    </button>
-
-                                                    {user?.role === 'ADMIN' && (
-                                                        <button
-                                                            onClick={() => handleDeleteRecord(r.id)}
-                                                            className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5 touch-manipulation"
-                                                            title="Delete Record (Admin Only)"
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                            Delete
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
+                                {/* Showroom Filter Tap Chips */}
+                                <div className="flex flex-wrap items-center gap-1.5">
+                                    {['ALL', ...SHOWROOM_OPTIONS].map((sh) => (
+                                        <button
+                                            key={`flt-${sh}`}
+                                            type="button"
+                                            onClick={() => {
+                                                setSelectedShowroomFilter(sh);
+                                                fetchVisitorRecords();
+                                            }}
+                                            className={`px-3 py-1.5 rounded-xl font-bold text-xs transition-all touch-manipulation active:scale-95 ${
+                                                selectedShowroomFilter === sh
+                                                    ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                                                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                                            }`}
+                                        >
+                                            {sh}
+                                        </button>
                                     ))}
                                 </div>
+                            </div>
 
-                                {/* Touchscreen-Friendly Pagination Controls */}
-                                {records.length > 0 && (
-                                    <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
-                                        <div>
-                                            Showing <span className="font-black text-slate-900 dark:text-white">{indexOfFirstRecord + 1}</span> to <span className="font-black text-slate-900 dark:text-white">{Math.min(indexOfLastRecord, records.length)}</span> of <span className="font-black text-slate-900 dark:text-white">{records.length}</span> records
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            <button
-                                                onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
-                                                disabled={currentPage === 1}
-                                                className="w-11 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition active:scale-95 flex items-center justify-center touch-manipulation"
-                                                title="Previous Page"
-                                            >
-                                                <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-                                            </button>
-                                            <span className="font-bold text-sm text-slate-800 dark:text-slate-200">
-                                                Page {currentPage} of {totalPages}
-                                            </span>
-                                            <button
-                                                onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
-                                                disabled={currentPage === totalPages}
-                                                className="w-11 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition active:scale-95 flex items-center justify-center touch-manipulation"
-                                                title="Next Page"
-                                            >
-                                                <ChevronRight className="w-5 h-5 text-slate-700 dark:text-slate-200" />
-                                            </button>
-                                        </div>
+                            {/* Search & Date Filter Bar */}
+                            <form onSubmit={handleFilterSubmit} className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                <div className="sm:col-span-6 relative">
+                                    <Search className="w-4 h-4 absolute left-3.5 top-3.5 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search by client name, phone, or reason..."
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="w-full pl-10 pr-4 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-4 grid grid-cols-2 gap-2">
+                                    <input
+                                        type="date"
+                                        value={startDate}
+                                        onChange={(e) => setStartDate(e.target.value)}
+                                        className="w-full px-2.5 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none"
+                                    />
+                                    <input
+                                        type="date"
+                                        value={endDate}
+                                        onChange={(e) => setEndDate(e.target.value)}
+                                        className="w-full px-2.5 py-2.5 min-h-[46px] bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs focus:outline-none"
+                                    />
+                                </div>
+
+                                <div className="sm:col-span-2">
+                                    <button
+                                        type="submit"
+                                        className="w-full min-h-[46px] py-2.5 px-3 bg-slate-900 hover:bg-slate-800 dark:bg-red-600 dark:hover:bg-red-700 text-white font-bold text-xs sm:text-sm rounded-2xl transition active:scale-95 flex items-center justify-center gap-1.5 touch-manipulation"
+                                    >
+                                        <Search className="w-4 h-4" />
+                                        Filter
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+
+                        {/* Visitor History Record Cards */}
+                        <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-md overflow-hidden">
+                            <div className="p-5 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between">
+                                <h3 className="font-bold text-slate-900 dark:text-white flex items-center gap-2 text-sm">
+                                    <BookOpen className="w-4 h-4 text-red-600" />
+                                    Client Visit Logs ({records.length})
+                                </h3>
+                                <button
+                                    onClick={fetchVisitorRecords}
+                                    className="min-h-[40px] px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300 transition flex items-center gap-1.5 text-xs font-bold active:scale-95 touch-manipulation"
+                                    title="Refresh"
+                                >
+                                    <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+                                    Refresh
+                                </button>
+                            </div>
+
+                            {loading ? (
+                                <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+                                    <RefreshCw className="w-7 h-7 animate-spin mx-auto mb-3 text-red-600" />
+                                    <p className="font-semibold text-sm">Loading visitor records...</p>
+                                </div>
+                            ) : records.length === 0 ? (
+                                <div className="p-12 text-center text-slate-500 dark:text-slate-400">
+                                    <AlertCircle className="w-10 h-10 mx-auto mb-3 opacity-40 text-red-500" />
+                                    <p className="font-bold text-sm">No visitor records found matching criteria.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className="divide-y divide-slate-200 dark:divide-slate-800">
+                                        {currentRecords.map((r) => (
+                                            <div key={r.id} className="p-5 hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition">
+                                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-3">
+                                                    <div className="flex flex-wrap items-center gap-2">
+                                                        <span className="font-black text-slate-900 dark:text-white text-base">
+                                                            {r.clientName}
+                                                        </span>
+                                                        <span className="px-2.5 py-1 text-xs font-bold rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                                            📞 {r.phoneNumber}
+                                                        </span>
+                                                        <span className="px-2.5 py-1 text-xs font-black rounded-xl bg-red-100 dark:bg-red-950/80 text-red-700 dark:text-red-300">
+                                                            {r.showroom}
+                                                        </span>
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2 text-xs font-medium text-slate-500 dark:text-slate-400">
+                                                        <span className="flex items-center gap-1">
+                                                            <Calendar className="w-3.5 h-3.5 text-red-500" />
+                                                            {new Date(r.dateOfVisit).toLocaleDateString('en-IN', {
+                                                                day: '2-digit', month: 'short', year: 'numeric'
+                                                            })}
+                                                        </span>
+                                                        <span>•</span>
+                                                        <span className="flex items-center gap-1">
+                                                            <Clock className="w-3.5 h-3.5 text-red-500" />
+                                                            {r.timeOfEntry}
+                                                        </span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mb-3">
+                                                    <span className="text-xs font-bold px-3 py-1.5 rounded-xl bg-slate-200/70 dark:bg-slate-800 text-slate-800 dark:text-slate-200 inline-block">
+                                                        📌 Reason: {r.reasonOfVisit}
+                                                    </span>
+                                                </div>
+
+                                                {/* Assigned Team Grid */}
+                                                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 my-3 p-3 bg-slate-50 dark:bg-slate-800/40 rounded-2xl text-xs">
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-black">CRE</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200">{r.cre?.name || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-black">FA</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200">{r.fa?.name || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-black">LA</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200">{r.la?.name || 'N/A'}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-400 block text-[10px] uppercase font-black">BH</span>
+                                                        <span className="font-bold text-slate-800 dark:text-slate-200">{r.bh?.name || 'N/A'}</span>
+                                                    </div>
+                                                </div>
+
+                                                {r.notes && (
+                                                    <p className="text-xs text-slate-500 dark:text-slate-400 italic mb-3">
+                                                        Note: "{r.notes}"
+                                                    </p>
+                                                )}
+
+                                                {/* Action Bar (WhatsApp & Admin Delete) */}
+                                                <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800/80">
+                                                    <div className="flex items-center gap-1.5">
+                                                        {r.whatsappSent ? (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                                <CheckCircle className="w-4 h-4" />
+                                                                WhatsApp Dispatched
+                                                            </span>
+                                                        ) : (
+                                                            <span className="inline-flex items-center gap-1 text-xs font-bold text-amber-600 dark:text-amber-400">
+                                                                <XCircle className="w-4 h-4" />
+                                                                WhatsApp Pending
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className="flex items-center gap-2">
+                                                        <button
+                                                            onClick={() => handleResendWhatsApp(r.id)}
+                                                            disabled={resendingId === r.id}
+                                                            className="min-h-[40px] px-3 py-2 bg-red-50 hover:bg-red-100 dark:bg-red-950/50 dark:hover:bg-red-900/60 text-red-600 dark:text-red-400 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5 touch-manipulation"
+                                                        >
+                                                            <MessageSquare className="w-4 h-4" />
+                                                            {resendingId === r.id ? 'Resending...' : 'Resend WhatsApp'}
+                                                        </button>
+
+                                                        {user?.role === 'ADMIN' && (
+                                                            <button
+                                                                onClick={() => handleDeleteRecord(r.id)}
+                                                                className="min-h-[40px] px-3 py-2 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/50 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 text-xs font-bold rounded-xl transition active:scale-95 flex items-center gap-1.5 touch-manipulation"
+                                                                title="Delete Record (Admin Only)"
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                                Delete
+                                                            </button>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
                                     </div>
-                                )}
-                            </>
-                        )}
+
+                                    {/* Touchscreen-Friendly Pagination Controls */}
+                                    {records.length > 0 && (
+                                        <div className="p-4 sm:p-5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs font-semibold text-slate-600 dark:text-slate-400">
+                                            <div>
+                                                Showing <span className="font-black text-slate-900 dark:text-white">{indexOfFirstRecord + 1}</span> to <span className="font-black text-slate-900 dark:text-white">{Math.min(indexOfLastRecord, records.length)}</span> of <span className="font-black text-slate-900 dark:text-white">{records.length}</span> records
+                                            </div>
+                                            <div className="flex items-center gap-3">
+                                                <button
+                                                    onClick={() => setCurrentPage(p => Math.max(p - 1, 1))}
+                                                    disabled={currentPage === 1}
+                                                    className="w-11 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition active:scale-95 flex items-center justify-center touch-manipulation"
+                                                    title="Previous Page"
+                                                >
+                                                    <ChevronLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+                                                </button>
+                                                <span className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                                                    Page {currentPage} of {totalPages}
+                                                </span>
+                                                <button
+                                                    onClick={() => setCurrentPage(p => Math.min(p + 1, totalPages))}
+                                                    disabled={currentPage === totalPages}
+                                                    className="w-11 h-11 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-40 transition active:scale-95 flex items-center justify-center touch-manipulation"
+                                                    title="Next Page"
+                                                >
+                                                    <ChevronRight className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
                     </div>
-                </div>
+                )}
             </div>
         </div>
     );

@@ -8,6 +8,13 @@ import {
 } from 'lucide-react';
 import { formatTime } from '../../utils/dateUtils';
 
+const isAeAttendanceUser = (userItem) => {
+    if (!userItem) return false;
+    const designation = (userItem.designation || '').trim().toUpperCase();
+    const role = (userItem.role || '').trim().toUpperCase();
+    return designation === 'AE' || designation === 'AE MANAGER' || role === 'AE_MANAGER';
+};
+
 const AttendanceVerification = () => {
     const { user } = useSelector((state) => state.auth);
     const [report, setReport] = useState([]);
@@ -30,8 +37,9 @@ const AttendanceVerification = () => {
                 },
             };
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            const { data } = await axios.get(`${baseUrl}/admin/attendance/daily?date=${date}`, config);
-            setReport(data);
+            const { data } = await axios.get(`${baseUrl}/admin/attendance/daily?date=${date}&onlyAE=true`, config);
+            const aeData = (Array.isArray(data) ? data : []).filter(item => isAeAttendanceUser(item.user));
+            setReport(aeData);
         } catch (error) {
             console.error(error);
             alert('Failed to fetch attendance report');

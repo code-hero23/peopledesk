@@ -689,9 +689,13 @@ const getDailyAttendance = async (req, res) => {
         const endOfDay = new Date(queryDate.setHours(23, 59, 59, 999));
 
         // 1. Get all active users
-        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE'] } };
-        if (req.user.role === 'AE_MANAGER') {
-            userWhere.designation = 'AE';
+        let userWhere = { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'WALL2WALL_EMPLOYEE', 'AE_MANAGER'] } };
+        if (req.query.onlyAE === 'true' || req.user.role === 'AE_MANAGER') {
+            userWhere.OR = [
+                { designation: { equals: 'AE', mode: 'insensitive' } },
+                { designation: { equals: 'AE MANAGER', mode: 'insensitive' } },
+                { role: 'AE_MANAGER' }
+            ];
         } else if (req.user.role === 'BUSINESS_HEAD') {
             if (!req.user.isGlobalAccess) {
                 userWhere.reportingBhId = req.user.id;
