@@ -238,7 +238,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
-                            {(user?.role === 'AE_MANAGER' || user?.designation === 'AE MANAGER') && (
+                            {(user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (
                                 <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites" indent />
                             )}
                             {(['ADMIN', 'BUSINESS_HEAD'].includes(user?.role) || user?.designation === 'BH' || user?.designation === 'FRONT DESK MANAGER') && (
@@ -293,7 +293,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {!isCollapsed && <p className="px-3 py-2 text-[9px] text-slate-400 font-black uppercase tracking-[0.22em]">My Workspace</p>}
                             <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
-                            <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
+                            {(user?.role === 'AE' || user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation?.toUpperCase()?.includes('AE') || user?.designation?.toUpperCase()?.includes('ARCHITECT')) && (
+                                <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
+                            )}
                             <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                             <NavItem to="/seating" icon={Armchair} label="Seating Layout" />
                             {isSalaryEnabled && (
