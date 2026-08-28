@@ -52,7 +52,6 @@ const getShowroomFromUser = (user, attendanceRecord) => {
     if (text.includes('PORUR')) return 'Porur';
     if (text.includes('OMR')) return 'OMR';
     if (text.includes('MTRS')) return 'MTRS';
-    // Fallback distribution based on user ID if showroom isn't explicitly in designation
     const showrooms = ['MTRS', 'Porur', 'OMR'];
     return showrooms[(user?.id || 0) % 3];
 };
@@ -81,7 +80,7 @@ const OverviewDashboard = () => {
         return () => clearInterval(timer);
     }, []);
 
-    // Main Data Fetching from Real Database Endpoints
+    // Fetch Real Data from Correct Backend Endpoints
     const fetchRealData = async () => {
         setIsRefreshing(true);
         try {
@@ -89,12 +88,18 @@ const OverviewDashboard = () => {
 
             const config = { headers: { Authorization: `Bearer ${user.token}` } };
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            const todayStr = new Date().toISOString().slice(0, 10);
+
+            // Construct local date string YYYY-MM-DD
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const todayStr = `${year}-${month}-${day}`;
 
             // Fetch Real Database Employees, Daily Attendance, and Active Break Statuses
             const [employeesRes, attendanceRes, activeStatusesRes] = await Promise.allSettled([
                 axios.get(`${baseUrl}/admin/employees`, config),
-                axios.get(`${baseUrl}/admin/daily-attendance?date=${todayStr}`, config),
+                axios.get(`${baseUrl}/admin/attendance/daily?date=${todayStr}`, config),
                 axios.get(`${baseUrl}/admin/active-statuses`, config)
             ]);
 
@@ -110,14 +115,16 @@ const OverviewDashboard = () => {
                 ? activeStatusesRes.value.data
                 : [];
 
-            // Map Attendance & Break data by User ID
+            // Map Attendance data by User ID
             const attendanceMap = new Map();
             attendanceRecords.forEach(rec => {
-                if (rec.user?.id) {
-                    attendanceMap.set(rec.user.id, rec);
+                const uid = rec.user?.id || rec.userId;
+                if (uid) {
+                    attendanceMap.set(uid, rec);
                 }
             });
 
+            // Map Active Break data by User ID
             const activeBreakMap = new Map();
             activeBreaks.forEach(ab => {
                 if (ab.userId) {
@@ -143,13 +150,24 @@ const OverviewDashboard = () => {
                         else if (activeBreak.breakType === 'LUNCH') status = 'Lunch Break';
                         else if (['CLIENT_MEETING', 'BH_MEETING'].includes(activeBreak.breakType)) status = 'In Meeting';
                         else status = 'On Break';
+                    } else if (att.timeOut) {
+                        status = 'Checked Out';
                     } else {
                         status = 'Working';
                     }
+
                     inTime = att.timeIn ? formatTime(att.timeIn) : '-';
                     outTime = att.timeOut ? formatTime(att.timeOut) : '-';
                 } else if (att && att.status === 'LEAVE') {
                     status = 'On Leave';
+                }
+
+                // Calculate duration if currently on active break
+                if (activeBreak && activeBreak.startTime) {
+                    const elapsedMins = Math.max(1, Math.round((new Date() - new Date(activeBreak.startTime)) / 60000));
+                    totalBreakMinutes += elapsedMins;
+                    if (activeBreak.breakType === 'TEA') teaMinutes += elapsedMins;
+                    if (activeBreak.breakType === 'LUNCH') lunchMinutes += elapsedMins;
                 }
 
                 // Format break string
@@ -188,6 +206,10 @@ const OverviewDashboard = () => {
 
     useEffect(() => {
         fetchRealData();
+
+        // Auto polling every 15 seconds for live attendance & breaks
+        const interval = setInterval(fetchRealData, 15000);
+        return () => clearInterval(interval);
     }, []);
 
     // Filter Logic
@@ -216,7 +238,7 @@ const OverviewDashboard = () => {
     const breakCount = employees.filter((e) => ['Tea Break', 'Lunch Break', 'On Break'].includes(e.status)).length;
     const meetingCount = employees.filter((e) => e.status === 'In Meeting').length;
 
-    // Total accumulated break minutes for all working employees
+    // Total accumulated break minutes for all employees
     const totalAccumulatedBreakMinutes = employees.reduce((sum, e) => sum + e.breakMinutes, 0);
     const totalBreakHours = Math.floor(totalAccumulatedBreakMinutes / 60);
     const totalBreakMins = totalAccumulatedBreakMinutes % 60;
@@ -283,9 +305,16 @@ const OverviewDashboard = () => {
                 </span>
             );
         }
+        if (emp.status === 'Checked Out') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+                    Checked Out
+                </span>
+            );
+        }
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
-                {emp.status}
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-red-50 text-red-600 border border-red-200">
+                Absent
             </span>
         );
     };
