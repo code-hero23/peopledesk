@@ -675,6 +675,7 @@ const getAllCallStats = async (req, res) => {
                         name: true,
                         id: true,
                         designation: true,
+                        role: true,
                         callSyncDevices: {
                             where: { active: true },
                             select: { lastSuccessAt: true },
@@ -732,6 +733,8 @@ const getAllCallStats = async (req, res) => {
                 lastSync: effectiveLastSync,
                 user: log.user.name,
                 designation: log.user.designation,
+                role: log.user.role,
+                userId: log.user.id,
                 empId: `EMP-${log.user.id}`,
                 calls: filteredCalls,
                 totalCalls: filteredCalls.length

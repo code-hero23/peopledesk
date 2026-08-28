@@ -215,25 +215,95 @@ const AdminCallReports = () => {
 
     // Data Processing
     const normalize = (num) => String(num || "").replace(/\D/g, "").slice(-10);
-    const normalizeDesignation = (value) => String(value || '').toUpperCase();
-    const isCreFamilyDesignation = (value) => {
-        const designation = normalizeDesignation(value);
+    const normalizeText = (value) => String(value || '').toUpperCase().trim();
+
+    const isAdminPersonnel = (m) => {
+        const role = normalizeText(m.role);
+        const desg = normalizeText(m.designation);
+        const name = normalizeText(m.name);
+        return (
+            role === 'ADMIN' ||
+            role === 'SUPER_ADMIN' ||
+            desg === 'ADMIN' ||
+            desg === 'SUPER ADMIN' ||
+            desg === 'ADMINISTRATOR' ||
+            name === 'ADMIN USER' ||
+            name.includes('ADMIN USER')
+        );
+    };
+
+    const isBhPersonnel = (m) => {
+        if (isAdminPersonnel(m)) return false;
+        const role = normalizeText(m.role);
+        const desg = normalizeText(m.designation);
+        return (
+            role === 'BUSINESS_HEAD' ||
+            role === 'BH' ||
+            desg.includes('BUSINESS HEAD') ||
+            desg.includes('BUSINESS-HEAD') ||
+            desg.includes('BUSINESS_HEAD') ||
+            desg === 'BH' ||
+            desg.startsWith('BH ') ||
+            desg.endsWith(' BH')
+        );
+    };
+
+    const isCrePersonnel = (m) => {
+        if (isAdminPersonnel(m) || isBhPersonnel(m)) return false;
+        const desg = normalizeText(m.designation);
         if (
-            designation.includes('CLIENT CARE') ||
-            designation.includes('CLIENT-CARE') ||
-            designation.includes('CLIENTCARE') ||
-            designation.includes('ESCALATION') ||
-            designation.includes('ESCALATIONS')
+            desg.includes('CLIENT CARE') ||
+            desg.includes('CLIENT-CARE') ||
+            desg.includes('CLIENTCARE') ||
+            desg.includes('ESCALATION') ||
+            desg.includes('ESCALATIONS')
         ) {
             return false;
         }
         return (
-            designation.includes('CRE') ||
-            designation.includes('CUSTOMER RELATIONSHIP') ||
-            designation.includes('CUSTOMER-RELATIONSHIP') ||
-            designation.includes('CUSTOMER REL') ||
-            designation === 'RELATIONSHIP EXECUTIVE' ||
-            designation === 'RELATIONSHIP MANAGER'
+            /\bCRE\b/.test(desg) ||
+            desg.includes('CUSTOMER RELATIONSHIP') ||
+            desg.includes('CUSTOMER-RELATIONSHIP') ||
+            desg.includes('CUSTOMER REL') ||
+            desg === 'RELATIONSHIP EXECUTIVE' ||
+            desg === 'RELATIONSHIP MANAGER'
+        );
+    };
+
+    const isFaPersonnel = (m) => {
+        if (isAdminPersonnel(m) || isBhPersonnel(m) || isCrePersonnel(m)) return false;
+        const desg = normalizeText(m.designation);
+        if (
+            desg.includes('CLIENT CARE') ||
+            desg.includes('CLIENT-CARE') ||
+            desg.includes('ESCALATION') ||
+            desg.includes('ESCALATIONS')
+        ) {
+            return false;
+        }
+        return (
+            /\bFA\b/.test(desg) ||
+            desg.includes('FIELD ASSISTANT') ||
+            desg.includes('FINANCIAL ASSISTANT')
+        );
+    };
+
+    const isLaPersonnel = (m) => {
+        if (isAdminPersonnel(m) || isBhPersonnel(m) || isCrePersonnel(m) || isFaPersonnel(m)) return false;
+        const desg = normalizeText(m.designation);
+        if (
+            desg.includes('CLIENT CARE') ||
+            desg.includes('CLIENT-CARE') ||
+            desg.includes('ESCALATION') ||
+            desg.includes('ESCALATIONS')
+        ) {
+            return false;
+        }
+        return (
+            /\bLA\b/.test(desg) ||
+            desg.includes('LEGAL ASSISTANT') ||
+            desg.includes('LOAN ASSISTANT') ||
+            desg.includes('LAND ASSISTANT')
         );
     };
 
@@ -243,12 +313,18 @@ const AdminCallReports = () => {
         const userName = typeof rawName === 'string' ? rawName : "Unknown Personnel";
         const rawDesg = typeof log.user === 'object' ? log.user?.designation : (log.designation || 'OTHER');
         const userDesignation = typeof rawDesg === 'string' ? rawDesg : 'OTHER';
+        const rawRole = typeof log.user === 'object' ? log.user?.role : (log.role || 'EMPLOYEE');
+        const userRole = typeof rawRole === 'string' ? rawRole : 'EMPLOYEE';
+        const userId = log.userId || (typeof log.user === 'object' ? log.user?.id : null);
 
         if (!acc[key]) {
             acc[key] = {
                 name: userName,
                 empId: log.empId,
                 designation: userDesignation,
+                role: userRole,
+                id: userId,
+                userId: userId,
                 totalCalls: 0,
                 incoming: 0,
                 outgoing: 0,
@@ -265,6 +341,13 @@ const AdminCallReports = () => {
             }
             if (acc[key].name === "Unknown Personnel" && userName !== "Unknown Personnel") {
                 acc[key].name = userName;
+            }
+            if (userRole && userRole !== 'EMPLOYEE') {
+                acc[key].role = userRole;
+            }
+            if (!acc[key].id && userId) {
+                acc[key].id = userId;
+                acc[key].userId = userId;
             }
         }
 
@@ -394,17 +477,14 @@ const AdminCallReports = () => {
     };
 
     const filteredMetrics = metricsArray.filter(m => (typeof m.name === 'string' ? m.name : "Unknown Personnel").toLowerCase().includes((searchTerm || '').toLowerCase()));
-    const creMetrics = filteredMetrics.filter((m) => isCreFamilyDesignation(typeof m.designation === 'string' ? m.designation : ''));
-    const faMetrics = filteredMetrics.filter((m) => {
-        const d = (typeof m.designation === 'string' ? m.designation : '').toUpperCase();
-        return !isCreFamilyDesignation(d) && (d.includes('FA') || d.includes('FIELD ASSISTANT') || d.includes('FINANCIAL ASSISTANT'));
-    });
-    const laMetrics = filteredMetrics.filter((m) => {
-        const d = (typeof m.designation === 'string' ? m.designation : '').toUpperCase();
-        return !isCreFamilyDesignation(d) && !faMetrics.includes(m) && (d.includes('LA') || d.includes('LEGAL ASSISTANT') || d.includes('LOAN ASSISTANT') || d.includes('LAND ASSISTANT'));
-    });
-    const otherEmployeeMetrics = filteredMetrics.filter((m) => {
-        return !creMetrics.includes(m) && !faMetrics.includes(m) && !laMetrics.includes(m);
+    
+    const adminMetrics = filteredMetrics.filter(isAdminPersonnel);
+    const bhMetrics = filteredMetrics.filter(isBhPersonnel);
+    const creMetrics = filteredMetrics.filter(isCrePersonnel);
+    const faMetrics = filteredMetrics.filter(isFaPersonnel);
+    const laMetrics = filteredMetrics.filter(isLaPersonnel);
+    const otherEmployeeMetrics = filteredMetrics.filter(m => {
+        return !adminMetrics.includes(m) && !bhMetrics.includes(m) && !creMetrics.includes(m) && !faMetrics.includes(m) && !laMetrics.includes(m);
     });
 
     // Chart Data
@@ -806,9 +886,11 @@ const AdminCallReports = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                     {[
+                                        { title: 'ADMIN', employees: adminMetrics, badgeColor: 'bg-rose-500' },
+                                        { title: 'BUSINESS HEAD', employees: bhMetrics, badgeColor: 'bg-purple-600' },
                                         { title: 'CRE', employees: creMetrics, badgeColor: 'bg-blue-500' },
                                         { title: 'FA', employees: faMetrics, badgeColor: 'bg-emerald-500' },
-                                        { title: 'LA', employees: laMetrics, badgeColor: 'bg-purple-500' },
+                                        { title: 'LA', employees: laMetrics, badgeColor: 'bg-indigo-500' },
                                         { title: 'EMPLOYEE', employees: otherEmployeeMetrics, badgeColor: 'bg-amber-500' }
                                     ].map((section) => (
                                         section.employees.length > 0 ? [
