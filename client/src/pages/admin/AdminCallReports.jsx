@@ -218,13 +218,22 @@ const AdminCallReports = () => {
     const normalizeDesignation = (value) => String(value || '').toUpperCase();
     const isCreFamilyDesignation = (value) => {
         const designation = normalizeDesignation(value);
+        if (
+            designation.includes('CLIENT CARE') ||
+            designation.includes('CLIENT-CARE') ||
+            designation.includes('CLIENTCARE') ||
+            designation.includes('ESCALATION') ||
+            designation.includes('ESCALATIONS')
+        ) {
+            return false;
+        }
         return (
             designation.includes('CRE') ||
-            designation.includes('RELATIONSHIP') ||
-            designation.includes('CLIENT-CARE') ||
-            designation.includes('CLIENT CARE') ||
+            designation.includes('CUSTOMER RELATIONSHIP') ||
             designation.includes('CUSTOMER-RELATIONSHIP') ||
-            designation.includes('CUSTOMER REL')
+            designation.includes('CUSTOMER REL') ||
+            designation === 'RELATIONSHIP EXECUTIVE' ||
+            designation === 'RELATIONSHIP MANAGER'
         );
     };
 
@@ -797,7 +806,7 @@ const AdminCallReports = () => {
                                 </thead>
                                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                                     {[
-                                        { title: 'CRE / CLIENT CARE', employees: creMetrics, badgeColor: 'bg-blue-500' },
+                                        { title: 'CRE', employees: creMetrics, badgeColor: 'bg-blue-500' },
                                         { title: 'FA', employees: faMetrics, badgeColor: 'bg-emerald-500' },
                                         { title: 'LA', employees: laMetrics, badgeColor: 'bg-purple-500' },
                                         { title: 'EMPLOYEE', employees: otherEmployeeMetrics, badgeColor: 'bg-amber-500' }
