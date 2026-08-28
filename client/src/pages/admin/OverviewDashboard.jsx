@@ -25,182 +25,37 @@ import {
     ExternalLink,
     Filter,
     Shield,
-    Sparkles
+    Sparkles,
+    Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import { formatTime } from '../../utils/dateUtils';
 
-// Sample Mock Employees Data (used if live API returns fewer or during initial load)
-const MOCK_EMPLOYEES = [
-    {
-        id: 'EMP-1001',
-        name: 'Aravind Kumar',
-        role: 'Senior Manager',
-        level: 'Level 1',
-        showroom: 'MTRS',
-        status: 'Working',
-        inTime: '09:02 AM',
-        outTime: '-',
-        breakTime: '15m',
-        breakMinutes: 15,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1002',
-        name: 'Sangeetha R',
-        role: 'Sales Executive',
-        level: 'Level 2',
-        showroom: 'Porur',
-        status: 'Tea Break',
-        inTime: '09:05 AM',
-        outTime: '-',
-        breakTime: '10m',
-        breakMinutes: 10,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1003',
-        name: 'Karthik J',
-        role: 'Technical Lead',
-        level: 'Level 2',
-        showroom: 'OMR',
-        status: 'Client Meeting',
-        inTime: '09:01 AM',
-        outTime: '-',
-        breakTime: '0m',
-        breakMinutes: 0,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1004',
-        name: 'Deeksha P',
-        role: 'Support Specialist',
-        level: 'Level 3',
-        showroom: 'MTRS',
-        status: 'Lunch Break',
-        inTime: '09:03 AM',
-        outTime: '-',
-        breakTime: '45m',
-        breakMinutes: 45,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1005',
-        name: 'Mukesh G',
-        role: 'Operations Lead',
-        level: 'Level 2',
-        showroom: 'OMR',
-        status: 'Tea Break',
-        inTime: '09:00 AM',
-        outTime: '-',
-        breakTime: '1h 25m',
-        breakMinutes: 85,
-        maxBreak: '1h 15m',
-        isExceeded: true,
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1006',
-        name: 'Abinaya B',
-        role: 'Customer Success',
-        level: 'Level 3',
-        showroom: 'Porur',
-        status: 'Working',
-        inTime: '09:04 AM',
-        outTime: '-',
-        breakTime: '10m',
-        breakMinutes: 10,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1007',
-        name: 'Vignesh R',
-        role: 'Business Analyst',
-        level: 'Level 1',
-        showroom: 'MTRS',
-        status: 'BH Meeting',
-        inTime: '09:02 AM',
-        outTime: '-',
-        breakTime: '0m',
-        breakMinutes: 0,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1008',
-        name: 'Nithya T',
-        role: 'HR Specialist',
-        level: 'Level 2',
-        showroom: 'Porur',
-        status: 'Working',
-        inTime: '09:06 AM',
-        outTime: '-',
-        breakTime: '45m',
-        breakMinutes: 45,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1009',
-        name: 'Pradeep R',
-        role: 'Field Executive',
-        level: 'Level 4',
-        showroom: 'OMR',
-        status: 'Client Meeting',
-        inTime: '09:03 AM',
-        outTime: '-',
-        breakTime: '0m',
-        breakMinutes: 0,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1010',
-        name: 'Ramesh K',
-        role: 'Showroom Assistant',
-        level: 'Level 4',
-        showroom: 'MTRS',
-        status: 'Tea Break',
-        inTime: '09:10 AM',
-        outTime: '-',
-        breakTime: '12m',
-        breakMinutes: 12,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1522075469751-3a6694fb2f61?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1011',
-        name: 'Divya R',
-        role: 'Sales Representative',
-        level: 'Level 3',
-        showroom: 'Porur',
-        status: 'Tea Break',
-        inTime: '09:12 AM',
-        outTime: '-',
-        breakTime: '8m',
-        breakMinutes: 8,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
-    },
-    {
-        id: 'EMP-1012',
-        name: 'Praveen M',
-        role: 'Intern',
-        level: 'Level 4',
-        showroom: 'OMR',
-        status: 'Lunch Break',
-        inTime: '09:15 AM',
-        outTime: '-',
-        breakTime: '15m',
-        breakMinutes: 15,
-        maxBreak: '1h 15m',
-        avatar: 'https://images.unsplash.com/photo-1539571696357-5a69c17a67c6?w=150&auto=format&fit=crop&q=80',
+// Helper to determine Level from Designation / Role
+const getLevelFromDesignation = (designation, role) => {
+    const d = (designation || role || '').toUpperCase();
+    if (['ADMIN', 'BH', 'BUSINESS_HEAD', 'COO', 'DIRECTOR', 'MANAGER'].some(k => d.includes(k))) {
+        return 'Level 1'; // Management
     }
-];
+    if (['AE', 'OPERATIONS', 'ACCOUNTS', 'CRE', 'LEAD'].some(k => d.includes(k))) {
+        return 'Level 2'; // Operations
+    }
+    if (['LA', 'FA', 'SUPPORT', 'HR', 'COORDINATOR'].some(k => d.includes(k))) {
+        return 'Level 3'; // Support
+    }
+    return 'Level 4'; // Interns & Field
+};
+
+// Helper to determine Showroom
+const getShowroomFromUser = (user, attendanceRecord) => {
+    const text = `${user?.siteName || ''} ${attendanceRecord?.siteName || ''} ${user?.designation || ''} ${user?.name || ''}`.toUpperCase();
+    if (text.includes('PORUR')) return 'Porur';
+    if (text.includes('OMR')) return 'OMR';
+    if (text.includes('MTRS')) return 'MTRS';
+    // Fallback distribution based on user ID if showroom isn't explicitly in designation
+    const showrooms = ['MTRS', 'Porur', 'OMR'];
+    return showrooms[(user?.id || 0) % 3];
+};
 
 const OverviewDashboard = () => {
     const { user } = useSelector((state) => state.auth);
@@ -208,73 +63,142 @@ const OverviewDashboard = () => {
     const [selectedShowroom, setSelectedShowroom] = useState('All Showrooms');
     const [statusTab, setStatusTab] = useState('All');
     const [searchQuery, setSearchQuery] = useState('');
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
+    const [viewMode, setViewMode] = useState('grid');
     const [sortBy, setSortBy] = useState('Status');
-    const [breakTab, setBreakTab] = useState('Tea Break'); // 'Tea Break' | 'Lunch Break'
+    const [breakTab, setBreakTab] = useState('Tea Break');
 
     // Live clock
     const [currentTime, setCurrentTime] = useState(new Date());
     const [isRefreshing, setIsRefreshing] = useState(false);
-    const [employees, setEmployees] = useState(MOCK_EMPLOYEES);
-    const [visibleCount, setVisibleCount] = useState(9);
+    const [isLoadingData, setIsLoadingData] = useState(true);
+
+    // Real Data State
+    const [employees, setEmployees] = useState([]);
+    const [visibleCount, setVisibleCount] = useState(12);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000);
         return () => clearInterval(timer);
     }, []);
 
-    // Try fetching live active status from backend
-    const fetchLiveData = async () => {
+    // Main Data Fetching from Real Database Endpoints
+    const fetchRealData = async () => {
         setIsRefreshing(true);
         try {
-            if (user?.token) {
-                const config = { headers: { Authorization: `Bearer ${user.token}` } };
-                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-                const response = await axios.get(`${baseUrl}/admin/active-statuses`, config);
-                
-                if (Array.isArray(response.data) && response.data.length > 0) {
-                    const fetchedMap = new Map(response.data.map(item => [item.userId || item._id, item]));
-                    
-                    const updated = MOCK_EMPLOYEES.map(emp => {
-                        const match = fetchedMap.get(emp.id);
-                        if (match) {
-                            return {
-                                ...emp,
-                                status: match.status || emp.status,
-                                inTime: match.checkInTime || emp.inTime,
-                                breakMinutes: match.breakMinutes || emp.breakMinutes,
-                                isExceeded: (match.breakMinutes || emp.breakMinutes) > 75
-                            };
-                        }
-                        return emp;
-                    });
-                    setEmployees(updated);
+            if (!user?.token) return;
+
+            const config = { headers: { Authorization: `Bearer ${user.token}` } };
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const todayStr = new Date().toISOString().slice(0, 10);
+
+            // Fetch Real Database Employees, Daily Attendance, and Active Break Statuses
+            const [employeesRes, attendanceRes, activeStatusesRes] = await Promise.allSettled([
+                axios.get(`${baseUrl}/admin/employees`, config),
+                axios.get(`${baseUrl}/admin/daily-attendance?date=${todayStr}`, config),
+                axios.get(`${baseUrl}/admin/active-statuses`, config)
+            ]);
+
+            const allUsers = employeesRes.status === 'fulfilled' && Array.isArray(employeesRes.value.data)
+                ? employeesRes.value.data
+                : [];
+
+            const attendanceRecords = attendanceRes.status === 'fulfilled' && Array.isArray(attendanceRes.value.data)
+                ? attendanceRes.value.data
+                : [];
+
+            const activeBreaks = activeStatusesRes.status === 'fulfilled' && Array.isArray(activeStatusesRes.value.data)
+                ? activeStatusesRes.value.data
+                : [];
+
+            // Map Attendance & Break data by User ID
+            const attendanceMap = new Map();
+            attendanceRecords.forEach(rec => {
+                if (rec.user?.id) {
+                    attendanceMap.set(rec.user.id, rec);
                 }
-            }
+            });
+
+            const activeBreakMap = new Map();
+            activeBreaks.forEach(ab => {
+                if (ab.userId) {
+                    activeBreakMap.set(ab.userId, ab);
+                }
+            });
+
+            // Process every real user in database
+            const processedEmployees = allUsers.map(emp => {
+                const att = attendanceMap.get(emp.id);
+                const activeBreak = activeBreakMap.get(emp.id);
+
+                let status = 'Absent';
+                let inTime = '-';
+                let outTime = '-';
+                let teaMinutes = att?.breakData?.tea || 0;
+                let lunchMinutes = att?.breakData?.lunch || 0;
+                let totalBreakMinutes = teaMinutes + lunchMinutes;
+
+                if (att && att.status === 'PRESENT') {
+                    if (activeBreak) {
+                        if (activeBreak.breakType === 'TEA') status = 'Tea Break';
+                        else if (activeBreak.breakType === 'LUNCH') status = 'Lunch Break';
+                        else if (['CLIENT_MEETING', 'BH_MEETING'].includes(activeBreak.breakType)) status = 'In Meeting';
+                        else status = 'On Break';
+                    } else {
+                        status = 'Working';
+                    }
+                    inTime = att.timeIn ? formatTime(att.timeIn) : '-';
+                    outTime = att.timeOut ? formatTime(att.timeOut) : '-';
+                } else if (att && att.status === 'LEAVE') {
+                    status = 'On Leave';
+                }
+
+                // Format break string
+                const h = Math.floor(totalBreakMinutes / 60);
+                const m = totalBreakMinutes % 60;
+                const breakTimeStr = h > 0 ? `${h}h ${m}m` : `${m}m`;
+
+                return {
+                    id: `EMP-${emp.id}`,
+                    rawId: emp.id,
+                    name: emp.name,
+                    role: emp.designation || emp.role || 'Employee',
+                    level: getLevelFromDesignation(emp.designation, emp.role),
+                    showroom: getShowroomFromUser(emp, att),
+                    status: status,
+                    inTime: inTime,
+                    outTime: outTime,
+                    breakTime: breakTimeStr,
+                    breakMinutes: totalBreakMinutes,
+                    teaMinutes: teaMinutes,
+                    lunchMinutes: lunchMinutes,
+                    maxBreak: '1h 15m',
+                    isExceeded: totalBreakMinutes > 75,
+                    avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${encodeURIComponent(emp.name)}`
+                };
+            });
+
+            setEmployees(processedEmployees);
         } catch (err) {
-            console.log('Using baseline mockup data for overview demo');
+            console.error('Failed to load real data:', err);
         } finally {
-            setTimeout(() => setIsRefreshing(false), 500);
+            setIsLoadingData(false);
+            setTimeout(() => setIsRefreshing(false), 400);
         }
     };
 
     useEffect(() => {
-        fetchLiveData();
+        fetchRealData();
     }, []);
 
     // Filter Logic
     const filteredEmployees = employees.filter((emp) => {
-        // Level filter
         if (selectedLevel !== 'All Levels' && emp.level !== selectedLevel) return false;
-        // Showroom filter
         if (selectedShowroom !== 'All Showrooms' && emp.showroom !== selectedShowroom) return false;
-        // Status tab filter
         if (statusTab !== 'All') {
             if (statusTab === 'Working' && emp.status !== 'Working') return false;
-            if (statusTab === 'On Break' && !emp.status.includes('Break')) return false;
-            if (statusTab === 'In Meeting' && !emp.status.includes('Meeting')) return false;
+            if (statusTab === 'On Break' && !['Tea Break', 'Lunch Break', 'On Break'].includes(emp.status)) return false;
+            if (statusTab === 'In Meeting' && emp.status !== 'In Meeting') return false;
         }
-        // Search query
         if (searchQuery.trim() !== '') {
             const q = searchQuery.toLowerCase();
             return (
@@ -286,17 +210,46 @@ const OverviewDashboard = () => {
         return true;
     });
 
-    // Stats calculations
-    const totalCount = 100; // Match mockup UI numbers
-    const workingCount = employees.filter((e) => e.status === 'Working').length + 75;
-    const breakCount = employees.filter((e) => e.status.includes('Break')).length + 4;
-    const meetingCount = employees.filter((e) => e.status.includes('Meeting')).length + 3;
+    // Dynamic Counts from Real Data
+    const totalCount = employees.length;
+    const workingCount = employees.filter((e) => e.status === 'Working').length;
+    const breakCount = employees.filter((e) => ['Tea Break', 'Lunch Break', 'On Break'].includes(e.status)).length;
+    const meetingCount = employees.filter((e) => e.status === 'In Meeting').length;
 
-    // Break area filtered lists
+    // Total accumulated break minutes for all working employees
+    const totalAccumulatedBreakMinutes = employees.reduce((sum, e) => sum + e.breakMinutes, 0);
+    const totalBreakHours = Math.floor(totalAccumulatedBreakMinutes / 60);
+    const totalBreakMins = totalAccumulatedBreakMinutes % 60;
+    const totalBreakTimeStr = totalBreakHours > 0 ? `${totalBreakHours}h ${totalBreakMins}m` : `${totalBreakMins}m`;
+
+    // Level-wise counts
+    const getLevelCounts = (lvl) => {
+        const lvlEmps = employees.filter((e) => e.level === lvl);
+        return {
+            total: lvlEmps.length,
+            working: lvlEmps.filter((e) => e.status === 'Working').length,
+            break: lvlEmps.filter((e) => ['Tea Break', 'Lunch Break', 'On Break'].includes(e.status)).length,
+            meeting: lvlEmps.filter((e) => e.status === 'In Meeting').length
+        };
+    };
+
+    const lvl1Stats = getLevelCounts('Level 1');
+    const lvl2Stats = getLevelCounts('Level 2');
+    const lvl3Stats = getLevelCounts('Level 3');
+    const lvl4Stats = getLevelCounts('Level 4');
+
+    // Break area lists
     const teaBreakList = employees.filter((e) => e.status === 'Tea Break');
     const lunchBreakList = employees.filter((e) => e.status === 'Lunch Break');
 
-    // Helper function for status pill badges
+    // Total Tea vs Lunch break minutes
+    const totalTeaBreakMins = employees.reduce((sum, e) => sum + e.teaMinutes, 0);
+    const totalLunchBreakMins = employees.reduce((sum, e) => sum + e.lunchMinutes, 0);
+    const combinedBreakMins = Math.max(1, totalTeaBreakMins + totalLunchBreakMins);
+    const teaPct = Math.round((totalTeaBreakMins / combinedBreakMins) * 100);
+    const lunchPct = 100 - teaPct;
+
+    // Render Status Badges
     const renderStatusBadge = (emp) => {
         if (emp.status === 'Working') {
             return (
@@ -322,26 +275,26 @@ const OverviewDashboard = () => {
                 </span>
             );
         }
-        if (emp.status.includes('Meeting')) {
+        if (emp.status === 'In Meeting') {
             return (
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">
-                    <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                    {emp.status}
+                    <Video size={12} className="text-indigo-600" />
+                    In Meeting
                 </span>
             );
         }
         return (
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-600">
                 {emp.status}
             </span>
         );
     };
 
-    // CSV Export
+    // Export CSV
     const handleExport = () => {
-        const headers = ['Employee ID,Name,Role,Level,Showroom,Status,In Time,Break Duration\n'];
+        const headers = ['Employee ID,Name,Role,Level,Showroom,Status,In Time,Out Time,Break Duration\n'];
         const rows = filteredEmployees.map(
-            (e) => `${e.id},"${e.name}",${e.role},${e.level},${e.showroom},${e.status},${e.inTime},${e.breakTime}`
+            (e) => `${e.id},"${e.name}",${e.role},${e.level},${e.showroom},${e.status},${e.inTime},${e.outTime},${e.breakTime}`
         );
         const blob = new Blob([headers.concat(rows.join('\n')).join('')], { type: 'text/csv' });
         const url = window.URL.createObjectURL(blob);
@@ -408,18 +361,12 @@ const OverviewDashboard = () => {
 
                     {/* Refresh Button */}
                     <button
-                        onClick={fetchLiveData}
+                        onClick={fetchRealData}
                         disabled={isRefreshing}
                         className="p-2.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-slate-600 transition-colors active:scale-95 shadow-xs"
                         title="Refresh live statuses"
                     >
                         <RefreshCw size={15} className={isRefreshing ? 'animate-spin text-indigo-600' : ''} />
-                    </button>
-
-                    {/* Filter Button */}
-                    <button className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl text-xs font-semibold text-slate-700 transition-colors shadow-xs">
-                        <Filter size={14} />
-                        Filter
                     </button>
 
                     {/* Export Button */}
@@ -440,7 +387,7 @@ const OverviewDashboard = () => {
                     <div>
                         <p className="text-3xl font-black text-slate-900 tracking-tight">{totalCount}</p>
                         <p className="text-xs font-semibold text-slate-500 mt-1">Total Employees</p>
-                        <p className="text-[10px] font-medium text-slate-400 mt-0.5">All selected</p>
+                        <p className="text-[10px] font-medium text-slate-400 mt-0.5">Real Database Records</p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
                         <Users size={22} />
@@ -452,7 +399,9 @@ const OverviewDashboard = () => {
                     <div>
                         <p className="text-3xl font-black text-slate-900 tracking-tight">{workingCount}</p>
                         <p className="text-xs font-semibold text-slate-500 mt-1">Currently Working</p>
-                        <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">83% of total</p>
+                        <p className="text-[10px] font-semibold text-emerald-600 mt-0.5">
+                            {totalCount > 0 ? Math.round((workingCount / totalCount) * 100) : 0}% of total
+                        </p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-emerald-50 border border-emerald-100 text-emerald-600 flex items-center justify-center shadow-xs">
                         <Activity size={22} />
@@ -464,7 +413,9 @@ const OverviewDashboard = () => {
                     <div>
                         <p className="text-3xl font-black text-slate-900 tracking-tight">{breakCount}</p>
                         <p className="text-xs font-semibold text-slate-500 mt-1">On Break</p>
-                        <p className="text-[10px] font-semibold text-amber-600 mt-0.5">9% of total</p>
+                        <p className="text-[10px] font-semibold text-amber-600 mt-0.5">
+                            {totalCount > 0 ? Math.round((breakCount / totalCount) * 100) : 0}% of total
+                        </p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-amber-50 border border-amber-100 text-amber-600 flex items-center justify-center shadow-xs">
                         <Coffee size={22} />
@@ -476,7 +427,9 @@ const OverviewDashboard = () => {
                     <div>
                         <p className="text-3xl font-black text-slate-900 tracking-tight">{meetingCount}</p>
                         <p className="text-xs font-semibold text-slate-500 mt-1">In Meeting</p>
-                        <p className="text-[10px] font-semibold text-indigo-600 mt-0.5">6% of total</p>
+                        <p className="text-[10px] font-semibold text-indigo-600 mt-0.5">
+                            {totalCount > 0 ? Math.round((meetingCount / totalCount) * 100) : 0}% of total
+                        </p>
                     </div>
                     <div className="w-12 h-12 rounded-2xl bg-indigo-50 border border-indigo-100 text-indigo-600 flex items-center justify-center shadow-xs">
                         <Video size={22} />
@@ -487,7 +440,7 @@ const OverviewDashboard = () => {
                 <div className="bg-red-50/40 p-5 rounded-2xl border border-red-200/70 shadow-xs flex items-center justify-between relative overflow-hidden">
                     <div>
                         <div className="flex items-center gap-2">
-                            <p className="text-3xl font-black text-slate-900 tracking-tight">1h 15m</p>
+                            <p className="text-3xl font-black text-slate-900 tracking-tight">{totalBreakTimeStr}</p>
                         </div>
                         <p className="text-xs font-semibold text-slate-600 mt-1">Total Break Time</p>
                         <p className="text-[10px] font-medium text-slate-500 mt-0.5">(Tea + Lunch)</p>
@@ -496,17 +449,13 @@ const OverviewDashboard = () => {
                         <div className="w-10 h-10 rounded-2xl bg-red-100 border border-red-200 text-red-600 flex items-center justify-center shadow-xs">
                             <Clock size={20} />
                         </div>
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black bg-red-600 text-white uppercase tracking-wider shadow-xs animate-pulse">
-                            <AlertTriangle size={10} />
-                            Exceeded
-                        </span>
                     </div>
                 </div>
             </div>
 
             {/* ── MAIN DASHBOARD GRID LAYOUT ─────────────────────────────────── */}
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-                
+
                 {/* ── LEFT COLUMN: LEVEL WISE SUMMARY (3 cols) ───────────────── */}
                 <div className="lg:col-span-3 space-y-4">
                     <div className="bg-white rounded-2xl p-5 border border-slate-200/80 shadow-xs space-y-4">
@@ -525,13 +474,13 @@ const OverviewDashboard = () => {
                                     <span className="w-2.5 h-2.5 rounded-full bg-purple-600" />
                                     <span className="text-xs font-bold text-slate-800">Level 1</span>
                                 </div>
-                                <span className="text-lg font-black text-slate-900">8</span>
+                                <span className="text-lg font-black text-slate-900">{lvl1Stats.total}</span>
                             </div>
                             <p className="text-[11px] font-medium text-slate-500">Management</p>
                             <div className="flex items-center justify-between text-[11px] font-semibold pt-1 border-t border-slate-200/50">
-                                <span className="text-emerald-700">6 Working</span>
-                                <span className="text-amber-700">1 On Break</span>
-                                <span className="text-indigo-700">1 In Meeting</span>
+                                <span className="text-emerald-700">{lvl1Stats.working} Working</span>
+                                <span className="text-amber-700">{lvl1Stats.break} On Break</span>
+                                <span className="text-indigo-700">{lvl1Stats.meeting} Meeting</span>
                             </div>
                         </div>
 
@@ -542,13 +491,13 @@ const OverviewDashboard = () => {
                                     <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
                                     <span className="text-xs font-bold text-slate-800">Level 2</span>
                                 </div>
-                                <span className="text-lg font-black text-slate-900">32</span>
+                                <span className="text-lg font-black text-slate-900">{lvl2Stats.total}</span>
                             </div>
                             <p className="text-[11px] font-medium text-slate-500">Operations</p>
                             <div className="flex items-center justify-between text-[11px] font-semibold pt-1 border-t border-slate-200/50">
-                                <span className="text-emerald-700">26 Working</span>
-                                <span className="text-amber-700">3 On Break</span>
-                                <span className="text-indigo-700">3 In Meeting</span>
+                                <span className="text-emerald-700">{lvl2Stats.working} Working</span>
+                                <span className="text-amber-700">{lvl2Stats.break} On Break</span>
+                                <span className="text-indigo-700">{lvl2Stats.meeting} Meeting</span>
                             </div>
                         </div>
 
@@ -559,13 +508,13 @@ const OverviewDashboard = () => {
                                     <span className="w-2.5 h-2.5 rounded-full bg-pink-600" />
                                     <span className="text-xs font-bold text-slate-800">Level 3</span>
                                 </div>
-                                <span className="text-lg font-black text-slate-900">40</span>
+                                <span className="text-lg font-black text-slate-900">{lvl3Stats.total}</span>
                             </div>
                             <p className="text-[11px] font-medium text-slate-500">Support</p>
                             <div className="flex items-center justify-between text-[11px] font-semibold pt-1 border-t border-slate-200/50">
-                                <span className="text-emerald-700">32 Working</span>
-                                <span className="text-amber-700">5 On Break</span>
-                                <span className="text-indigo-700">3 In Meeting</span>
+                                <span className="text-emerald-700">{lvl3Stats.working} Working</span>
+                                <span className="text-amber-700">{lvl3Stats.break} On Break</span>
+                                <span className="text-indigo-700">{lvl3Stats.meeting} Meeting</span>
                             </div>
                         </div>
 
@@ -576,19 +525,15 @@ const OverviewDashboard = () => {
                                     <span className="w-2.5 h-2.5 rounded-full bg-amber-500" />
                                     <span className="text-xs font-bold text-slate-800">Level 4</span>
                                 </div>
-                                <span className="text-lg font-black text-slate-900">20</span>
+                                <span className="text-lg font-black text-slate-900">{lvl4Stats.total}</span>
                             </div>
                             <p className="text-[11px] font-medium text-slate-500">Interns & Field</p>
                             <div className="flex items-center justify-between text-[11px] font-semibold pt-1 border-t border-slate-200/50">
-                                <span className="text-emerald-700">19 Working</span>
-                                <span className="text-amber-700">0 On Break</span>
-                                <span className="text-indigo-700">1 In Meeting</span>
+                                <span className="text-emerald-700">{lvl4Stats.working} Working</span>
+                                <span className="text-amber-700">{lvl4Stats.break} On Break</span>
+                                <span className="text-indigo-700">{lvl4Stats.meeting} Meeting</span>
                             </div>
                         </div>
-
-                        <button className="w-full text-center py-2 text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors flex items-center justify-center gap-1 border border-indigo-100 rounded-xl bg-indigo-50/50 hover:bg-indigo-50">
-                            View all levels <ChevronRight size={14} />
-                        </button>
                     </div>
                 </div>
 
@@ -600,7 +545,7 @@ const OverviewDashboard = () => {
                             <div className="flex items-center gap-3">
                                 <h2 className="text-base font-bold text-slate-900">Employees at a Glance</h2>
                                 <span className="px-2.5 py-0.5 bg-slate-100 text-slate-700 text-xs font-bold rounded-full">
-                                    100 Employees
+                                    {filteredEmployees.length} Employees
                                 </span>
                             </div>
 
@@ -705,8 +650,19 @@ const OverviewDashboard = () => {
                             </div>
                         </div>
 
-                        {/* Employee Cards Grid */}
-                        {viewMode === 'grid' ? (
+                        {/* Loading State */}
+                        {isLoadingData ? (
+                            <div className="py-12 text-center text-slate-400 space-y-2">
+                                <Loader2 size={24} className="animate-spin mx-auto text-emerald-600" />
+                                <p className="text-xs font-semibold">Fetching live employee database...</p>
+                            </div>
+                        ) : filteredEmployees.length === 0 ? (
+                            <div className="py-12 text-center text-slate-400 space-y-1">
+                                <p className="text-sm font-bold text-slate-700">No employees match this filter</p>
+                                <p className="text-xs">Try selecting a different level or showroom filter.</p>
+                            </div>
+                        ) : viewMode === 'grid' ? (
+                            /* Employee Cards Grid */
                             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pt-2">
                                 {filteredEmployees.slice(0, visibleCount).map((emp) => (
                                     <div
@@ -724,12 +680,9 @@ const OverviewDashboard = () => {
                                                 />
                                                 <div>
                                                     <h3 className="text-xs font-bold text-slate-900 leading-tight">{emp.name}</h3>
-                                                    <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{emp.id}</p>
+                                                    <p className="text-[10px] font-semibold text-slate-400 mt-0.5">{emp.id} • {emp.role}</p>
                                                 </div>
                                             </div>
-                                            <button className="text-slate-400 hover:text-slate-600 p-1">
-                                                <MoreVertical size={16} />
-                                            </button>
                                         </div>
 
                                         {/* Status Badge */}
@@ -794,7 +747,7 @@ const OverviewDashboard = () => {
                                             />
                                             <div>
                                                 <h3 className="text-xs font-bold text-slate-900">{emp.name}</h3>
-                                                <p className="text-[10px] text-slate-400">{emp.id} • {emp.level} • {emp.showroom}</p>
+                                                <p className="text-[10px] text-slate-400">{emp.id} • {emp.role} • {emp.level} • {emp.showroom}</p>
                                             </div>
                                         </div>
                                         <div className="flex items-center gap-4">
@@ -813,7 +766,7 @@ const OverviewDashboard = () => {
                         {visibleCount < filteredEmployees.length && (
                             <div className="text-center pt-3">
                                 <button
-                                    onClick={() => setVisibleCount((prev) => prev + 6)}
+                                    onClick={() => setVisibleCount((prev) => prev + 12)}
                                     className="px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-bold rounded-xl transition-colors inline-flex items-center gap-1.5 active:scale-95 shadow-xs"
                                 >
                                     Load More Employees <ChevronDown size={15} />
@@ -863,30 +816,30 @@ const OverviewDashboard = () => {
 
                         {/* Break List */}
                         <div className="space-y-3">
-                            {(breakTab === 'Tea Break' ? teaBreakList : lunchBreakList).map((emp) => (
-                                <div key={emp.id} className="flex items-center justify-between text-xs">
-                                    <div className="flex items-center gap-2.5">
-                                        <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-700 text-xs border border-slate-200">
-                                            {emp.name.split(' ').map((n) => n[0]).join('')}
+                            {(breakTab === 'Tea Break' ? teaBreakList : lunchBreakList).length === 0 ? (
+                                <p className="text-xs text-slate-400 py-3 text-center">No employees currently taking {breakTab.toLowerCase()}</p>
+                            ) : (
+                                (breakTab === 'Tea Break' ? teaBreakList : lunchBreakList).map((emp) => (
+                                    <div key={emp.id} className="flex items-center justify-between text-xs">
+                                        <div className="flex items-center gap-2.5">
+                                            <div className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center font-black text-slate-700 text-xs border border-slate-200">
+                                                {emp.name.split(' ').map((n) => n[0]).join('')}
+                                            </div>
+                                            <div>
+                                                <p className="font-bold text-slate-800">{emp.name}</p>
+                                                <p className="text-[10px] text-slate-400">{emp.id}</p>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <p className="font-bold text-slate-800">{emp.name}</p>
-                                            <p className="text-[10px] text-slate-400">{emp.id}</p>
+                                        <div className="text-right">
+                                            <span className="font-extrabold text-slate-800">{emp.breakTime}</span>
+                                            {emp.isExceeded && (
+                                                <span className="block text-[9px] font-black text-red-600 uppercase">Exceeded</span>
+                                            )}
                                         </div>
                                     </div>
-                                    <div className="text-right">
-                                        <span className="font-extrabold text-slate-800">{emp.breakTime}</span>
-                                        {emp.isExceeded && (
-                                            <span className="block text-[9px] font-black text-red-600 uppercase">Exceeded</span>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                ))
+                            )}
                         </div>
-
-                        <button className="w-full text-center py-2 text-xs font-bold text-slate-600 hover:text-slate-900 transition-colors flex items-center justify-center gap-1 border border-slate-200 rounded-xl bg-slate-50 hover:bg-slate-100">
-                            View all on break <ChevronRight size={14} />
-                        </button>
                     </div>
 
                     {/* Break Summary Ring Chart Panel */}
@@ -897,7 +850,6 @@ const OverviewDashboard = () => {
                         <div className="flex items-center justify-between gap-4">
                             <div className="relative w-28 h-28 flex items-center justify-center">
                                 <svg className="w-full h-full transform -rotate-90" viewBox="0 0 36 36">
-                                    {/* Background Track */}
                                     <path
                                         className="text-slate-100"
                                         strokeWidth="3.8"
@@ -905,21 +857,19 @@ const OverviewDashboard = () => {
                                         fill="none"
                                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                     />
-                                    {/* Tea Break Segment (40%) */}
                                     <path
                                         className="text-amber-500"
-                                        strokeDasharray="40, 100"
+                                        strokeDasharray={`${teaPct}, 100`}
                                         strokeWidth="3.8"
                                         strokeLinecap="round"
                                         stroke="currentColor"
                                         fill="none"
                                         d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831"
                                     />
-                                    {/* Lunch Break Segment (60%) */}
                                     <path
                                         className="text-emerald-500"
-                                        strokeDasharray="60, 100"
-                                        strokeDashoffset="-40"
+                                        strokeDasharray={`${lunchPct}, 100`}
+                                        strokeDashoffset={`-${teaPct}`}
                                         strokeWidth="3.8"
                                         strokeLinecap="round"
                                         stroke="currentColor"
@@ -929,7 +879,7 @@ const OverviewDashboard = () => {
                                 </svg>
                                 <div className="absolute inset-0 flex flex-col items-center justify-center text-center">
                                     <span className="text-[10px] text-slate-400 font-semibold">Total Break</span>
-                                    <span className="text-sm font-black text-slate-900">1h 15m</span>
+                                    <span className="text-xs font-black text-slate-900">{totalBreakTimeStr}</span>
                                 </div>
                             </div>
 
@@ -938,13 +888,13 @@ const OverviewDashboard = () => {
                                     <span className="flex items-center gap-1.5 text-slate-600 font-semibold">
                                         <span className="w-2.5 h-2.5 rounded-full bg-amber-500" /> Tea Break
                                     </span>
-                                    <span className="font-extrabold text-slate-800">30m (40%)</span>
+                                    <span className="font-extrabold text-slate-800">{totalTeaBreakMins}m ({teaPct}%)</span>
                                 </div>
                                 <div className="flex items-center justify-between">
                                     <span className="flex items-center gap-1.5 text-slate-600 font-semibold">
                                         <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" /> Lunch Break
                                     </span>
-                                    <span className="font-extrabold text-slate-800">45m (60%)</span>
+                                    <span className="font-extrabold text-slate-800">{totalLunchBreakMins}m ({lunchPct}%)</span>
                                 </div>
                             </div>
                         </div>
@@ -963,12 +913,9 @@ const OverviewDashboard = () => {
                                 <span className="font-bold text-red-600">Highlighted in Red</span>
                             </div>
                         </div>
-                        <button className="text-xs font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1 pt-1">
-                            View Policy Details <ChevronRight size={14} />
-                        </button>
                         <div className="pt-2 border-t border-slate-100 flex items-center gap-1.5 text-[10px] font-semibold text-emerald-600">
                             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                            All break updates in real-time
+                            Connected to live PostgreSQL / Prisma database
                         </div>
                     </div>
                 </div>
