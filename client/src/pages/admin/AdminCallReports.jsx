@@ -386,8 +386,17 @@ const AdminCallReports = () => {
 
     const filteredMetrics = metricsArray.filter(m => (typeof m.name === 'string' ? m.name : "Unknown Personnel").toLowerCase().includes((searchTerm || '').toLowerCase()));
     const creMetrics = filteredMetrics.filter((m) => isCreFamilyDesignation(typeof m.designation === 'string' ? m.designation : ''));
-    const faMetrics = filteredMetrics.filter((m) => (typeof m.designation === 'string' ? m.designation : '').toUpperCase().includes('FA'));
-    const laMetrics = filteredMetrics.filter((m) => (typeof m.designation === 'string' ? m.designation : '').toUpperCase().includes('LA'));
+    const faMetrics = filteredMetrics.filter((m) => {
+        const d = (typeof m.designation === 'string' ? m.designation : '').toUpperCase();
+        return !isCreFamilyDesignation(d) && (d.includes('FA') || d.includes('FIELD ASSISTANT') || d.includes('FINANCIAL ASSISTANT'));
+    });
+    const laMetrics = filteredMetrics.filter((m) => {
+        const d = (typeof m.designation === 'string' ? m.designation : '').toUpperCase();
+        return !isCreFamilyDesignation(d) && !faMetrics.includes(m) && (d.includes('LA') || d.includes('LEGAL ASSISTANT') || d.includes('LOAN ASSISTANT') || d.includes('LAND ASSISTANT'));
+    });
+    const otherEmployeeMetrics = filteredMetrics.filter((m) => {
+        return !creMetrics.includes(m) && !faMetrics.includes(m) && !laMetrics.includes(m);
+    });
 
     // Chart Data
     const barData = metricsArray.slice(0, 10).map(m => {
@@ -790,7 +799,8 @@ const AdminCallReports = () => {
                                     {[
                                         { title: 'CRE / CLIENT CARE', employees: creMetrics, badgeColor: 'bg-blue-500' },
                                         { title: 'FA', employees: faMetrics, badgeColor: 'bg-emerald-500' },
-                                        { title: 'LA', employees: laMetrics, badgeColor: 'bg-purple-500' }
+                                        { title: 'LA', employees: laMetrics, badgeColor: 'bg-purple-500' },
+                                        { title: 'EMPLOYEE', employees: otherEmployeeMetrics, badgeColor: 'bg-amber-500' }
                                     ].map((section) => (
                                         section.employees.length > 0 ? [
                                             <tr key={`${section.title}-header`} className="bg-slate-50/80 dark:bg-slate-950/80">
