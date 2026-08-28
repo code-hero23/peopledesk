@@ -31,6 +31,7 @@ import VisitorRecordBook from './pages/employee/VisitorRecordBook';
 import Helpdesk from './pages/employee/Helpdesk';
 import HelpdeskManagement from './pages/admin/HelpdeskManagement';
 import SeatingLayout from './pages/admin/SeatingLayout';
+import OverviewDashboard from './pages/admin/OverviewDashboard';
 
 import OSCDirectory from './pages/OSCDirectory';
 import DecoraAI from './pages/DecoraAI';
@@ -80,6 +81,7 @@ function App() {
 
               {/* Admin Routes */}
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
+              <Route path="/admin/overview" element={<OverviewDashboard />} />
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/vouchers" element={<VoucherManagement />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />

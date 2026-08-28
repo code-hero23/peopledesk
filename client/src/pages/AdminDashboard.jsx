@@ -132,6 +132,14 @@ const AdminDashboard = () => {
 
     const quickLinks = [
         {
+            to: '/admin/overview',
+            icon: <BarChart2 size={24} />,
+            label: 'Real-time Overview',
+            desc: 'Showrooms (MTRS, Porur, OMR), 4-Level summary & break tracking.',
+            color: 'from-emerald-500 to-teal-600',
+            roles: ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'],
+        },
+        {
             to: '/admin/employees',
             icon: <Users size={24} />,
             label: user?.role === 'ADMIN' || user?.role === 'AE_MANAGER' ? 'Manage Employees' : 'View Employees',

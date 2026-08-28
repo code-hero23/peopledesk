@@ -218,6 +218,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                     <div className="mb-4">
                         {!isCollapsed && <p className="px-3 py-2 text-[9px] text-slate-400 font-black uppercase tracking-[0.22em]">Main Workspace</p>}
                         <NavItem to={isAdmin ? "/admin-dashboard" : "/dashboard"} icon={LayoutDashboard} label="Dashboard" exact />
+                        {isAdmin && (
+                            <NavItem to="/admin/overview" icon={Activity} label="Real-time Overview" badge="New" />
+                        )}
                         {isAdmin && ['ADMIN', 'HR', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
                             <NavItem to="/admin/approvals" icon={FileCheck} label="Pending Approvals" badge="Live" />
                         )}
