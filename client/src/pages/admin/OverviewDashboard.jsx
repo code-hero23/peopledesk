@@ -132,8 +132,15 @@ const OverviewDashboard = () => {
                 }
             });
 
-            // Process every real user in database
-            const processedEmployees = allUsers.map(emp => {
+            // Exclude Admin, Business Head (BH), and HR users from the employee list
+            const staffUsers = allUsers.filter(emp => {
+                const role = (emp.role || '').toUpperCase();
+                const des = (emp.designation || '').toUpperCase();
+                return !['ADMIN', 'BUSINESS_HEAD', 'HR'].includes(role) && des !== 'ADMIN' && des !== 'HR' && des !== 'BH';
+            });
+
+            // Process every real staff employee in database
+            const processedEmployees = staffUsers.map(emp => {
                 const att = attendanceMap.get(emp.id);
                 const activeBreak = activeBreakMap.get(emp.id);
 
