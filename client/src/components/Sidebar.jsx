@@ -32,7 +32,8 @@ import {
     Armchair,
     Boxes,
     Award,
-    Sparkle
+    Sparkle,
+    Activity
 } from 'lucide-react';
 import ThemeSelector from './common/ThemeSelector';
 
