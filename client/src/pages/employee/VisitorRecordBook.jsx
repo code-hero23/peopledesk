@@ -6,7 +6,7 @@ import {
     UserCheck, BookOpen, Send, RefreshCw, Search, Filter,
     Calendar, Clock, Building, User, Phone, FileText, CheckCircle,
     XCircle, AlertCircle, Download, MessageSquare, Trash2,
-    ChevronLeft, ChevronRight, Sparkles, Check
+    ChevronLeft, ChevronRight, Sparkles, Check, ShieldAlert
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -27,8 +27,13 @@ const VisitorRecordBook = () => {
     const { user } = useSelector((state) => state.auth);
     const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
 
-    // History logs are hidden for standard employees
-    const canViewHistory = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'FRONT_DESK_MANAGER'].includes(user?.role);
+    // Strictly visible only to Front Desk Manager, Admin, and all Business Heads (BH)
+    const isAllowed = 
+        ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'FRONT_DESK_MANAGER'].includes(user?.role) ||
+        ['FRONT DESK MANAGER', 'FRONT_DESK', 'FRONT DESK', 'BH'].includes(user?.designation) ||
+        (user?.designation && user?.designation.toUpperCase().includes('BUSINESS HEAD'));
+
+    const canViewHistory = isAllowed;
 
     const getAuthHeader = () => {
         const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
@@ -248,6 +253,20 @@ const VisitorRecordBook = () => {
     const indexOfLastRecord = currentPage * itemsPerPage;
     const indexOfFirstRecord = indexOfLastRecord - itemsPerPage;
     const currentRecords = records.slice(indexOfFirstRecord, indexOfLastRecord);
+
+    if (!isAllowed) {
+        return (
+            <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
+                <div className="w-16 h-16 bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 rounded-2xl flex items-center justify-center mb-4 shadow-lg shadow-rose-500/10">
+                    <ShieldAlert className="w-8 h-8" />
+                </div>
+                <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Access Restricted</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md">
+                    The Visitors Record Book is only accessible to Front Desk Managers, Administrators, and Business Heads (BH).
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-slate-100 dark:bg-slate-950 p-3 sm:p-5 lg:p-8 text-slate-800 dark:text-slate-100 transition-colors select-none">

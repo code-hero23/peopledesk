@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
+import axios from 'axios';
 import { createSiteVisitRequest, getBusinessHeads } from '../features/employee/employeeSlice';
 import SuccessModal from './SuccessModal';
 
@@ -8,6 +9,8 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
     const { businessHeads } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [assignedSites, setAssignedSites] = useState([]);
+    const [activeProjects, setActiveProjects] = useState([]);
 
     const { user } = useSelector((state) => state.auth);
     const [formData, setFormData] = useState({
@@ -19,6 +22,24 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
         reason: '',
         targetBhId: user?.reportingBhId || '',
     });
+
+    useEffect(() => {
+        const fetchSites = async () => {
+            try {
+                const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
+                if (!token) return;
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+                const res = await axios.get(`${baseUrl}/site-assignments/my-sites`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                setAssignedSites(res.data?.assignedSites || []);
+                setActiveProjects(res.data?.activeProjects || []);
+            } catch (err) {
+                // Ignore silent failure
+            }
+        };
+        fetchSites();
+    }, [user]);
 
     useEffect(() => {
         if (initialData) {
@@ -59,15 +80,28 @@ const SiteVisitRequestForm = ({ onSuccess, initialData, isMandatory }) => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Project Name</label>
+                    <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Project / Site Name</label>
                     <input
                         type="text"
                         className="w-full px-4 py-2.5 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none bg-white dark:bg-slate-900 dark:text-white transition-all shadow-sm font-bold"
                         required
                         value={formData.projectName}
-                        onChange={(e) => setFormData({ ...formData, projectName: e.target.value })}
-                        placeholder="e.g. Villa Project"
+                        onChange={(e) => {
+                            const val = e.target.value;
+                            const matchedSite = assignedSites.find(s => s.siteName === val);
+                            if (matchedSite && matchedSite.location) {
+                                setFormData({ ...formData, projectName: val, location: matchedSite.location });
+                            } else {
+                                setFormData({ ...formData, projectName: val });
+                            }
+                        }}
+                        placeholder="e.g. Villa Project or Select Assigned Site"
+                        list="site-visit-suggestions"
                     />
+                    <datalist id="site-visit-suggestions">
+                        {assignedSites.map(s => <option key={s.id} value={s.siteName}>{s.location ? `📍 ${s.location}` : ''}</option>)}
+                        {activeProjects.map(p => <option key={`p-${p.id}`} value={p.name}>{p.location ? `🏢 ${p.location}` : ''}</option>)}
+                    </datalist>
                 </div>
                 <div>
                     <label className="block text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest mb-2 transition-colors">Location</label>

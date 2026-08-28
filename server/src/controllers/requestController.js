@@ -659,9 +659,18 @@ const getMyRequests = async (req, res) => {
             label,
             subLabel: "Current Attendance Cycle"
         };
+        // Calculate distinct unique present calendar dates for this employee (multiple site visits on same day count as 1 day)
+        const uniquePresentDates = new Set(
+            attendanceHistory
+                .filter(a => a.status === 'PRESENT' || !a.status || a.date)
+                .map(a => {
+                    const d = new Date(a.date);
+                    return !isNaN(d.getTime()) ? d.toLocaleDateString('en-CA') : String(a.date).split('T')[0];
+                })
+        );
 
         const stats = {
-            presentDays: attendanceHistory.length,
+            presentDays: uniquePresentDates.size,
             leaveDays: leaves.filter(l => l.status === 'APPROVED').length,
             permissionDays: permissions.filter(p => p.status === 'APPROVED').length
         };

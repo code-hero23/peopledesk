@@ -88,23 +88,28 @@ const computeAutomatedMetrics = async (userId, month, year) => {
     const calStart = new Date(Date.UTC(y, m - 1, 1, 0, 0, 0, 0));
     const calEnd = new Date(Date.UTC(y, m, 0, 23, 59, 59, 999));
 
-    // Query attendance in both cycle and calendar ranges to take higher count
-    const [attCycle, attCal] = await Promise.all([
-        prisma.attendance.count({
+    // Query attendance in both cycle and calendar ranges to take higher count of distinct calendar days present
+    const [attCycleRecords, attCalRecords] = await Promise.all([
+        prisma.attendance.findMany({
             where: {
                 userId: parseInt(userId),
                 date: { gte: cycleStart, lte: cycleEnd },
                 status: 'PRESENT'
-            }
+            },
+            select: { date: true }
         }),
-        prisma.attendance.count({
+        prisma.attendance.findMany({
             where: {
                 userId: parseInt(userId),
                 date: { gte: calStart, lte: calEnd },
                 status: 'PRESENT'
-            }
+            },
+            select: { date: true }
         })
     ]);
+
+    const attCycle = new Set(attCycleRecords.map(a => new Date(a.date).toLocaleDateString('en-CA'))).size;
+    const attCal = new Set(attCalRecords.map(a => new Date(a.date).toLocaleDateString('en-CA'))).size;
 
     const presentDays = Math.max(attCycle, attCal);
     const systemScore = Math.min(15, (presentDays / 26) * 15);

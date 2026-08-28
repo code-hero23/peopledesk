@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
@@ -242,6 +243,37 @@ const Overview = () => {
     const [availableSims, setAvailableSims] = useState([]);
     const [simLabels, setSimLabels] = useState({});
     const [isDiscoveringSims, setIsDiscoveringSims] = useState(false);
+    const [assignedSites, setAssignedSites] = useState([]);
+    const [activeProjects, setActiveProjects] = useState([]);
+    const [isCustomSite, setIsCustomSite] = useState(false);
+
+    useEffect(() => {
+        const fetchAssignedSites = async () => {
+            try {
+                const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
+                if (!token) return;
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
+                const res = await axios.get(`${baseUrl}/site-assignments/my-sites`, {
+                    headers: { Authorization: `Bearer ${token}` }
+                });
+                const sites = res.data?.assignedSites || [];
+                const projs = res.data?.activeProjects || [];
+                setAssignedSites(sites);
+                setActiveProjects(projs);
+
+                if (sites.length > 0) {
+                    setSiteNameInput((prev) => prev || sites[0].siteName);
+                } else if (projs.length > 0) {
+                    setSiteNameInput((prev) => prev || projs[0].name);
+                }
+            } catch (err) {
+                console.error('Could not fetch assigned sites for dropdown:', err);
+            }
+        };
+
+        fetchAssignedSites();
+    }, [user, showCheckInModal]);
+
     useEffect(() => {
         if (user?.wfhViewEnabled) {
             navigate('/dashboard/wfh');

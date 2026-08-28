@@ -1,14 +1,15 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const XLSX = require('xlsx');
-const path = require('path');
 const fs = require('fs');
+const axios = require('axios');
 
-// Helper to determine if user has management permissions for Site Assignments
+// Helper to determine if user has management permissions for Site Assignments (Only AE Manager)
 const isSiteManager = (user) => {
     if (!user) return false;
     const role = (user.role || '').toUpperCase();
-    return ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(role);
+    const designation = (user.designation || '').toUpperCase();
+    return role === 'AE_MANAGER' || designation === 'AE MANAGER' || designation === 'AE_MANAGER';
 };
 
 // @desc    Get dropdown list of active AE employees
@@ -41,7 +42,6 @@ const getAEList = async (req, res) => {
             }
         });
 
-        // Fallback: If no users strictly matched the AE filter, return active employees so dropdown is never broken
         if (aeUsers.length === 0) {
             const allEmployees = await prisma.user.findMany({
                 where: { status: 'ACTIVE', role: { in: ['EMPLOYEE', 'AE_MANAGER', 'WALL2WALL_EMPLOYEE'] } },
@@ -60,9 +60,13 @@ const getAEList = async (req, res) => {
 
 // @desc    Create a new site assignment
 // @route   POST /api/site-assignments
-// @access  Private (Managers / Admins)
+// @access  Private (Only AE Manager)
 const createAssignment = async (req, res) => {
     try {
+        if (!isSiteManager(req.user)) {
+            return res.status(403).json({ message: 'Access denied. Only AE Manager can assign sites.' });
+        }
+
         const {
             siteName,
             clientName,
@@ -71,8 +75,7 @@ const createAssignment = async (req, res) => {
             scheduledDate,
             scheduledTime,
             workType,
-            remarks,
-            status
+            remarks
         } = req.body;
 
         if (!siteName || !aeId || !scheduledDate || !scheduledTime) {
@@ -109,7 +112,6 @@ const createAssignment = async (req, res) => {
                 scheduledDate: parsedDate,
                 scheduledTime: scheduledTime.trim(),
                 workType: workType ? workType.trim() : 'Site Inspection',
-                status: status || 'SCHEDULED',
                 remarks: remarks ? remarks.trim() : null
             },
             include: {
@@ -156,7 +158,6 @@ const getAssignments = async (req, res) => {
         const {
             search,
             aeId,
-            status,
             date,
             startDate,
             endDate,
@@ -167,19 +168,14 @@ const getAssignments = async (req, res) => {
 
         const where = {};
 
-        // Role-based visibility
+        // Role-based visibility: If not AE Manager, only see user's own assigned sites
         if (!isSiteManager(req.user)) {
             where.aeId = req.user.id;
-        } else if (aeId) {
+        } else if (aeId && aeId !== 'ALL') {
             const parsedAeId = parseInt(aeId, 10);
             if (!isNaN(parsedAeId)) {
                 where.aeId = parsedAeId;
             }
-        }
-
-        // Status Filter
-        if (status && status !== 'ALL') {
-            where.status = status.toUpperCase();
         }
 
         // Work Type Filter
@@ -229,7 +225,6 @@ const getAssignments = async (req, res) => {
             ];
         }
 
-        // Calculate summary counts in parallel
         const baseWhere = isSiteManager(req.user) ? {} : { aeId: req.user.id };
         const todayStart = new Date();
         todayStart.setHours(0, 0, 0, 0);
@@ -239,11 +234,8 @@ const getAssignments = async (req, res) => {
         const [
             total,
             assignments,
-            scheduledCount,
-            inProgressCount,
-            completedCount,
-            cancelledCount,
-            todayCount
+            todayCount,
+            uniqueAEs
         ] = await Promise.all([
             prisma.siteAssignment.count({ where }),
             prisma.siteAssignment.findMany({
@@ -262,15 +254,15 @@ const getAssignments = async (req, res) => {
                     }
                 }
             }),
-            prisma.siteAssignment.count({ where: { ...baseWhere, status: 'SCHEDULED' } }),
-            prisma.siteAssignment.count({ where: { ...baseWhere, status: 'IN_PROGRESS' } }),
-            prisma.siteAssignment.count({ where: { ...baseWhere, status: 'COMPLETED' } }),
-            prisma.siteAssignment.count({ where: { ...baseWhere, status: 'CANCELLED' } }),
             prisma.siteAssignment.count({
                 where: {
                     ...baseWhere,
                     scheduledDate: { gte: todayStart, lte: todayEnd }
                 }
+            }),
+            prisma.siteAssignment.groupBy({
+                by: ['aeId'],
+                where: baseWhere
             })
         ]);
 
@@ -285,12 +277,9 @@ const getAssignments = async (req, res) => {
                 totalPages
             },
             summary: {
-                total: scheduledCount + inProgressCount + completedCount + cancelledCount,
-                scheduled: scheduledCount,
-                inProgress: inProgressCount,
-                completed: completedCount,
-                cancelled: cancelledCount,
-                today: todayCount
+                total,
+                today: todayCount,
+                uniqueAECount: uniqueAEs.length
             }
         });
     } catch (error) {
@@ -319,7 +308,6 @@ const getAssignmentById = async (req, res) => {
             return res.status(404).json({ message: 'Site assignment not found' });
         }
 
-        // Access check
         if (!isSiteManager(req.user) && assignment.aeId !== req.user.id) {
             return res.status(403).json({ message: 'Access denied to this assignment.' });
         }
@@ -331,11 +319,15 @@ const getAssignmentById = async (req, res) => {
     }
 };
 
-// @desc    Update a site assignment or status
+// @desc    Update a site assignment
 // @route   PUT /api/site-assignments/:id
-// @access  Private
+// @access  Private (Only AE Manager)
 const updateAssignment = async (req, res) => {
     try {
+        if (!isSiteManager(req.user)) {
+            return res.status(403).json({ message: 'Access denied. Only AE Manager can edit site assignments.' });
+        }
+
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: 'Invalid ID' });
 
@@ -347,53 +339,36 @@ const updateAssignment = async (req, res) => {
             return res.status(404).json({ message: 'Site assignment not found.' });
         }
 
-        const isManager = isSiteManager(req.user);
-        const isAssignedAE = existing.aeId === req.user.id;
-
-        if (!isManager && !isAssignedAE) {
-            return res.status(403).json({ message: 'Not authorized to update this assignment.' });
-        }
+        const {
+            siteName,
+            clientName,
+            location,
+            aeId,
+            scheduledDate,
+            scheduledTime,
+            workType,
+            remarks
+        } = req.body;
 
         const updateData = {};
+        if (siteName !== undefined) updateData.siteName = siteName.trim();
+        if (clientName !== undefined) updateData.clientName = clientName ? clientName.trim() : null;
+        if (location !== undefined) updateData.location = location ? location.trim() : null;
+        if (workType !== undefined) updateData.workType = workType ? workType.trim() : 'Site Inspection';
+        if (remarks !== undefined) updateData.remarks = remarks ? remarks.trim() : null;
+        if (scheduledTime !== undefined) updateData.scheduledTime = scheduledTime.trim();
 
-        // If regular AE employee, allow updating status and remarks
-        if (!isManager && isAssignedAE) {
-            if (req.body.status) updateData.status = req.body.status.toUpperCase();
-            if (req.body.remarks !== undefined) updateData.remarks = req.body.remarks;
-        } else {
-            // Manager/Admin can update all fields
-            const {
-                siteName,
-                clientName,
-                location,
-                aeId,
-                scheduledDate,
-                scheduledTime,
-                workType,
-                status,
-                remarks
-            } = req.body;
-
-            if (siteName !== undefined) updateData.siteName = siteName.trim();
-            if (clientName !== undefined) updateData.clientName = clientName ? clientName.trim() : null;
-            if (location !== undefined) updateData.location = location ? location.trim() : null;
-            if (workType !== undefined) updateData.workType = workType ? workType.trim() : 'Site Inspection';
-            if (status !== undefined) updateData.status = status.toUpperCase();
-            if (remarks !== undefined) updateData.remarks = remarks ? remarks.trim() : null;
-            if (scheduledTime !== undefined) updateData.scheduledTime = scheduledTime.trim();
-
-            if (scheduledDate) {
-                const parsedDate = new Date(scheduledDate);
-                if (!isNaN(parsedDate.getTime())) {
-                    updateData.scheduledDate = parsedDate;
-                }
+        if (scheduledDate) {
+            const parsedDate = new Date(scheduledDate);
+            if (!isNaN(parsedDate.getTime())) {
+                updateData.scheduledDate = parsedDate;
             }
+        }
 
-            if (aeId) {
-                const parsedAeId = parseInt(aeId, 10);
-                if (!isNaN(parsedAeId)) {
-                    updateData.aeId = parsedAeId;
-                }
+        if (aeId) {
+            const parsedAeId = parseInt(aeId, 10);
+            if (!isNaN(parsedAeId)) {
+                updateData.aeId = parsedAeId;
             }
         }
 
@@ -415,15 +390,15 @@ const updateAssignment = async (req, res) => {
 
 // @desc    Delete a site assignment
 // @route   DELETE /api/site-assignments/:id
-// @access  Private (Managers / Admins)
+// @access  Private (Only AE Manager)
 const deleteAssignment = async (req, res) => {
     try {
+        if (!isSiteManager(req.user)) {
+            return res.status(403).json({ message: 'Access denied. Only AE Manager can delete site assignments.' });
+        }
+
         const id = parseInt(req.params.id, 10);
         if (isNaN(id)) return res.status(400).json({ message: 'Invalid ID' });
-
-        if (!isSiteManager(req.user)) {
-            return res.status(403).json({ message: 'Only managers can delete site assignments.' });
-        }
 
         const existing = await prisma.siteAssignment.findUnique({
             where: { id }
@@ -446,16 +421,15 @@ const deleteAssignment = async (req, res) => {
 
 // @desc    Bulk import site assignments from uploaded Excel/CSV file or parsed rows
 // @route   POST /api/site-assignments/import
-// @access  Private (Managers / Admins)
+// @access  Private (Only AE Manager)
 const bulkImportAssignments = async (req, res) => {
     try {
         if (!isSiteManager(req.user)) {
-            return res.status(403).json({ message: 'Only managers can import site assignments.' });
+            return res.status(403).json({ message: 'Access denied. Only AE Manager can import site assignments.' });
         }
 
         let rawRows = [];
 
-        // Handle file upload
         if (req.file) {
             let workbook;
             if (req.file.buffer) {
@@ -471,7 +445,6 @@ const bulkImportAssignments = async (req, res) => {
             const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
             rawRows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
 
-            // Clean up uploaded file from disk if stored by multer
             if (req.file.path) {
                 try { fs.unlinkSync(req.file.path); } catch (e) { }
             }
@@ -485,7 +458,6 @@ const bulkImportAssignments = async (req, res) => {
             return res.status(400).json({ message: 'No data rows found in the imported file.' });
         }
 
-        // Fetch all active users for matching
         const allUsers = await prisma.user.findMany({
             where: { status: 'ACTIVE' },
             select: { id: true, name: true, email: true, phone: true, biometricId: true, designation: true }
@@ -498,15 +470,13 @@ const bulkImportAssignments = async (req, res) => {
 
         for (let i = 0; i < rawRows.length; i++) {
             const raw = rawRows[i];
-            const rowNumber = i + 2; // Excel 1-based index with header
+            const rowNumber = i + 2;
 
-            // Normalize row keys
             const normalizedRow = {};
             for (const [k, v] of Object.entries(raw)) {
                 normalizedRow[normalizeKey(k)] = v;
             }
 
-            // Extract fields with multiple aliases
             const siteName = String(
                 normalizedRow.sitename || normalizedRow.site || normalizedRow.projectname || normalizedRow.project || ''
             ).trim();
@@ -537,11 +507,6 @@ const bulkImportAssignments = async (req, res) => {
                 normalizedRow.remarks || normalizedRow.notes || normalizedRow.instructions || ''
             ).trim();
 
-            const status = String(
-                normalizedRow.status || 'SCHEDULED'
-            ).trim().toUpperCase();
-
-            // Validations
             if (!siteName) {
                 errors.push({ row: rowNumber, error: 'Missing Site Name' });
                 continue;
@@ -552,7 +517,6 @@ const bulkImportAssignments = async (req, res) => {
                 continue;
             }
 
-            // Match AE User
             const lowerIdentifier = aeIdentifier.toLowerCase();
             const matchedUser = allUsers.find(u =>
                 (u.email && u.email.toLowerCase() === lowerIdentifier) ||
@@ -566,15 +530,13 @@ const bulkImportAssignments = async (req, res) => {
                 continue;
             }
 
-            // Parse Date
             let parsedDate = null;
             if (typeof rawDate === 'number') {
-                // Excel serial date format
                 parsedDate = new Date(Math.round((rawDate - 25569) * 86400 * 1000));
             } else if (rawDate) {
                 parsedDate = new Date(rawDate);
             } else {
-                parsedDate = new Date(); // Default today
+                parsedDate = new Date();
             }
 
             if (isNaN(parsedDate.getTime())) {
@@ -593,7 +555,6 @@ const bulkImportAssignments = async (req, res) => {
                         scheduledDate: parsedDate,
                         scheduledTime: scheduledTime || '10:00 AM',
                         workType: workType || 'Site Inspection',
-                        status: ['SCHEDULED', 'IN_PROGRESS', 'COMPLETED', 'CANCELLED'].includes(status) ? status : 'SCHEDULED',
                         remarks: remarks || null
                     }
                 });
@@ -625,7 +586,6 @@ const exportAssignments = async (req, res) => {
         const {
             search,
             aeId,
-            status,
             startDate,
             endDate,
             format = 'xlsx'
@@ -638,10 +598,6 @@ const exportAssignments = async (req, res) => {
         } else if (aeId && aeId !== 'ALL') {
             const parsedAeId = parseInt(aeId, 10);
             if (!isNaN(parsedAeId)) where.aeId = parsedAeId;
-        }
-
-        if (status && status !== 'ALL') {
-            where.status = status.toUpperCase();
         }
 
         if (startDate || endDate) {
@@ -687,15 +643,13 @@ const exportAssignments = async (req, res) => {
             'Scheduled Date': item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString('en-GB') : '-',
             'Scheduled Time': item.scheduledTime || '-',
             'Work Type': item.workType || 'Site Inspection',
-            'Status': item.status || 'SCHEDULED',
-            'Assigned By': item.assignedBy?.name || 'Admin',
+            'Assigned By': item.assignedBy?.name || 'AE Manager',
             'Remarks': item.remarks || '',
             'Created At': item.createdAt ? new Date(item.createdAt).toLocaleString('en-GB') : '-'
         }));
 
         const ws = XLSX.utils.json_to_sheet(rows.length > 0 ? rows : [{ 'Message': 'No site assignments found' }]);
 
-        // Auto-size columns
         if (rows.length > 0) {
             const colWidths = Object.keys(rows[0]).map(key => {
                 let maxLen = key.length;
@@ -733,6 +687,131 @@ const exportAssignments = async (req, res) => {
     }
 };
 
+// @desc    Fetch and parse a remote XLS / Google Sheets / Online spreadsheet by URL
+// @route   POST /api/site-assignments/fetch-remote-xls
+// @access  Private
+const fetchRemoteXls = async (req, res) => {
+    try {
+        let { url } = req.body;
+        if (!url || typeof url !== 'string') {
+            return res.status(400).json({ message: 'A valid XLS / Google Sheets URL is required.' });
+        }
+
+        url = url.trim();
+
+        // If Google Sheets URL, convert to direct XLSX export URL if needed
+        if (url.includes('docs.google.com/spreadsheets')) {
+            const sheetIdMatch = url.match(/\/d\/([a-zA-Z0-9-_]+)/);
+            if (sheetIdMatch && sheetIdMatch[1]) {
+                const sheetId = sheetIdMatch[1];
+                const gidMatch = url.match(/[#&?]gid=([0-9]+)/);
+                const gidParam = gidMatch ? `&gid=${gidMatch[1]}` : '';
+                url = `https://docs.google.com/spreadsheets/d/${sheetId}/export?format=xlsx${gidParam}`;
+            }
+        }
+
+        // Fetch binary spreadsheet buffer from remote link
+        const response = await axios.get(url, {
+            responseType: 'arraybuffer',
+            timeout: 20000,
+            headers: {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            }
+        });
+
+        const workbook = XLSX.read(response.data, { type: 'buffer' });
+        const sheetName = workbook.SheetNames[0];
+        const sheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(sheet, { defval: '' });
+
+        if (!data || data.length === 0) {
+            return res.status(400).json({ message: 'The spreadsheet at this link contains no data rows.' });
+        }
+
+        const headers = Object.keys(data[0] || {});
+
+        res.json({
+            success: true,
+            totalRows: data.length,
+            headers,
+            data,
+            sheetName,
+            url
+        });
+    } catch (error) {
+        console.error('Error fetching remote spreadsheet:', error.message);
+        res.status(500).json({
+            message: `Failed to load spreadsheet from link (${error.message}). Please ensure the link is public or accessible with link sharing enabled.`,
+            error: error.message
+        });
+    }
+};
+
+// @desc    Get assigned sites for the logged-in AE employee (for check-in dropdown)
+// @route   GET /api/site-assignments/my-sites
+// @access  Private
+const getMyAssignments = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const userEmail = (req.user.email || '').toLowerCase().trim();
+        const userName = (req.user.name || '').toLowerCase().trim();
+
+        // 1. Direct assignments to this AE ID or matching email/name
+        const myAssignments = await prisma.siteAssignment.findMany({
+            where: {
+                OR: [
+                    { aeId: userId },
+                    { ae: { email: { equals: userEmail, mode: 'insensitive' } } },
+                    { ae: { name: { equals: userName, mode: 'insensitive' } } }
+                ]
+            },
+            orderBy: [
+                { scheduledDate: 'desc' },
+                { createdAt: 'desc' }
+            ],
+            take: 100,
+            include: {
+                ae: {
+                    select: { id: true, name: true, email: true }
+                }
+            }
+        });
+
+        // 2. Also retrieve recent site assignments as fallback if this AE doesn't have personal assignments yet
+        let fallbackSites = [];
+        if (myAssignments.length === 0) {
+            fallbackSites = await prisma.siteAssignment.findMany({
+                orderBy: [
+                    { scheduledDate: 'desc' },
+                    { createdAt: 'desc' }
+                ],
+                take: 30,
+                include: {
+                    ae: {
+                        select: { id: true, name: true, email: true }
+                    }
+                }
+            });
+        }
+
+        // 3. Active projects as additional choices
+        const activeProjects = await prisma.project.findMany({
+            where: { status: 'ACTIVE' },
+            select: { id: true, name: true, client: true, location: true },
+            take: 30
+        }).catch(() => []);
+
+        res.json({
+            assignedSites: myAssignments.length > 0 ? myAssignments : fallbackSites,
+            myDirectCount: myAssignments.length,
+            activeProjects
+        });
+    } catch (error) {
+        console.error('Error fetching employee assigned sites:', error);
+        res.status(500).json({ message: 'Failed to fetch assigned sites', error: error.message });
+    }
+};
+
 module.exports = {
     getAEList,
     createAssignment,
@@ -741,5 +820,7 @@ module.exports = {
     updateAssignment,
     deleteAssignment,
     bulkImportAssignments,
-    exportAssignments
+    exportAssignments,
+    fetchRemoteXls,
+    getMyAssignments
 };

@@ -238,8 +238,12 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
-                            <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites" indent />
-                            <NavItem to="/admin/visitors-record" icon={BookOpen} label="Visitors Book" indent />
+                            {(user?.role === 'AE_MANAGER' || user?.designation === 'AE MANAGER') && (
+                                <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites" indent />
+                            )}
+                            {(['ADMIN', 'BUSINESS_HEAD'].includes(user?.role) || user?.designation === 'BH' || user?.designation === 'FRONT DESK MANAGER') && (
+                                <NavItem to="/admin/visitors-record" icon={BookOpen} label="Visitors Book" indent />
+                            )}
                             {/* {['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user?.role) && (
                                 <NavItem to="/admin/wfh" icon={Home} label="WFH Approvals" indent />
                             )} */}
@@ -276,7 +280,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" indent />
                         </NavGroup>
                     </>
-                ) : user?.role === 'FRONT_DESK_MANAGER' ? (
+                ) : (user?.role === 'FRONT_DESK_MANAGER' || user?.designation === 'FRONT DESK MANAGER' || user?.designation === 'FRONT_DESK' || user?.designation === 'FRONT DESK') ? (
                     <>
                         <div className="mb-4">
                             {!isCollapsed && <p className="px-3 py-2 text-[9px] text-slate-400 font-black uppercase tracking-[0.22em]">Front Desk</p>}
@@ -302,7 +306,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {user?.callAnalyticsViewEnabled && (
                                 <NavItem to="/dashboard/call-reports" icon={Phone} label="Call Analytics" />
                             )}
-                            <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
+                            {/* Visitors Book is restricted: only Front Desk Manager, Admin, and BH */}
+                            {(['ADMIN', 'BUSINESS_HEAD', 'FRONT_DESK_MANAGER'].includes(user?.role) || user?.designation === 'BH' || user?.designation === 'FRONT DESK MANAGER') && (
+                                <NavItem to="/dashboard/visitors-record" icon={BookOpen} label="Visitors Book" />
+                            )}
                             <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI Scoreboard" />
                             <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
                             {user?.designation === 'ACCOUNT' && (

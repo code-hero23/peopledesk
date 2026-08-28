@@ -10,7 +10,6 @@ import {
     Clock,
     UserCheck,
     Search,
-    Filter,
     Plus,
     Upload,
     Download,
@@ -25,13 +24,14 @@ import {
     ChevronRight,
     Building,
     User,
-    Clipboard,
     HardHat,
     Layers,
-    FileText,
-    ArrowUpDown,
+    ShieldAlert,
     Check,
-    HelpCircle
+    Sparkles,
+    Link2,
+    Globe,
+    ExternalLink
 } from 'lucide-react';
 import Modal from '../../components/Modal';
 
@@ -46,45 +46,27 @@ const WORK_TYPES = [
     'Other'
 ];
 
-const STATUS_CONFIG = {
-    SCHEDULED: {
-        label: 'Scheduled',
-        bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-        dot: 'bg-blue-500'
-    },
-    IN_PROGRESS: {
-        label: 'In Progress',
-        bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-        dot: 'bg-amber-500'
-    },
-    COMPLETED: {
-        label: 'Completed',
-        bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-        dot: 'bg-emerald-500'
-    },
-    CANCELLED: {
-        label: 'Cancelled',
-        bg: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-        dot: 'bg-rose-500'
-    }
-};
-
 const SiteAssignments = () => {
     const { user } = useSelector((state) => state.auth);
+    const isAEManager = user?.role === 'AE_MANAGER' || user?.designation === 'AE MANAGER' || user?.designation === 'AE_MANAGER';
+
     const [assignments, setAssignments] = useState([]);
     const [aeList, setAeList] = useState([]);
     const [projects, setProjects] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    // Permanent XLS Link State
+    const [savedXlsLink, setSavedXlsLink] = useState(() => localStorage.getItem('peopledesk_assigned_sites_xls_link') || '');
+    const [xlsLinkInput, setXlsLinkInput] = useState(() => localStorage.getItem('peopledesk_assigned_sites_xls_link') || '');
+    const [isLinkModalOpen, setIsLinkModalOpen] = useState(false);
+    const [isSyncingLink, setIsSyncingLink] = useState(false);
+
     // Summary KPIs
     const [summary, setSummary] = useState({
         total: 0,
-        scheduled: 0,
-        inProgress: 0,
-        completed: 0,
-        cancelled: 0,
-        today: 0
+        today: 0,
+        uniqueAECount: 0
     });
 
     // Pagination & Filters State
@@ -95,7 +77,6 @@ const SiteAssignments = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedAeFilter, setSelectedAeFilter] = useState('ALL');
-    const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
     const [selectedDateFilter, setSelectedDateFilter] = useState('');
     const [selectedWorkTypeFilter, setSelectedWorkTypeFilter] = useState('ALL');
 
@@ -110,9 +91,15 @@ const SiteAssignments = () => {
         scheduledDate: new Date().toISOString().split('T')[0],
         scheduledTime: '10:00 AM',
         workType: 'Site Inspection',
-        remarks: '',
-        status: 'SCHEDULED'
+        remarks: ''
     });
+
+    // Connected XLS State for Add Site Form
+    const [connectedXlsFile, setConnectedXlsFile] = useState(null);
+    const [connectedXlsData, setConnectedXlsData] = useState([]);
+    const [selectedXlsIndex, setSelectedXlsIndex] = useState('');
+    const [connectedXlsHeaders, setConnectedXlsHeaders] = useState([]);
+    const connectXlsInputRef = useRef(null);
 
     // Import Modal State
     const [isImportModalOpen, setIsImportModalOpen] = useState(false);
@@ -148,10 +135,10 @@ const SiteAssignments = () => {
             }
         };
 
-        if (user?.token) {
+        if (user?.token && isAEManager) {
             fetchDropdownData();
         }
-    }, [baseUrl, authHeaders, user?.token]);
+    }, [baseUrl, authHeaders, user?.token, isAEManager]);
 
     // Fetch Assignments list
     const fetchAssignments = async () => {
@@ -166,7 +153,6 @@ const SiteAssignments = () => {
 
             if (searchTerm.trim()) params.append('search', searchTerm.trim());
             if (selectedAeFilter !== 'ALL') params.append('aeId', selectedAeFilter);
-            if (selectedStatusFilter !== 'ALL') params.append('status', selectedStatusFilter);
             if (selectedWorkTypeFilter !== 'ALL') params.append('workType', selectedWorkTypeFilter);
             if (selectedDateFilter) params.append('date', selectedDateFilter);
 
@@ -186,17 +172,20 @@ const SiteAssignments = () => {
     };
 
     useEffect(() => {
-        fetchAssignments();
-    }, [page, limit, selectedAeFilter, selectedStatusFilter, selectedDateFilter, selectedWorkTypeFilter]);
+        if (isAEManager) {
+            fetchAssignments();
+        }
+    }, [page, limit, selectedAeFilter, selectedDateFilter, selectedWorkTypeFilter, isAEManager]);
 
     // Handle Search with debounce
     useEffect(() => {
+        if (!isAEManager) return;
         const timer = setTimeout(() => {
             setPage(1);
             fetchAssignments();
         }, 400);
         return () => clearTimeout(timer);
-    }, [searchTerm]);
+    }, [searchTerm, isAEManager]);
 
     // Handle Form Submit (Create / Edit)
     const handleFormSubmit = async (e) => {
@@ -233,8 +222,7 @@ const SiteAssignments = () => {
             scheduledDate: new Date().toISOString().split('T')[0],
             scheduledTime: '10:00 AM',
             workType: 'Site Inspection',
-            remarks: '',
-            status: 'SCHEDULED'
+            remarks: ''
         });
         setEditingItem(null);
         setIsFormOpen(false);
@@ -250,23 +238,9 @@ const SiteAssignments = () => {
             scheduledDate: item.scheduledDate ? new Date(item.scheduledDate).toISOString().split('T')[0] : '',
             scheduledTime: item.scheduledTime || '10:00 AM',
             workType: item.workType || 'Site Inspection',
-            remarks: item.remarks || '',
-            status: item.status || 'SCHEDULED'
+            remarks: item.remarks || ''
         });
         setIsFormOpen(true);
-    };
-
-    // Quick Status Update
-    const handleStatusChange = async (id, newStatus) => {
-        try {
-            await axios.put(`${baseUrl}/site-assignments/${id}`, { status: newStatus }, authHeaders);
-            toast.success(`Status updated to ${newStatus}`);
-            setAssignments(prev => prev.map(a => a.id === id ? { ...a, status: newStatus } : a));
-            fetchAssignments();
-        } catch (error) {
-            console.error('Failed to update status:', error);
-            toast.error(error.response?.data?.message || 'Failed to update status');
-        }
     };
 
     // Delete Assignment
@@ -289,8 +263,7 @@ const SiteAssignments = () => {
             const params = new URLSearchParams({
                 format,
                 search: searchTerm,
-                aeId: selectedAeFilter,
-                status: selectedStatusFilter
+                aeId: selectedAeFilter
             });
             if (selectedDateFilter) params.append('startDate', selectedDateFilter);
 
@@ -300,6 +273,176 @@ const SiteAssignments = () => {
             console.error('Export failed:', error);
             toast.error('Failed to export assignments');
         }
+    };
+
+    // Handle Connecting XLS File in Add Site form
+    const handleConnectXlsFile = (e) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+            try {
+                const bstr = evt.target.result;
+                const wb = XLSX.read(bstr, { type: 'binary' });
+                const wsname = wb.SheetNames[0];
+                const ws = wb.Sheets[wsname];
+                const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
+
+                if (!data || data.length === 0) {
+                    toast.error('The selected spreadsheet has no data rows.');
+                    return;
+                }
+
+                const headers = Object.keys(data[0] || {});
+                setConnectedXlsFile(file);
+                setConnectedXlsData(data);
+                setConnectedXlsHeaders(headers);
+                setSelectedXlsIndex('');
+                toast.success(`Connected "${file.name}" - ${data.length} sites loaded!`);
+            } catch (err) {
+                console.error('Error reading spreadsheet:', err);
+                toast.error('Failed to parse selected Excel file.');
+            }
+        };
+        reader.readAsBinaryString(file);
+    };
+
+    // Apply selected row from connected XLS into Add Site form
+    const handleApplyXlsRow = (indexStr) => {
+        if (indexStr === '' || indexStr === null || indexStr === undefined) {
+            setSelectedXlsIndex('');
+            return;
+        }
+
+        const idx = Number(indexStr);
+        const row = connectedXlsData[idx];
+        if (!row) return;
+
+        setSelectedXlsIndex(String(idx));
+
+        // Extract values using various common header variations
+        const site = row['Site Name'] || row['Site'] || row['siteName'] || row['Project'] || row['Project Name'] || row['Name'] || '';
+        const client = row['Client Name'] || row['Client'] || row['clientName'] || row['Customer'] || row['Customer Name'] || '';
+        const loc = row['Location'] || row['Address'] || row['location'] || row['Site Address'] || row['City'] || '';
+        const dateRaw = row['Scheduled Date'] || row['Date'] || row['scheduledDate'] || '';
+        const time = row['Scheduled Time'] || row['Time'] || row['scheduledTime'] || '';
+        const work = row['Work Type'] || row['Purpose'] || row['workType'] || row['Type'] || '';
+        const rem = row['Remarks'] || row['Instructions'] || row['Notes'] || row['remarks'] || row['Description'] || '';
+        const aeIdent = (row['AE Email'] || row['Email'] || row['AE Name'] || row['Engineer'] || row['AE'] || '').toString().toLowerCase().trim();
+
+        // Match AE ID from aeList
+        let matchedAeId = formData.aeId;
+        if (aeIdent && aeList.length > 0) {
+            const found = aeList.find(a => 
+                (a.email && a.email.toLowerCase().includes(aeIdent)) ||
+                (a.name && a.name.toLowerCase().includes(aeIdent)) ||
+                (aeIdent.includes(a.name.toLowerCase()))
+            );
+            if (found) {
+                matchedAeId = found.id;
+            }
+        }
+
+        // Format date if valid
+        let formattedDate = formData.scheduledDate;
+        if (dateRaw) {
+            const d = new Date(dateRaw);
+            if (!isNaN(d.getTime())) {
+                formattedDate = d.toISOString().split('T')[0];
+            }
+        }
+
+        // Match work type if in WORK_TYPES
+        let matchedWorkType = formData.workType;
+        if (work) {
+            const foundWork = WORK_TYPES.find(w => w.toLowerCase() === work.toLowerCase().trim());
+            if (foundWork) {
+                matchedWorkType = foundWork;
+            }
+        }
+
+        setFormData(prev => ({
+            ...prev,
+            siteName: site || prev.siteName,
+            clientName: client || prev.clientName,
+            location: loc || prev.location,
+            scheduledDate: formattedDate || prev.scheduledDate,
+            scheduledTime: time || prev.scheduledTime,
+            workType: matchedWorkType || prev.workType,
+            remarks: rem || prev.remarks,
+            aeId: matchedAeId || prev.aeId
+        }));
+
+        toast.info(`Loaded: ${site || `Row #${idx + 1}`}`);
+    };
+
+    // Disconnect XLS
+    const handleDisconnectXls = () => {
+        setConnectedXlsFile(null);
+        setConnectedXlsData([]);
+        setSelectedXlsIndex('');
+        setConnectedXlsHeaders([]);
+        if (connectXlsInputRef.current) {
+            connectXlsInputRef.current.value = '';
+        }
+        toast.info('Disconnected spreadsheet.');
+    };
+
+    // Fetch and parse remote spreadsheet from URL / Google Sheets
+    const fetchAndApplyRemoteXls = async (url, showToast = true) => {
+        if (!url || !url.trim()) return;
+        setIsSyncingLink(true);
+        try {
+            const res = await axios.post(`${baseUrl}/site-assignments/fetch-remote-xls`, { url: url.trim() }, authHeaders);
+            if (res.data.success && res.data.data) {
+                setConnectedXlsData(res.data.data);
+                setConnectedXlsHeaders(res.data.headers || []);
+                setConnectedXlsFile({
+                    name: res.data.sheetName ? `${res.data.sheetName} (Cloud Link)` : 'Connected Cloud Spreadsheet',
+                    isRemote: true,
+                    url: url.trim()
+                });
+                setSelectedXlsIndex('');
+                if (showToast) {
+                    toast.success(`Connected & loaded ${res.data.totalRows} sites from cloud spreadsheet!`);
+                }
+            }
+        } catch (error) {
+            console.error('Failed to sync remote spreadsheet:', error);
+            if (showToast) {
+                toast.error(error.response?.data?.message || 'Failed to load spreadsheet from link.');
+            }
+        } finally {
+            setIsSyncingLink(false);
+        }
+    };
+
+    // Auto-connect to saved XLS link on mount
+    useEffect(() => {
+        if (savedXlsLink && isAEManager && user?.token) {
+            fetchAndApplyRemoteXls(savedXlsLink, false);
+        }
+    }, [savedXlsLink, isAEManager, user?.token]);
+
+    const handleSaveXlsLink = (e) => {
+        e?.preventDefault();
+        if (!xlsLinkInput.trim()) {
+            return toast.error('Please enter a valid spreadsheet URL');
+        }
+        const link = xlsLinkInput.trim();
+        localStorage.setItem('peopledesk_assigned_sites_xls_link', link);
+        setSavedXlsLink(link);
+        setIsLinkModalOpen(false);
+        fetchAndApplyRemoteXls(link, true);
+    };
+
+    const handleClearSavedLink = () => {
+        localStorage.removeItem('peopledesk_assigned_sites_xls_link');
+        setSavedXlsLink('');
+        setXlsLinkInput('');
+        handleDisconnectXls();
+        toast.info('Removed cloud spreadsheet link.');
     };
 
     // Download Sample Template
@@ -313,8 +456,7 @@ const SiteAssignments = () => {
                 'Scheduled Date': '2026-08-30',
                 'Scheduled Time': '10:30 AM',
                 'Work Type': 'Measurement',
-                'Remarks': 'Take living room & kitchen measurements',
-                'Status': 'SCHEDULED'
+                'Remarks': 'Take living room & kitchen measurements'
             },
             {
                 'Site Name': 'Plot 18 - Orchid Heights',
@@ -324,20 +466,29 @@ const SiteAssignments = () => {
                 'Scheduled Date': '2026-08-31',
                 'Scheduled Time': '02:30 PM',
                 'Work Type': 'Installation',
-                'Remarks': 'Verify carcass and modular shutter alignment',
-                'Status': 'SCHEDULED'
+                'Remarks': 'Verify carcass and modular shutter alignment'
+            },
+            {
+                'Site Name': 'Prestige Palms - Tower B 504',
+                'Client Name': 'Suresh Chandran',
+                'Location': 'Whitefield, Bangalore',
+                'AE Email': aeList[0]?.email || 'ae.engineer@cookscape.com',
+                'Scheduled Date': '2026-09-01',
+                'Scheduled Time': '11:00 AM',
+                'Work Type': 'Site Inspection',
+                'Remarks': 'Check electrical conduits and false ceiling markings'
             }
         ];
 
         const ws = XLSX.utils.json_to_sheet(sampleData);
         ws['!cols'] = [
-            { wch: 25 }, { wch: 18 }, { wch: 20 }, { wch: 28 },
-            { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 35 }, { wch: 14 }
+            { wch: 30 }, { wch: 20 }, { wch: 25 }, { wch: 28 },
+            { wch: 16 }, { wch: 16 }, { wch: 18 }, { wch: 45 }
         ];
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, 'Template');
+        XLSX.utils.book_append_sheet(wb, ws, 'Sites');
         XLSX.writeFile(wb, 'site_assignments_template.xlsx');
-        toast.success('Sample template downloaded');
+        toast.success('Sample sites template downloaded (.xlsx)');
     };
 
     // Handle File Selection for Bulk Import
@@ -354,7 +505,7 @@ const SiteAssignments = () => {
                 const wsname = wb.SheetNames[0];
                 const ws = wb.Sheets[wsname];
                 const data = XLSX.utils.sheet_to_json(ws, { defval: '' });
-                setImportPreview(data.slice(0, 10)); // preview first 10
+                setImportPreview(data.slice(0, 10));
             } catch (err) {
                 console.error('Error reading spreadsheet:', err);
                 toast.error('Failed to parse selected file');
@@ -392,9 +543,23 @@ const SiteAssignments = () => {
             console.error('Import failed:', error);
             toast.error(error.response?.data?.message || 'Failed to import site assignments');
         } finally {
-            setImportLoading(false);
+            setIsImportLoading(false);
         }
     };
+
+    if (!isAEManager) {
+        return (
+            <div className="p-8 max-w-2xl mx-auto text-center space-y-4">
+                <div className="w-16 h-16 rounded-3xl bg-rose-500/10 text-rose-500 flex items-center justify-center mx-auto">
+                    <ShieldAlert size={32} />
+                </div>
+                <h2 className="text-2xl font-black text-white">Access Restricted</h2>
+                <p className="text-sm text-slate-400 font-medium">
+                    Only the <b className="text-slate-200">AE Manager</b> is authorized to allocate and assign site visits to engineers.
+                </p>
+            </div>
+        );
+    }
 
     return (
         <div className="p-4 md:p-8 space-y-8 max-w-[1600px] mx-auto min-h-screen text-slate-100">
@@ -407,23 +572,53 @@ const SiteAssignments = () => {
                     <div>
                         <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest mb-3">
                             <MapPin size={13} className="text-blue-400" />
-                            Field Operations & Logistics
+                            AE Manager Workspace
                         </div>
                         <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white flex items-center gap-3">
                             Assign Sites
-                            <span className="text-xs bg-white/10 text-slate-300 font-bold px-3 py-1 rounded-full border border-white/10">
-                                AE Management
+                            <span className="text-xs bg-blue-500/20 text-blue-300 font-bold px-3 py-1 rounded-full border border-blue-500/30">
+                                AE Manager
                             </span>
                         </h1>
                         <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium">
-                            Allocate customer project sites to Application Engineers, schedule on-site visit slots, track execution stages, and bulk manage assignments.
+                            Allocate customer project sites to Application Engineers, schedule on-site visit slots, and manage field allocations.
                         </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-3">
                         <button
+                            onClick={() => {
+                                setXlsLinkInput(savedXlsLink);
+                                setIsLinkModalOpen(true);
+                            }}
+                            className={`flex items-center gap-2 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 border cursor-pointer ${
+                                savedXlsLink 
+                                    ? 'bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 border-blue-500/40'
+                                    : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10'
+                            }`}
+                            title={savedXlsLink ? `Cloud XLS Connected: ${savedXlsLink}` : 'Connect permanent spreadsheet URL'}
+                        >
+                            <Link2 size={16} className={savedXlsLink ? 'text-blue-400' : 'text-slate-400'} />
+                            <span>{savedXlsLink ? 'Cloud XLS Link' : 'Connect XLS Link'}</span>
+                            {savedXlsLink && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                            )}
+                        </button>
+
+                        {savedXlsLink && (
+                            <button
+                                onClick={() => fetchAndApplyRemoteXls(savedXlsLink, true)}
+                                disabled={isSyncingLink}
+                                className="p-3 bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 hover:text-white rounded-2xl text-xs font-bold transition-all disabled:opacity-50 cursor-pointer"
+                                title="Sync Latest Changes from Cloud XLS"
+                            >
+                                <RefreshCw size={15} className={isSyncingLink ? 'animate-spin text-blue-400' : ''} />
+                            </button>
+                        )}
+
+                        <button
                             onClick={() => setIsImportModalOpen(true)}
-                            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-slate-200 hover:text-white transition-all shadow-md active:scale-95"
+                            className="flex items-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-slate-200 hover:text-white transition-all shadow-md active:scale-95 cursor-pointer"
                         >
                             <Upload size={16} className="text-blue-400" />
                             Upload XLS / CSV
@@ -431,7 +626,7 @@ const SiteAssignments = () => {
 
                         <button
                             onClick={() => handleExport('xlsx')}
-                            className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-all shadow-md active:scale-95"
+                            className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-emerald-400 hover:text-emerald-300 transition-all shadow-md active:scale-95 cursor-pointer"
                         >
                             <Download size={16} className="text-emerald-400" />
                             Export Excel
@@ -442,7 +637,7 @@ const SiteAssignments = () => {
                                 resetForm();
                                 setIsFormOpen(true);
                             }}
-                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-xl shadow-primary/25 active:scale-95"
+                            className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-xl shadow-primary/25 active:scale-95 cursor-pointer"
                         >
                             <Plus size={18} />
                             Assign New Site
@@ -451,17 +646,17 @@ const SiteAssignments = () => {
                 </div>
             </div>
 
-            {/* 2. KPI Summary Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+            {/* 2. Summary KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-6">
                 <div className="bg-[#0e131f] border border-white/5 p-6 rounded-3xl relative overflow-hidden shadow-lg group hover:border-blue-500/30 transition-all">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Allocations</span>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Sites Allocated</span>
                         <div className="p-2.5 rounded-xl bg-blue-500/10 text-blue-400">
                             <Layers size={18} />
                         </div>
                     </div>
                     <p className="text-3xl font-black text-white">{summary.total || 0}</p>
-                    <span className="text-xs text-slate-500 font-bold mt-1 block">All registered site tasks</span>
+                    <span className="text-xs text-slate-500 font-bold mt-1 block">Total site visits assigned</span>
                 </div>
 
                 <div className="bg-[#0e131f] border border-white/5 p-6 rounded-3xl relative overflow-hidden shadow-lg group hover:border-emerald-500/30 transition-all">
@@ -475,39 +670,35 @@ const SiteAssignments = () => {
                     <span className="text-xs text-slate-500 font-bold mt-1 block">Visits planned for today</span>
                 </div>
 
-                <div className="bg-[#0e131f] border border-white/5 p-6 rounded-3xl relative overflow-hidden shadow-lg group hover:border-amber-500/30 transition-all">
+                <div className="bg-[#0e131f] border border-white/5 p-6 rounded-3xl relative overflow-hidden shadow-lg group hover:border-indigo-500/30 transition-all">
                     <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">In Progress</span>
-                        <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400">
-                            <Clock size={18} />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Active Engineers</span>
+                        <div className="p-2.5 rounded-xl bg-indigo-500/10 text-indigo-400">
+                            <UserCheck size={18} />
                         </div>
                     </div>
-                    <p className="text-3xl font-black text-amber-400">{summary.inProgress || 0}</p>
-                    <span className="text-xs text-slate-500 font-bold mt-1 block">Field visits active</span>
-                </div>
-
-                <div className="bg-[#0e131f] border border-white/5 p-6 rounded-3xl relative overflow-hidden shadow-lg group hover:border-purple-500/30 transition-all">
-                    <div className="flex items-center justify-between mb-2">
-                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Completed</span>
-                        <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400">
-                            <CheckCircle2 size={18} />
-                        </div>
-                    </div>
-                    <p className="text-3xl font-black text-purple-400">{summary.completed || 0}</p>
-                    <span className="text-xs text-slate-500 font-bold mt-1 block">Successfully executed</span>
+                    <p className="text-3xl font-black text-indigo-400">{summary.uniqueAECount || 0}</p>
+                    <span className="text-xs text-slate-500 font-bold mt-1 block">Engineers with allocated sites</span>
                 </div>
             </div>
 
-            {/* 3. Assign Site Form (Inline Collapsible or Top Section) */}
+            {/* 3. Assign Site Pop-Up Modal */}
             <AnimatePresence>
                 {isFormOpen && (
-                    <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: 'auto' }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="overflow-hidden"
+                    <div 
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/85 backdrop-blur-md overflow-y-auto"
+                        onClick={(e) => {
+                            if (e.target === e.currentTarget) resetForm();
+                        }}
                     >
-                        <div className="bg-[#0d121e] border border-blue-500/20 rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative">
+                        <motion.div
+                            initial={{ opacity: 0, scale: 0.93, y: 30 }}
+                            animate={{ opacity: 1, scale: 1, y: 0 }}
+                            exit={{ opacity: 0, scale: 0.93, y: 30 }}
+                            transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                            className="bg-[#0d121e] border border-blue-500/30 w-full max-w-4xl rounded-[2.5rem] p-6 md:p-8 shadow-2xl relative my-auto max-h-[90vh] overflow-y-auto"
+                            onClick={(e) => e.stopPropagation()}
+                        >
                             <div className="flex items-center justify-between pb-6 border-b border-white/5 mb-6">
                                 <div className="flex items-center gap-3">
                                     <div className="p-3 bg-blue-600/20 text-blue-400 rounded-2xl">
@@ -524,19 +715,194 @@ const SiteAssignments = () => {
                                 </div>
                                 <button
                                     onClick={resetForm}
-                                    className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors"
+                                    className="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white transition-colors cursor-pointer"
                                 >
                                     <X size={18} />
                                 </button>
+                            </div>
+
+                            {/* XLS Connect & Auto-fill Bar */}
+                            <div className="mb-6 p-4 rounded-2xl bg-gradient-to-r from-blue-900/30 via-slate-900/60 to-indigo-900/30 border border-blue-500/30 backdrop-blur-sm">
+                                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2.5 rounded-xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 shadow-inner">
+                                            <FileSpreadsheet size={20} />
+                                        </div>
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-xs font-black uppercase tracking-wider text-white flex items-center gap-1.5">
+                                                    <Sparkles size={13} className="text-amber-400" /> Connect XLS / Spreadsheet
+                                                </h4>
+                                                {connectedXlsFile && (
+                                                    <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[9px] font-black uppercase tracking-wider flex items-center gap-1">
+                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" /> Connected
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <p className="text-[11px] text-slate-400">
+                                                {connectedXlsFile 
+                                                    ? `Loaded "${connectedXlsFile.name}" with ${connectedXlsData.length} site records. Pick any site below to auto-fill form.`
+                                                    : savedXlsLink 
+                                                        ? 'Using permanent cloud XLS link. You can also upload a local spreadsheet file.' 
+                                                        : 'Connect a cloud link or local Excel file to populate site details automatically in dropdown.'}
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-2 w-full md:w-auto">
+                                        <input
+                                            ref={connectXlsInputRef}
+                                            type="file"
+                                            accept=".xlsx,.xls,.csv"
+                                            onChange={handleConnectXlsFile}
+                                            className="hidden"
+                                        />
+                                        
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                setXlsLinkInput(savedXlsLink);
+                                                setIsLinkModalOpen(true);
+                                            }}
+                                            className="px-3.5 py-2 bg-indigo-600/30 hover:bg-indigo-600/50 text-indigo-300 border border-indigo-500/40 rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all cursor-pointer"
+                                            title="Configure permanent Google Sheets / online XLS link"
+                                        >
+                                            <Link2 size={14} /> {savedXlsLink ? 'Cloud Link' : 'Add Link'}
+                                        </button>
+
+                                        {savedXlsLink && (
+                                            <button
+                                                type="button"
+                                                onClick={() => fetchAndApplyRemoteXls(savedXlsLink, true)}
+                                                disabled={isSyncingLink}
+                                                className="p-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl border border-white/10 transition-colors disabled:opacity-40 cursor-pointer"
+                                                title="Sync now from cloud link"
+                                            >
+                                                <RefreshCw size={14} className={isSyncingLink ? 'animate-spin text-blue-400' : ''} />
+                                            </button>
+                                        )}
+
+                                        {!connectedXlsFile?.isRemote && !connectedXlsFile ? (
+                                            <>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => connectXlsInputRef.current?.click()}
+                                                    className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-xs font-black uppercase tracking-wider flex items-center gap-1.5 transition-all shadow-md shadow-blue-600/20 active:scale-95 cursor-pointer"
+                                                >
+                                                    <Upload size={14} /> Upload File
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDownloadTemplate}
+                                                    className="px-3 py-2 bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white rounded-xl text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
+                                                    title="Download Sample XLS Template"
+                                                >
+                                                    <Download size={13} /> Sample XLS
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                {!connectedXlsFile.isRemote && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => connectXlsInputRef.current?.click()}
+                                                        className="px-3 py-1.5 bg-white/10 hover:bg-white/20 text-slate-200 rounded-xl text-xs font-bold flex items-center gap-1.5 border border-white/10 transition-colors cursor-pointer"
+                                                    >
+                                                        <Upload size={13} /> Change File
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    onClick={handleDisconnectXls}
+                                                    className="p-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 rounded-xl transition-colors border border-red-500/20 cursor-pointer"
+                                                    title="Disconnect Loaded Spreadsheet"
+                                                >
+                                                    <X size={15} />
+                                                </button>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* When XLS is Connected: Render Dropdown Selector */}
+                                {connectedXlsFile && connectedXlsData.length > 0 && (
+                                    <div className="mt-3.5 pt-3.5 border-t border-white/10 space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <label className="text-[10px] font-black uppercase tracking-widest text-emerald-400 flex items-center gap-1">
+                                                <CheckCircle2 size={12} /> Select Site from Connected XLS ({connectedXlsData.length} Available)
+                                            </label>
+                                            <span className="text-[10px] text-slate-400 font-semibold">
+                                                Auto-fills Site, Client, Location, AE & Time
+                                            </span>
+                                        </div>
+
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={selectedXlsIndex}
+                                                onChange={(e) => handleApplyXlsRow(e.target.value)}
+                                                className="flex-1 bg-slate-950 border border-emerald-500/40 rounded-xl px-3.5 py-2.5 text-xs font-bold text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/40 cursor-pointer shadow-inner"
+                                            >
+                                                <option value="">-- Choose a site from "{connectedXlsFile.name}" --</option>
+                                                {connectedXlsData.map((row, idx) => {
+                                                    const sName = row['Site Name'] || row['Site'] || row['siteName'] || row['Project'] || `Site #${idx + 1}`;
+                                                    const cName = row['Client Name'] || row['Client'] || row['clientName'] || row['Customer'] || '';
+                                                    const loc = row['Location'] || row['Address'] || row['location'] || '';
+                                                    const time = row['Scheduled Time'] || row['Time'] || '';
+                                                    return (
+                                                        <option key={idx} value={idx}>
+                                                            📍 {sName} {cName ? `| Client: ${cName}` : ''} {loc ? `| ${loc}` : ''} {time ? `| ⏰ ${time}` : ''}
+                                                        </option>
+                                                    );
+                                                })}
+                                            </select>
+
+                                            {selectedXlsIndex !== '' && (
+                                                <div className="flex items-center gap-1">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const prev = Math.max(0, Number(selectedXlsIndex) - 1);
+                                                            handleApplyXlsRow(String(prev));
+                                                        }}
+                                                        disabled={Number(selectedXlsIndex) <= 0}
+                                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                                                        title="Previous site in XLS"
+                                                    >
+                                                        <ChevronLeft size={16} />
+                                                    </button>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => {
+                                                            const next = Math.min(connectedXlsData.length - 1, Number(selectedXlsIndex) + 1);
+                                                            handleApplyXlsRow(String(next));
+                                                        }}
+                                                        disabled={Number(selectedXlsIndex) >= connectedXlsData.length - 1}
+                                                        className="p-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 disabled:opacity-30 disabled:pointer-events-none transition-colors cursor-pointer"
+                                                        title="Next site in XLS"
+                                                    >
+                                                        <ChevronRight size={16} />
+                                                    </button>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
 
                             <form onSubmit={handleFormSubmit} className="space-y-6">
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                     {/* Site Name */}
                                     <div className="space-y-2">
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300">
-                                            Site Name <span className="text-red-500">*</span>
-                                        </label>
+                                        <div className="flex items-center justify-between">
+                                            <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300">
+                                                Site Name <span className="text-red-500">*</span>
+                                            </label>
+                                            {connectedXlsData.length > 0 && (
+                                                <span className="text-[9px] font-black text-emerald-400 uppercase tracking-wider">
+                                                    XLS Ready ({connectedXlsData.length})
+                                                </span>
+                                            )}
+                                        </div>
                                         <div className="relative">
                                             <Building className="absolute left-3.5 top-3.5 text-slate-500" size={16} />
                                             <input
@@ -549,6 +915,10 @@ const SiteAssignments = () => {
                                                 list="projects-datalist"
                                             />
                                             <datalist id="projects-datalist">
+                                                {connectedXlsData.map((row, idx) => {
+                                                    const s = row['Site Name'] || row['Site'] || row['siteName'] || row['Project'];
+                                                    return s ? <option key={`xls-site-${idx}`} value={s} /> : null;
+                                                })}
                                                 {projects.map(p => (
                                                     <option key={p.id} value={p.name} />
                                                 ))}
@@ -642,24 +1012,6 @@ const SiteAssignments = () => {
                                         </select>
                                     </div>
 
-                                    {/* Initial Status (if editing) */}
-                                    <div className="space-y-2">
-                                        <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300">
-                                            Assignment Status
-                                        </label>
-                                        <select
-                                            value={formData.status}
-                                            onChange={(e) => setFormData({ ...formData, status: e.target.value })}
-                                            className="w-full bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-white focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all cursor-pointer"
-                                        >
-                                            {Object.keys(STATUS_CONFIG).map(s => (
-                                                <option key={s} value={s} className="bg-slate-900">
-                                                    {STATUS_CONFIG[s].label}
-                                                </option>
-                                            ))}
-                                        </select>
-                                    </div>
-
                                     {/* Client Name */}
                                     <div className="space-y-2">
                                         <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300">
@@ -670,12 +1022,19 @@ const SiteAssignments = () => {
                                             placeholder="e.g. Mr. Rajesh / Mrs. Ananya"
                                             value={formData.clientName}
                                             onChange={(e) => setFormData({ ...formData, clientName: e.target.value })}
-                                            className="w-full bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                            className="w-full bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
+                                            list="xls-clients-datalist"
                                         />
+                                        <datalist id="xls-clients-datalist">
+                                            {connectedXlsData.map((row, idx) => {
+                                                const c = row['Client Name'] || row['Client'] || row['clientName'] || row['Customer'];
+                                                return c ? <option key={`xls-client-${idx}`} value={c} /> : null;
+                                            })}
+                                        </datalist>
                                     </div>
 
                                     {/* Location / Area */}
-                                    <div className="space-y-2 lg:col-span-2">
+                                    <div className="space-y-2 lg:col-span-3">
                                         <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300">
                                             Location / Full Address (Optional)
                                         </label>
@@ -684,8 +1043,15 @@ const SiteAssignments = () => {
                                             placeholder="e.g. Plot 18, 4th Cross St, Sholinganallur, Chennai"
                                             value={formData.location}
                                             onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                                            className="w-full bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                            className="w-full bg-slate-900/90 border border-white/10 rounded-2xl px-4 py-3 text-sm font-bold text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all"
+                                            list="xls-locations-datalist"
                                         />
+                                        <datalist id="xls-locations-datalist">
+                                            {connectedXlsData.map((row, idx) => {
+                                                const l = row['Location'] || row['Address'] || row['location'] || row['Site Address'];
+                                                return l ? <option key={`xls-loc-${idx}`} value={l} /> : null;
+                                            })}
+                                        </datalist>
                                     </div>
                                 </div>
 
@@ -699,7 +1065,7 @@ const SiteAssignments = () => {
                                         placeholder="Add instructions, key site focus areas, contractor contacts, etc..."
                                         value={formData.remarks}
                                         onChange={(e) => setFormData({ ...formData, remarks: e.target.value })}
-                                        className="w-full bg-slate-900/90 border border-white/10 rounded-2xl p-4 text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none"
+                                        className="w-full bg-slate-900/90 border border-white/10 rounded-2xl p-4 text-sm font-medium text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 transition-all resize-none"
                                     />
                                 </div>
 
@@ -731,8 +1097,8 @@ const SiteAssignments = () => {
                                     </button>
                                 </div>
                             </form>
-                        </div>
-                    </motion.div>
+                        </motion.div>
+                    </div>
                 )}
             </AnimatePresence>
 
@@ -775,20 +1141,6 @@ const SiteAssignments = () => {
                             </select>
                         </div>
 
-                        {/* Status Filter */}
-                        <div className="flex-1 sm:flex-none">
-                            <select
-                                value={selectedStatusFilter}
-                                onChange={(e) => { setSelectedStatusFilter(e.target.value); setPage(1); }}
-                                className="w-full bg-slate-900/80 border border-white/10 rounded-2xl px-4 py-3 text-xs font-bold text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer"
-                            >
-                                <option value="ALL">All Statuses</option>
-                                {Object.keys(STATUS_CONFIG).map(s => (
-                                    <option key={s} value={s}>{STATUS_CONFIG[s].label}</option>
-                                ))}
-                            </select>
-                        </div>
-
                         {/* Work Type Filter */}
                         <div className="flex-1 sm:flex-none">
                             <select
@@ -814,12 +1166,11 @@ const SiteAssignments = () => {
                         </div>
 
                         {/* Reset Filter Button */}
-                        {(searchTerm || selectedAeFilter !== 'ALL' || selectedStatusFilter !== 'ALL' || selectedDateFilter || selectedWorkTypeFilter !== 'ALL') && (
+                        {(searchTerm || selectedAeFilter !== 'ALL' || selectedDateFilter || selectedWorkTypeFilter !== 'ALL') && (
                             <button
                                 onClick={() => {
                                     setSearchTerm('');
                                     setSelectedAeFilter('ALL');
-                                    setSelectedStatusFilter('ALL');
                                     setSelectedDateFilter('');
                                     setSelectedWorkTypeFilter('ALL');
                                     setPage(1);
@@ -842,9 +1193,8 @@ const SiteAssignments = () => {
                             <tr className="border-b border-white/5 bg-white/[0.02] text-[10px] font-black uppercase tracking-widest text-slate-400">
                                 <th className="p-5 pl-6">Site & Location</th>
                                 <th className="p-5">Assigned AE</th>
-                                <th className="p-5">Date & Time</th>
+                                <th className="p-5">Scheduled Date & Time</th>
                                 <th className="p-5">Work Type</th>
-                                <th className="p-5">Status</th>
                                 <th className="p-5">Remarks</th>
                                 <th className="p-5 pr-6 text-right">Actions</th>
                             </tr>
@@ -852,14 +1202,14 @@ const SiteAssignments = () => {
                         <tbody className="divide-y divide-white/5 text-sm">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan={7} className="p-12 text-center text-slate-500 font-bold">
+                                    <td colSpan={6} className="p-12 text-center text-slate-500 font-bold">
                                         <RefreshCw size={24} className="animate-spin mx-auto mb-2 text-blue-500" />
                                         Loading site assignments...
                                     </td>
                                 </tr>
                             ) : assignments.length === 0 ? (
                                 <tr>
-                                    <td colSpan={7} className="p-16 text-center text-slate-500">
+                                    <td colSpan={6} className="p-16 text-center text-slate-500">
                                         <div className="max-w-xs mx-auto space-y-3">
                                             <div className="w-12 h-12 rounded-2xl bg-white/5 flex items-center justify-center mx-auto text-slate-400">
                                                 <MapPin size={24} />
@@ -879,7 +1229,6 @@ const SiteAssignments = () => {
                                 </tr>
                             ) : (
                                 assignments.map((item) => {
-                                    const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.SCHEDULED;
                                     const isToday = item.scheduledDate && new Date(item.scheduledDate).toDateString() === new Date().toDateString();
 
                                     return (
@@ -949,21 +1298,6 @@ const SiteAssignments = () => {
                                                     <HardHat size={12} className="text-blue-400" />
                                                     {item.workType || 'Site Inspection'}
                                                 </span>
-                                            </td>
-
-                                            {/* Status Dropdown */}
-                                            <td className="p-5">
-                                                <select
-                                                    value={item.status || 'SCHEDULED'}
-                                                    onChange={(e) => handleStatusChange(item.id, e.target.value)}
-                                                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border outline-none cursor-pointer transition-all ${statusCfg.bg}`}
-                                                >
-                                                    {Object.keys(STATUS_CONFIG).map(s => (
-                                                        <option key={s} value={s} className="bg-slate-900 text-white">
-                                                            {STATUS_CONFIG[s].label}
-                                                        </option>
-                                                    ))}
-                                                </select>
                                             </td>
 
                                             {/* Remarks */}
@@ -1184,7 +1518,92 @@ const SiteAssignments = () => {
                 </Modal>
             )}
 
-            {/* 8. Delete Confirmation Modal */}
+            {/* 8. Cloud XLS / Google Sheets Permanent Link Modal */}
+            {isLinkModalOpen && (
+                <Modal
+                    title="Connect Cloud XLS / Google Sheets Link"
+                    onClose={() => setIsLinkModalOpen(false)}
+                    maxWidth="max-w-xl"
+                >
+                    <form onSubmit={handleSaveXlsLink} className="space-y-5">
+                        <div className="p-4 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-xs text-slate-300 space-y-2">
+                            <div className="flex items-center gap-2 text-blue-400 font-black uppercase tracking-wider">
+                                <Sparkles size={14} className="text-amber-400" />
+                                Always-Connected Spreadsheet Link
+                            </div>
+                            <p className="text-[11px] leading-relaxed text-slate-300">
+                                Paste a public link to your Google Sheet, OneDrive Excel file, or online spreadsheet (<code className="text-blue-300 bg-black/30 px-1 py-0.5 rounded">.xlsx</code> / <code className="text-blue-300 bg-black/30 px-1 py-0.5 rounded">.csv</code>). 
+                                PeopleDesk will <b>always connect automatically</b> to this link whenever you assign sites!
+                            </p>
+                            <div className="text-[10px] text-slate-400 bg-black/20 p-2.5 rounded-xl space-y-1">
+                                <div className="font-bold text-slate-300">💡 Google Sheets Tip:</div>
+                                <div>1. Open your sheet &gt; Click <b>Share</b> &gt; Set to <b>"Anyone with the link can view"</b>.</div>
+                                <div>2. Copy and paste the browser URL below.</div>
+                            </div>
+                        </div>
+
+                        <div className="space-y-2">
+                            <label className="block text-[11px] font-black uppercase tracking-wider text-slate-300">
+                                Spreadsheet URL / Google Sheet Link <span className="text-red-500">*</span>
+                            </label>
+                            <div className="relative">
+                                <Globe className="absolute left-3.5 top-3.5 text-slate-500" size={16} />
+                                <input
+                                    type="url"
+                                    required
+                                    placeholder="https://docs.google.com/spreadsheets/d/... or https://example.com/sites.xlsx"
+                                    value={xlsLinkInput}
+                                    onChange={(e) => setXlsLinkInput(e.target.value)}
+                                    className="w-full bg-slate-900 border border-white/10 rounded-2xl pl-10 pr-4 py-3 text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all"
+                                />
+                            </div>
+                        </div>
+
+                        {savedXlsLink && (
+                            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-900/60 border border-white/5 text-xs">
+                                <span className="text-slate-400 truncate max-w-[280px]">
+                                    Current: <b className="text-emerald-400">{savedXlsLink}</b>
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={handleClearSavedLink}
+                                    className="text-red-400 hover:text-red-300 text-[11px] font-bold underline cursor-pointer"
+                                >
+                                    Disconnect Link
+                                </button>
+                            </div>
+                        )}
+
+                        <div className="flex items-center justify-end gap-3 pt-4 border-t border-white/5">
+                            <button
+                                type="button"
+                                onClick={() => setIsLinkModalOpen(false)}
+                                className="px-5 py-2.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white text-xs font-bold transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="submit"
+                                disabled={isSyncingLink}
+                                className="px-6 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-primary/25 transition-all flex items-center gap-2 active:scale-95 disabled:opacity-50 cursor-pointer"
+                            >
+                                {isSyncingLink ? (
+                                    <>
+                                        <RefreshCw size={14} className="animate-spin" />
+                                        Connecting...
+                                    </>
+                                ) : (
+                                    <>
+                                        <Link2 size={15} /> Save & Always Connect
+                                    </>
+                                )}
+                            </button>
+                        </div>
+                    </form>
+                </Modal>
+            )}
+
+            {/* 9. Delete Confirmation Modal */}
             {deleteModalConfig.isOpen && (
                 <Modal
                     title="Confirm Deletion"

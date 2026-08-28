@@ -61,8 +61,12 @@ const getEmployeeStats = async (req, res) => {
             prisma.permissionRequest.findMany({ where: { userId, date: { gte: start, lte: end } } })
         ]);
 
-        // CALCULATIONS
-        const totalDaysPresent = attendance.length;
+        // CALCULATIONS - Count distinct calendar days present (so multiple site visits on 1 day count as 1 day)
+        const totalDaysPresent = new Set(
+            attendance
+                .filter(a => a.status === 'PRESENT' || !a.status || a.date)
+                .map(a => new Date(a.date).toLocaleDateString('en-CA'))
+        ).size;
         const daysWithLogs = new Set(workLogs.map(log => new Date(log.date).toDateString())).size;
 
         const consistencyScore = totalDaysPresent > 0 ? (daysWithLogs / totalDaysPresent) * 100 : 0;
@@ -193,12 +197,18 @@ const getTeamOverview = async (req, res) => {
                 }
             });
 
-            const expectedMinutesTotal = attendance.length * 540; // 9 hours * 60 mins
+            const uniqueDaysPresent = new Set(
+                attendance
+                    .filter(a => a.status === 'PRESENT' || !a.status || a.date)
+                    .map(a => new Date(a.date).toLocaleDateString('en-CA'))
+            ).size;
+
+            const expectedMinutesTotal = uniqueDaysPresent * 540; // 9 hours * 60 mins
             const efficiency = expectedMinutesTotal > 0 ? (totalNetMinutes / expectedMinutesTotal) * 100 : 0;
-            const consistency = attendance.length > 0 ? (uniqueDaysWithLogs / attendance.length) * 100 : 0;
+            const consistency = uniqueDaysPresent > 0 ? (uniqueDaysWithLogs / uniqueDaysPresent) * 100 : 0;
             const avgLateness = punctualityCount > 0 ? Math.round(totalLateness / punctualityCount) : 0;
             const totalHours = Math.round((totalNetMinutes / 60) * 10) / 10;
-            const expectedHours = attendance.length * 9;
+            const expectedHours = uniqueDaysPresent * 9;
 
             return {
                 id: emp.id,
@@ -206,7 +216,7 @@ const getTeamOverview = async (req, res) => {
                 designation: emp.designation,
                 efficiency: Math.round(efficiency),
                 consistency: Math.min(100, Math.round(consistency)),
-                daysPresent: attendance.length,
+                daysPresent: uniqueDaysPresent,
                 totalHours: totalHours,
                 expectedHours: expectedHours,
                 logsSubmitted: logsCount,

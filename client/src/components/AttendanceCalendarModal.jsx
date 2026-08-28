@@ -101,6 +101,24 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
         );
     }, [permissions, cycleData]);
 
+    // Calculate all unique present dates in cycle (multiple site visits on 1 day count as 1 day)
+    const uniquePresentDates = useMemo(() => {
+        if (!attendanceHistory || !cycleData) return new Set();
+
+        const cycleStart = new Date(cycleData.startDate);
+        const cycleEnd = new Date(cycleData.endDate);
+
+        return new Set(
+            attendanceHistory
+                .filter(a => a.status === 'PRESENT' || !a.status || a.date)
+                .map(a => getYYYYMMDD(a.date))
+                .filter(dateStr => {
+                    const d = new Date(dateStr);
+                    return d >= cycleStart && d <= cycleEnd;
+                })
+        );
+    }, [attendanceHistory, cycleData]);
+
     const getDayStatus = (date) => {
         const dateStr = getYYYYMMDD(date);
         const today = new Date();
@@ -209,7 +227,7 @@ const AttendanceCalendarModal = ({ isOpen, onClose, cycleData, attendanceHistory
                         <div className="grid grid-cols-4 gap-3 mb-8">
                             <div className="bg-emerald-50/50 dark:bg-emerald-900/10 rounded-2xl p-4 border border-emerald-100/50 dark:border-emerald-900/30 group hover:bg-emerald-50 dark:hover:bg-emerald-900/20 transition-colors">
                                 <p className="text-emerald-600 dark:text-emerald-400 text-[9px] font-black uppercase tracking-wider mb-1">Present</p>
-                                <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 transition-colors">{attendanceHistory?.length || 0}</p>
+                                <p className="text-2xl font-black text-emerald-700 dark:text-emerald-300 transition-colors">{uniquePresentDates.size}</p>
                             </div>
                             <div className={`${sortedLeaveDates.length <= 4 ? 'bg-blue-50/50 dark:bg-blue-900/10 border-blue-100/50' : 'bg-orange-50/50 dark:bg-orange-900/10 border-orange-100/50'} rounded-2xl p-4 border transition-all group overflow-hidden relative`}>
                                 <p className={`${sortedLeaveDates.length <= 4 ? 'text-blue-600 dark:text-blue-400' : 'text-orange-600 dark:text-orange-400'} text-[9px] font-black uppercase tracking-wider mb-1`}>Leaves</p>

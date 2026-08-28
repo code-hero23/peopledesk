@@ -37,8 +37,12 @@ const createActivationCode = async (req, res) => {
     if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not allowed to activate this employee device' });
     }
-    const employee = await prisma.user.findUnique({ where: { id: userId }, select: { callAnalyticsViewEnabled: true } });
-    if (!employee?.callAnalyticsViewEnabled) return res.status(400).json({ message: 'Call sync is not enabled for this employee' });
+    const employee = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, callAnalyticsViewEnabled: true } });
+    if (!employee) return res.status(404).json({ message: 'Employee not found' });
+    const isSpecialRole = ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'ANALYZER'].includes(employee.role);
+    if (!employee.callAnalyticsViewEnabled && !isSpecialRole) {
+      return res.status(400).json({ message: 'Call sync is not enabled for this employee' });
+    }
     await prisma.callSyncActivationCode.deleteMany({ where: { userId, OR: [{ usedAt: { not: null } }, { expiresAt: { lt: new Date() } }] } });
     const code = makeCode();
     const expiresAt = new Date(Date.now() + 10 * 60 * 1000);

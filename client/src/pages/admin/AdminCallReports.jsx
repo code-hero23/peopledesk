@@ -42,7 +42,31 @@ const AdminCallReports = () => {
     const [isRefreshingStatus, setIsRefreshingStatus] = useState(false);
     const [simFilter, setSimFilter] = useState('ALL');
     const [syncModalTab, setSyncModalTab] = useState('ALL');
+    const [showActivationModal, setShowActivationModal] = useState(false);
+    const [adminActivationCode, setAdminActivationCode] = useState(null);
+    const [isGeneratingActivationCode, setIsGeneratingActivationCode] = useState(false);
+    const [selectedUserForActivation, setSelectedUserForActivation] = useState(null);
     const pollTimeoutRef = useRef(null);
+
+    const handleCreateAdminActivationCode = async (targetUserId = null) => {
+        setIsGeneratingActivationCode(true);
+        try {
+            const token = JSON.parse(localStorage.getItem('user'))?.token;
+            const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+            const payload = targetUserId ? { userId: targetUserId } : {};
+            const res = await axios.post(`${baseUrl}/call-sync/activation-codes`, payload, {
+                headers: { Authorization: `Bearer ${token}` }
+            });
+            setAdminActivationCode(res.data.code);
+            setShowActivationModal(true);
+            toast.success('APK activation code generated! Valid for 10 minutes.');
+        } catch (err) {
+            console.error('Error creating activation code:', err);
+            toast.error(err.response?.data?.message || 'Could not generate activation code');
+        } finally {
+            setIsGeneratingActivationCode(false);
+        }
+    };
 
     const formatDeviceName = (rawName) => {
         if (!rawName) return 'Android Device';
@@ -487,6 +511,23 @@ const AdminCallReports = () => {
 
                         {/* Action Buttons */}
                         <div className="flex items-center gap-2 flex-wrap">
+                            <button
+                                onClick={() => {
+                                    setShowActivationModal(true);
+                                    if (!adminActivationCode) {
+                                        handleCreateAdminActivationCode();
+                                    }
+                                }}
+                                disabled={isGeneratingActivationCode}
+                                className="px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl transition-all shadow-lg shadow-indigo-900/30 active:scale-95 flex items-center gap-2 font-bold text-xs disabled:opacity-50"
+                                title="Get 6-Digit APK Activation Code for Mobile Call Sync"
+                            >
+                                <Smartphone size={16} className={isGeneratingActivationCode ? 'animate-pulse' : ''} />
+                                <span className="text-[10px] font-black uppercase tracking-wider">
+                                    {isGeneratingActivationCode ? 'Generating...' : 'Get APK Code'}
+                                </span>
+                            </button>
+
                             <button
                                 onClick={handleRequestAllSync}
                                 disabled={isRequestingAllSync}
@@ -980,7 +1021,7 @@ const AdminCallReports = () => {
                                 <h2 className="text-xl font-black text-slate-800 dark:text-slate-100 tracking-tight text-center">
                                     {typeof selectedEmployee.name === 'string' ? selectedEmployee.name : "Unknown Personnel"}
                                 </h2>
-                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-6 text-center">
+                                <p className="text-slate-400 font-bold uppercase text-[10px] tracking-widest mb-4 text-center">
                                     {selectedEmployee.empId} • {selectedEmployee.designation || 'Personnel'}
                                     {selectedEmployee.lastSync && (
                                         <span className="block mt-1 text-[9px] text-blue-500 font-mono">
@@ -988,6 +1029,18 @@ const AdminCallReports = () => {
                                         </span>
                                     )}
                                 </p>
+
+                                <button
+                                    onClick={() => {
+                                        const targetId = selectedEmployee.id || selectedEmployee.userId;
+                                        setSelectedUserForActivation(selectedEmployee);
+                                        handleCreateAdminActivationCode(targetId);
+                                    }}
+                                    disabled={isGeneratingActivationCode}
+                                    className="mb-6 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 flex items-center gap-2 disabled:opacity-50"
+                                >
+                                    <Smartphone size={14} /> Get APK Activation Code
+                                </button>
 
                                 <div className="w-full space-y-4">
                                     <div className="h-[220px] w-full">
@@ -1370,6 +1423,120 @@ const AdminCallReports = () => {
                                     className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-white text-xs font-bold rounded-xl transition-all"
                                 >
                                     Close Dialog
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
+
+            {/* Modal: APK Activation Code */}
+            <AnimatePresence>
+                {showActivationModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 10 }} animate={{ scale: 1, opacity: 1, y: 0 }} exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                            className="bg-slate-900 border border-slate-800 rounded-3xl p-6 max-w-md w-full shadow-2xl text-white space-y-6 text-center"
+                        >
+                            <div className="w-16 h-16 bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 rounded-3xl flex items-center justify-center mx-auto shadow-inner">
+                                <Smartphone size={32} />
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-black tracking-tight">APK Device Activation</h3>
+                                <p className="text-xs text-slate-400 mt-1 max-w-xs mx-auto">
+                                    {selectedUserForActivation
+                                        ? `Activation code for ${selectedUserForActivation.name} (${selectedUserForActivation.designation || 'Personnel'})`
+                                        : 'Generate a 6-digit code to activate the PeopleDesk Call Sync APK on Android.'}
+                                </p>
+                            </div>
+
+                            {/* Personnel Selector if needed */}
+                            {filteredMetrics.length > 0 && !selectedUserForActivation && (
+                                <div className="text-left space-y-1">
+                                    <label className="text-[10px] font-black uppercase tracking-wider text-slate-400">Target Employee (Optional):</label>
+                                    <select
+                                        onChange={(e) => {
+                                            const targetId = e.target.value ? Number(e.target.value) : null;
+                                            const targetEmp = filteredMetrics.find(m => (m.id || m.userId) === targetId);
+                                            setSelectedUserForActivation(targetEmp || null);
+                                            handleCreateAdminActivationCode(targetId);
+                                        }}
+                                        className="w-full bg-slate-950 px-3 py-2 rounded-xl border border-slate-800 text-xs font-bold text-slate-200 outline-none cursor-pointer"
+                                    >
+                                        <option value="">Your Account (Logged-in User)</option>
+                                        {filteredMetrics.map((emp) => (
+                                            <option key={emp.id || emp.userId} value={emp.id || emp.userId}>
+                                                {emp.name} ({emp.designation || 'Staff'})
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+
+                            {adminActivationCode ? (
+                                <div className="bg-indigo-950/40 p-6 rounded-3xl border-2 border-indigo-500/30 space-y-3">
+                                    <p className="text-[10px] font-black text-indigo-400 uppercase tracking-widest">6-Digit Activation Code</p>
+                                    <div className="flex items-center justify-center gap-3">
+                                        <span className="text-4xl font-black text-indigo-300 tracking-[0.25em] font-mono select-all">
+                                            {adminActivationCode}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(adminActivationCode);
+                                                toast.success('Activation code copied to clipboard!');
+                                            }}
+                                            className="p-2.5 bg-slate-800 hover:bg-slate-700 text-indigo-400 rounded-xl shadow-sm border border-slate-700 transition-all active:scale-95"
+                                            title="Copy code"
+                                        >
+                                            <CheckCircle2 size={18} />
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-400">
+                                        ⏰ Valid for 10 minutes.
+                                    </p>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={() => handleCreateAdminActivationCode(selectedUserForActivation?.id || selectedUserForActivation?.userId)}
+                                    disabled={isGeneratingActivationCode}
+                                    className="w-full py-4 px-6 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl shadow-indigo-950/50 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                                >
+                                    {isGeneratingActivationCode ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+                                    {isGeneratingActivationCode ? 'Generating Code...' : 'Generate Activation Code'}
+                                </button>
+                            )}
+
+                            {/* Instructions */}
+                            <div className="bg-slate-950/70 p-4 rounded-2xl border border-slate-800 text-left space-y-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">Device Activation Steps:</p>
+                                <ol className="text-xs font-medium text-slate-300 space-y-1.5 list-decimal list-inside">
+                                    <li>Open the <span className="font-bold text-indigo-400">PeopleDesk APK</span> on the mobile phone.</li>
+                                    <li>Type in the 6-digit code shown above.</li>
+                                    <li>Select the official company SIM slot.</li>
+                                    <li>Tap <span className="font-bold text-indigo-400">Activate Device</span>.</li>
+                                </ol>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2">
+                                <button
+                                    onClick={() => handleCreateAdminActivationCode(selectedUserForActivation?.id || selectedUserForActivation?.userId)}
+                                    disabled={isGeneratingActivationCode}
+                                    className="text-xs font-bold text-indigo-400 hover:underline flex items-center gap-1"
+                                >
+                                    <RefreshCw size={12} className={isGeneratingActivationCode ? 'animate-spin' : ''} /> Generate New Code
+                                </button>
+                                <button
+                                    onClick={() => {
+                                        setShowActivationModal(false);
+                                        setSelectedUserForActivation(null);
+                                    }}
+                                    className="px-5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs font-bold transition-all"
+                                >
+                                    Close
                                 </button>
                             </div>
                         </motion.div>

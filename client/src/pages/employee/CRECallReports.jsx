@@ -36,6 +36,7 @@ const CRECallReports = () => {
     const [lastSyncTime, setLastSyncTime] = useState(null);
     const [activationCode, setActivationCode] = useState(null);
     const [isCreatingActivationCode, setIsCreatingActivationCode] = useState(false);
+    const [showActivationModal, setShowActivationModal] = useState(false);
     const [deviceStatus, setDeviceStatus] = useState(null);
 
     const fetchDeviceStatus = async () => {
@@ -302,16 +303,18 @@ const CRECallReports = () => {
     const createActivationCode = async () => {
         setIsCreatingActivationCode(true);
         try {
-            const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixdesigns.com/api';
+            const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
+            const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
             const response = await fetch(`${API_BASE}/call-sync/activation-codes`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${user.token}` },
-                body: JSON.stringify({ userId: user.id })
+                headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+                body: JSON.stringify({ userId: user?.id })
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.message || 'Could not create code');
             setActivationCode(data.code);
-            toast.success('Activation code created. It expires in 10 minutes.');
+            setShowActivationModal(true);
+            toast.success('Activation code created! It expires in 10 minutes.');
         } catch (error) {
             toast.error(error.message || 'Could not create activation code');
         } finally { setIsCreatingActivationCode(false); }
@@ -551,8 +554,20 @@ const CRECallReports = () => {
 
                     <div className="flex flex-wrap items-center gap-3">
                         {!Capacitor.isNativePlatform() && (
-                            <button onClick={createActivationCode} disabled={isCreatingActivationCode} className="px-4 py-3 rounded-2xl bg-indigo-600 text-white text-[10px] font-black uppercase tracking-wider disabled:opacity-50">
-                                {isCreatingActivationCode ? 'Creating…' : activationCode ? `APK code: ${activationCode}` : 'Get APK activation code'}
+                            <button
+                                onClick={() => {
+                                    if (activationCode) {
+                                        setShowActivationModal(true);
+                                    } else {
+                                        createActivationCode();
+                                    }
+                                }}
+                                disabled={isCreatingActivationCode}
+                                className="px-4 py-3 rounded-2xl bg-indigo-600 hover:bg-indigo-700 text-white text-[10px] font-black uppercase tracking-wider disabled:opacity-50 flex items-center gap-2 shadow-md transition-all active:scale-95"
+                                title="Get 6-Digit Activation Code for Mobile APK"
+                            >
+                                <Smartphone size={14} />
+                                {isCreatingActivationCode ? 'Generating…' : activationCode ? `APK Code: ${activationCode}` : 'Get APK Activation Code'}
                             </button>
                         )}
                         {/* SIM Slot Selector */}
@@ -830,6 +845,96 @@ const CRECallReports = () => {
                     </table>
                 </div>
             </motion.div>
+
+            {/* APK Activation Code Modal */}
+            <AnimatePresence>
+                {showActivationModal && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/70 backdrop-blur-md"
+                    >
+                        <motion.div
+                            initial={{ scale: 0.95, opacity: 0, y: 10 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.95, opacity: 0, y: 10 }}
+                            className="bg-white rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-6 text-center"
+                        >
+                            <div className="w-16 h-16 bg-indigo-50 text-indigo-600 rounded-3xl flex items-center justify-center mx-auto shadow-inner border border-indigo-100">
+                                <Smartphone size={32} />
+                            </div>
+
+                            <div>
+                                <h3 className="text-xl font-black text-slate-900">Mobile APK Activation</h3>
+                                <p className="text-xs text-slate-500 mt-1 max-w-xs mx-auto">
+                                    Enter this 6-digit code in your PeopleDesk Android app to activate automated call syncing.
+                                </p>
+                            </div>
+
+                            {activationCode ? (
+                                <div className="bg-indigo-50/90 p-6 rounded-3xl border-2 border-indigo-200 space-y-3">
+                                    <p className="text-[10px] font-black text-indigo-600 uppercase tracking-widest">Your 6-Digit Activation Code</p>
+                                    <div className="flex items-center justify-center gap-3">
+                                        <span className="text-4xl font-black text-indigo-700 tracking-[0.25em] font-mono select-all">
+                                            {activationCode}
+                                        </span>
+                                        <button
+                                            onClick={() => {
+                                                navigator.clipboard.writeText(activationCode);
+                                                toast.success('Activation code copied to clipboard!');
+                                            }}
+                                            className="p-2.5 bg-white hover:bg-indigo-100 text-indigo-600 rounded-xl shadow-sm border border-indigo-100 transition-all active:scale-95"
+                                            title="Copy code"
+                                        >
+                                            <CheckCircle2 size={18} />
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] font-bold text-slate-500">
+                                        ⏰ Valid for 10 minutes.
+                                    </p>
+                                </div>
+                            ) : (
+                                <button
+                                    onClick={createActivationCode}
+                                    disabled={isCreatingActivationCode}
+                                    className="w-full py-4 px-6 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black text-xs uppercase tracking-wider shadow-xl shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 active:scale-98 disabled:opacity-50"
+                                >
+                                    {isCreatingActivationCode ? <RefreshCw size={16} className="animate-spin" /> : <Zap size={16} />}
+                                    {isCreatingActivationCode ? 'Generating...' : 'Generate Activation Code'}
+                                </button>
+                            )}
+
+                            {/* Setup Instructions */}
+                            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 text-left space-y-2">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider">How to Activate:</p>
+                                <ol className="text-xs font-semibold text-slate-600 space-y-1.5 list-decimal list-inside">
+                                    <li>Open the <span className="font-bold text-indigo-600">PeopleDesk APK</span> on your Android device.</li>
+                                    <li>Enter the 6-digit activation code.</li>
+                                    <li>Select your company SIM slot.</li>
+                                    <li>Tap <span className="font-bold text-indigo-600">Activate Device</span>.</li>
+                                </ol>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-2">
+                                <button
+                                    onClick={createActivationCode}
+                                    disabled={isCreatingActivationCode}
+                                    className="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1"
+                                >
+                                    <RefreshCw size={12} className={isCreatingActivationCode ? 'animate-spin' : ''} /> Generate New Code
+                                </button>
+                                <button
+                                    onClick={() => setShowActivationModal(false)}
+                                    className="px-5 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-xl text-xs font-bold transition-all"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* SIM Selection Confirmation Modal */}
             <ConfirmationModal

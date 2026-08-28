@@ -9,40 +9,14 @@ import {
     Clock,
     Search,
     HardHat,
-    CheckCircle2,
     RefreshCw,
     Download,
     ExternalLink,
-    Building,
-    FileText,
     ChevronLeft,
     ChevronRight,
-    Play,
-    CheckCircle
+    User,
+    FileText
 } from 'lucide-react';
-
-const STATUS_CONFIG = {
-    SCHEDULED: {
-        label: 'Scheduled',
-        bg: 'bg-blue-500/10 text-blue-500 border-blue-500/20',
-        action: 'Start Visit'
-    },
-    IN_PROGRESS: {
-        label: 'In Progress',
-        bg: 'bg-amber-500/10 text-amber-500 border-amber-500/20',
-        action: 'Mark Completed'
-    },
-    COMPLETED: {
-        label: 'Completed',
-        bg: 'bg-emerald-500/10 text-emerald-500 border-emerald-500/20',
-        action: null
-    },
-    CANCELLED: {
-        label: 'Cancelled',
-        bg: 'bg-rose-500/10 text-rose-500 border-rose-500/20',
-        action: null
-    }
-};
 
 const MySiteAssignments = () => {
     const { user } = useSelector((state) => state.auth);
@@ -55,14 +29,10 @@ const MySiteAssignments = () => {
     const [totalRecords, setTotalRecords] = useState(0);
 
     const [searchTerm, setSearchTerm] = useState('');
-    const [selectedStatusFilter, setSelectedStatusFilter] = useState('ALL');
     const [selectedDateFilter, setSelectedDateFilter] = useState('');
 
     const [summary, setSummary] = useState({
         total: 0,
-        scheduled: 0,
-        inProgress: 0,
-        completed: 0,
         today: 0
     });
 
@@ -82,7 +52,6 @@ const MySiteAssignments = () => {
             });
 
             if (searchTerm.trim()) params.append('search', searchTerm.trim());
-            if (selectedStatusFilter !== 'ALL') params.append('status', selectedStatusFilter);
             if (selectedDateFilter) params.append('date', selectedDateFilter);
 
             const res = await axios.get(`${baseUrl}/site-assignments?${params.toString()}`, authHeaders);
@@ -104,7 +73,7 @@ const MySiteAssignments = () => {
         if (user?.token) {
             fetchMyAssignments();
         }
-    }, [page, limit, selectedStatusFilter, selectedDateFilter]);
+    }, [page, limit, selectedDateFilter]);
 
     useEffect(() => {
         const timer = setTimeout(() => {
@@ -114,20 +83,8 @@ const MySiteAssignments = () => {
         return () => clearTimeout(timer);
     }, [searchTerm]);
 
-    const handleUpdateStatus = async (id, newStatus) => {
-        try {
-            await axios.put(`${baseUrl}/site-assignments/${id}`, { status: newStatus }, authHeaders);
-            toast.success(`Site marked as ${newStatus.replace('_', ' ')}`);
-            fetchMyAssignments();
-        } catch (error) {
-            console.error('Failed to update status:', error);
-            toast.error(error.response?.data?.message || 'Failed to update status');
-        }
-    };
-
     const handleExport = () => {
         const params = new URLSearchParams({ format: 'xlsx' });
-        if (selectedStatusFilter !== 'ALL') params.append('status', selectedStatusFilter);
         window.open(`${baseUrl}/site-assignments/export?${params.toString()}&token=${user?.token}`, '_blank');
         toast.info('Downloading your site schedule...');
     };
@@ -146,7 +103,7 @@ const MySiteAssignments = () => {
                             My Assigned Sites
                         </h1>
                         <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium">
-                            Review your allocated site inspection, measurement, and installation schedules with live location details.
+                            Review your allocated site inspection, measurement, and installation schedules assigned by your AE Manager.
                         </p>
                     </div>
 
@@ -162,22 +119,14 @@ const MySiteAssignments = () => {
             </div>
 
             {/* Quick Metrics */}
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="bg-[#0e131f] border border-white/5 p-5 rounded-3xl">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Assigned</span>
-                    <p className="text-2xl font-black text-white mt-1">{summary.total || 0}</p>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Sites Assigned</span>
+                    <p className="text-3xl font-black text-white mt-1">{summary.total || 0}</p>
                 </div>
                 <div className="bg-[#0e131f] border border-white/5 p-5 rounded-3xl">
                     <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Today's Visits</span>
-                    <p className="text-2xl font-black text-emerald-400 mt-1">{summary.today || 0}</p>
-                </div>
-                <div className="bg-[#0e131f] border border-white/5 p-5 rounded-3xl">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-400">In Progress</span>
-                    <p className="text-2xl font-black text-amber-400 mt-1">{summary.inProgress || 0}</p>
-                </div>
-                <div className="bg-[#0e131f] border border-white/5 p-5 rounded-3xl">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-purple-400">Completed</span>
-                    <p className="text-2xl font-black text-purple-400 mt-1">{summary.completed || 0}</p>
+                    <p className="text-3xl font-black text-emerald-400 mt-1">{summary.today || 0}</p>
                 </div>
             </div>
 
@@ -195,18 +144,6 @@ const MySiteAssignments = () => {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-                    <select
-                        value={selectedStatusFilter}
-                        onChange={(e) => { setSelectedStatusFilter(e.target.value); setPage(1); }}
-                        className="bg-slate-900/80 border border-white/10 rounded-2xl px-4 py-2.5 text-xs font-bold text-slate-300 focus:outline-none focus:border-blue-500 cursor-pointer"
-                    >
-                        <option value="ALL">All Statuses</option>
-                        <option value="SCHEDULED">Scheduled</option>
-                        <option value="IN_PROGRESS">In Progress</option>
-                        <option value="COMPLETED">Completed</option>
-                        <option value="CANCELLED">Cancelled</option>
-                    </select>
-
                     <input
                         type="date"
                         value={selectedDateFilter}
@@ -214,9 +151,9 @@ const MySiteAssignments = () => {
                         className="bg-slate-900/80 border border-white/10 rounded-2xl px-4 py-2 text-xs font-bold text-slate-300 focus:outline-none focus:border-blue-500"
                     />
 
-                    {(searchTerm || selectedStatusFilter !== 'ALL' || selectedDateFilter) && (
+                    {(searchTerm || selectedDateFilter) && (
                         <button
-                            onClick={() => { setSearchTerm(''); setSelectedStatusFilter('ALL'); setSelectedDateFilter(''); setPage(1); }}
+                            onClick={() => { setSearchTerm(''); setSelectedDateFilter(''); setPage(1); }}
                             className="p-2.5 bg-white/5 hover:bg-white/10 rounded-2xl text-slate-400 hover:text-white transition-colors"
                         >
                             <RefreshCw size={14} />
@@ -225,7 +162,7 @@ const MySiteAssignments = () => {
                 </div>
             </div>
 
-            {/* List / Cards */}
+            {/* List Cards */}
             <div className="space-y-4">
                 {isLoading ? (
                     <div className="p-16 text-center text-slate-500 font-bold bg-[#0e131f] rounded-3xl border border-white/5">
@@ -240,7 +177,6 @@ const MySiteAssignments = () => {
                     </div>
                 ) : (
                     assignments.map((item) => {
-                        const statusCfg = STATUS_CONFIG[item.status] || STATUS_CONFIG.SCHEDULED;
                         const isToday = item.scheduledDate && new Date(item.scheduledDate).toDateString() === new Date().toDateString();
 
                         return (
@@ -250,13 +186,10 @@ const MySiteAssignments = () => {
                                 animate={{ opacity: 1, y: 0 }}
                                 className="bg-[#0e131f] border border-white/5 hover:border-blue-500/30 rounded-3xl p-6 shadow-xl transition-all"
                             >
-                                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
-                                    <div className="space-y-2 flex-1">
-                                        <div className="flex flex-wrap items-center gap-3">
+                                <div className="space-y-3">
+                                    <div className="flex flex-wrap items-center justify-between gap-3">
+                                        <div className="flex items-center gap-3">
                                             <h3 className="text-xl font-black text-white">{item.siteName}</h3>
-                                            <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider border ${statusCfg.bg}`}>
-                                                {statusCfg.label}
-                                            </span>
                                             {isToday && (
                                                 <span className="px-2.5 py-0.5 rounded-lg bg-emerald-500/20 text-emerald-400 text-[10px] font-black uppercase tracking-wider border border-emerald-500/30">
                                                     Today's Visit
@@ -264,68 +197,50 @@ const MySiteAssignments = () => {
                                             )}
                                         </div>
 
-                                        <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400 pt-1">
-                                            <span className="flex items-center gap-1.5 text-slate-300 font-bold">
-                                                <Calendar size={14} className="text-blue-400" />
-                                                {item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-blue-500/10 border border-blue-500/20 text-xs font-bold text-blue-400">
+                                            <HardHat size={13} className="text-blue-400" />
+                                            {item.workType || 'Site Inspection'}
+                                        </span>
+                                    </div>
+
+                                    <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-xs text-slate-400 pt-1">
+                                        <span className="flex items-center gap-1.5 text-slate-300 font-bold">
+                                            <Calendar size={14} className="text-blue-400" />
+                                            {item.scheduledDate ? new Date(item.scheduledDate).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '-'}
+                                        </span>
+                                        <span className="flex items-center gap-1.5 text-slate-300 font-bold">
+                                            <Clock size={14} className="text-slate-400" />
+                                            {item.scheduledTime || '--:--'}
+                                        </span>
+                                        {item.clientName && (
+                                            <span className="flex items-center gap-1 text-slate-400">
+                                                <User size={13} className="text-slate-500" />
+                                                Client: <b className="text-white">{item.clientName}</b>
                                             </span>
-                                            <span className="flex items-center gap-1.5 text-slate-300 font-bold">
-                                                <Clock size={14} className="text-slate-400" />
-                                                {item.scheduledTime || '--:--'}
-                                            </span>
-                                            <span className="flex items-center gap-1.5 text-slate-300 font-bold">
-                                                <HardHat size={14} className="text-indigo-400" />
-                                                {item.workType || 'Site Inspection'}
-                                            </span>
-                                            {item.clientName && (
-                                                <span className="flex items-center gap-1 text-slate-400">
-                                                    Client: <b className="text-white">{item.clientName}</b>
-                                                </span>
-                                            )}
+                                        )}
+                                    </div>
+
+                                    {item.location && (
+                                        <div className="flex items-center gap-2 pt-1 text-xs text-slate-400">
+                                            <MapPin size={14} className="text-rose-400 flex-shrink-0" />
+                                            <span>{item.location}</span>
+                                            <a
+                                                href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`}
+                                                target="_blank"
+                                                rel="noopener noreferrer"
+                                                className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-[11px] font-bold ml-2 underline underline-offset-2"
+                                            >
+                                                View on Maps <ExternalLink size={11} />
+                                            </a>
                                         </div>
+                                    )}
 
-                                        {item.location && (
-                                            <div className="flex items-center gap-2 pt-1 text-xs text-slate-400">
-                                                <MapPin size={14} className="text-rose-400 flex-shrink-0" />
-                                                <span>{item.location}</span>
-                                                <a
-                                                    href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.location)}`}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    className="inline-flex items-center gap-1 text-blue-400 hover:text-blue-300 text-[11px] font-bold ml-2 underline underline-offset-2"
-                                                >
-                                                    View on Maps <ExternalLink size={11} />
-                                                </a>
-                                            </div>
-                                        )}
-
-                                        {item.remarks && (
-                                            <div className="bg-slate-900/60 p-3 rounded-xl border border-white/5 text-xs text-slate-300 italic mt-2">
-                                                <b>Instructions:</b> "{item.remarks}"
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Action Buttons for AE */}
-                                    <div className="flex items-center gap-3">
-                                        {item.status === 'SCHEDULED' && (
-                                            <button
-                                                onClick={() => handleUpdateStatus(item.id, 'IN_PROGRESS')}
-                                                className="px-5 py-3 rounded-2xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-blue-600/30 transition-all active:scale-95"
-                                            >
-                                                <Play size={14} /> Start Site Visit
-                                            </button>
-                                        )}
-
-                                        {item.status === 'IN_PROGRESS' && (
-                                            <button
-                                                onClick={() => handleUpdateStatus(item.id, 'COMPLETED')}
-                                                className="px-5 py-3 rounded-2xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-black uppercase tracking-wider flex items-center gap-2 shadow-lg shadow-emerald-600/30 transition-all active:scale-95"
-                                            >
-                                                <CheckCircle size={14} /> Mark Completed
-                                            </button>
-                                        )}
-                                    </div>
+                                    {item.remarks && (
+                                        <div className="bg-slate-900/60 p-3.5 rounded-xl border border-white/5 text-xs text-slate-300 italic">
+                                            <b className="text-slate-400 not-italic uppercase text-[10px] tracking-wider block mb-0.5">Instructions:</b>
+                                            "{item.remarks}"
+                                        </div>
+                                    )}
                                 </div>
                             </motion.div>
                         );

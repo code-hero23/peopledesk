@@ -71,12 +71,19 @@ const getMySalarySummary = async (req, res) => {
             end = getCycleEndDateIST(null, latest.year, latest.month);
         }
 
-        // 1. Fetch Attendance (Working Days)
+        // 1. Fetch Attendance (Working Days) - Multiple site visits on the same calendar day count as 1 working day
         const attendance = await prisma.attendance.findMany({
             where: { userId, date: { gte: start, lte: end } },
             include: { breaks: true }
         });
-        const presentDays = attendance.length;
+        const presentDays = new Set(
+            attendance
+                .filter(a => a.status === 'PRESENT' || !a.status || a.date)
+                .map(a => {
+                    const d = new Date(a.date);
+                    return !isNaN(d.getTime()) ? d.toLocaleDateString('en-CA') : String(a.date).split('T')[0];
+                })
+        ).size;
 
         // Total days in period (approx 30 for salary math, but exact for stats)
         const totalDaysInPeriod = Math.ceil((end - start) / (1000 * 60 * 60 * 24));
