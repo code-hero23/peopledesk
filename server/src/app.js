@@ -106,6 +106,7 @@ app.use('/api/visitors', require('./routes/visitorRoutes'));
 app.use('/api/performance', require('./routes/performanceRoutes'));
 app.use('/api/helpdesk', require('./routes/helpdeskRoutes'));
 app.use('/api/seating', require('./routes/seatingRoutes'));
+app.use('/api/site-assignments', require('./routes/siteAssignmentRoutes'));
 app.use('/api/public-events', require('./routes/publicEventRoutes'));
 
 app.get('/api', (req, res) => {
