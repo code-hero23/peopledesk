@@ -756,42 +756,48 @@ const getMyAssignments = async (req, res) => {
         const userEmail = (req.user.email || '').toLowerCase().trim();
         const userName = (req.user.name || '').toLowerCase().trim();
 
-        // 1. Direct assignments to this AE ID or matching email/name
-        const myAssignments = await prisma.siteAssignment.findMany({
-            where: {
-                OR: [
-                    { aeId: userId },
-                    { ae: { email: { equals: userEmail, mode: 'insensitive' } } },
-                    { ae: { name: { equals: userName, mode: 'insensitive' } } }
-                ]
-            },
-            orderBy: [
-                { scheduledDate: 'desc' },
-                { createdAt: 'desc' }
-            ],
-            take: 100,
-            include: {
-                ae: {
-                    select: { id: true, name: true, email: true }
-                }
-            }
-        });
-
-        // 2. Also retrieve recent site assignments as fallback if this AE doesn't have personal assignments yet
+        let myAssignments = [];
         let fallbackSites = [];
-        if (myAssignments.length === 0) {
-            fallbackSites = await prisma.siteAssignment.findMany({
+
+        try {
+            // 1. Direct assignments to this AE ID or matching email/name
+            myAssignments = await prisma.siteAssignment.findMany({
+                where: {
+                    OR: [
+                        { aeId: userId },
+                        { ae: { email: { equals: userEmail, mode: 'insensitive' } } },
+                        { ae: { name: { equals: userName, mode: 'insensitive' } } }
+                    ]
+                },
                 orderBy: [
                     { scheduledDate: 'desc' },
                     { createdAt: 'desc' }
                 ],
-                take: 30,
+                take: 100,
                 include: {
                     ae: {
                         select: { id: true, name: true, email: true }
                     }
                 }
             });
+
+            // 2. Also retrieve recent site assignments as fallback if this AE doesn't have personal assignments yet
+            if (myAssignments.length === 0) {
+                fallbackSites = await prisma.siteAssignment.findMany({
+                    orderBy: [
+                        { scheduledDate: 'desc' },
+                        { createdAt: 'desc' }
+                    ],
+                    take: 30,
+                    include: {
+                        ae: {
+                            select: { id: true, name: true, email: true }
+                        }
+                    }
+                });
+            }
+        } catch (dbErr) {
+            console.warn('[SiteAssignment] Table SiteAssignment does not exist or query failed:', dbErr.message);
         }
 
         // 3. Active projects as additional choices
