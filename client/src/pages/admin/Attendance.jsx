@@ -572,12 +572,12 @@ const Attendance = () => {
                                         {/* Status Badge */}
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center gap-1">
-                                                <span className={`inline-flex px-2.5 py-0.5 text-[10px] font-black uppercase rounded-full tracking-wider ${
+                                                <span className={`inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md ${
                                                     record.status === 'PRESENT'
-                                                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800'
+                                                        ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/30'
                                                         : record.status === 'LEAVE'
-                                                        ? 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800'
-                                                        : 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800'
+                                                        ? 'bg-amber-500 text-white shadow-amber-500/30 ring-2 ring-amber-500/30'
+                                                        : 'bg-rose-600 text-white shadow-rose-600/30 ring-2 ring-rose-500/30'
                                                 }`}>
                                                     {record.status}
                                                 </span>
