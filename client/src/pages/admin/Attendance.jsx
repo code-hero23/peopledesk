@@ -572,13 +572,16 @@ const Attendance = () => {
                                         {/* Status Badge */}
                                         <td className="px-6 py-4 text-center">
                                             <div className="flex flex-col items-center gap-1">
-                                                <span className={`inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md ${
-                                                    record.status === 'PRESENT'
-                                                        ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/30'
-                                                        : record.status === 'LEAVE'
-                                                        ? 'bg-amber-500 text-white shadow-amber-500/30 ring-2 ring-amber-500/30'
-                                                        : 'bg-rose-600 text-white shadow-rose-600/30 ring-2 ring-rose-500/30'
-                                                }`}>
+                                                <span 
+                                                    className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
+                                                    style={{
+                                                        backgroundColor: record.status === 'PRESENT' 
+                                                            ? '#059669' 
+                                                            : record.status === 'LEAVE' 
+                                                            ? '#d97706' 
+                                                            : '#dc2626'
+                                                    }}
+                                                >
                                                     {record.status}
                                                 </span>
                                                 {activeStatuses.find(s => s.userId === record.user.id) && (

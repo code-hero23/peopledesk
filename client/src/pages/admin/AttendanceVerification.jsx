@@ -294,11 +294,12 @@ const AttendanceVerification = () => {
 
                                         {/* Status */}
                                         <td className="px-6 py-4 align-top text-center">
-                                            <span className={`inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md ${
-                                                item.status === 'PRESENT'
-                                                    ? 'bg-emerald-600 text-white shadow-emerald-600/30 ring-2 ring-emerald-500/30'
-                                                    : 'bg-rose-600 text-white shadow-rose-600/30 ring-2 ring-rose-500/30'
-                                            }`}>
+                                            <span 
+                                                className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
+                                                style={{
+                                                    backgroundColor: item.status === 'PRESENT' ? '#059669' : '#dc2626'
+                                                }}
+                                            >
                                                 {item.status}
                                             </span>
                                         </td>
