@@ -790,6 +790,15 @@ const getDailyAttendance = async (req, res) => {
                     checkoutIpAddress: record.checkoutIpAddress,
                     siteName: record.siteName,
                     checkoutSiteName: record.checkoutSiteName,
+                    latitude: record.latitude,
+                    longitude: record.longitude,
+                    locationAddress: record.locationAddress,
+                    checkoutLatitude: record.checkoutLatitude,
+                    checkoutLongitude: record.checkoutLongitude,
+                    checkoutLocationAddress: record.checkoutLocationAddress,
+                    distanceKm: record.distanceKm,
+                    isLocationMismatch: record.isLocationMismatch,
+                    checkoutMismatchReason: record.checkoutMismatchReason,
                     breaks: sessionBreaks
                 };
             });

@@ -15,7 +15,10 @@ import {
     ChevronLeft,
     ChevronRight,
     User,
-    FileText
+    FileText,
+    Sparkles,
+    Building2,
+    CheckCircle2
 } from 'lucide-react';
 
 const MySiteAssignments = () => {
@@ -92,27 +95,31 @@ const MySiteAssignments = () => {
     return (
         <div className="p-4 md:p-8 space-y-8 max-w-[1400px] mx-auto min-h-screen text-slate-100">
             {/* Header Banner */}
-            <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-br from-slate-900 via-blue-950/40 to-slate-950 p-8 md:p-10 border border-white/10 shadow-2xl">
-                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 relative z-10">
-                    <div>
-                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest mb-3">
-                            <HardHat size={13} className="text-blue-400" />
-                            AE Site Schedule
+            <div className="rounded-3xl md:rounded-[2.5rem] bg-[#0e131f] p-6 md:p-8 border border-white/10 shadow-xl">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-xs font-black uppercase tracking-widest">
+                            <HardHat size={14} className="text-blue-400" />
+                            <span>AE Site Schedule</span>
                         </div>
-                        <h1 className="text-3xl md:text-4xl font-black tracking-tight text-white">
-                            My Assigned Sites
-                        </h1>
-                        <p className="text-slate-400 text-sm mt-2 max-w-xl font-medium">
-                            Review your allocated site inspection, measurement, and installation schedules assigned by your AE Manager.
-                        </p>
+
+                        <div>
+                            <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">
+                                My Assigned Sites
+                            </h1>
+                            <p className="text-slate-400 text-xs md:text-sm mt-1 max-w-2xl font-medium leading-relaxed">
+                                Review your allocated site inspection, measurement, and installation schedules assigned by your AE Manager.
+                            </p>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-3">
                         <button
                             onClick={handleExport}
-                            className="flex items-center gap-2 bg-emerald-600/20 hover:bg-emerald-600/30 border border-emerald-500/30 px-4 py-3 rounded-2xl text-xs font-black uppercase tracking-wider text-emerald-400 transition-all shadow-md active:scale-95"
+                            className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-500 text-white px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95"
                         >
-                            <Download size={16} /> Export Schedule
+                            <Download size={15} />
+                            <span>Export Schedule</span>
                         </button>
                     </div>
                 </div>
@@ -120,13 +127,23 @@ const MySiteAssignments = () => {
 
             {/* Quick Metrics */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="bg-[#0e131f] border border-white/5 p-5 rounded-3xl">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Total Sites Assigned</span>
-                    <p className="text-3xl font-black text-white mt-1">{summary.total || 0}</p>
+                <div className="bg-slate-900/90 border border-slate-800 hover:border-slate-700/80 p-6 rounded-3xl shadow-lg transition-all flex items-center justify-between">
+                    <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-slate-400 block mb-1">Total Sites Assigned</span>
+                        <p className="text-3xl lg:text-4xl font-black text-white">{summary.total || 0}</p>
+                    </div>
+                    <div className="p-4 bg-blue-500/10 border border-blue-500/20 rounded-2xl text-blue-400">
+                        <Building2 size={28} />
+                    </div>
                 </div>
-                <div className="bg-[#0e131f] border border-white/5 p-5 rounded-3xl">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400">Today's Visits</span>
-                    <p className="text-3xl font-black text-emerald-400 mt-1">{summary.today || 0}</p>
+                <div className="bg-slate-900/90 border border-slate-800 hover:border-emerald-500/30 p-6 rounded-3xl shadow-lg transition-all flex items-center justify-between">
+                    <div>
+                        <span className="text-[10px] font-black uppercase tracking-widest text-emerald-400 block mb-1">Today's Scheduled Visits</span>
+                        <p className="text-3xl lg:text-4xl font-black text-emerald-400">{summary.today || 0}</p>
+                    </div>
+                    <div className="p-4 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl text-emerald-400">
+                        <CheckCircle2 size={28} />
+                    </div>
                 </div>
             </div>
 

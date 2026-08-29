@@ -148,10 +148,19 @@ model Attendance {
   checkoutDeviceInfo String?
   checkoutIpAddress  String?
   seatId             String?
-  siteName           String?
-  checkoutSiteName   String?
-  user               User       @relation(fields: [userId], references: [id])
-  breaks             BreakLog[]
+  siteName                String?
+  checkoutSiteName        String?
+  latitude                Float?
+  longitude               Float?
+  locationAddress         String?
+  checkoutLatitude        Float?
+  checkoutLongitude       Float?
+  checkoutLocationAddress String?
+  distanceKm              Float?
+  isLocationMismatch      Boolean    @default(false)
+  checkoutMismatchReason  String?
+  user                    User       @relation(fields: [userId], references: [id])
+  breaks                  BreakLog[]
 
   @@unique([userId, date])
 }

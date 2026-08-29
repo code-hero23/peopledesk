@@ -6,7 +6,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
     Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
-    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone, RefreshCw, Armchair
+    Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone, RefreshCw, Armchair,
+    ChevronDown, AlertTriangle
 } from 'lucide-react';
 import {
     getAttendanceStatus,
@@ -245,26 +246,75 @@ const Overview = () => {
     const [isDiscoveringSims, setIsDiscoveringSims] = useState(false);
     const [assignedSites, setAssignedSites] = useState([]);
     const [activeProjects, setActiveProjects] = useState([]);
+    const [recentSites, setRecentSites] = useState([]);
     const [isCustomSite, setIsCustomSite] = useState(false);
+    const [checkoutMismatchReason, setCheckoutMismatchReason] = useState('');
+
+    const calculateDistanceKm = (lat1, lon1, lat2, lon2) => {
+        if (!lat1 || !lon1 || !lat2 || !lon2) return null;
+        const R = 6371; // Earth's radius in km
+        const dLat = (lat2 - lat1) * (Math.PI / 180);
+        const dLon = (lon2 - lon1) * (Math.PI / 180);
+        const a =
+            Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+            Math.cos(lat1 * (Math.PI / 180)) *
+            Math.cos(lat2 * (Math.PI / 180)) *
+            Math.sin(dLon / 2) * Math.sin(dLon / 2);
+        const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return parseFloat((R * c).toFixed(2));
+    };
+
+    const currentDistanceKm = useMemo(() => {
+        if (!isCheckingOut || !attendance?.latitude || !attendance?.longitude || !location?.lat || !location?.lng) {
+            return null;
+        }
+        return calculateDistanceKm(attendance.latitude, attendance.longitude, location.lat, location.lng);
+    }, [isCheckingOut, attendance, location]);
+
+    const isLocationMismatch = currentDistanceKm !== null && currentDistanceKm > 1.0;
 
     useEffect(() => {
         const fetchAssignedSites = async () => {
             try {
                 const token = user?.token || JSON.parse(localStorage.getItem('user') || '{}')?.token;
                 if (!token) return;
-                const baseUrl = import.meta.env.VITE_API_BASE_URL || '/api';
-                const res = await axios.get(`${baseUrl}/site-assignments/my-sites`, {
-                    headers: { Authorization: `Bearer ${token}` }
-                });
-                const sites = res.data?.assignedSites || [];
-                const projs = res.data?.activeProjects || [];
+                const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+                const authHeaders = { headers: { Authorization: `Bearer ${token}` } };
+
+                let sites = [];
+                let projs = [];
+                let recents = [];
+
+                try {
+                    const res = await axios.get(`${baseUrl}/site-assignments/my-sites`, authHeaders);
+                    sites = res.data?.assignedSites || [];
+                    projs = res.data?.activeProjects || [];
+                    recents = res.data?.recentSites || [];
+                } catch (err) {
+                    console.warn('Could not fetch from /my-sites, checking /site-assignments:', err.message);
+                }
+
+                // If my-sites returned 0 sites, also fetch directly from /site-assignments (same as MySiteAssignments page)
+                if (sites.length === 0) {
+                    try {
+                        const listRes = await axios.get(`${baseUrl}/site-assignments?limit=50`, authHeaders);
+                        sites = listRes.data?.data || [];
+                    } catch (listErr) {
+                        console.warn('Could not fetch /site-assignments fallback:', listErr.message);
+                    }
+                }
+
+                console.log('[Overview] Assigned Sites Loaded:', sites.length, 'Recent Sites:', recents.length);
                 setAssignedSites(sites);
                 setActiveProjects(projs);
+                setRecentSites(recents);
 
                 if (sites.length > 0) {
                     setSiteNameInput((prev) => prev || sites[0].siteName);
                 } else if (projs.length > 0) {
                     setSiteNameInput((prev) => prev || projs[0].name);
+                } else if (recents.length > 0) {
+                    setSiteNameInput((prev) => prev || recents[0]);
                 }
             } catch (err) {
                 console.error('Could not fetch assigned sites for dropdown:', err);
@@ -881,6 +931,7 @@ const Overview = () => {
                 if (isCheckedIn) {
                     if (isAeAttendanceUser(user)) {
                         setIsCheckingOut(true);
+                        setSiteNameInput(attendance?.siteName || (assignedSites[0]?.siteName || ''));
                         setShowCheckInModal(true);
                         return;
                     }
@@ -1579,22 +1630,100 @@ const Overview = () => {
                                         <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest">{isCheckingOut ? 'Session End Verification' : 'Session Start Verification'}</p>
                                     </div>
                                 </div>
-                                <button onClick={() => { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); }} className="p-3 hover:bg-slate-100 rounded-2xl transition-all hover:rotate-90"><X size={20} className="text-slate-400" /></button>
+                                <button onClick={() => { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); setCheckoutMismatchReason(''); setIsCustomSite(false); }} className="p-3 hover:bg-slate-100 rounded-2xl transition-all hover:rotate-90"><X size={20} className="text-slate-400" /></button>
                             </div>
 
-                            {/* Site Name Input Field */}
-                            <div className="px-6 sm:px-8 py-4 bg-indigo-50/60 border-b border-indigo-100/50 shrink-0">
-                                <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-900 mb-1.5 flex items-center gap-1.5">
-                                    <Building2 size={14} className="text-indigo-600" /> Site Name / Location <span className="text-rose-500">*</span>
+                            {/* Red Checkout / Logout Radius Policy Banner */}
+                            {isCheckingOut && (
+                                <div className="px-6 sm:px-8 py-2.5 bg-rose-600 text-white shadow-sm shrink-0 flex items-center gap-2.5">
+                                    <AlertTriangle size={16} className="text-white shrink-0 animate-pulse" />
+                                    <p className="text-[11px] font-black tracking-wide leading-tight">
+                                        ⚠️ Logout Notice: Please check out / log out within 1 km radius of the site location.
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Site Name Selection & Manual Input Field */}
+                            <div className="px-6 sm:px-8 py-3.5 bg-indigo-50/70 border-b border-indigo-100/60 shrink-0 space-y-2.5">
+                                <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-900 flex items-center justify-between">
+                                    <span className="flex items-center gap-1.5">
+                                        <Building2 size={13} className="text-indigo-600" /> Site Name / Location <span className="text-rose-500">*</span>
+                                    </span>
+                                    <span className="text-[9px] font-bold text-indigo-600/80">
+                                        Select from dropdown or type below
+                                    </span>
                                 </label>
-                                <input
-                                    type="text"
-                                    value={siteNameInput}
-                                    onChange={(e) => setSiteNameInput(e.target.value)}
-                                    placeholder="e.g. Prestige Estates - Villa 402 / Site A"
-                                    className="w-full px-4 py-2.5 rounded-xl border border-indigo-200/80 bg-white text-xs font-bold text-slate-900 outline-none focus:ring-2 ring-indigo-500/30 transition-all placeholder:text-slate-400 placeholder:font-medium"
-                                />
+
+                                {/* Dropdown Selector - ALWAYS VISIBLE */}
+                                <div className="relative">
+                                    <select
+                                        value={siteNameInput}
+                                        onChange={(e) => {
+                                            if (e.target.value && e.target.value !== '__SELECT__') {
+                                                setSiteNameInput(e.target.value);
+                                            }
+                                        }}
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200/90 bg-white text-xs font-bold text-slate-800 outline-none focus:ring-2 ring-indigo-500/30 transition-all appearance-none cursor-pointer pr-9 shadow-sm"
+                                    >
+                                        <option value="__SELECT__">-- 📋 Select Assigned Site --</option>
+                                        {assignedSites.map((site) => (
+                                            <option key={site.id || site.siteName} value={site.siteName}>
+                                                {site.siteName}
+                                            </option>
+                                        ))}
+                                        {assignedSites.length === 0 && (
+                                            <option value="" disabled>No assigned sites found (type below)</option>
+                                        )}
+                                    </select>
+                                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-indigo-500">
+                                        <ChevronDown size={14} />
+                                    </div>
+                                </div>
+
+                                {/* Manual Typing Input Field with Datalist */}
+                                <div className="relative">
+                                    <input
+                                        type="text"
+                                        list="assigned-site-options"
+                                        value={siteNameInput}
+                                        onChange={(e) => setSiteNameInput(e.target.value)}
+                                        placeholder="Or type site name manually..."
+                                        className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200/90 bg-white text-xs font-bold text-slate-900 outline-none focus:ring-2 ring-indigo-500/30 transition-all placeholder:text-slate-400 placeholder:font-medium shadow-sm"
+                                    />
+                                    <datalist id="assigned-site-options">
+                                        {assignedSites.map((site) => (
+                                            <option key={site.id || site.siteName} value={site.siteName} />
+                                        ))}
+                                    </datalist>
+                                </div>
                             </div>
+
+                            {/* Location Radius Mismatch Notice & Reason Prompt */}
+                            {isCheckingOut && isLocationMismatch && (
+                                <div className="px-6 sm:px-8 py-3 bg-rose-50 border-b border-rose-300 shrink-0 animate-fade-in">
+                                    <div className="flex items-start gap-2.5">
+                                        <AlertTriangle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+                                        <div className="flex-1">
+                                            <p className="text-xs font-black text-rose-900 flex items-center gap-2">
+                                                <span>Location Radius Mismatch:</span>
+                                                <span className="px-2 py-0.5 bg-rose-600 text-white rounded-md text-[10px] font-extrabold shadow-sm">
+                                                    {currentDistanceKm} km from Check-in Site
+                                                </span>
+                                            </p>
+                                            <p className="text-[11px] font-bold text-rose-700 mt-1">
+                                                You appear to be checking out away from your check-in site ({attendance?.siteName || 'Original Site'}). Please state the reason:
+                                            </p>
+                                            <input
+                                                type="text"
+                                                value={checkoutMismatchReason}
+                                                onChange={(e) => setCheckoutMismatchReason(e.target.value)}
+                                                placeholder="e.g. Shifted to HO / Left site for meeting / Finished site work"
+                                                className="mt-2 w-full px-3.5 py-2 rounded-xl border border-rose-300 bg-white text-xs font-bold text-slate-900 outline-none focus:ring-2 ring-rose-500/30 transition-all placeholder:text-slate-400"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
 
                             {/* Camera Area - Flexible height */}
                             <div className="flex-1 relative bg-slate-900 sm:m-6 sm:rounded-[2rem] overflow-hidden group shadow-inner">
@@ -1762,7 +1891,7 @@ const Overview = () => {
                                         </div>
                                         <motion.button 
                                             whileHover={{ y: -2 }}
-                                            onClick={() => { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); }}
+                                            onClick={() => { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); setCheckoutMismatchReason(''); setIsCustomSite(false); }}
                                             className="w-full py-4 text-slate-400 font-black text-[10px] uppercase tracking-[0.2em] hover:text-rose-500 transition-colors"
                                         >
                                             Cancel & Go Back
@@ -1783,12 +1912,20 @@ const Overview = () => {
                                                 formData.append('photo', blob, 'photo.jpg');
                                                 formData.append('siteName', siteNameInput.trim());
                                                 formData.append('deviceInfo', `${getDeviceType().toUpperCase()} | ${isSiteLogin ? 'SITE | ' : ''}${navigator.userAgent}`);
+                                                if (location?.lat) formData.append('latitude', location.lat);
+                                                if (location?.lng) formData.append('longitude', location.lng);
+                                                if (location?.address) formData.append('locationAddress', location.address);
+                                                if (isCheckingOut && checkoutMismatchReason.trim()) {
+                                                    formData.append('checkoutMismatchReason', checkoutMismatchReason.trim());
+                                                }
                                                 const action = isCheckingOut ? checkoutAttendance(formData) : markAttendance(formData);
                                                 dispatch(action).then((res) => {
                                                     if (!res.error) {
                                                         dispatch(getAttendanceStatus());
                                                         setPhoto(null);
                                                         setSiteNameInput('');
+                                                        setCheckoutMismatchReason('');
+                                                        setIsCustomSite(false);
                                                         setShowCheckInModal(false);
                                                     } else {
                                                         toast.error(res.payload || "Attendance could not be submitted.");

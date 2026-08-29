@@ -4,7 +4,8 @@ import { useSelector } from 'react-redux';
 import { 
     Search, Calendar, X, ExternalLink, Camera, CheckCircle2, XCircle, 
     UserCheck, Image as ImageIcon, Sparkles, RefreshCw, Download, ZoomIn, 
-    ShieldCheck, Filter, Clock, Users, ArrowUpRight, MapPin, Building2
+    ShieldCheck, Filter, Clock, Users, ArrowUpRight, MapPin, Building2,
+    AlertTriangle, Navigation
 } from 'lucide-react';
 import { formatTime } from '../../utils/dateUtils';
 
@@ -328,12 +329,17 @@ const AttendanceVerification = () => {
                                                                     {/* Check In Photo */}
                                                                     {inUrl ? (
                                                                         <div
-                                                                            className="cursor-pointer group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm"                                                                             onClick={() => setSelectedPhoto({ 
+                                                                            className="cursor-pointer group relative rounded-2xl overflow-hidden border border-slate-200 dark:border-slate-700 shadow-sm"
+                                                                            onClick={() => setSelectedPhoto({ 
                                                                                 url: inUrl, 
                                                                                 title: `${item.user.name} - Check In Photo`,
                                                                                 time: formatTime(session.timeIn),
                                                                                 type: 'Check In',
-                                                                                siteName: session.siteName
+                                                                                siteName: session.siteName,
+                                                                                address: session.locationAddress,
+                                                                                distanceKm: session.distanceKm,
+                                                                                isLocationMismatch: session.isLocationMismatch,
+                                                                                mismatchReason: session.checkoutMismatchReason
                                                                             })}
                                                                         >
                                                                             <img src={inUrl} alt="Check In" className="w-20 h-20 object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -361,7 +367,11 @@ const AttendanceVerification = () => {
                                                                                 title: `${item.user.name} - Check Out Photo`,
                                                                                 time: session.timeOut ? formatTime(session.timeOut) : 'Active',
                                                                                 type: 'Check Out',
-                                                                                siteName: session.checkoutSiteName || session.siteName
+                                                                                siteName: session.checkoutSiteName || session.siteName,
+                                                                                address: session.checkoutLocationAddress || session.locationAddress,
+                                                                                distanceKm: session.distanceKm,
+                                                                                isLocationMismatch: session.isLocationMismatch,
+                                                                                mismatchReason: session.checkoutMismatchReason
                                                                             })}
                                                                         >
                                                                             <img src={outUrl} alt="Check Out" className="w-20 h-20 object-cover group-hover:scale-105 transition-transform duration-300" />
@@ -383,23 +393,44 @@ const AttendanceVerification = () => {
                                                                     )}
                                                                 </div>
 
-                                                                {/* Site Name Info Badges */}
-                                                                {(session.siteName || session.checkoutSiteName) && (
-                                                                    <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800 flex flex-wrap gap-2 text-[10px]">
+                                                                {/* Site & Distance Badges */}
+                                                                <div className="mt-2.5 pt-2 border-t border-slate-200/60 dark:border-slate-800 space-y-1.5 text-[10px]">
+                                                                    <div className="flex flex-wrap gap-2">
                                                                         {session.siteName && (
                                                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-200/60 dark:border-emerald-800/50">
                                                                                 <MapPin size={11} className="text-emerald-500 shrink-0" />
-                                                                                <span className="opacity-70">In Site:</span> {session.siteName}
+                                                                                <span className="opacity-70">In:</span> {session.siteName}
                                                                             </span>
                                                                         )}
                                                                         {session.checkoutSiteName && (
                                                                             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 font-bold border border-rose-200/60 dark:border-rose-800/50">
                                                                                 <MapPin size={11} className="text-rose-500 shrink-0" />
-                                                                                <span className="opacity-70">Out Site:</span> {session.checkoutSiteName}
+                                                                                <span className="opacity-70">Out:</span> {session.checkoutSiteName}
                                                                             </span>
                                                                         )}
+                                                                        {session.distanceKm !== null && session.distanceKm !== undefined && (
+                                                                            session.isLocationMismatch ? (
+                                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-200 font-extrabold border border-rose-300 dark:border-rose-700 shadow-sm animate-pulse-subtle">
+                                                                                    <AlertTriangle size={11} className="text-rose-600 dark:text-rose-400 shrink-0" />
+                                                                                    <span>Radius Mismatch ({session.distanceKm} km)</span>
+                                                                                </span>
+                                                                            ) : (
+                                                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-200 font-bold border border-emerald-300 dark:border-emerald-700">
+                                                                                    <Navigation size={11} className="text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                                                                    <span>Within Radius ({session.distanceKm} km)</span>
+                                                                                </span>
+                                                                            )
+                                                                        )}
                                                                     </div>
-                                                                )}
+
+                                                                    {/* Mismatch Explanation from Employee */}
+                                                                    {session.isLocationMismatch && session.checkoutMismatchReason && (
+                                                                        <div className="bg-amber-50/90 dark:bg-amber-950/40 p-2 rounded-xl border border-amber-200/80 dark:border-amber-800/60 text-amber-900 dark:text-amber-200">
+                                                                            <span className="font-extrabold text-[9px] uppercase tracking-wider block text-amber-700 dark:text-amber-400">Employee Explanation:</span>
+                                                                            <p className="italic font-bold text-[11px] mt-0.5">"{session.checkoutMismatchReason}"</p>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
                                                             </div>
                                                         );
                                                     })}
@@ -435,7 +466,7 @@ const AttendanceVerification = () => {
                         <div className="w-full flex items-center justify-between border-b border-slate-800 pb-4">
                             <div>
                                 <h3 className="text-lg font-black text-white">{selectedPhoto.title}</h3>
-                                <div className="flex flex-wrap items-center gap-3 mt-1">
+                                <div className="flex flex-wrap items-center gap-3 mt-1.5">
                                     <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
                                         Timestamp: <span className="text-blue-400 font-mono">{selectedPhoto.time}</span>
                                     </p>
@@ -445,7 +476,18 @@ const AttendanceVerification = () => {
                                             <span>Site: {selectedPhoto.siteName}</span>
                                         </p>
                                     )}
+                                    {selectedPhoto.distanceKm !== null && selectedPhoto.distanceKm !== undefined && (
+                                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider flex items-center gap-1 ${selectedPhoto.isLocationMismatch ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' : 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'}`}>
+                                            {selectedPhoto.isLocationMismatch ? <AlertTriangle size={10} /> : <Navigation size={10} />}
+                                            {selectedPhoto.isLocationMismatch ? `Mismatch: ${selectedPhoto.distanceKm} km` : `Within Radius: ${selectedPhoto.distanceKm} km`}
+                                        </span>
+                                    )}
                                 </div>
+                                {selectedPhoto.mismatchReason && (
+                                    <p className="text-xs font-semibold text-amber-300 bg-amber-950/60 border border-amber-800/60 px-3 py-1 rounded-lg mt-2 inline-block">
+                                        💬 Reason: "{selectedPhoto.mismatchReason}"
+                                    </p>
+                                )}
                             </div>
                             <div className="flex items-center gap-2">
                                 <a 

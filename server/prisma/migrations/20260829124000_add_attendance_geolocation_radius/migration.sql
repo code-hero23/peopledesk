@@ -1,0 +1,10 @@
+-- AlterTable: Add Geolocation and Radius Mismatch columns to Attendance
+ALTER TABLE "Attendance" ADD COLUMN IF NOT EXISTS "latitude" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "longitude" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "locationAddress" TEXT,
+ADD COLUMN IF NOT EXISTS "checkoutLatitude" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "checkoutLongitude" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "checkoutLocationAddress" TEXT,
+ADD COLUMN IF NOT EXISTS "distanceKm" DOUBLE PRECISION,
+ADD COLUMN IF NOT EXISTS "isLocationMismatch" BOOLEAN NOT NULL DEFAULT false,
+ADD COLUMN IF NOT EXISTS "checkoutMismatchReason" TEXT;

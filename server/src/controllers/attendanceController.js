@@ -6,9 +6,27 @@ const isAeAttendanceUser = (user) => {
     return designation === 'AE' || designation === 'AE MANAGER' || user?.role === 'AE_MANAGER';
 };
 
-// @desc    Mark attendance for today
-// @route   POST /api/attendance
-// @access  Private (Employee)
+const calculateDistanceInKm = (lat1, lon1, lat2, lon2) => {
+    if (lat1 == null || lon1 == null || lat2 == null || lon2 == null) return null;
+    const nLat1 = parseFloat(lat1);
+    const nLon1 = parseFloat(lon1);
+    const nLat2 = parseFloat(lat2);
+    const nLon2 = parseFloat(lon2);
+    if (isNaN(nLat1) || isNaN(nLon1) || isNaN(nLat2) || isNaN(nLon2)) return null;
+
+    const R = 6371; // Earth's radius in km
+    const dLat = (nLat2 - nLat1) * (Math.PI / 180);
+    const dLon = (nLon2 - nLon1) * (Math.PI / 180);
+    const a =
+        Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+        Math.cos(nLat1 * (Math.PI / 180)) *
+        Math.cos(nLat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    const d = R * c;
+    return parseFloat(d.toFixed(2));
+};
+
 // @desc    Mark attendance for today
 // @route   POST /api/attendance
 // @access  Private (Employee)
@@ -61,6 +79,10 @@ const markAttendance = async (req, res) => {
             where: { userId }
         });
 
+        const latitude = req.body.latitude ? parseFloat(req.body.latitude) : null;
+        const longitude = req.body.longitude ? parseFloat(req.body.longitude) : null;
+        const locationAddress = req.body.locationAddress || null;
+
         const attendance = await prisma.attendance.create({
             data: {
                 userId,
@@ -70,7 +92,10 @@ const markAttendance = async (req, res) => {
                 deviceInfo: req.body.deviceInfo || req.headers['user-agent'],
                 ipAddress: req.ip || req.connection.remoteAddress,
                 seatId: userSeat ? userSeat.seatId : null,
-                siteName: req.body.siteName || null
+                siteName: req.body.siteName || null,
+                latitude: !isNaN(latitude) ? latitude : null,
+                longitude: !isNaN(longitude) ? longitude : null,
+                locationAddress: locationAddress
             },
         });
 
@@ -81,9 +106,6 @@ const markAttendance = async (req, res) => {
     }
 };
 
-// @desc    Checkout for today
-// @route   PUT /api/attendance/checkout
-// @access  Private (Employee)
 // @desc    Checkout for today
 // @route   PUT /api/attendance/checkout
 // @access  Private (Employee)
@@ -118,6 +140,21 @@ const checkoutAttendance = async (req, res) => {
             console.warn('No file received for check-out');
         }
 
+        const checkoutLatitude = (req.body.latitude || req.body.checkoutLatitude) ? parseFloat(req.body.latitude || req.body.checkoutLatitude) : null;
+        const checkoutLongitude = (req.body.longitude || req.body.checkoutLongitude) ? parseFloat(req.body.longitude || req.body.checkoutLongitude) : null;
+        const checkoutLocationAddress = req.body.locationAddress || req.body.checkoutLocationAddress || null;
+        const checkoutMismatchReason = req.body.checkoutMismatchReason || req.body.mismatchReason || null;
+
+        let distanceKm = null;
+        let isLocationMismatch = false;
+
+        if (attendance.latitude != null && attendance.longitude != null && checkoutLatitude != null && checkoutLongitude != null) {
+            distanceKm = calculateDistanceInKm(attendance.latitude, attendance.longitude, checkoutLatitude, checkoutLongitude);
+            if (distanceKm !== null && distanceKm > 1.0) {
+                isLocationMismatch = true;
+            }
+        }
+
         const updatedAttendance = await prisma.attendance.update({
             where: { id: attendance.id },
             data: {
@@ -125,7 +162,13 @@ const checkoutAttendance = async (req, res) => {
                 checkoutPhoto: req.file ? `/uploads/${req.file.filename}` : null,
                 checkoutDeviceInfo: req.body.deviceInfo || req.headers['user-agent'],
                 checkoutIpAddress: req.ip || req.connection.remoteAddress,
-                checkoutSiteName: req.body.siteName || req.body.checkoutSiteName || null
+                checkoutSiteName: req.body.siteName || req.body.checkoutSiteName || null,
+                checkoutLatitude: !isNaN(checkoutLatitude) ? checkoutLatitude : null,
+                checkoutLongitude: !isNaN(checkoutLongitude) ? checkoutLongitude : null,
+                checkoutLocationAddress: checkoutLocationAddress,
+                distanceKm: distanceKm,
+                isLocationMismatch: isLocationMismatch,
+                checkoutMismatchReason: checkoutMismatchReason
             },
         });
 
@@ -159,10 +202,6 @@ const checkoutAttendance = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
-
-// @desc    Pause attendance (Take a break)
-// @route   POST /api/attendance/pause
-// @access  Private
 const pauseAttendance = async (req, res) => {
     try {
         const userId = req.user.id;

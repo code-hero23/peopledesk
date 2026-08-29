@@ -801,17 +801,40 @@ const getMyAssignments = async (req, res) => {
         }
 
         // 3. Active projects as additional choices
-        const activeProjects = await prisma.project.findMany({
-            where: { status: 'ACTIVE' },
-            select: { id: true, name: true, client: true, location: true },
-            take: 30
-        }).catch(() => []);
+        let activeProjects = [];
+        try {
+            activeProjects = await prisma.project.findMany({
+                select: { id: true, name: true, clientName: true, location: true },
+                take: 30
+            });
+        } catch (projErr) {
+            console.warn('[SiteAssignment] Project query skipped:', projErr.message);
+        }
 
-        res.json({
+        // 4. Recent sites logged in Attendance as fallback
+        let recentSites = [];
+        try {
+            const recentAttendance = await prisma.attendance.findMany({
+                where: {
+                    siteName: { not: null }
+                },
+                select: { siteName: true },
+                take: 30
+            });
+            recentSites = [...new Set(recentAttendance.map((r) => r.siteName).filter(Boolean))];
+        } catch (attErr) {
+            console.warn('[SiteAssignment] Attendance site query skipped:', attErr.message);
+        }
+
+        const payload = {
             assignedSites: myAssignments.length > 0 ? myAssignments : fallbackSites,
             myDirectCount: myAssignments.length,
-            activeProjects
-        });
+            activeProjects,
+            recentSites
+        };
+
+   
+        return res.json(payload);
     } catch (error) {
         console.error('Error fetching employee assigned sites:', error);
         res.status(500).json({ message: 'Failed to fetch assigned sites', error: error.message });
