@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
-import { getDailyWorkLogs, getAllEmployees, reset } from '../../features/admin/adminSlice';
-import { Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle, Plus } from 'lucide-react';
+import { getDailyWorkLogs, reset } from '../../features/admin/adminSlice';
+import { 
+    Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle, 
+    FileText, CheckCircle2, Clock, AlertCircle, Sparkles, Users, RefreshCw, 
+    Filter, ArrowUpRight, ShieldCheck, FileSpreadsheet
+} from 'lucide-react';
 import axios from 'axios';
 import WorkLogDetailModal from '../../components/admin/WorkLogDetailModal';
 import CreateProjectModal from '../../components/admin/CreateProjectModal';
@@ -9,14 +13,14 @@ import CreateProjectModal from '../../components/admin/CreateProjectModal';
 const WorkLogs = () => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
-    const { dailyWorkLogs, employees, isLoading, isError, message } = useSelector((state) => state.admin);
+    const { dailyWorkLogs, isLoading, isError, message } = useSelector((state) => state.admin);
 
     const [selectedDate, setSelectedDate] = useState(new Date().toLocaleDateString('en-CA'));
-    // Start and end are same for single date, keeping variable names for existing backend compat
     const startDate = selectedDate;
     const endDate = selectedDate;
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedDesignation, setSelectedDesignation] = useState('');
+    const [statusFilterTab, setStatusFilterTab] = useState('ALL'); // ALL, SUBMITTED, IN_PROGRESS, NOT_SUBMITTED
 
     const isAeUser = (userItem) => {
         if (!userItem) return false;
@@ -27,7 +31,7 @@ const WorkLogs = () => {
 
     // Filtering Logic
     const filteredLogs = dailyWorkLogs.filter((record) => {
-        // Exclude AE / AE Manager users from WorkLogs
+        // Exclude AE / AE Manager users from WorkLogs unless user is AE_MANAGER
         if (user?.role !== 'AE_MANAGER' && isAeUser(record.user)) {
             return false;
         }
@@ -37,17 +41,22 @@ const WorkLogs = () => {
             return false;
         }
 
+        // Match Status Tab Filter
+        const log = record.workLog;
+        if (statusFilterTab === 'SUBMITTED' && (!log || log.logStatus !== 'CLOSED')) return false;
+        if (statusFilterTab === 'IN_PROGRESS' && (!log || log.logStatus === 'CLOSED')) return false;
+        if (statusFilterTab === 'NOT_SUBMITTED' && log) return false;
+
         if (!searchTerm) return true;
         const lowerTerm = searchTerm.toLowerCase();
 
         // Match User
-        const userMatch = record.user.name.toLowerCase().includes(lowerTerm) ||
-            record.user.email.toLowerCase().includes(lowerTerm);
+        const userMatch = (record.user.name || '').toLowerCase().includes(lowerTerm) ||
+            (record.user.email || '').toLowerCase().includes(lowerTerm);
 
         // Match Log Content
         let logMatch = false;
-        if (record.workLog) {
-            const log = record.workLog;
+        if (log) {
             logMatch = (log.clientName?.toLowerCase().includes(lowerTerm)) ||
                 (log.projectName?.toLowerCase().includes(lowerTerm)) ||
                 (log.site?.toLowerCase().includes(lowerTerm)) ||
@@ -59,6 +68,13 @@ const WorkLogs = () => {
         return userMatch || logMatch;
     });
 
+    // KPI Metrics Calculation
+    const totalVisibleEmployees = dailyWorkLogs.filter(r => user?.role === 'AE_MANAGER' || !isAeUser(r.user)).length;
+    const submittedCount = dailyWorkLogs.filter(r => (user?.role === 'AE_MANAGER' || !isAeUser(r.user)) && r.workLog?.logStatus === 'CLOSED').length;
+    const inProgressCount = dailyWorkLogs.filter(r => (user?.role === 'AE_MANAGER' || !isAeUser(r.user)) && r.workLog && r.workLog.logStatus !== 'CLOSED').length;
+    const notSubmittedCount = totalVisibleEmployees - submittedCount - inProgressCount;
+    const completionRate = totalVisibleEmployees > 0 ? Math.round((submittedCount / totalVisibleEmployees) * 100) : 0;
+
     // Modal State
     const [selectedLog, setSelectedLog] = useState(null);
     const [isModalOpen, setIsModalOpen] = useState(false);
@@ -67,11 +83,7 @@ const WorkLogs = () => {
     const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
     const [projectInitialData, setProjectInitialData] = useState({});
 
-    useEffect(() => {
-        if (isError) {
-            console.error(message);
-        }
-
+    const fetchLogs = () => {
         if (user && user.token) {
             if (startDate === endDate) {
                 dispatch(getDailyWorkLogs({ date: startDate }));
@@ -79,7 +91,13 @@ const WorkLogs = () => {
                 dispatch(getDailyWorkLogs({ startDate, endDate }));
             }
         }
+    };
 
+    useEffect(() => {
+        if (isError) {
+            console.error(message);
+        }
+        fetchLogs();
         return () => {
             dispatch(reset());
         };
@@ -87,9 +105,9 @@ const WorkLogs = () => {
 
     const onExportDaily = async () => {
         try {
-            const user = JSON.parse(localStorage.getItem('user'));
+            const userObj = JSON.parse(localStorage.getItem('user'));
             const config = {
-                headers: { Authorization: `Bearer ${user.token}` },
+                headers: { Authorization: `Bearer ${userObj.token}` },
                 responseType: 'blob',
             };
 
@@ -126,14 +144,12 @@ const WorkLogs = () => {
 
     const onExportMonth = async () => {
         try {
-            const date = new Date(startDate);
-            const month = date.getMonth() + 1; // 1-12
-            const year = date.getFullYear();
+            const dateObj = new Date(startDate);
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
 
             const config = {
-                headers: {
-                    Authorization: `Bearer ${user.token}`,
-                },
+                headers: { Authorization: `Bearer ${user.token}` },
                 responseType: 'blob',
             };
 
@@ -188,9 +204,9 @@ const WorkLogs = () => {
 
     const onExportTaskSummary = async (userId, userName) => {
         try {
-            const date = new Date(startDate);
-            const month = date.getMonth() + 1; // 1-12
-            const year = date.getFullYear();
+            const dateObj = new Date(startDate);
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
 
             const config = {
                 headers: { Authorization: `Bearer ${user.token}` },
@@ -217,9 +233,9 @@ const WorkLogs = () => {
 
     const onExportAllTaskSummary = async () => {
         try {
-            const date = new Date(startDate);
-            const month = date.getMonth() + 1; // 1-12
-            const year = date.getFullYear();
+            const dateObj = new Date(startDate);
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
 
             const config = {
                 headers: { Authorization: `Bearer ${user.token}` },
@@ -246,9 +262,9 @@ const WorkLogs = () => {
 
     const onExportProjectWise = async (userId, userName) => {
         try {
-            const date = new Date(startDate);
-            const month = date.getMonth() + 1; // 1-12
-            const year = date.getFullYear();
+            const dateObj = new Date(startDate);
+            const month = dateObj.getMonth() + 1;
+            const year = dateObj.getFullYear();
 
             const config = {
                 headers: { Authorization: `Bearer ${user.token}` },
@@ -281,38 +297,46 @@ const WorkLogs = () => {
         };
     }, [startDate, endDate]);
 
-    const renderClientInfo = (log) => {
-        // AE
-        if (log.ae_siteLocation) return <div className="font-bold">{log.ae_siteLocation}</div>;
-        // FA / CRE / LA
-        return (
-            <>
-                <div className="font-bold">{log.clientName || log.projectName || '-'}</div>
-                {(log.site || log.la_projectLocation) && <div className="text-xs text-slate-500">{log.site || log.la_projectLocation}</div>}
-            </>
-        );
-    };
-
     const renderWorkDescription = (log) => {
         // CRE
         if (log.cre_totalCalls !== null || log.cre_showroomVisits !== null) {
             return (
-                <div className="text-xs">
-                    <div className="flex gap-1 mb-1">
-                        {log.cre_totalCalls > 0 && <span className="bg-blue-50 text-blue-700 px-1 rounded">📞 {log.cre_totalCalls}</span>}
-                        {log.cre_showroomVisits > 0 && <span className="bg-orange-50 text-orange-700 px-1 rounded">🏢 {log.cre_showroomVisits}</span>}
+                <div className="text-xs space-y-1">
+                    <div className="flex flex-wrap gap-1.5">
+                        {log.cre_totalCalls > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded-lg border border-blue-200/60 dark:border-blue-800 font-bold">
+                                📞 {log.cre_totalCalls} Calls
+                            </span>
+                        )}
+                        {log.cre_showroomVisits > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 px-2 py-0.5 rounded-lg border border-amber-200/60 dark:border-amber-800 font-bold">
+                                🏢 {log.cre_showroomVisits} Visits
+                            </span>
+                        )}
                     </div>
-                    <div className="truncate max-w-[200px]" title={log.cre_callBreakdown}>{log.cre_callBreakdown}</div>
+                    {log.cre_callBreakdown && (
+                        <p className="text-slate-600 dark:text-slate-400 truncate max-w-xs font-medium" title={log.cre_callBreakdown}>
+                            {log.cre_callBreakdown}
+                        </p>
+                    )}
                 </div>
             );
         }
         // FA
         if (log.fa_calls !== null || log.fa_showroomVisits !== null || log.fa_siteVisits !== null) {
             return (
-                <div className="text-xs">
-                    <div className="flex gap-1 mb-1">
-                        {log.fa_calls > 0 && <span className="bg-purple-50 text-purple-700 px-1 rounded">📞 {log.fa_calls}</span>}
-                        {log.fa_designPendingClients && <span className="text-slate-500" title={`Design Pending: ${log.fa_designPendingClients}`}>🎨 Pending</span>}
+                <div className="text-xs space-y-1">
+                    <div className="flex flex-wrap gap-1.5">
+                        {log.fa_calls > 0 && (
+                            <span className="inline-flex items-center gap-1 bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 px-2 py-0.5 rounded-lg border border-purple-200/60 dark:border-purple-800 font-bold">
+                                📞 {log.fa_calls} Calls
+                            </span>
+                        )}
+                        {log.fa_designPendingClients && (
+                            <span className="inline-flex items-center gap-1 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-lg font-bold" title={`Design Pending: ${log.fa_designPendingClients}`}>
+                                🎨 Pending
+                            </span>
+                        )}
                     </div>
                 </div>
             );
@@ -320,19 +344,27 @@ const WorkLogs = () => {
         // AE
         if (log.ae_visitType) {
             return (
-                <div className="text-xs">
-                    <div className="flex flex-wrap gap-1 mb-1">
+                <div className="text-xs space-y-1">
+                    <div className="flex flex-wrap gap-1">
                         {(Array.isArray(log.ae_visitType) ? log.ae_visitType : [log.ae_visitType]).map((t, i) => (
-                            <span key={i} className="bg-slate-100 px-1 rounded border">{t}</span>
+                            <span key={i} className="bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2 py-0.5 rounded-md border border-slate-200 dark:border-slate-700 font-bold">
+                                {t}
+                            </span>
                         ))}
                     </div>
-                    {log.ae_workStage && <div>Stage: {log.ae_workStage}</div>}
+                    {log.ae_workStage && (
+                        <div className="text-slate-500 dark:text-slate-400 font-medium">Stage: {log.ae_workStage}</div>
+                    )}
                 </div>
             );
         }
 
-        // Default LA
-        return <div className="truncate max-w-[200px]" title={log.process || log.tasks}>{log.process || log.tasks || log.remarks || '-'}</div>;
+        // Default LA / General
+        return (
+            <p className="text-slate-700 dark:text-slate-300 font-medium truncate max-w-xs" title={log.process || log.tasks || log.remarks}>
+                {log.process || log.tasks || log.remarks || '-'}
+            </p>
+        );
     };
 
     const handleViewDetails = (record) => {
@@ -341,174 +373,357 @@ const WorkLogs = () => {
     };
 
     return (
-        <div className="space-y-6 animate-fade-in">
-            <div className="flex flex-col md:flex-row justify-between md:items-center gap-4">
-                <div>
-                    <h2 className="text-3xl font-bold text-slate-800">Daily Work Reports</h2>
-                    <p className="text-slate-500">Monitor employee work submissions.</p>
-                </div>
-                <div className="flex flex-wrap items-center gap-4">
-                    <div className="relative">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 w-4 h-4" />
-                        <input
-                            type="text"
-                            placeholder="Search employee, project..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10 pr-4 py-2 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium w-48 lg:w-64"
-                        />
+        <div className="max-w-7xl mx-auto p-4 md:p-8 space-y-8 pb-32">
+            {/* Executive Header Banner */}
+            <header className="relative bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 p-6 md:p-8 rounded-3xl md:rounded-[2.5rem] text-white shadow-2xl border border-slate-800/80 overflow-hidden">
+                <div className="absolute -top-24 -right-24 w-96 h-96 bg-blue-600/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div className="space-y-2">
+                        <div className="flex items-center gap-3">
+                            <div className="p-3 bg-gradient-to-tr from-blue-600 to-indigo-500 rounded-2xl shadow-lg shadow-blue-500/25 ring-4 ring-white/10">
+                                <FileText className="text-white" size={24} />
+                            </div>
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <h1 className="text-2xl md:text-3xl lg:text-4xl font-black tracking-tight text-white">Daily Work Reports</h1>
+                                    <span className="px-2.5 py-0.5 rounded-full text-[9px] font-black tracking-widest uppercase bg-blue-500/20 text-blue-300 border border-blue-400/30 flex items-center gap-1">
+                                        <Sparkles size={10} className="animate-pulse" /> AUDIT MATRIX
+                                    </span>
+                                </div>
+                                <p className="text-slate-400 font-bold text-[10px] uppercase tracking-[0.25em] mt-0.5">
+                                    Employee Daily Task Submissions & Activity Logs
+                                </p>
+                            </div>
+                        </div>
                     </div>
-                    <select
-                        value={selectedDesignation}
-                        onChange={(e) => setSelectedDesignation(e.target.value)}
-                        className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 font-medium bg-white"
-                    >
-                        <option value="">All Categories</option>
-                        <option value="LA">Loading Architect (LA)</option>
-                        <option value="CRE">Customer Relationship Executive (CRE)</option>
-                        <option value="FA">Feasibility Architect (FA)</option>
-                        <option value="OFFICE-ADMINISTRATION">Office Administration</option>
-                        <option value="ACCOUNT">Account</option>
-                        <option value="LEAD-OPERATION">Lead Operation</option>
-                        <option value="LEAD-CONVERSION">Lead Conversion</option>
-                        <option value="DIGITAL-MARKETING">Digital Marketing</option>
-                        <option value="VENDOR-MANAGEMENT">Vendor Management</option>
-                        <option value="CUSTOMER-RELATIONSHIP">Customer Relationship</option>
-                        <option value="CLIENT-CARE">Client Care</option>
-                        <option value="ESCALATION">Escalation</option>
-                        <option value="CLIENT-FACILITATOR">Client Facilitator</option>
-                    </select>
-                    <button onClick={onExportDaily} className="bg-rose-600 hover:bg-rose-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
-                        <Download size={16} /> Today
-                    </button>
-                    <button onClick={onExportMonth} className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
-                        <Calendar size={16} /> Monthly
-                    </button>
-                    <button onClick={onExportAllTaskSummary} className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg font-bold shadow-md transition-all flex items-center gap-2 whitespace-nowrap text-xs transform hover:scale-105 active:scale-95">
-                        <BarChart3 size={16} /> Summary Report
-                    </button>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                        className="py-2 px-3 border border-slate-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-600 bg-white shadow-sm font-medium"
-                    />
+
+                    {/* Date Selector Pill & Refresh */}
+                    <div className="flex items-center gap-3">
+                        <div 
+                            onClick={(e) => {
+                                const dateInput = e.currentTarget.querySelector('input[type="date"]');
+                                if (dateInput && 'showPicker' in HTMLInputElement.prototype) {
+                                    try { dateInput.showPicker(); } catch (err) { dateInput.focus(); }
+                                }
+                            }}
+                            className="flex items-center gap-3 bg-slate-900/90 hover:bg-slate-900 border border-slate-700/80 hover:border-blue-500/60 p-2 px-4 rounded-2xl shadow-lg shadow-black/20 backdrop-blur-md cursor-pointer transition-all duration-200 group"
+                        >
+                            <div className="p-2 bg-blue-500/15 border border-blue-400/30 rounded-xl text-blue-400 group-hover:scale-105 group-hover:bg-blue-500/25 transition-all">
+                                <Calendar size={18} className="shrink-0" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">DATE</span>
+                                <input
+                                    type="date"
+                                    value={selectedDate}
+                                    onChange={(e) => setSelectedDate(e.target.value)}
+                                    style={{ colorScheme: 'dark' }}
+                                    className="bg-transparent text-xs font-black text-white outline-none cursor-pointer dark-picker tracking-wide"
+                                />
+                            </div>
+                        </div>
+
+                        <button
+                            onClick={fetchLogs}
+                            disabled={isLoading}
+                            className="p-3 bg-white/10 hover:bg-white/20 text-white rounded-2xl transition-all border border-white/10 active:scale-95 disabled:opacity-50"
+                            title="Refresh Work Logs"
+                        >
+                            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            {/* KPI Metric Summary Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
+                        <Users size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Total Active Staff</p>
+                        <h3 className="text-2xl font-black text-slate-800 dark:text-white mt-0.5">{totalVisibleEmployees}</h3>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                        <CheckCircle2 size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Logs Submitted</p>
+                        <h3 className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5">{submittedCount}</h3>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400">
+                        <Clock size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">In Progress</p>
+                        <h3 className="text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">{inProgressCount}</h3>
+                    </div>
+                </div>
+
+                <div className="bg-white dark:bg-slate-900 p-5 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-sm flex items-center gap-4">
+                    <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                        <ShieldCheck size={20} />
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Submission Rate</p>
+                        <h3 className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-0.5">{completionRate}%</h3>
+                    </div>
                 </div>
             </div>
 
+            {/* Filter Tabs, Search & Action Export Controls */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 p-6 shadow-xl shadow-slate-200/50 dark:shadow-none space-y-4">
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                    {/* Search & Category Filter */}
+                    <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                        <div className="relative group flex-1 sm:w-64">
+                            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-blue-500 transition-colors" size={16} />
+                            <input
+                                type="text"
+                                placeholder="Search employee, project, site..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full pl-10 pr-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-800 outline-none focus:ring-2 ring-blue-500/30 bg-slate-50 dark:bg-slate-950 text-xs font-bold text-slate-800 dark:text-slate-200 transition-all"
+                            />
+                        </div>
 
-            <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                        <select
+                            value={selectedDesignation}
+                            onChange={(e) => setSelectedDesignation(e.target.value)}
+                            className="py-2.5 px-3.5 border border-slate-200 dark:border-slate-800 rounded-2xl outline-none focus:ring-2 ring-blue-500/30 text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-slate-950 transition-all"
+                        >
+                            <option value="">All Categories</option>
+                            <option value="LA">Loading Architect (LA)</option>
+                            <option value="CRE">Customer Relationship Executive (CRE)</option>
+                            <option value="FA">Feasibility Architect (FA)</option>
+                            <option value="OFFICE-ADMINISTRATION">Office Administration</option>
+                            <option value="ACCOUNT">Account</option>
+                            <option value="LEAD-OPERATION">Lead Operation</option>
+                            <option value="LEAD-CONVERSION">Lead Conversion</option>
+                            <option value="DIGITAL-MARKETING">Digital Marketing</option>
+                            <option value="VENDOR-MANAGEMENT">Vendor Management</option>
+                            <option value="CUSTOMER-RELATIONSHIP">Customer Relationship</option>
+                            <option value="CLIENT-CARE">Client Care</option>
+                            <option value="ESCALATION">Escalation</option>
+                            <option value="CLIENT-FACILITATOR">Client Facilitator</option>
+                        </select>
+                    </div>
+
+                    {/* Export Action Buttons */}
+                    <div className="flex flex-wrap items-center gap-2">
+                        <button
+                            onClick={onExportDaily}
+                            className="px-3.5 py-2 bg-rose-600 hover:bg-rose-500 text-white rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs font-bold"
+                            title="Export Selected Date Worklogs to Excel"
+                        >
+                            <Download size={14} />
+                            <span>Export Today</span>
+                        </button>
+
+                        <button
+                            onClick={onExportMonth}
+                            className="px-3.5 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs font-bold"
+                            title="Export Selected Month Worklogs to Excel"
+                        >
+                            <Calendar size={14} />
+                            <span>Export Monthly</span>
+                        </button>
+
+                        <button
+                            onClick={onExportAllTaskSummary}
+                            className="px-3.5 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs font-bold"
+                            title="Export Monthly Task Summary Report for All Staff"
+                        >
+                            <BarChart3 size={14} />
+                            <span>Summary Report</span>
+                        </button>
+                    </div>
+                </div>
+
+                {/* Status Filter Tabs */}
+                <div className="flex flex-wrap items-center gap-1.5 bg-slate-50 dark:bg-slate-950 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800">
+                    {[
+                        { id: 'ALL', label: `All Staff (${totalVisibleEmployees})` },
+                        { id: 'SUBMITTED', label: `Submitted (${submittedCount})` },
+                        { id: 'IN_PROGRESS', label: `In Progress (${inProgressCount})` },
+                        { id: 'NOT_SUBMITTED', label: `Not Submitted (${notSubmittedCount})` }
+                    ].map((tab) => (
+                        <button
+                            key={tab.id}
+                            onClick={() => setStatusFilterTab(tab.id)}
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
+                                statusFilterTab === tab.id
+                                    ? 'bg-blue-600 text-white shadow-md'
+                                    : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
+                            }`}
+                        >
+                            {tab.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Work Logs Data Table */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/50 dark:shadow-none overflow-hidden">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-left border-collapse text-sm">
-                        <thead>
-                            <tr className="bg-slate-50 text-slate-500 text-xs uppercase tracking-wider">
-                                <th className="px-6 py-4 font-semibold">Employee</th>
-                                <th className="px-6 py-4 font-semibold">Project/Site</th>
-                                <th className="px-6 py-4 font-semibold">Activity Details</th>
-                                <th className="px-6 py-4 font-semibold text-center">Status</th>
-                                <th className="px-6 py-4 font-semibold text-center">Actions</th>
+                    <table className="w-full text-left border-collapse text-xs">
+                        <thead className="bg-slate-100/60 dark:bg-slate-950/60 border-b border-slate-200/60 dark:border-slate-800/60">
+                            <tr>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Employee</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Project / Site</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest">Activity Details</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Status</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Actions</th>
                             </tr>
                         </thead>
-                        <tbody className="divide-y divide-slate-100">
+                        <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                             {isLoading ? (
-                                <tr><td colSpan="5" className="text-center py-8">Loading...</td></tr>
+                                <tr>
+                                    <td colSpan="5" className="text-center py-16 text-slate-400 font-bold uppercase tracking-widest">
+                                        <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-blue-500 opacity-60" />
+                                        Loading Daily Work Reports...
+                                    </td>
+                                </tr>
                             ) : dailyWorkLogs.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center py-8 text-slate-400 italic">No employees found.</td></tr>
+                                <tr>
+                                    <td colSpan="5" className="text-center py-16 text-slate-400 font-bold text-xs italic">
+                                        No employee work log records found for this date.
+                                    </td>
+                                </tr>
                             ) : filteredLogs.length === 0 ? (
-                                <tr><td colSpan="5" className="text-center py-8 text-slate-400 italic">No logs found matching your search.</td></tr>
+                                <tr>
+                                    <td colSpan="5" className="text-center py-16 text-slate-400 font-bold text-xs italic">
+                                        No work logs match your current search and filters.
+                                    </td>
+                                </tr>
                             ) : (
                                 filteredLogs.map((record) => {
                                     const log = record.workLog;
-                                    // Status Logic:
-                                    // No Log -> Not Submitted
-                                    // LogStatus OPEN -> In Progress (Opening Submitted)
-                                    // LogStatus CLOSED -> Submitted (Opening & Closing Submitted)
-
-                                    let statusLabel = 'Not Submitted';
-                                    let statusColor = 'bg-slate-100 text-slate-500';
-
-                                    if (log) {
-                                        if (log.logStatus === 'CLOSED') {
-                                            statusLabel = 'Submitted';
-                                            statusColor = 'bg-green-100 text-green-700';
-                                        } else {
-                                            statusLabel = 'In Progress';
-                                            statusColor = 'bg-yellow-100 text-yellow-800';
-                                        }
-                                    }
 
                                     return (
-                                        <tr key={record.user.id} className="hover:bg-slate-50 transition-colors">
-                                            <td className="px-6 py-4 font-medium text-slate-800">
-                                                <div className="flex flex-col">
-                                                    <span className="text-base">{record.user.name}</span>
-                                                    <span className="text-xs text-slate-400 font-normal">{record.user.email}</span>
-                                                    <span className="text-xs text-slate-400 font-normal uppercase mt-0.5">{record.user.designation}</span>
+                                        <tr key={record.user.id} className="hover:bg-blue-50/30 dark:hover:bg-slate-800/30 transition-colors">
+                                            {/* Employee Column */}
+                                            <td className="px-6 py-4 align-top">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 flex items-center justify-center font-black text-white text-xs shadow-md shrink-0">
+                                                        {(record.user.name || "E").charAt(0).toUpperCase()}
+                                                    </div>
+                                                    <div className="flex flex-col">
+                                                        <span className="font-black text-slate-800 dark:text-slate-100 text-xs">{record.user.name}</span>
+                                                        <span className="text-[10px] text-slate-400 font-medium">{record.user.email}</span>
+                                                        <span className="text-[9px] font-black text-blue-600 dark:text-blue-400 uppercase tracking-wider mt-0.5">
+                                                            {record.user.designation || 'STAFF'}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-700">{log?.projectName || log?.project?.name || '-'}</span>
-                                                    <span className="text-[10px] text-slate-400 italic leading-tight">{log?.site || '-'}</span>
+
+                                            {/* Project / Site Column */}
+                                            <td className="px-6 py-4 align-top">
+                                                <div className="flex flex-col space-y-0.5">
+                                                    <span className="font-black text-slate-800 dark:text-slate-200 text-xs">
+                                                        {log?.projectName || log?.project?.name || log?.clientName || '-'}
+                                                    </span>
+                                                    <span className="text-[10px] text-slate-400 italic">
+                                                        {log?.site || log?.la_projectLocation || log?.ae_siteLocation || '-'}
+                                                    </span>
                                                 </div>
                                             </td>
-                                            <td className="px-6 py-4">
-                                                {log ? renderWorkDescription(log) : <span className="text-slate-300 italic text-xs">Waiting for submission...</span>}
+
+                                            {/* Activity Details Column */}
+                                            <td className="px-6 py-4 align-top">
+                                                {log ? renderWorkDescription(log) : (
+                                                    <span className="text-slate-400 dark:text-slate-600 italic text-[11px] font-bold">
+                                                        Waiting for submission...
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
-                                                <span className={`inline-flex px-3 py-1 text-xs font-bold rounded-full ${statusColor}`}>
-                                                    {statusLabel}
-                                                </span>
+
+                                            {/* Status Badge Column */}
+                                            <td className="px-6 py-4 align-top text-center">
+                                                {log?.logStatus === 'CLOSED' ? (
+                                                    <span 
+                                                        className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
+                                                        style={{ backgroundColor: '#059669' }}
+                                                    >
+                                                        Submitted
+                                                    </span>
+                                                ) : log ? (
+                                                    <span 
+                                                        className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
+                                                        style={{ backgroundColor: '#d97706' }}
+                                                    >
+                                                        In Progress
+                                                    </span>
+                                                ) : (
+                                                    <span className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700">
+                                                        Not Submitted
+                                                    </span>
+                                                )}
                                             </td>
-                                            <td className="px-6 py-4 text-center">
+
+                                            {/* Action Buttons Column */}
+                                            <td className="px-6 py-4 align-top text-center">
                                                 {log ? (
-                                                    <div className="flex items-center justify-center gap-2">
+                                                    <div className="flex items-center justify-center gap-1.5 flex-wrap">
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 handleViewDetails(record);
                                                             }}
-                                                            className="inline-flex items-center gap-2 px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all font-bold text-xs group"
-                                                            title="View & Print Details"
+                                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-600 text-blue-600 dark:text-blue-400 hover:text-white rounded-xl transition-all font-black text-xs border border-blue-200/60 dark:border-blue-800/80 group shadow-sm"
+                                                            title="View Detailed Report"
                                                         >
-                                                            <Eye size={16} className="group-hover:scale-110 transition-transform" />
+                                                            <Eye size={14} className="group-hover:scale-110 transition-transform" />
                                                             <span>View Report</span>
                                                         </button>
+
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 onExportIndividual(record.user.id, record.user.name);
                                                             }}
-                                                            className="p-1.5 text-rose-600 hover:bg-rose-50 rounded-lg transition-all"
+                                                            className="p-2 bg-slate-50 dark:bg-slate-950 hover:bg-rose-600 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl transition-all border border-slate-200/60 dark:border-slate-800 shadow-sm"
                                                             title="Download Monthly Report"
                                                         >
-                                                            <Download size={16} />
+                                                            <Download size={14} />
                                                         </button>
+
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
                                                                 e.stopPropagation();
                                                                 onExportTaskSummary(record.user.id, record.user.name);
                                                             }}
-                                                            className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all"
+                                                            className="p-2 bg-slate-50 dark:bg-slate-950 hover:bg-indigo-600 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl transition-all border border-slate-200/60 dark:border-slate-800 shadow-sm"
                                                             title="Download Task Summary (Full Month)"
                                                         >
-                                                            <BarChart3 size={16} />
+                                                            <BarChart3 size={14} />
                                                         </button>
-                                                        {['LA', 'FA', 'LOADING ARCHITECT', 'FEASIBILITY ARCHITECT'].some(role => record.user.designation?.toUpperCase().includes(role)) && (
-                                                            <div className="flex gap-1">
+
+                                                        {['LA', 'FA', 'LOADING ARCHITECT', 'FEASIBILITY ARCHITECT'].some(role => (record.user.designation || '').toUpperCase().includes(role)) && (
+                                                            <>
                                                                 <button
                                                                     type="button"
                                                                     onClick={(e) => {
                                                                         e.stopPropagation();
                                                                         onExportProjectWise(record.user.id, record.user.name);
                                                                     }}
-                                                                    className="p-1.5 text-emerald-600 hover:bg-emerald-50 rounded-lg transition-all"
+                                                                    className="p-2 bg-slate-50 dark:bg-slate-950 hover:bg-emerald-600 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl transition-all border border-slate-200/60 dark:border-slate-800 shadow-sm"
                                                                     title="Download Project Wise Reports (LA/FA Only)"
                                                                 >
-                                                                    <Briefcase size={16} />
+                                                                    <Briefcase size={14} />
                                                                 </button>
                                                                 <button
                                                                     type="button"
@@ -521,16 +736,16 @@ const WorkLogs = () => {
                                                                         });
                                                                         setIsProjectModalOpen(true);
                                                                     }}
-                                                                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-lg transition-all"
+                                                                    className="p-2 bg-slate-50 dark:bg-slate-950 hover:bg-blue-600 text-slate-600 dark:text-slate-400 hover:text-white rounded-xl transition-all border border-slate-200/60 dark:border-slate-800 shadow-sm"
                                                                     title="Create Project"
                                                                 >
-                                                                    <PlusCircle size={16} />
+                                                                    <PlusCircle size={14} />
                                                                 </button>
-                                                            </div>
+                                                            </>
                                                         )}
                                                     </div>
                                                 ) : (
-                                                    <span className="text-slate-300">-</span>
+                                                    <span className="text-slate-400 dark:text-slate-600 font-bold">-</span>
                                                 )}
                                             </td>
                                         </tr>
@@ -541,7 +756,6 @@ const WorkLogs = () => {
                     </table>
                 </div>
             </div>
-
 
             {/* Modal */}
             <WorkLogDetailModal
@@ -561,3 +775,4 @@ const WorkLogs = () => {
 };
 
 export default WorkLogs;
+
