@@ -134,15 +134,28 @@ const AttendanceVerification = () => {
 
                     {/* Date Selector Pill & Refresh */}
                     <div className="flex items-center gap-3">
-                        <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-700/80 p-2.5 px-4 rounded-2xl shadow-inner">
-                            <Calendar size={16} className="text-blue-400 shrink-0" />
-                            <span className="text-[10px] font-black text-slate-400 uppercase">DATE</span>
-                            <input
-                                type="date"
-                                value={date}
-                                onChange={(e) => setDate(e.target.value)}
-                                className="bg-transparent text-xs font-black text-white outline-none cursor-pointer"
-                            />
+                        <div 
+                            onClick={(e) => {
+                                const dateInput = e.currentTarget.querySelector('input[type="date"]');
+                                if (dateInput && 'showPicker' in HTMLInputElement.prototype) {
+                                    try { dateInput.showPicker(); } catch (err) { dateInput.focus(); }
+                                }
+                            }}
+                            className="flex items-center gap-3 bg-slate-900/90 hover:bg-slate-900 border border-slate-700/80 hover:border-blue-500/60 p-2 px-4 rounded-2xl shadow-lg shadow-black/20 backdrop-blur-md cursor-pointer transition-all duration-200 group"
+                        >
+                            <div className="p-2 bg-blue-500/15 border border-blue-400/30 rounded-xl text-blue-400 group-hover:scale-105 group-hover:bg-blue-500/25 transition-all">
+                                <Calendar size={18} className="shrink-0" />
+                            </div>
+                            <div className="flex flex-col">
+                                <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-0.5">DATE</span>
+                                <input
+                                    type="date"
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    style={{ colorScheme: 'dark' }}
+                                    className="bg-transparent text-xs font-black text-white outline-none cursor-pointer dark-picker tracking-wide"
+                                />
+                            </div>
                         </div>
 
                         <button

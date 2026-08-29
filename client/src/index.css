@@ -143,3 +143,33 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
 }
+
+/* Date Input & Native Calendar Picker Indicator Styling */
+input[type="date"] {
+    color-scheme: light dark;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    border-radius: 6px;
+    padding: 2px;
+    transition: all 0.2s ease;
+    opacity: 0.85;
+}
+
+input[type="date"]::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    transform: scale(1.05);
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator,
+input[type="date"].dark-picker::-webkit-calendar-picker-indicator {
+    filter: invert(0.85) sepia(100%) saturate(600%) hue-rotate(185deg);
+    opacity: 0.9;
+}
+
+.dark input[type="date"]::-webkit-calendar-picker-indicator:hover,
+input[type="date"].dark-picker::-webkit-calendar-picker-indicator:hover {
+    filter: invert(0.7) sepia(100%) saturate(1000%) hue-rotate(190deg);
+    opacity: 1;
+}
