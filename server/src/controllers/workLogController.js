@@ -461,8 +461,25 @@ const syncCallLogs = async (req, res) => {
         
         const user = await prisma.user.findUnique({ 
             where: { id: parseInt(userId) }, 
-            select: { name: true, role: true } 
+            select: { name: true, role: true, designation: true, callAnalyticsViewEnabled: true } 
         });
+
+        const isAE = user?.role === 'AE' ||
+                     (user?.designation && (
+                         user.designation.toUpperCase().includes('AE') || 
+                         user.designation.toUpperCase().includes('ARCHITECT')
+                     ));
+
+        if (isAE || !user?.callAnalyticsViewEnabled) {
+            console.log(`[Call Sync Blocked] Ignoring call log sync for AE / disabled user ${userId} (${user?.name || 'No User'})`);
+            return res.status(200).json({ 
+                message: 'Call sync is disabled for AE / this employee role',
+                totalCalls: 0,
+                acceptedLogs: 0,
+                rawReceived: rawLogs.length 
+            });
+        }
+
         console.log(`[Sync] User ${userId} (${user?.name || "No User"}) syncing ${isHeartbeat ? '0 (Heartbeat)' : newLogs.length} logs. SIM Filter: ${simFilter}`);
 
         if (isHeartbeat) {

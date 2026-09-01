@@ -58,10 +58,13 @@ const enrollDevice = async (req, res) => {
     const activation = await prisma.callSyncActivationCode.findFirst({ where: { codeHash: hash(code), usedAt: null, expiresAt: { gt: new Date() } } });
     if (!activation) return res.status(400).json({ message: 'Activation code is invalid or expired' });
     const secret = makeSecret();
+    const userToEnroll = await prisma.user.findUnique({ where: { id: activation.userId }, select: { role: true, designation: true } });
+    const isAE = userToEnroll?.role === 'AE' || (userToEnroll?.designation && (userToEnroll.designation.toUpperCase().includes('AE') || userToEnroll.designation.toUpperCase().includes('ARCHITECT')));
+
     const device = await prisma.$transaction(async (tx) => {
       await tx.callSyncActivationCode.update({ where: { id: activation.id }, data: { usedAt: new Date() } });
       await tx.callSyncDevice.updateMany({ where: { userId: activation.userId, active: true }, data: { active: false } });
-      await tx.user.update({ where: { id: activation.userId }, data: { callAnalyticsViewEnabled: true } });
+      await tx.user.update({ where: { id: activation.userId }, data: { callAnalyticsViewEnabled: !isAE } });
       return tx.callSyncDevice.create({ data: { userId: activation.userId, deviceName: String(req.body.deviceName || '').slice(0, 120), officialSim, secretHash: hash(secret) } });
     });
     res.status(201).json({ deviceId: device.id, deviceToken: secret, officialSim });
@@ -198,6 +201,11 @@ const getPendingSyncRequest = async (req, res) => {
   try {
     const device = req.callSyncDevice;
     if (!device) return res.status(401).json({ message: 'Device is not active' });
+
+    const isAE = device.user?.role === 'AE' || (device.user?.designation && (device.user.designation.toUpperCase().includes('AE') || device.user.designation.toUpperCase().includes('ARCHITECT')));
+    if (isAE || !device.user?.callAnalyticsViewEnabled) {
+      return res.json({ pending: false, requestedAt: null, officialSim: null });
+    }
 
     const latestRequest = await getLatestRemoteSyncRequest(device.id, device.userId);
     const requestedAt = latestRequest?.request?.createdAt || null;
