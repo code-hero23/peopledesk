@@ -109,7 +109,11 @@ export default function CallSyncDeviceSetup() {
     const targetSim = syncBothSims ? 'all' : sim;
     try {
       const plugin = getCallLogPlugin();
-      await plugin.getCallLogs();
+      try {
+        await plugin.getCallLogs();
+      } catch (e) {
+        console.warn('Call log permission not granted during initial check, proceeding with device enrollment:', e);
+      }
       const response = await fetch(`${API_BASE}/call-sync/enroll`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
