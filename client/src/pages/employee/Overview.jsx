@@ -308,14 +308,6 @@ const Overview = () => {
                 setAssignedSites(sites);
                 setActiveProjects(projs);
                 setRecentSites(recents);
-
-                if (sites.length > 0) {
-                    setSiteNameInput((prev) => prev || sites[0].siteName);
-                } else if (projs.length > 0) {
-                    setSiteNameInput((prev) => prev || projs[0].name);
-                } else if (recents.length > 0) {
-                    setSiteNameInput((prev) => prev || recents[0]);
-                }
             } catch (err) {
                 console.error('Could not fetch assigned sites for dropdown:', err);
             }
@@ -956,6 +948,7 @@ const Overview = () => {
                 // AE roles continue through photo verification.
                 if (isAeAttendanceUser(user)) {
                     setIsCheckingOut(false);
+                    setSiteNameInput('');
                     setShowCheckInModal(true);
                     return;
                 }
@@ -1612,7 +1605,7 @@ const Overview = () => {
             <AnimatePresence>
                 {showCheckInModal && (
                     <div className="fixed inset-0 z-[200] flex sm:items-center sm:justify-center">
-                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/95 backdrop-blur-2xl" onClick={() => !loading && setShowCheckInModal(false)} />
+                        <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="absolute inset-0 bg-slate-950/95 backdrop-blur-2xl" onClick={() => { if (!loading) { setShowCheckInModal(false); setSiteNameInput(''); setPhoto(null); setCheckoutMismatchReason(''); setIsCustomSite(false); } }} />
                         
                         <motion.div 
                             initial={{ scale: 0.9, opacity: 0, y: 100 }} 
@@ -1643,51 +1636,22 @@ const Overview = () => {
                                 </div>
                             )}
 
-                            {/* Site Name Selection & Manual Input Field */}
-                            <div className="px-6 sm:px-8 py-3.5 bg-indigo-50/70 border-b border-indigo-100/60 shrink-0 space-y-2.5">
+                            {/* Site Name Input Field */}
+                            <div className="px-6 sm:px-8 py-3.5 bg-indigo-50/70 border-b border-indigo-100/60 shrink-0 space-y-2">
                                 <label className="block text-[10px] font-black uppercase tracking-widest text-indigo-900 flex items-center justify-between">
                                     <span className="flex items-center gap-1.5">
                                         <Building2 size={13} className="text-indigo-600" /> Site Name / Location <span className="text-rose-500">*</span>
                                     </span>
-                                    <span className="text-[9px] font-bold text-indigo-600/80">
-                                        Select from dropdown or type below
-                                    </span>
                                 </label>
 
-                                {/* Dropdown Selector - ALWAYS VISIBLE */}
-                                <div className="relative">
-                                    <select
-                                        value={siteNameInput}
-                                        onChange={(e) => {
-                                            if (e.target.value && e.target.value !== '__SELECT__') {
-                                                setSiteNameInput(e.target.value);
-                                            }
-                                        }}
-                                        className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200/90 bg-white text-xs font-bold text-slate-800 outline-none focus:ring-2 ring-indigo-500/30 transition-all appearance-none cursor-pointer pr-9 shadow-sm"
-                                    >
-                                        <option value="__SELECT__">-- 📋 Select Assigned Site --</option>
-                                        {assignedSites.map((site) => (
-                                            <option key={site.id || site.siteName} value={site.siteName}>
-                                                {site.siteName}
-                                            </option>
-                                        ))}
-                                        {assignedSites.length === 0 && (
-                                            <option value="" disabled>No assigned sites found (type below)</option>
-                                        )}
-                                    </select>
-                                    <div className="absolute right-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-indigo-500">
-                                        <ChevronDown size={14} />
-                                    </div>
-                                </div>
-
-                                {/* Manual Typing Input Field with Datalist */}
+                                {/* Manual Typing Input Field with Datalist Auto-Complete */}
                                 <div className="relative">
                                     <input
                                         type="text"
                                         list="assigned-site-options"
                                         value={siteNameInput}
                                         onChange={(e) => setSiteNameInput(e.target.value)}
-                                        placeholder="Or type site name manually..."
+                                        placeholder="e.g. Prestige Estates - Villa 402 / Site A"
                                         className="w-full px-3.5 py-2.5 rounded-xl border border-indigo-200/90 bg-white text-xs font-bold text-slate-900 outline-none focus:ring-2 ring-indigo-500/30 transition-all placeholder:text-slate-400 placeholder:font-medium shadow-sm"
                                     />
                                     <datalist id="assigned-site-options">
