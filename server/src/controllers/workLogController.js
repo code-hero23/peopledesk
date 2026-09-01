@@ -427,9 +427,10 @@ const syncCallLogs = async (req, res) => {
         rawLogs = Array.isArray(rawLogs) ? rawLogs : [];
         const rawReceived = rawLogs.length;
         const normalizeText = (value) => String(value || "").trim().toLowerCase();
-        const canonicalSimSlot = simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL'
-            ? String(simFilter).trim()
-            : null;
+        const simFilterUpper = String(simFilter || '').trim().toUpperCase();
+        const isAllSims = !simFilter || simFilterUpper === '0' || simFilterUpper === 'ALL' || simFilterUpper === 'BOTH';
+
+        const canonicalSimSlot = !isAllSims ? String(simFilter).trim() : null;
         const matchesSelectedSim = (log, target) => {
             const normalizedTarget = normalizeText(target);
             const logSlot = normalizeText(log.simSlot);
@@ -450,7 +451,7 @@ const syncCallLogs = async (req, res) => {
         };
 
         let newLogs = rawLogs;
-        if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
+        if (!isAllSims) {
             newLogs = rawLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
