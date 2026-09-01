@@ -383,7 +383,7 @@ const AdminCallReports = () => {
         });
         
         acc[key].totalCalls += filteredCalls.length;
-        acc[key].logs.push(...calls.map(c => ({ ...c, dateFormatted: log.date })));
+        acc[key].logs.push(...filteredCalls.map(c => ({ ...c, dateFormatted: log.date })));
 
         filteredCalls.forEach(c => {
             if (c.type === 'INCOMING') acc[key].incoming++;
@@ -994,7 +994,7 @@ const AdminCallReports = () => {
                                             ))
                                         ] : null
                                     ))}
-                                    {creMetrics.length === 0 && faMetrics.length === 0 && laMetrics.length === 0 && (
+                                    {filteredMetrics.length === 0 && (
                                         <tr>
                                             <td colSpan="5" className="px-6 py-12 text-center text-xs font-bold text-slate-400">
                                                 No matching employees found for current search criteria.

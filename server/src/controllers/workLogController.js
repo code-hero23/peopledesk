@@ -674,14 +674,19 @@ const getMyCallLogs = async (req, res) => {
 const getAllCallStats = async (req, res) => {
     try {
         const { startDate, endDate, simFilter } = req.query;
-        // Interpret date strings as local midnight instead of UTC midnight
+        // Interpret date strings with safe boundaries to prevent timezone clipping (IST vs UTC)
         let start = startDate ? new Date(startDate + 'T00:00:00') : new Date();
         start.setHours(0, 0, 0, 0);
+        let startUtc = startDate ? new Date(startDate + 'T00:00:00Z') : new Date();
+        let queryStart = start < startUtc ? start : startUtc;
+
         let end = endDate ? new Date(endDate + 'T23:59:59.999') : new Date();
+        let endUtc = endDate ? new Date(endDate + 'T23:59:59.999Z') : new Date();
+        let queryEnd = end > endUtc ? end : endUtc;
 
         const callLogs = await prisma.callLog.findMany({
             where: {
-                date: { gte: start, lte: end },
+                date: { gte: queryStart, lte: queryEnd },
                 user: {
                     NOT: [
                         { designation: { contains: 'AE', mode: 'insensitive' } },
