@@ -104,6 +104,7 @@ const AdminCallReports = () => {
 
     useEffect(() => {
         dispatch(getCallStats({ ...dateRange }));
+        fetchBulkStatusOnce();
     }, [dispatch, dateRange]);
 
     useEffect(() => {
