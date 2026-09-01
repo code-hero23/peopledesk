@@ -45,6 +45,11 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
             .build();
         WorkManager.getInstance(context).enqueue(request);
 
+        OneTimeWorkRequest locRequest = new OneTimeWorkRequest.Builder(LocationSyncWorker.class)
+            .setConstraints(new Constraints.Builder().setRequiredNetworkType(NetworkType.CONNECTED).build())
+            .build();
+        WorkManager.getInstance(context).enqueue(locRequest);
+
         if (ACTION_START.equals(action) || ACTION_TICK.equals(action)) {
             scheduleNextWindowTick(context);
         }

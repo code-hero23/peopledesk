@@ -58,6 +58,7 @@ model User {
   laVisitorRecords             VisitorRecord[]        @relation("VisitorRecord_LA")
   bhVisitorRecords             VisitorRecord[]        @relation("VisitorRecord_BH")
   siteAssignments              SiteAssignment[]       @relation("AeSiteAssignments")
+  aeLocationLogs               AELocationLog[]
   createdSiteAssignments       SiteAssignment[]       @relation("AssignedBySiteAssignments")
 }
 
@@ -789,6 +790,21 @@ model SiteAssignment {
 
   @@index([aeId, scheduledDate])
   @@index([status])
+}
+
+model AELocationLog {
+  id           Int      @id @default(autoincrement())
+  userId       Int
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  latitude     Float
+  longitude    Float
+  accuracy     Float?
+  batteryLevel Int?
+  speed        Float?
+  address      String?
+  createdAt    DateTime @default(now())
+
+  @@index([userId, createdAt])
 }
 
 

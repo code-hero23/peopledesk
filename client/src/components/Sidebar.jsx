@@ -12,6 +12,7 @@ import {
     CalendarClock,
     Camera,
     MapPin,
+    Navigation,
     BarChart3,
     Megaphone,
     LogOut,
@@ -238,6 +239,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
+                            {['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(user?.role) && (
+                                <NavItem to="/admin/live-tracker" icon={Navigation} label="AE Live Tracker" badge="Live" indent />
+                            )}
                             {(user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (
                                 <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites" indent />
                             )}

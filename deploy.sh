@@ -24,19 +24,32 @@ npm install
 npm run build
 
 echo "📱 Checking Mobile APK Build (Optional)..."
-if [ -d "android" ] && command -v java &> /dev/null; then
+if [ -d "android" ] && command -v java &> /dev/null && [ -n "$ANDROID_HOME" -o -d "$HOME/Android/Sdk" -o -f "android/local.properties" ]; then
     echo "Syncing Capacitor Android..."
     npx cap sync android || true
     cd android
     chmod +x ./gradlew || true
+    
+    echo "Building Release APK..."
+    ./gradlew assembleRelease || true
     ./gradlew assembleDebug || true
+
     mkdir -p ../../server/uploads/apks/
-    cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk || true
+    
+    if [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
+        cp app/build/outputs/apk/release/app-release-unsigned.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
+        echo "📍 Release APK Location: server/uploads/apks/peopledesk-release-latest.apk (~24 MB)"
+    fi
+
+    if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
+        cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk || true
+        echo "📍 Debug APK Location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
+    fi
+
     cd ../..
-    echo "📍 APK Location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
 else
     cd ..
-    echo "ℹ️ Android SDK/Java not found on VPS - Web & Server deployment complete!"
+    echo "ℹ️ Android SDK/Java environment not configured on VPS - Web & Server deployment complete!"
 fi
 
-echo "✅ Deployment Complete!"
+echo "✅ Deployment Complete!"
