@@ -311,7 +311,6 @@ const AdminCallReports = () => {
     if (syncStatusData?.devices && Array.isArray(syncStatusData.devices)) {
         syncStatusData.devices.forEach(d => {
             if (!d.user) return;
-            if (d.user.callAnalyticsViewEnabled === false) return;
             const desg = (d.user.designation || '').toUpperCase();
             if (desg.includes('AE') || desg.includes('ARCHITECT')) return;
 
@@ -336,7 +335,6 @@ const AdminCallReports = () => {
     }
 
     const employeeMetrics = callStats.reduce((acc, log) => {
-        if (log.user?.callAnalyticsViewEnabled === false || log.callAnalyticsViewEnabled === false) return acc;
         const desg = (typeof log.user === 'object' ? log.user?.designation : (log.designation || '')).toUpperCase();
         if (desg.includes('AE') || desg.includes('ARCHITECT')) return acc;
 
