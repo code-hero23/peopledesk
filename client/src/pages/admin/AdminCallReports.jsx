@@ -1043,7 +1043,14 @@ const AdminCallReports = () => {
                     return c.simSlot ? `SIM ${c.simSlot}` : 'N/A';
                 };
 
-                const uniqueLabels = [...new Set(selectedEmployee.logs.map(getCallSimLabel))].filter(l => l !== 'N/A');
+                const availableSims = new Set();
+                selectedEmployee.logs.forEach(c => {
+                    const label = getCallSimLabel(c);
+                    if (label && label !== 'N/A') availableSims.add(label);
+                    if (c.simSlot === '1' || c.simSlot === 1) availableSims.add('SIM 1');
+                    if (c.simSlot === '2' || c.simSlot === 2) availableSims.add('SIM 2');
+                });
+                const uniqueLabels = [...availableSims];
 
                 const normExcluded = (excludedNumbers || []).map(normalize);
                 const employeeFilteredLogs = selectedEmployee.logs
@@ -1053,7 +1060,17 @@ const AdminCallReports = () => {
                     })
                     .filter(c => {
                         if (simFilter === 'ALL') return true;
-                        return getCallSimLabel(c).toLowerCase() === simFilter.toLowerCase();
+                        const filter = simFilter.toLowerCase();
+                        const callLabel = getCallSimLabel(c).toLowerCase();
+                        const callSlot = String(c.simSlot || '').toLowerCase();
+
+                        if (filter === 'sim 1') {
+                            return callSlot === '1' || callLabel.includes('sim 1') || callLabel === 'vi india';
+                        }
+                        if (filter === 'sim 2') {
+                            return callSlot === '2' || callLabel.includes('sim 2');
+                        }
+                        return callLabel === filter || callSlot === filter;
                     });
 
                 const numberCallCounts = employeeFilteredLogs.reduce((acc, c) => {
