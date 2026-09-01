@@ -307,8 +307,32 @@ const AdminCallReports = () => {
         );
     };
 
+    const initialMetrics = {};
+    if (bulkStatus?.devices && Array.isArray(bulkStatus.devices)) {
+        bulkStatus.devices.forEach(d => {
+            if (!d.user) return;
+            const empId = `EMP-${d.user.id}`;
+            const key = empId;
+            initialMetrics[key] = {
+                name: d.user.name || 'Unknown Personnel',
+                empId: empId,
+                designation: d.user.designation || 'OTHER',
+                role: d.user.role || 'EMPLOYEE',
+                id: d.user.id,
+                userId: d.user.id,
+                totalCalls: 0,
+                incoming: 0,
+                outgoing: 0,
+                missed: 0,
+                duration: 0,
+                lastSync: d.lastSuccessAt || d.lastAttemptAt || null,
+                logs: []
+            };
+        });
+    }
+
     const employeeMetrics = callStats.reduce((acc, log) => {
-        const key = log.empId || (typeof log.user === 'object' ? log.user?.id : log.userId) || 'unknown';
+        const key = log.empId || (typeof log.user === 'object' ? `EMP-${log.user?.id}` : `EMP-${log.userId}`) || 'unknown';
         const rawName = typeof log.user === 'object' ? log.user?.name : (log.user || log.userName);
         const userName = typeof rawName === 'string' ? rawName : "Unknown Personnel";
         const rawDesg = typeof log.user === 'object' ? log.user?.designation : (log.designation || 'OTHER');
@@ -369,7 +393,7 @@ const AdminCallReports = () => {
         });
 
         return acc;
-    }, {});
+    }, initialMetrics);
 
     const metricsArray = Object.values(employeeMetrics).sort((a, b) => b.totalCalls - a.totalCalls);
 

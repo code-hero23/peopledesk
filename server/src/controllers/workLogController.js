@@ -759,7 +759,7 @@ const getAllCallStats = async (req, res) => {
                 calls: filteredCalls,
                 totalCalls: filteredCalls.length
             };
-        }).filter(log => log.calls.length > 0); // Only return if there are matching calls
+        });
 
         // 3. Fetch Excluded Numbers
         const excludedSetting = await prisma.globalSetting.findUnique({
