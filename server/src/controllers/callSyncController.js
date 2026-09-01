@@ -61,6 +61,7 @@ const enrollDevice = async (req, res) => {
     const device = await prisma.$transaction(async (tx) => {
       await tx.callSyncActivationCode.update({ where: { id: activation.id }, data: { usedAt: new Date() } });
       await tx.callSyncDevice.updateMany({ where: { userId: activation.userId, active: true }, data: { active: false } });
+      await tx.user.update({ where: { id: activation.userId }, data: { callAnalyticsViewEnabled: true } });
       return tx.callSyncDevice.create({ data: { userId: activation.userId, deviceName: String(req.body.deviceName || '').slice(0, 120), officialSim, secretHash: hash(secret) } });
     });
     res.status(201).json({ deviceId: device.id, deviceToken: secret, officialSim });
@@ -153,8 +154,7 @@ const requestRemoteSyncForAll = async (req, res) => {
       where: {
         active: true,
         user: {
-          status: 'ACTIVE',
-          callAnalyticsViewEnabled: true
+          status: 'ACTIVE'
         }
       },
       select: {
@@ -258,8 +258,7 @@ const getBulkSyncStatus = async (req, res) => {
       where: {
         active: true,
         user: {
-          status: 'ACTIVE',
-          callAnalyticsViewEnabled: true
+          status: 'ACTIVE'
         }
       },
       select: {
