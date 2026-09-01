@@ -308,8 +308,8 @@ const AdminCallReports = () => {
     };
 
     const initialMetrics = {};
-    if (bulkStatus?.devices && Array.isArray(bulkStatus.devices)) {
-        bulkStatus.devices.forEach(d => {
+    if (syncStatusData?.devices && Array.isArray(syncStatusData.devices)) {
+        syncStatusData.devices.forEach(d => {
             if (!d.user) return;
             const empId = `EMP-${d.user.id}`;
             const key = empId;
