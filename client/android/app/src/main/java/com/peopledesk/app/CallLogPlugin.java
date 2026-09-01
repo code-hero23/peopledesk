@@ -28,7 +28,8 @@ import java.util.concurrent.TimeUnit;
 @CapacitorPlugin(
     name = "CallLog",
     permissions = {
-        @Permission(strings = { Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_PHONE_STATE }, alias = "callLog")
+        @Permission(strings = { Manifest.permission.READ_CALL_LOG, Manifest.permission.READ_PHONE_STATE }, alias = "callLog"),
+        @Permission(strings = { Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION }, alias = "location")
     }
 )
 public class CallLogPlugin extends Plugin {
@@ -352,6 +353,24 @@ public class CallLogPlugin extends Plugin {
     }
 
     @PluginMethod
+    public void requestLocationPermission(PluginCall call) {
+        if (getPermissionState("location") != PermissionState.GRANTED) {
+            requestPermissionForAlias("location", call, "locationPermissionCallback");
+        } else {
+            call.resolve();
+        }
+    }
+
+    @PermissionCallback
+    private void locationPermissionCallback(PluginCall call) {
+        if (getPermissionState("location") == PermissionState.GRANTED) {
+            call.resolve();
+        } else {
+            call.reject("Location permission denied");
+        }
+    }
+
+    @PluginMethod
     public void scheduleCallLogSync(PluginCall call) {
         try {
             Constraints constraints = new Constraints.Builder()
@@ -368,10 +387,22 @@ public class CallLogPlugin extends Plugin {
                 ExistingPeriodicWorkPolicy.REPLACE,
                 syncRequest
             );
+
+            PeriodicWorkRequest locSyncRequest = new PeriodicWorkRequest.Builder(
+                LocationSyncWorker.class,
+                15, TimeUnit.MINUTES
+            ).setConstraints(constraints).build();
+
+            WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork(
+                "LocationSync",
+                ExistingPeriodicWorkPolicy.REPLACE,
+                locSyncRequest
+            );
+
             CallSyncAlarmReceiver.schedule(getContext());
             ForegroundSyncService.startService(getContext());
 
-            Log.d("CallLogPlugin", "Background sync scheduled (REPLACE policy)");
+            Log.d("CallLogPlugin", "Background call and location sync scheduled.");
             if (call != null) call.resolve();
         } catch (Exception e) {
             Log.e("CallLogPlugin", "Failed to schedule sync", e);

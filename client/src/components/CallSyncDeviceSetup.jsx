@@ -122,6 +122,7 @@ export default function CallSyncDeviceSetup() {
       await Preferences.set({ key: 'cre_official_sim', value: data.officialSim || targetSim });
       await plugin.requestExactAlarmPermission?.();
       await plugin.requestBatteryExemption?.();
+      await plugin.requestLocationPermission?.();
       await plugin.scheduleCallLogSync();
       setActivated(true);
       setStatus('Activated. Syncing call logs now...');
