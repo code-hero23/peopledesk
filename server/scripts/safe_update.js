@@ -323,17 +323,17 @@ async function main() {
       DELETE FROM "CallLog" 
       WHERE "userId" IN (
         SELECT id FROM "User" 
-        WHERE role = 'AE' 
-           OR designation ILIKE '%AE%' 
+        WHERE designation ILIKE '%AE%' 
            OR designation ILIKE '%Architect%'
+           OR role::text = 'AE'
       );
     `);
     await prisma.$executeRawUnsafe(`
       UPDATE "User" 
       SET "callAnalyticsViewEnabled" = false 
-      WHERE role = 'AE' 
-         OR designation ILIKE '%AE%' 
-         OR designation ILIKE '%Architect%';
+      WHERE designation ILIKE '%AE%' 
+         OR designation ILIKE '%Architect%'
+         OR role::text = 'AE';
     `);
     console.log('Legacy AE call logs cleaned up successfully.');
   } catch (err) {

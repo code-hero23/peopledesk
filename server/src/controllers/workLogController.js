@@ -687,7 +687,6 @@ const getAllCallStats = async (req, res) => {
                 date: { gte: start, lte: end },
                 user: {
                     NOT: [
-                        { role: 'AE' },
                         { designation: { contains: 'AE', mode: 'insensitive' } },
                         { designation: { contains: 'Architect', mode: 'insensitive' } }
                     ]
