@@ -76,12 +76,44 @@ const MyLocationHistory = () => {
     };
   }, []);
 
+  const [mapType, setMapType] = useState('google_roadmap');
+  const tileLayerRef = useRef(null);
+
+  const getTileConfig = (type) => {
+    if (type === 'google_satellite') {
+      return {
+        url: 'https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
+        options: { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' }
+      };
+    }
+    if (type === 'google_roadmap') {
+      return {
+        url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
+        options: { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' }
+      };
+    }
+    return {
+      url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+      options: { attribution: '&copy; OpenStreetMap contributors' }
+    };
+  };
+
+  const changeMapType = (type) => {
+    setMapType(type);
+    if (leafletMap.current && window.L) {
+      if (tileLayerRef.current) {
+        tileLayerRef.current.remove();
+      }
+      const config = getTileConfig(type);
+      tileLayerRef.current = window.L.tileLayer(config.url, config.options).addTo(leafletMap.current);
+    }
+  };
+
   const initMap = () => {
     if (mapRef.current && !leafletMap.current && window.L) {
       leafletMap.current = window.L.map(mapRef.current).setView([13.0827, 80.2707], 12);
-      window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-      }).addTo(leafletMap.current);
+      const config = getTileConfig('google_roadmap');
+      tileLayerRef.current = window.L.tileLayer(config.url, config.options).addTo(leafletMap.current);
     }
   };
 
@@ -338,6 +370,28 @@ const MyLocationHistory = () => {
 
         {/* Map View (8 cols) */}
         <div className="lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex flex-col h-full shadow-2xl relative overflow-hidden">
+          {/* Map Type Switcher Floating Overlay */}
+          <div className="absolute top-6 right-6 z-20 flex items-center bg-slate-900/90 border border-slate-700/80 rounded-xl p-1 shadow-xl backdrop-blur-md">
+            <button
+              onClick={() => changeMapType('google_roadmap')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+            >
+              🗺️ Google Map
+            </button>
+            <button
+              onClick={() => changeMapType('google_satellite')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+            >
+              🛰️ Satellite
+            </button>
+            <button
+              onClick={() => changeMapType('openstreetmap')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+            >
+              🌐 OpenStreet
+            </button>
+          </div>
+
           <div ref={mapRef} className="w-full h-full rounded-2xl z-10 border border-slate-800" />
         </div>
       </div>
