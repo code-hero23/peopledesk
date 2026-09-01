@@ -121,6 +121,20 @@ const LAWorkLogForm = ({ onSuccess }) => {
         });
     };
 
+    const sanitizeMetrics = (metricsObj) => {
+        const sanitized = { ...metricsObj };
+        Object.keys(sanitized).forEach(k => {
+            if (sanitized[k] && typeof sanitized[k] === 'object') {
+                const detailsStr = String(sanitized[k].details || '').trim();
+                const rawCount = sanitized[k].count;
+                if (detailsStr && (!rawCount || rawCount === '0' || rawCount === 0)) {
+                    sanitized[k] = { ...sanitized[k], count: 1 };
+                }
+            }
+        });
+        return sanitized;
+    };
+
     const handleOpeningSubmit = (e) => {
         e.preventDefault();
         if (isSubmitting) return;
@@ -135,7 +149,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                 const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const payload = { 
                     logStatus: 'OPEN', 
-                    la_opening_metrics: openingData,
+                    la_opening_metrics: sanitizeMetrics(openingData),
                     startTime: currentTime
                 };
                 dispatch(createWorkLog(payload)).then((res) => {
@@ -163,7 +177,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                 setIsSubmitting(true);
                 const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
                 const payload = {
-                    la_closing_metrics: closingData,
+                    la_closing_metrics: sanitizeMetrics(closingData),
                     notes: dailyNotes,
                     endTime: currentTime
                 };
@@ -823,7 +837,21 @@ const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading })
                                             type="text"
                                             placeholder="Add details..."
                                             value={data[f.key].details}
-                                            onChange={(e) => update(f.key, 'details', e.target.value)}
+                                            onChange={(e) => {
+                                                const detailsVal = e.target.value;
+                                                setData(prev => {
+                                                    const curCount = prev[f.key]?.count;
+                                                    const newCount = (detailsVal.trim() && (!curCount || curCount === '0' || curCount === 0)) ? 1 : curCount;
+                                                    return {
+                                                        ...prev,
+                                                        [f.key]: {
+                                                            ...prev[f.key],
+                                                            details: detailsVal,
+                                                            count: newCount
+                                                        }
+                                                    };
+                                                });
+                                            }}
                                             className="w-full bg-transparent p-2 font-medium text-slate-600 dark:text-slate-400 text-sm outline-none border-b border-transparent focus:border-blue-200 dark:focus:border-blue-700 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
                                         />
                                     </td>

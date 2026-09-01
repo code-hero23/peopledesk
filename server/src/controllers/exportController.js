@@ -176,6 +176,13 @@ const exportWorkLogs = async (req, res) => {
         };
 
         const mapLogToEntries = (log, user, dateStr) => {
+            const rawDesig = (user.designation || '').toUpperCase();
+            let roleType = 'OTHER';
+            if (rawDesig.includes('CRE') || rawDesig.includes('RELATIONSHIP')) roleType = 'CRE';
+            else if (rawDesig.includes('FA') || rawDesig.includes('FEASIBILITY')) roleType = 'FA';
+            else if (rawDesig.includes('LA') || rawDesig.includes('LOADING')) roleType = 'LA';
+            else if (rawDesig.includes('AE') || rawDesig.includes('APPLICATION')) roleType = 'AE';
+
             const desig = user.designation || 'OTHER';
             const common = {
                 Employee: user.name,
@@ -199,13 +206,13 @@ const exportWorkLogs = async (req, res) => {
             }
 
             // Project Reports (If any)
-            const reportsField = desig === 'AE' ? 'ae_project_reports' : (desig === 'LA' ? 'la_project_reports' : null);
+            const reportsField = roleType === 'AE' ? 'ae_project_reports' : (roleType === 'LA' ? 'la_project_reports' : null);
             if (reportsField && log[reportsField]) {
                 const reports = safeParse(log[reportsField]);
                 if (Array.isArray(reports)) {
                     common['Details (Projects)'] = reports.map(report => {
                         const r = typeof report === 'string' ? safeParse(report) : report;
-                        if (desig === 'AE') {
+                        if (roleType === 'AE') {
                             const tasks = Array.isArray(r.ae_tasksCompleted) ? r.ae_tasksCompleted.join(', ') : (r.ae_tasksCompleted || '');
                             return `${r.clientName || 'Site'}: ${r.process || ''} - ${tasks} [${r.ae_siteStatus || ''}] (${r.startTime}-${r.endTime})`;
                         } else {
@@ -215,9 +222,38 @@ const exportWorkLogs = async (req, res) => {
                 }
             }
 
+            // LA Execution Summary
+            if (roleType === 'LA' && log.la_closing_metrics) {
+                const cl = safeParse(log.la_closing_metrics);
+                if (cl && typeof cl === 'object') {
+                    const summaries = [];
+                    const laFields = [
+                        { k: 'initial2D', l: 'Initial 2D' }, { k: 'production2D', l: 'Prod 2D' },
+                        { k: 'revised2D', l: 'Revised 2D' }, { k: 'fresh3D', l: 'Fresh 3D' },
+                        { k: 'revised3D', l: 'Revised 3D' }, { k: 'estimation', l: 'Estimation' },
+                        { k: 'woe', l: 'WOE' }, { k: 'onlineDiscussion', l: 'Online Disc' },
+                        { k: 'showroomDiscussion', l: 'Showroom Disc' }, { k: 'signFromEngineer', l: 'Sign Engr' },
+                        { k: 'siteVisit', l: 'Site Visit' }, { k: 'infurnia', l: 'Infurnia' }
+                    ];
+                    laFields.forEach(f => {
+                        const m = cl[f.k];
+                        if (m && typeof m === 'object') {
+                            const count = m.count !== undefined && m.count !== '' ? m.count : '';
+                            const details = m.details && typeof m.details === 'string' && m.details.trim() ? m.details.trim() : '';
+                            if (count || details) {
+                                summaries.push(`${f.l}: ${count ? `[${count}] ` : ''}${details}`.trim());
+                            }
+                        }
+                    });
+                    if (summaries.length > 0) {
+                        common['Execution Summary'] = summaries.join(' | ');
+                    }
+                }
+            }
+
             let roleEntry = { Employee: common.Employee, Date: common.Date, 'Log Status': common['Log Status'] };
 
-            if (desig === 'CRE') {
+            if (roleType === 'CRE') {
                 const op = safeParse(log.cre_opening_metrics);
                 const cl = safeParse(log.cre_closing_metrics);
                 roleEntry = {
@@ -253,7 +289,7 @@ const exportWorkLogs = async (req, res) => {
                     'WhatsApp Sent': cl?.whatsappSent || '',
                     '8 Star Calls': cl?.eightStar || ''
                 };
-            } else if (desig === 'FA') {
+            } else if (roleType === 'FA') {
                 const op = safeParse(log.fa_opening_metrics);
                 const cl = safeParse(log.fa_closing_metrics);
                 roleEntry = {
@@ -280,7 +316,7 @@ const exportWorkLogs = async (req, res) => {
                     'Cl: Revised Quote Details': cl?.revisedQuote?.text || '',
                     'Site Visits': log.fa_siteVisits || ''
                 };
-            } else if (desig === 'LA') {
+            } else if (roleType === 'LA') {
                 const op = safeParse(log.la_opening_metrics);
                 const cl = safeParse(log.la_closing_metrics);
                 const fields = [
@@ -292,12 +328,19 @@ const exportWorkLogs = async (req, res) => {
                     { k: 'siteVisit', l: 'Site Visit' }, { k: 'infurnia', l: 'Infurnia' }
                 ];
                 fields.forEach(f => {
-                    roleEntry[`Op: ${f.l}`] = op?.[f.k]?.count || '';
-                    roleEntry[`Cl: ${f.l}`] = cl?.[f.k]?.count || '';
-                    roleEntry[`Op: ${f.l} Details`] = op?.[f.k]?.details || '';
-                    roleEntry[`Cl: ${f.l} Details`] = cl?.[f.k]?.details || '';
+                    const opItem = op?.[f.k];
+                    const clItem = cl?.[f.k];
+                    const opCount = typeof opItem === 'object' ? (opItem.count !== undefined && opItem.count !== '' ? opItem.count : (opItem.details ? '1' : '')) : (opItem || '');
+                    const clCount = typeof clItem === 'object' ? (clItem.count !== undefined && clItem.count !== '' ? clItem.count : (clItem.details ? '1' : '')) : (clItem || '');
+                    const opDetails = typeof opItem === 'object' ? (opItem.details || '') : '';
+                    const clDetails = typeof clItem === 'object' ? (clItem.details || '') : '';
+
+                    roleEntry[`Op: ${f.l}`] = opCount;
+                    roleEntry[`Cl: ${f.l}`] = clCount;
+                    roleEntry[`Op: ${f.l} Details`] = opDetails;
+                    roleEntry[`Cl: ${f.l} Details`] = clDetails;
                 });
-            } else if (desig === 'AE') {
+            } else if (roleType === 'AE') {
                 const op = safeParse(log.ae_opening_metrics);
                 const cl = safeParse(log.ae_closing_metrics);
                 roleEntry = {
@@ -310,7 +353,7 @@ const exportWorkLogs = async (req, res) => {
                 // AE work is mostly in project reports, which is handled in the summary column 'Details (Projects)'
             }
 
-            return { common, role: roleEntry, desig };
+            return { common, role: roleEntry, desig: roleType };
         };
 
         // Determine Dates to show
@@ -1670,7 +1713,7 @@ const getTaskMetrics = (employee, workLogs) => {
     
     // Initialize standard fields
     taskFields.forEach(f => {
-        taskSummary[f.k] = { label: f.l, count: 0 };
+        taskSummary[f.k] = { label: f.l, count: 0, detailsList: [] };
     });
 
     // Special grouping for generic/other roles
@@ -1689,8 +1732,22 @@ const getTaskMetrics = (employee, workLogs) => {
                     const data = metrics[f.k];
                     if (data !== undefined && data !== null) {
                         if (typeof data === 'object') {
-                            const count = data.count !== undefined ? data.count : (data.value !== undefined ? data.value : 0);
-                            taskSummary[f.k].count += Number(count || 0);
+                            const rawCount = data.count !== undefined ? data.count : (data.value !== undefined ? data.value : '');
+                            const hasDetails = data.details && typeof data.details === 'string' && data.details.trim().length > 0;
+                            
+                            let countVal = 0;
+                            if (rawCount !== '' && !isNaN(Number(rawCount)) && Number(rawCount) > 0) {
+                                countVal = Number(rawCount);
+                            } else if (hasDetails) {
+                                countVal = 1;
+                            }
+                            
+                            taskSummary[f.k].count += countVal;
+                            
+                            if (hasDetails) {
+                                if (!taskSummary[f.k].detailsList) taskSummary[f.k].detailsList = [];
+                                taskSummary[f.k].detailsList.push(data.details.trim());
+                            }
                         } else {
                             taskSummary[f.k].count += Number(data || 0);
                         }
@@ -1729,7 +1786,7 @@ const getTaskMetrics = (employee, workLogs) => {
                         const desc = (t.description || t.task || t.work || t.taskDescription || t.workDescription || t.process || '').trim();
                         if (desc) {
                             const taskKey = `gen_${desc.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-                            if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
+                            if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0, detailsList: [] };
                             taskSummary[taskKey].count++;
                             manualTasksFound++;
 
@@ -1746,7 +1803,7 @@ const getTaskMetrics = (employee, workLogs) => {
                     const lowerKey = key.toLowerCase();
                     if (!lowerKey.includes('link') && !['_id', 'starttime', 'endtime', 'date', 'id'].includes(lowerKey)) {
                          const taskKey = `gen_${key.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-                         if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: key, count: 0 };
+                         if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: key, count: 0, detailsList: [] };
                          const val = Number(value);
                          taskSummary[taskKey].count += isNaN(val) ? 1 : val;
                          manualTasksFound++;
@@ -1759,7 +1816,7 @@ const getTaskMetrics = (employee, workLogs) => {
                 const desc = (log.tasks || log.process || log.remarks || '').trim();
                 if (desc && desc.length > 0 && desc.length < 200 && !desc.includes('Session Started')) {
                      const taskKey = `gen_${desc.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
-                     if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0 };
+                     if (!taskSummary[taskKey]) taskSummary[taskKey] = { label: desc, count: 0, detailsList: [] };
                      taskSummary[taskKey].count++;
                 }
             }
@@ -1819,7 +1876,7 @@ const exportEmployeeTaskSummary = async (req, res) => {
         sheet.addRow([`Period: ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}`]);
         sheet.addRow([]);
 
-        const headerRow = sheet.addRow(['S.No', 'Task Description', 'Total Monthly Count']);
+        const headerRow = sheet.addRow(['S.No', 'Task Description', 'Total Monthly Count', 'Details / Notes']);
         headerRow.eachCell(cell => {
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
@@ -1830,12 +1887,15 @@ const exportEmployeeTaskSummary = async (req, res) => {
         Object.values(taskSummary).forEach(task => {
             // Always show basic metrics (Total Logs, Hours) and show other tasks only if count > 0 (unless LA which shows all fields)
             const isBasic = task.label === 'Total Hours Worked' || task.label === 'Total Work Reports Submitted';
+            const detailsText = Array.isArray(task.detailsList) && task.detailsList.length > 0 
+                ? Array.from(new Set(task.detailsList)).join(', ') 
+                : '-';
             if (task.count > 0 || isBasic || desig.includes('LA')) { 
-                sheet.addRow([rowIndex++, task.label, task.count]);
+                sheet.addRow([rowIndex++, task.label, task.count, detailsText]);
             }
         });
 
-        sheet.columns = [{ width: 8 }, { width: 40 }, { width: 25 }];
+        sheet.columns = [{ width: 8 }, { width: 40 }, { width: 25 }, { width: 45 }];
         sheet.getColumn(3).alignment = { horizontal: 'center' };
 
         const buffer = await workbook.xlsx.writeBuffer();
@@ -1879,7 +1939,7 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
         sheet.addRow([`Period: ${startDate.toLocaleDateString('en-IN')} to ${endDate.toLocaleDateString('en-IN')}`]);
         sheet.addRow([]);
 
-        const headerRow = sheet.addRow(['S.No', 'Employee Name', 'Designation', 'Task Description', 'Monthly Total']);
+        const headerRow = sheet.addRow(['S.No', 'Employee Name', 'Designation', 'Task Description', 'Monthly Total', 'Details / Notes']);
         headerRow.eachCell(cell => {
             cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
             cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF1E293B' } };
@@ -1899,8 +1959,11 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
 
             Object.values(taskSummary).forEach(task => {
                 const isBasic = task.label === 'Total Hours Worked' || task.label === 'Total Work Reports Submitted';
+                const detailsText = Array.isArray(task.detailsList) && task.detailsList.length > 0 
+                    ? Array.from(new Set(task.detailsList)).join(', ') 
+                    : '-';
                 if (task.count > 0 || isBasic) {
-                    sheet.addRow([rowIndex++, employee.name, desig, task.label, task.count]);
+                    sheet.addRow([rowIndex++, employee.name, desig, task.label, task.count, detailsText]);
                 }
             });
         }
@@ -1910,7 +1973,8 @@ const exportAllEmployeesTaskSummary = async (req, res) => {
             { width: 30 }, 
             { width: 15 }, 
             { width: 40 }, 
-            { width: 25 }
+            { width: 20 },
+            { width: 45 }
         ];
 
         const buffer = await workbook.xlsx.writeBuffer();

@@ -239,7 +239,11 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                     <div key={i} className="bg-slate-50 p-2 rounded border border-slate-200">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black text-slate-400 uppercase">{item.label}</span>
-                                            <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
+                                            {(item.data?.count || item.data?.details) && (
+                                                <span className="bg-blue-600 text-white text-[10px] font-bold px-1.5 rounded">
+                                                    {item.data.count > 0 ? item.data.count : 1}
+                                                </span>
+                                            )}
                                         </div>
                                         {item.data.details && <p className="text-[10px] text-slate-600 font-bold break-words whitespace-pre-wrap">{item.data.details}</p>}
                                     </div>
@@ -504,7 +508,11 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                     <div key={i} className="bg-emerald-50/30 p-2 rounded border border-emerald-100">
                                         <div className="flex justify-between items-center mb-1">
                                             <span className="text-[9px] font-black text-emerald-600/50 uppercase">{item.label}</span>
-                                            <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">{item.data.count}</span>
+                                            {(item.data?.count || item.data?.details) && (
+                                                <span className="bg-emerald-600 text-white text-[10px] font-bold px-1.5 rounded">
+                                                    {item.data.count > 0 ? item.data.count : 1}
+                                                </span>
+                                            )}
                                         </div>
                                         {item.data.details && <p className="text-[10px] text-emerald-700 font-bold break-words whitespace-pre-wrap">{item.data.details}</p>}
                                     </div>
