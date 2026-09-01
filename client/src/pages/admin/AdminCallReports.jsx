@@ -311,6 +311,10 @@ const AdminCallReports = () => {
     if (syncStatusData?.devices && Array.isArray(syncStatusData.devices)) {
         syncStatusData.devices.forEach(d => {
             if (!d.user) return;
+            if (d.user.callAnalyticsViewEnabled === false) return;
+            const desg = (d.user.designation || '').toUpperCase();
+            if (desg.includes('AE') || desg.includes('ARCHITECT')) return;
+
             const empId = `EMP-${d.user.id}`;
             const key = empId;
             initialMetrics[key] = {
@@ -332,6 +336,10 @@ const AdminCallReports = () => {
     }
 
     const employeeMetrics = callStats.reduce((acc, log) => {
+        if (log.user?.callAnalyticsViewEnabled === false || log.callAnalyticsViewEnabled === false) return acc;
+        const desg = (typeof log.user === 'object' ? log.user?.designation : (log.designation || '')).toUpperCase();
+        if (desg.includes('AE') || desg.includes('ARCHITECT')) return acc;
+
         const key = log.empId || (typeof log.user === 'object' ? `EMP-${log.user?.id}` : `EMP-${log.userId}`) || 'unknown';
         const rawName = typeof log.user === 'object' ? log.user?.name : (log.user || log.userName);
         const userName = typeof rawName === 'string' ? rawName : "Unknown Personnel";

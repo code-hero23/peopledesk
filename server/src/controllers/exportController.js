@@ -1146,11 +1146,18 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
     // 2. Fetch Call Logs
     const callLogs = await prisma.callLog.findMany({
         where: {
-            date: { gte: start, lte: end }
+            date: { gte: start, lte: end },
+            user: {
+                callAnalyticsViewEnabled: true,
+                NOT: [
+                    { designation: { contains: 'AE', mode: 'insensitive' } },
+                    { designation: { contains: 'Architect', mode: 'insensitive' } }
+                ]
+            }
         },
         include: {
             user: {
-                select: { name: true, id: true, designation: true }
+                select: { name: true, id: true, designation: true, callAnalyticsViewEnabled: true }
             }
         },
         orderBy: { date: 'desc' }

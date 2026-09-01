@@ -688,6 +688,7 @@ const getAllCallStats = async (req, res) => {
             where: {
                 date: { gte: queryStart, lte: queryEnd },
                 user: {
+                    callAnalyticsViewEnabled: true,
                     NOT: [
                         { designation: { contains: 'AE', mode: 'insensitive' } },
                         { designation: { contains: 'Architect', mode: 'insensitive' } }
@@ -701,6 +702,7 @@ const getAllCallStats = async (req, res) => {
                         id: true,
                         designation: true,
                         role: true,
+                        callAnalyticsViewEnabled: true,
                         callSyncDevices: {
                             where: { active: true },
                             select: { lastSuccessAt: true },

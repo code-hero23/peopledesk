@@ -157,7 +157,12 @@ const requestRemoteSyncForAll = async (req, res) => {
       where: {
         active: true,
         user: {
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          callAnalyticsViewEnabled: true,
+          NOT: [
+            { designation: { contains: 'AE', mode: 'insensitive' } },
+            { designation: { contains: 'Architect', mode: 'insensitive' } }
+          ]
         }
       },
       select: {
@@ -266,7 +271,12 @@ const getBulkSyncStatus = async (req, res) => {
       where: {
         active: true,
         user: {
-          status: 'ACTIVE'
+          status: 'ACTIVE',
+          callAnalyticsViewEnabled: true,
+          NOT: [
+            { designation: { contains: 'AE', mode: 'insensitive' } },
+            { designation: { contains: 'Architect', mode: 'insensitive' } }
+          ]
         }
       },
       select: {
@@ -281,7 +291,8 @@ const getBulkSyncStatus = async (req, res) => {
             id: true,
             name: true,
             email: true,
-            designation: true
+            designation: true,
+            callAnalyticsViewEnabled: true
           }
         }
       }
