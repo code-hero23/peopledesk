@@ -551,18 +551,14 @@ const syncCallLogs = async (req, res) => {
 
             let consolidatedLogs = [];
             if (existingCallLog) {
-                const shouldReplaceExistingForSim =
-                    Boolean(replaceExistingForSim) &&
-                    simFilter &&
-                    String(simFilter) !== '0' &&
-                    String(simFilter) !== 'ALL';
+                const shouldReplaceExistingForSim = Boolean(replaceExistingForSim) && !isAllSims;
 
                 if (shouldReplaceExistingForSim) {
                     consolidatedLogs = dayLogs.map(normalizeAcceptedLog);
                     console.log(`[Sync] User ${userId} for ${dateStr}: Replaced existing SIM ${simFilter} logs with ${consolidatedLogs.length} freshly filtered logs.`);
                 } else {
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
-                if (simFilter && String(simFilter) !== '0' && String(simFilter) !== 'ALL') {
+                if (!isAllSims) {
                     consolidatedLogs = consolidatedLogs
                         .filter(log => matchesSelectedSim(log, simFilter))
                         .map(normalizeAcceptedLog);
