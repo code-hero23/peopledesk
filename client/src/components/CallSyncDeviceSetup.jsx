@@ -223,9 +223,9 @@ export default function CallSyncDeviceSetup() {
   return (
     <main className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6 relative">
       <section className="w-full max-w-md rounded-3xl border border-white/10 bg-slate-900 p-8 shadow-2xl">
-        <p className="text-xs font-bold tracking-[.2em] text-red-400">PEOPLEDESK APK</p>
-        <h1 className="mt-2 text-3xl font-black">Call Sync Setup</h1>
-        <p className="mt-3 text-sm text-slate-300">Activate call logging for official work SIMs on this Android device.</p>
+        <p className="text-xs font-bold tracking-[.2em] text-red-400">PEOPLEDESK MOBILE APK</p>
+        <h1 className="mt-2 text-3xl font-black">Device Activation</h1>
+        <p className="mt-3 text-sm text-slate-300">Activate live location tracking & mobile device sync for this Android phone.</p>
         
         {activated ? (
           <div className="mt-6 space-y-4">
