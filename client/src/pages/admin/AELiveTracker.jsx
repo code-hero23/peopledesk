@@ -16,7 +16,9 @@ import {
   CheckCircle2, 
   AlertTriangle, 
   XCircle, 
-  Layers
+  Layers,
+  Smartphone,
+  Copy
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -30,6 +32,28 @@ const AELiveTracker = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedAE, setSelectedAE] = useState(null);
+  
+  // APK Activation Code Modal state
+  const [activationCode, setActivationCode] = useState(null);
+  const [isGeneratingCode, setIsGeneratingCode] = useState(false);
+  const [showCodeModal, setShowCodeModal] = useState(false);
+
+  const generateActivationCode = async () => {
+    setIsGeneratingCode(true);
+    try {
+      const res = await axios.post(`${API_BASE}/call-sync/activation-codes`, {}, {
+        headers: { Authorization: `Bearer ${user.token}` }
+      });
+      setActivationCode(res.data.code);
+      setShowCodeModal(true);
+      toast.success('APK activation code generated! Valid for 10 minutes.');
+    } catch (err) {
+      console.error('Failed to generate activation code:', err);
+      toast.error(err.response?.data?.message || 'Could not generate activation code.');
+    } finally {
+      setIsGeneratingCode(false);
+    }
+  };
   
   // Historical Route Tracing state
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -244,6 +268,14 @@ const AELiveTracker = () => {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={generateActivationCode}
+            disabled={isGeneratingCode}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-blue-600/25"
+          >
+            <Smartphone size={15} />
+            {isGeneratingCode ? 'Generating...' : 'Get APK Code'}
+          </button>
+          <button
             onClick={() => fetchLiveData(true)}
             disabled={refreshing}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition-all active:scale-95 disabled:opacity-50"
@@ -426,6 +458,49 @@ const AELiveTracker = () => {
           <div ref={mapRef} className="w-full h-full rounded-2xl z-10 border border-slate-800" />
         </div>
       </div>
+
+      {/* Modal: APK Activation Code */}
+      {showCodeModal && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md rounded-3xl border border-slate-700 bg-slate-900 p-6 shadow-2xl space-y-5 text-center">
+            <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+              <Smartphone size={28} />
+            </div>
+
+            <div>
+              <h3 className="text-xl font-black text-white">APK Device Activation Code</h3>
+              <p className="mt-1 text-xs text-slate-300">Enter this code into the PeopleDesk APK on the mobile device.</p>
+            </div>
+
+            <div className="bg-slate-950 border border-slate-800 p-4 rounded-2xl flex items-center justify-between">
+              <span className="text-3xl font-black tracking-[0.3em] font-mono text-blue-400 pl-3">
+                {activationCode}
+              </span>
+              <button
+                onClick={() => {
+                  navigator.clipboard.writeText(activationCode);
+                  toast.success('Code copied to clipboard!');
+                }}
+                className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
+                title="Copy Code"
+              >
+                <Copy size={16} />
+              </button>
+            </div>
+
+            <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
+              ⏱️ Valid for 10 minutes. Device will sync Call Logs and 5-minute Live Location pings.
+            </p>
+
+            <button
+              onClick={() => setShowCodeModal(false)}
+              className="w-full py-3 rounded-xl bg-slate-800 hover:bg-slate-700 font-bold text-xs text-white transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -298,7 +298,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                             {(user?.role === 'AE' || user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation?.toUpperCase()?.includes('AE') || user?.designation?.toUpperCase()?.includes('ARCHITECT')) && (
-                                <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
+                                <>
+                                    <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
+                                    <NavItem to="/dashboard/my-location-history" icon={Navigation} label="My Travel History" />
+                                </>
                             )}
                             <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                             <NavItem to="/seating" icon={Armchair} label="Seating Layout" />

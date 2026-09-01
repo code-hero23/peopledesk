@@ -35,6 +35,7 @@ import OverviewDashboard from './pages/admin/OverviewDashboard';
 import SiteAssignments from './pages/admin/SiteAssignments';
 import MySiteAssignments from './pages/employee/MySiteAssignments';
 import AELiveTracker from './pages/admin/AELiveTracker';
+import MyLocationHistory from './pages/employee/MyLocationHistory';
 
 import OSCDirectory from './pages/OSCDirectory';
 import DecoraAI from './pages/DecoraAI';
@@ -72,6 +73,7 @@ function App() {
                 <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
                 <Route path="/dashboard/requests" element={<MyRequests />} />
                 <Route path="/dashboard/site-assignments" element={<MySiteAssignments />} />
+                <Route path="/dashboard/my-location-history" element={<MyLocationHistory />} />
                 <Route path="/dashboard/attendance" element={<MyAttendance />} />
                 <Route path="/dashboard/salary" element={<MySalary />} />
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
