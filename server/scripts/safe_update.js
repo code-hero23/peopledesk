@@ -293,6 +293,29 @@ async function main() {
     console.error('Error in VisitorRecord schema sync:', err.message);
   }
 
+  // Adding AELocationLog Table
+  try {
+    console.log('Syncing AELocationLog schema...');
+    await prisma.$executeRawUnsafe(`
+      CREATE TABLE IF NOT EXISTS "AELocationLog" (
+          "id" SERIAL PRIMARY KEY,
+          "userId" INTEGER NOT NULL,
+          "latitude" DOUBLE PRECISION NOT NULL,
+          "longitude" DOUBLE PRECISION NOT NULL,
+          "accuracy" DOUBLE PRECISION,
+          "batteryLevel" INTEGER,
+          "speed" DOUBLE PRECISION,
+          "address" TEXT,
+          "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          CONSTRAINT "AELocationLog_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE
+      )
+    `);
+    await prisma.$executeRawUnsafe(`CREATE INDEX IF NOT EXISTS "AELocationLog_userId_createdAt_idx" ON "AELocationLog"("userId", "createdAt")`);
+    console.log('AELocationLog table created or already exists.');
+  } catch (err) {
+    console.error('Error in AELocationLog schema sync:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 
