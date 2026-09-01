@@ -335,9 +335,13 @@ async function main() {
          OR designation ILIKE '%Architect%'
          OR role::text = 'AE';
     `);
-    console.log('Legacy AE call logs cleaned up successfully.');
-  } catch (err) {
-    console.error('Error cleaning up AE call logs:', err.message);
+  // Reset today's CallLogs so dual-SIM users re-sync fresh SIM 1 & SIM 2 tags
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    await prisma.$executeRawUnsafe(`DELETE FROM "CallLog" WHERE date >= '${today}T00:00:00.000Z'`);
+    console.log('Cleared cached today CallLogs for clean re-sync.');
+  } catch (e) {
+    console.error('Error clearing today CallLogs:', e.message);
   }
 
   console.log('Safe update completed.');
