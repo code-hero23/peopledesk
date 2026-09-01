@@ -684,7 +684,14 @@ const getAllCallStats = async (req, res) => {
 
         const callLogs = await prisma.callLog.findMany({
             where: {
-                date: { gte: start, lte: end }
+                date: { gte: start, lte: end },
+                user: {
+                    NOT: [
+                        { role: 'AE' },
+                        { designation: { contains: 'AE', mode: 'insensitive' } },
+                        { designation: { contains: 'Architect', mode: 'insensitive' } }
+                    ]
+                }
             },
             include: {
                 user: {

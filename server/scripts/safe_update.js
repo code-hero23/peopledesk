@@ -316,6 +316,30 @@ async function main() {
     console.error('Error in AELocationLog schema sync:', err.message);
   }
 
+  // Cleanup AE CallLogs and reset callAnalyticsViewEnabled for AEs
+  try {
+    console.log('Cleaning up legacy AE call logs and permissions...');
+    await prisma.$executeRawUnsafe(`
+      DELETE FROM "CallLog" 
+      WHERE "userId" IN (
+        SELECT id FROM "User" 
+        WHERE role = 'AE' 
+           OR designation ILIKE '%AE%' 
+           OR designation ILIKE '%Architect%'
+      );
+    `);
+    await prisma.$executeRawUnsafe(`
+      UPDATE "User" 
+      SET "callAnalyticsViewEnabled" = false 
+      WHERE role = 'AE' 
+         OR designation ILIKE '%AE%' 
+         OR designation ILIKE '%Architect%';
+    `);
+    console.log('Legacy AE call logs cleaned up successfully.');
+  } catch (err) {
+    console.error('Error cleaning up AE call logs:', err.message);
+  }
+
   console.log('Safe update completed.');
 }
 
