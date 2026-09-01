@@ -375,7 +375,7 @@ const CRECallReports = () => {
 
     const matchesOfficialSim = (call, targetSim) => {
         const targetSlot = normalizeSimValue(targetSim);
-        if (!targetSlot || targetSlot === '0') return true;
+        if (!targetSlot || targetSlot === '0' || targetSlot === 'all' || targetSlot === 'both') return true;
 
         const resolvedSlot = resolveCallSimSlot(call);
         if (resolvedSlot === targetSlot) return true;

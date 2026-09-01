@@ -260,7 +260,7 @@ public class CallLogSyncWorker extends Worker {
                         simLabel = simLabels.optString(simSlot, simLabel);
                     }
 
-                    boolean matches = officialSim.equals("0");
+                    boolean matches = officialSim.equals("0") || officialSim.equalsIgnoreCase("all") || officialSim.equalsIgnoreCase("both");
                     if (!matches) {
                         String officialLabel = null;
                         if (simLabels.has(officialSim)) {
