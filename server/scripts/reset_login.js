@@ -81,6 +81,24 @@ async function resetLogin(email, dateStr) {
             console.log(`ℹ️ No WorkLog record found for this date.`);
         }
 
+        // 5. Delete AE Location Logs for this date (if any)
+        try {
+            const deletedLocationLogs = await prisma.aELocationLog.deleteMany({
+                where: {
+                    userId: user.id,
+                    createdAt: {
+                        gte: date,
+                        lt: nextDay
+                    }
+                }
+            });
+            if (deletedLocationLogs.count > 0) {
+                console.log(`✅ Deleted ${deletedLocationLogs.count} AE Location log entries.`);
+            }
+        } catch (locErr) {
+            // In case table or model not loaded
+        }
+
         console.log(`--------------------------------------------------`);
         console.log(`Login reset complete! The user can now check in again.`);
 
