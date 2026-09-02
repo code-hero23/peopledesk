@@ -262,7 +262,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         </NavGroup>
 
                         <NavGroup id="admin" label="Administration" icon={ShieldCheck}>
-                            {['ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER'].includes(user?.role) && (
+                            {['ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(user?.role) && (
                                 <NavItem to="/admin/employees" icon={Users} label="Manage Employees" indent />
                             )}
                             {isFullAdmin && (

@@ -36,6 +36,13 @@ initWeeklyExcessiveAbsenceCron();
 // initBreakExceedanceCron();
 
 
+// CORS Middleware (enabled for all origins and methods in dev & production API)
+app.use(cors({
+    origin: '*',
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+}));
+
 // Security Middlewares
 app.use(helmet({
     contentSecurityPolicy: {
@@ -53,15 +60,6 @@ app.use(helmet({
     referrerPolicy: { policy: 'strict-origin-when-cross-origin' },
     crossOriginResourcePolicy: { policy: "cross-origin" },
 })); // Set security headers
-
-// Multi-origin CORS for development and mobile
-const corsOptions = {
-    origin: true, // Reflect request origin
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: false, // Set to false since we use Bearer tokens, makes wildcard/reflecting easier
-};
-app.use(cors(corsOptions));
 
 // Global Rate Limiting - Increased to 2000 for unrestricted development
 const globalLimiter = rateLimit({
