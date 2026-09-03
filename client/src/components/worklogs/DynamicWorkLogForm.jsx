@@ -323,6 +323,16 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                 ))}
                             </AnimatePresence>
                         </div>
+
+                        {canAddRows && (
+                            <button
+                                type="button"
+                                onClick={() => addRow(tableIndex)}
+                                className="mt-4 w-full py-3 border-2 border-dashed border-indigo-200 dark:border-indigo-800 rounded-xl text-indigo-500 dark:text-indigo-400 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/30 transition-all flex items-center justify-center gap-2 text-sm uppercase tracking-wide cursor-pointer active:scale-[0.99]"
+                            >
+                                <Plus size={16} /> Add Entry
+                            </button>
+                        )}
                     </div>
                 );
             })}
