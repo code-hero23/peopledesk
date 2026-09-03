@@ -7,6 +7,7 @@ const prisma = new PrismaClient();
 
 const designations = [
     { label: "Office Administration", value: "OFFICE-ADMINISTRATION", email: "admin01@cookscape.com", role: "ADMIN" },
+    { label: "IT (DEVELOPMENT)", value: "IT (DEVELOPMENT)", email: "it@cookscape.com", role: "ADMIN" },
     { label: "Account", value: "ACCOUNT", email: "account@cs.com" },
     { label: "Lead Operation", value: "LEAD-OPERATION", email: "leadop@cs.com" },
     { label: "Lead Conversion", value: "LEAD-CONVERSION", email: "leadconv@cs.com" },

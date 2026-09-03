@@ -439,6 +439,7 @@ const CreateEmployeeModal = ({ onClose, selectedEmployee }) => {
                                             <option value="FA">Feasibility Architect (FA)</option>
                                             <option value="AE">Application Engineer (AE)</option>
                                             <option value="OFFICE-ADMINISTRATION">Office Admn</option>
+                                            <option value="IT (DEVELOPMENT)">IT (DEVELOPMENT)</option>
                                             <option value="ACCOUNT">Account</option>
                                             <option value="LEAD-OPERATION">Lead Ops</option>
                                             <option value="LEAD-CONVERSION">Lead Conv</option>

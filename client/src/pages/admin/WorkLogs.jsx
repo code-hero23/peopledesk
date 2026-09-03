@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { getDailyWorkLogs, reset } from '../../features/admin/adminSlice';
-import { 
-    Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle, 
-    FileText, CheckCircle2, Clock, AlertCircle, Sparkles, Users, RefreshCw, 
+import {
+    Calendar, Download, Eye, Search, BarChart3, Briefcase, PlusCircle,
+    FileText, CheckCircle2, Clock, AlertCircle, Sparkles, Users, RefreshCw,
     Filter, ArrowUpRight, ShieldCheck, FileSpreadsheet
 } from 'lucide-react';
 import axios from 'axios';
@@ -401,7 +401,7 @@ const WorkLogs = () => {
 
                     {/* Date Selector Pill & Refresh */}
                     <div className="flex items-center gap-3">
-                        <div 
+                        <div
                             onClick={(e) => {
                                 const dateInput = e.currentTarget.querySelector('input[type="date"]');
                                 if (dateInput && 'showPicker' in HTMLInputElement.prototype) {
@@ -506,6 +506,7 @@ const WorkLogs = () => {
                             <option value="CRE">Customer Relationship Executive (CRE)</option>
                             <option value="FA">Feasibility Architect (FA)</option>
                             <option value="OFFICE-ADMINISTRATION">Office Administration</option>
+                            <option value="IT (DEVELOPMENT)">IT (DEVELOPMENT)</option>
                             <option value="ACCOUNT">Account</option>
                             <option value="LEAD-OPERATION">Lead Operation</option>
                             <option value="LEAD-CONVERSION">Lead Conversion</option>
@@ -560,11 +561,10 @@ const WorkLogs = () => {
                         <button
                             key={tab.id}
                             onClick={() => setStatusFilterTab(tab.id)}
-                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${
-                                statusFilterTab === tab.id
+                            className={`px-3.5 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider transition-all ${statusFilterTab === tab.id
                                     ? 'bg-blue-600 text-white shadow-md'
                                     : 'text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-slate-200'
-                            }`}
+                                }`}
                         >
                             {tab.label}
                         </button>
@@ -651,14 +651,14 @@ const WorkLogs = () => {
                                             {/* Status Badge Column */}
                                             <td className="px-6 py-4 align-top text-center">
                                                 {log?.logStatus === 'CLOSED' ? (
-                                                    <span 
+                                                    <span
                                                         className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
                                                         style={{ backgroundColor: '#059669' }}
                                                     >
                                                         Submitted
                                                     </span>
                                                 ) : log ? (
-                                                    <span 
+                                                    <span
                                                         className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
                                                         style={{ backgroundColor: '#d97706' }}
                                                     >

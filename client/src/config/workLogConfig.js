@@ -23,6 +23,66 @@ export const WORK_LOG_CONFIG = {
             }
         ]
     },
+    "IT (DEVELOPMENT)": {
+        title: "IT (DEVELOPMENT) Daily Report",
+        tables: [
+            {
+                label: "Task Entries",
+                fields: [
+                    { name: "task", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
+                ]
+            }
+        ]
+    },
+    "IT (DEVELOPMENT)": {
+        title: "IT (Development) Daily Report",
+        tables: [
+            {
+                label: "Task Entries",
+                fields: [
+                    { name: "task", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
+                ]
+            }
+        ]
+    },
+    "IT-DEVELOPEMENT": {
+        title: "IT (DEVELOPMENT) Daily Report",
+        tables: [
+            {
+                label: "Task Entries",
+                fields: [
+                    { name: "task", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
+                ]
+            }
+        ]
+    },
+    "IT-DEVELOPMENT": {
+        title: "IT (Development) Daily Report",
+        tables: [
+            {
+                label: "Task Entries",
+                fields: [
+                    { name: "task", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
+                ]
+            }
+        ]
+    },
+    "IT": {
+        title: "IT (DEVELOPMENT) Daily Report",
+        tables: [
+            {
+                label: "Task Entries",
+                fields: [
+                    { name: "task", label: "Task Description", type: "text" },
+                    { name: "status", label: "Status", type: "text" }
+                ]
+            }
+        ]
+    },
     "LEAD-OPERATION": {
         title: "Lead Operation Daily Report",
         tables: [

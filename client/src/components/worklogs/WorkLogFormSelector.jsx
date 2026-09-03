@@ -45,8 +45,18 @@ const WorkLogFormSelector = ({ designation, onSuccess }) => {
         case 'DIGITAL MARKETING':
             return <DynamicWorkLogForm onSuccess={onSuccess} role="DIGITAL-MARKETING" />;
         case 'OFFICE ADMIN':
+        case 'OFFICE-ADMINISTRATION':
+        case 'OFFICE ADMINISTRATION':
         case 'ADMIN':
             return <DynamicWorkLogForm onSuccess={onSuccess} role="OFFICE-ADMINISTRATION" />;
+        case 'IT (DEVELOPMENT)':
+        case 'IT (DEVELOPMENT)':
+        case 'IT-DEVELOPEMENT':
+        case 'IT-DEVELOPMENT':
+        case 'IT':
+        case 'IT DEVELOPEMENT':
+        case 'IT DEVELOPMENT':
+            return <DynamicWorkLogForm onSuccess={onSuccess} role="IT (DEVELOPMENT)" />;
         case 'VENDOR MANAGEMENT':
         case 'VENDOR-MANAGEMENT':
         case 'VENDOR':
