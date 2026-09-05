@@ -152,6 +152,11 @@ const checkoutAttendance = async (req, res) => {
             distanceKm = calculateDistanceInKm(attendance.latitude, attendance.longitude, checkoutLatitude, checkoutLongitude);
             if (distanceKm !== null && distanceKm > 1.0) {
                 isLocationMismatch = true;
+                if (!checkoutMismatchReason || !checkoutMismatchReason.trim()) {
+                    return res.status(400).json({
+                        message: `Location mismatch detected (${distanceKm} km from check-in site). You must enter a reason to complete checkout.`
+                    });
+                }
             }
         }
 

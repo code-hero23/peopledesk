@@ -1664,7 +1664,7 @@ const Overview = () => {
 
                             {/* Location Radius Mismatch Notice & Reason Prompt */}
                             {isCheckingOut && isLocationMismatch && (
-                                <div className="px-6 sm:px-8 py-3 bg-rose-50 border-b border-rose-300 shrink-0 animate-fade-in">
+                                <div className="px-6 sm:px-8 py-3.5 bg-rose-50 border-b border-rose-300 shrink-0 animate-fade-in">
                                     <div className="flex items-start gap-2.5">
                                         <AlertTriangle size={18} className="text-rose-600 shrink-0 mt-0.5" />
                                         <div className="flex-1">
@@ -1673,16 +1673,18 @@ const Overview = () => {
                                                 <span className="px-2 py-0.5 bg-rose-600 text-white rounded-md text-[10px] font-extrabold shadow-sm">
                                                     {currentDistanceKm} km from Check-in Site
                                                 </span>
+                                                <span className="text-[10px] font-black text-rose-600 uppercase bg-rose-100 px-1.5 py-0.5 rounded border border-rose-200">* Reason Required</span>
                                             </p>
                                             <p className="text-[11px] font-bold text-rose-700 mt-1">
-                                                You appear to be checking out away from your check-in site ({attendance?.siteName || 'Original Site'}). Please state the reason:
+                                                You appear to be checking out away from your check-in site ({attendance?.siteName || 'Original Site'}). <span className="font-extrabold text-rose-900">Please enter a reason message to complete sign-out:</span>
                                             </p>
                                             <input
                                                 type="text"
+                                                required
                                                 value={checkoutMismatchReason}
                                                 onChange={(e) => setCheckoutMismatchReason(e.target.value)}
-                                                placeholder="e.g. Shifted to HO / Left site for meeting / Finished site work"
-                                                className="mt-2 w-full px-3.5 py-2 rounded-xl border border-rose-300 bg-white text-xs font-bold text-slate-900 outline-none focus:ring-2 ring-rose-500/30 transition-all placeholder:text-slate-400"
+                                                placeholder="e.g. Shifted to HO / Left site for client meeting / Finished work (Required)"
+                                                className={`mt-2 w-full px-3.5 py-2 rounded-xl border ${!checkoutMismatchReason.trim() ? 'border-rose-400 ring-2 ring-rose-500/20' : 'border-emerald-400 ring-2 ring-emerald-500/20'} bg-white text-xs font-bold text-slate-900 outline-none transition-all placeholder:text-slate-400`}
                                             />
                                         </div>
                                     </div>
@@ -1868,6 +1870,10 @@ const Overview = () => {
                                             onClick={() => {
                                                 if (!siteNameInput.trim()) {
                                                     toast.error("Please enter the Site Name before confirming.");
+                                                    return;
+                                                }
+                                                if (isCheckingOut && isLocationMismatch && !checkoutMismatchReason.trim()) {
+                                                    toast.error(`Location Mismatch (${currentDistanceKm} km): You must enter a reason message before checking out.`);
                                                     return;
                                                 }
                                                 const formData = new FormData();
