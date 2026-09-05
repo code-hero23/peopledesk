@@ -1440,7 +1440,7 @@ const Overview = () => {
                     </Modal>
                 )}
                 {activeModal === 'worklog' && (
-                    <Modal isOpen onClose={() => !isMandatoryWorkLog && setActiveModal(null)} title={isMandatoryWorkLog ? "Mandatory Work Log" : "Work Log"}>
+                    <Modal isOpen onClose={() => !isMandatoryWorkLog && setActiveModal(null)} title={isMandatoryWorkLog ? "Mandatory Work Log" : "Work Log"} maxWidth="max-w-4xl">
                         <WorkLogFormSelector
                             designation={user?.designation}
                             onSuccess={() => {

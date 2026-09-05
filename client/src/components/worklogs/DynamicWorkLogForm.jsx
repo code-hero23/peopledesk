@@ -237,7 +237,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                 <div className={`p-2 rounded-lg transition-colors ${!isTodayOpen ? 'bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400' : 'bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400'}`}>
                                     <List size={18} />
                                 </div>
-                                <h4 className="text-xs font-black text-slate-500 dark:text-slate-500 uppercase tracking-widest">{table.label}</h4>
+                                <h4 className="text-sm font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider">{table.label}</h4>
                             </div>
                             {canAddRows && (
                                 <button
@@ -253,7 +253,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                         </div>
 
                         {/* Table Header */}
-                        <div className="hidden md:flex gap-4 mb-2 px-4 text-[10px] font-black text-slate-400 dark:text-slate-600 uppercase tracking-wider transition-colors">
+                        <div className="hidden md:flex gap-4 mb-2 px-4 text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider transition-colors">
                             {table.fields.map(field => (
                                 <div key={field.name} className="flex-1">{field.label}</div>
                             ))}
@@ -270,7 +270,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                     >
                                         {table.fields.map(field => (
                                             <div key={field.name} className="flex-1">
-                                                <label className="md:hidden text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase mb-1 block">{field.label}</label>
+                                                <label className="md:hidden text-xs font-bold text-slate-500 dark:text-slate-400 uppercase mb-1.5 block">{field.label}</label>
                                                 {field.type === 'select' ? (
                                                     <div className="relative">
                                                         <select

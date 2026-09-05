@@ -17,20 +17,9 @@ export const WORK_LOG_CONFIG = {
             {
                 label: "Task Entries",
                 fields: [
-                    { name: "task", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "text" }
-                ]
-            }
-        ]
-    },
-    "IT (DEVELOPMENT)": {
-        title: "IT (DEVELOPMENT) Daily Report",
-        tables: [
-            {
-                label: "Task Entries",
-                fields: [
-                    { name: "task", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "text" }
+                    { name: "task", label: "Task Description", type: "text", placeholder: "Task Description" },
+                    { name: "status", label: "Status", type: "text", placeholder: "Status" },
+                    { name: "remarks", label: "Remarks", type: "text", placeholder: "Remarks / Details" }
                 ]
             }
         ]

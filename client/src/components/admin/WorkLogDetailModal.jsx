@@ -37,11 +37,11 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
 
     // Common styling for metric cards
     const DataGrid = ({ items }) => (
-        <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-3.5">
             {items.filter(i => i.value !== null && i.value !== undefined && i.value !== '').map((item, idx) => (
-                <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-2 rounded transition-colors">
-                    <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-0.5">{item.label}</p>
-                    <p className="text-sm font-bold text-slate-800 dark:text-slate-100">{item.value}</p>
+                <div key={idx} className="bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-800 p-3 rounded-xl transition-colors">
+                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1">{item.label}</p>
+                    <p className="text-base font-black text-slate-800 dark:text-slate-100">{item.value}</p>
                 </div>
             ))}
         </div>
@@ -57,13 +57,13 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
 
     const SectionHeader = ({ title, colorClass }) => (
         <div className={`mt-8 mb-4 flex items-center gap-3`}>
-            <div className={`h-6 w-1 ${colorClass}`}></div>
-            <h3 className="text-sm font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">{title}</h3>
+            <div className={`h-6 w-1.5 rounded-full ${colorClass}`}></div>
+            <h3 className="text-base font-black text-slate-800 dark:text-slate-100 uppercase tracking-widest">{title}</h3>
         </div>
     );
 
     return (
-        <Modal title="Work Log Details" onClose={onClose}>
+        <Modal title="Work Log Details" onClose={onClose} maxWidth="max-w-5xl">
             <div className="flex justify-end gap-3 mb-4">
                 <button
                     onClick={handlePrint}
@@ -277,43 +277,43 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
 
                 {/* CUSTOM FIELDS / ROLE SPECIFIC METRICS */}
                 {customFields && (
-                    <div className="print-no-break border-t border-slate-100 mt-8 pt-4">
-                        <SectionHeader title="ROLE SPECIFIC METRICS" colorClass="bg-purple-600" />
+                    <div className="print-no-break border-t border-slate-100 dark:border-slate-800 mt-8 pt-4">
+                        <SectionHeader title="ROLE SPECIFIC METRICS / TASK DETAILS" colorClass="bg-purple-600" />
 
                         {/* Render Simple Key-Values */}
                         <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
                             {Object.entries(customFields)
                                 .filter(([_, value]) => typeof value !== 'object' || value === null)
                                 .map(([key, value]) => (
-                                    <div key={key} className="bg-slate-50 p-3 rounded border border-slate-200">
-                                        <p className="text-[10px] font-black text-slate-400 uppercase mb-1">{key}</p>
-                                        <p className="text-sm font-bold text-slate-800">{value || '-'}</p>
+                                    <div key={key} className="bg-slate-50 dark:bg-slate-800/50 p-3.5 rounded-xl border border-slate-200 dark:border-slate-800">
+                                        <p className="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase mb-1">{key}</p>
+                                        <p className="text-base font-black text-slate-800 dark:text-slate-100">{value || '-'}</p>
                                     </div>
                                 ))}
                         </div>
 
-                        {/* Render List/Table Data (e.g. Account Rows) */}
+                        {/* Render List/Table Data (e.g. Account / Office Admin Task Entries) */}
                         {Object.entries(customFields)
                             .filter(([_, value]) => Array.isArray(value))
                             .map(([key, list]) => (
                                 <div key={key} className="mb-6">
-                                    <h4 className="text-[10px] font-black text-slate-500 uppercase mb-2">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
-                                    <div className="border border-slate-200 rounded-lg overflow-hidden">
-                                        <table className="w-full text-xs">
-                                            <thead className="bg-slate-50 border-b border-slate-200">
+                                    <h4 className="text-sm font-black text-slate-600 dark:text-slate-400 uppercase tracking-wider mb-2.5">{key.replace(/([A-Z])/g, ' $1').trim()}</h4>
+                                    <div className="border border-slate-200 dark:border-slate-700 rounded-xl overflow-hidden shadow-sm">
+                                        <table className="w-full text-sm">
+                                            <thead className="bg-slate-100/70 dark:bg-slate-800 border-b border-slate-200 dark:border-slate-700">
                                                 <tr>
-                                                    <th className="px-3 py-2 text-left font-bold text-slate-600 w-12">No.</th>
+                                                    <th className="px-4 py-3 text-left font-black text-slate-700 dark:text-slate-300 w-16 text-xs uppercase tracking-wider">No.</th>
                                                     {list.length > 0 && Object.keys(list[0]).filter(k => !['_id', 'id', 'createdAt', 'updatedAt'].includes(k)).map((headerKey) => (
-                                                        <th key={headerKey} className="px-3 py-2 text-left font-bold text-slate-600 capitalize">
-                                                            {headerKey}
+                                                        <th key={headerKey} className="px-4 py-3 text-left font-black text-slate-700 dark:text-slate-300 capitalize text-xs uppercase tracking-wider">
+                                                            {headerKey === 'task' ? 'Task Description' : headerKey}
                                                         </th>
                                                     ))}
                                                 </tr>
                                             </thead>
-                                            <tbody className="divide-y divide-slate-100">
+                                            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 bg-white dark:bg-slate-900">
                                                 {list.map((item, idx) => (
-                                                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/30">
-                                                        <td className="px-3 py-2 text-slate-400 font-bold">{idx + 1}</td>
+                                                    <tr key={idx} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors">
+                                                        <td className="px-4 py-3 text-slate-400 font-bold text-sm">{idx + 1}</td>
                                                         {Object.keys(item).filter(k => !['_id', 'id', 'createdAt', 'updatedAt'].includes(k)).map((key) => {
                                                             const val = item[key];
                                                             if (key.toLowerCase() === 'status' && val) {
@@ -329,15 +329,15 @@ const WorkLogDetailModal = ({ isOpen, onClose, log }) => {
                                                                     badgeClass = "bg-rose-50 text-rose-700 border-rose-200";
                                                                 }
                                                                 return (
-                                                                    <td key={key} className="px-3 py-2 font-medium text-slate-800">
-                                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${badgeClass}`}>
+                                                                    <td key={key} className="px-4 py-3 font-semibold text-slate-800">
+                                                                        <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${badgeClass}`}>
                                                                             {val}
                                                                         </span>
                                                                     </td>
                                                                 );
                                                             }
                                                             return (
-                                                                <td key={key} className="px-3 py-2 font-medium text-slate-800 dark:text-slate-200">
+                                                                <td key={key} className="px-4 py-3 font-semibold text-slate-800 dark:text-slate-200 text-sm leading-relaxed">
                                                                     {val || '-'}
                                                                 </td>
                                                             );
