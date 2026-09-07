@@ -137,7 +137,7 @@ const AdminDashboard = () => {
             label: 'Real-time Overview',
             desc: 'Showrooms (MTRS, Porur, OMR), 4-Level summary & break tracking.',
             color: 'from-emerald-500 to-teal-600',
-            roles: ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'],
+            roles: ['ADMIN', 'BUSINESS_HEAD', 'HR'],
         },
         {
             to: '/admin/employees',

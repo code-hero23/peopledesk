@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSelector } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
     Users,
@@ -58,6 +59,13 @@ const getShowroomFromUser = (user, attendanceRecord) => {
 
 const OverviewDashboard = () => {
     const { user } = useSelector((state) => state.auth);
+    const navigate = useNavigate();
+
+    useEffect(() => {
+        if (user && !['ADMIN', 'SUPER_ADMIN', 'HR', 'BUSINESS_HEAD'].includes(user.role)) {
+            navigate('/admin-dashboard', { replace: true });
+        }
+    }, [user, navigate]);
     const [selectedLevel, setSelectedLevel] = useState('All Levels');
     const [selectedShowroom, setSelectedShowroom] = useState('All Showrooms');
     const [statusTab, setStatusTab] = useState('All');
