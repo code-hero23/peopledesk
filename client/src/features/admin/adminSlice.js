@@ -293,7 +293,8 @@ export const updateRequestStatus = createAsyncThunk(
                 { status },
                 config
             );
-            return { type, id, request: response.data.request }; // Return specific data and full request to update local state efficiently
+            const reqData = response.data.request || response.data;
+            return { type, id, request: reqData, status };
         } catch (error) {
             const message =
                 (error.response && error.response.data && error.response.data.message) ||
@@ -536,14 +537,16 @@ export const adminSlice = createSlice({
             })
             // Update Status
             .addCase(updateRequestStatus.fulfilled, (state, action) => {
-                const { type, id, request } = action.payload;
+                const { type, id, request, status } = action.payload;
                 
                 const updateList = (pendingList, historyList) => {
                     const list1 = pendingList || [];
                     const list2 = historyList || [];
                     
                     const oldReq = list1.find(r => r.id === id) || list2.find(r => r.id === id);
-                    const updatedReq = oldReq ? { ...oldReq, ...request } : request;
+                    const updatedReq = oldReq
+                        ? { ...oldReq, ...(request || {}), ...(status ? { bhStatus: status } : {}) }
+                        : (request || { id, status, bhStatus: status });
                     
                     const newPending = list1.filter(r => r.id !== id);
                     
@@ -551,43 +554,40 @@ export const adminSlice = createSlice({
                     const index = newHistory.findIndex(r => r.id === id);
                     if (index !== -1) {
                         newHistory[index] = updatedReq;
-                    } else {
-                        newHistory.push(updatedReq);
+                    } else if (updatedReq) {
+                        newHistory.unshift(updatedReq);
                     }
                     
                     return { newPending, newHistory };
                 };
 
+                if (!state.pendingRequests) {
+                    state.pendingRequests = { leaves: [], permissions: [], siteVisits: [], showroomVisits: [], wfh: [] };
+                }
+                if (!state.requestHistory) {
+                    state.requestHistory = { leaves: [], permissions: [], siteVisits: [], showroomVisits: [], wfh: [] };
+                }
+
                 if (type === 'leave') {
-                    const { newPending, newHistory } = updateList(state.pendingRequests.leaves, state.requestHistory?.leaves);
+                    const { newPending, newHistory } = updateList(state.pendingRequests.leaves, state.requestHistory.leaves);
                     state.pendingRequests.leaves = newPending;
-                    if (state.requestHistory) {
-                        state.requestHistory.leaves = newHistory;
-                    }
+                    state.requestHistory.leaves = newHistory;
                 } else if (type === 'permission') {
-                    const { newPending, newHistory } = updateList(state.pendingRequests.permissions, state.requestHistory?.permissions);
+                    const { newPending, newHistory } = updateList(state.pendingRequests.permissions, state.requestHistory.permissions);
                     state.pendingRequests.permissions = newPending;
-                    if (state.requestHistory) {
-                        state.requestHistory.permissions = newHistory;
-                    }
+                    state.requestHistory.permissions = newHistory;
                 } else if (type === 'site-visit') {
-                    const { newPending, newHistory } = updateList(state.pendingRequests.siteVisits, state.requestHistory?.siteVisits);
+                    const { newPending, newHistory } = updateList(state.pendingRequests.siteVisits, state.requestHistory.siteVisits);
                     state.pendingRequests.siteVisits = newPending;
-                    if (state.requestHistory) {
-                        state.requestHistory.siteVisits = newHistory;
-                    }
+                    state.requestHistory.siteVisits = newHistory;
                 } else if (type === 'showroom-visit') {
-                    const { newPending, newHistory } = updateList(state.pendingRequests.showroomVisits, state.requestHistory?.showroomVisits);
+                    const { newPending, newHistory } = updateList(state.pendingRequests.showroomVisits, state.requestHistory.showroomVisits);
                     state.pendingRequests.showroomVisits = newPending;
-                    if (state.requestHistory) {
-                        state.requestHistory.showroomVisits = newHistory;
-                    }
+                    state.requestHistory.showroomVisits = newHistory;
                 } else if (type === 'wfh') {
-                    const { newPending, newHistory } = updateList(state.pendingRequests.wfh, state.requestHistory?.wfh);
+                    const { newPending, newHistory } = updateList(state.pendingRequests.wfh, state.requestHistory.wfh);
                     state.pendingRequests.wfh = newPending;
-                    if (state.requestHistory) {
-                        state.requestHistory.wfh = newHistory;
-                    }
+                    state.requestHistory.wfh = newHistory;
                 }
             })
             // Update User Status

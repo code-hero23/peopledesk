@@ -4,6 +4,7 @@ const xlsx = require('xlsx');
 const prisma = new PrismaClient();
 const { generateAndSendDailySummary } = require('../cron/DailySummaryCron');
 const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
+const { sendEmail } = require('../utils/emailService');
 
 // @desc    Get all employees
 // @route   GET /api/admin/employees
@@ -427,9 +428,110 @@ const updateRequestStatus = async (req, res) => {
         result = await model.update({
             where: { id: parseInt(id) },
             data: updateData,
+            include: { user: { select: { id: true, name: true, email: true, designation: true } } }
         });
 
-        res.json(result);
+        // Enrich with BH and HR names
+        let bhUser = null;
+        if (result.bhId) {
+            bhUser = await prisma.user.findUnique({
+                where: { id: result.bhId },
+                select: { id: true, name: true, designation: true }
+            });
+        }
+        let hrUser = null;
+        if (result.hrId) {
+            hrUser = await prisma.user.findUnique({
+                where: { id: result.hrId },
+                select: { id: true, name: true, designation: true }
+            });
+        }
+
+        const enriched = {
+            ...result,
+            bhName: bhUser?.name || 'BH',
+            bhDesignation: bhUser?.designation || 'BH',
+            hrName: hrUser?.name || null,
+            approvedByName: hrUser?.name || null,
+            approvedByDesignation: hrUser?.designation || null
+        };
+
+        // Send Email Notification to employee when BH approves or rejects an exceeded leave/permission request
+        if ((userRole === 'BUSINESS_HEAD' || userRole === 'AE_MANAGER') && (type === 'leave' || type === 'permission')) {
+            if (request.isExceededLimit && request.user?.email) {
+                try {
+                    const employeeEmail = request.user.email;
+                    const employeeName = request.user.name;
+                    const bhName = req.user.name || 'Business Head';
+                    const isApproved = status === 'APPROVED';
+                    const actionWord = isApproved ? 'Verified & Approved' : 'Rejected';
+                    const reqTypeLabel = type === 'leave' ? 'Exceeded Leave Request' : 'Exceeded Permission Request';
+
+                    let detailsHtml = '';
+                    if (type === 'leave') {
+                        const sDate = new Date(request.startDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                        const eDate = new Date(request.endDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                        detailsHtml = `
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Leave Type:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.type || 'Standard'}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Duration:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${sDate} - ${eDate}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Reason:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.reason || 'N/A'}</td></tr>
+                        `;
+                    } else {
+                        const pDate = new Date(request.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                        detailsHtml = `
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Date:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${pDate}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Time Window:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.startTime || ''} - ${request.endTime || ''}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Reason:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.reason || 'N/A'}</td></tr>
+                        `;
+                    }
+
+                    const emailSubject = `[PeopleDesk] Your ${reqTypeLabel} has been ${actionWord} by Business Head`;
+                    const statusColor = isApproved ? '#10b981' : '#ef4444';
+                    const statusBg = isApproved ? '#ecfdf5' : '#fef2f2';
+                    const nextStepText = isApproved
+                        ? 'Your exceeded limit request has been <strong>verified and approved by your Business Head</strong> and forwarded to HR for final sign-off.'
+                        : 'Your exceeded limit request has been <strong>rejected by your Business Head</strong>.';
+
+                    const html = `
+                        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
+                            <div style="background-color: #1e293b; padding: 24px; text-align: center; color: #ffffff;">
+                                <h2 style="margin: 0; font-size: 20px; font-weight: bold;">PeopleDesk Notification</h2>
+                                <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Human Resource Management System</p>
+                            </div>
+                            <div style="padding: 24px;">
+                                <p style="font-size: 15px; color: #334155; margin-top: 0;">Dear <strong>${employeeName}</strong>,</p>
+                                <div style="background-color: ${statusBg}; border-left: 4px solid ${statusColor}; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
+                                    <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: ${statusColor}; letter-spacing: 0.05em;">Request Status Update</span>
+                                    <span style="font-size: 15px; font-weight: bold; color: #0f172a;">${actionWord} by Business Head (${bhName})</span>
+                                </div>
+                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f8fafc; border-radius: 8px; overflow: hidden; font-size: 14px; border: 1px solid #e2e8f0;">
+                                    ${detailsHtml}
+                                    <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569;">Reviewed By:</td><td style="padding: 10px 12px; color: #1e293b;">${bhName} (Business Head)</td></tr>
+                                </table>
+                                <p style="font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 24px;">
+                                    ${nextStepText}
+                                </p>
+                                <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 24px 0;" />
+                                <p style="font-size: 12px; color: #94a3b8; text-align: center; margin: 0;">
+                                    This is an automated notification from PeopleDesk. Please log in to your dashboard to view full details.
+                                </p>
+                            </div>
+                        </div>
+                    `;
+
+                    // Send email in background without blocking response
+                    sendEmail({
+                        to: employeeEmail,
+                        subject: emailSubject,
+                        html: html
+                    }).catch(err => console.error('Failed to send employee notification email:', err));
+                } catch (emailErr) {
+                    console.error('Error constructing notification email:', emailErr);
+                }
+            }
+        }
+
+        res.json({ request: enriched, ...enriched });
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Server Error', error: error.message });

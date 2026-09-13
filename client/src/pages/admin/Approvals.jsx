@@ -55,10 +55,15 @@ const Approvals = () => {
     };
   }, [dispatch, filterDate, cycleRange]);
 
-  const onUpdateStatus = (type, id, status) => {
+  const onUpdateStatus = async (type, id, status) => {
     if (window.confirm(`Confirm ${status} action?`)) {
-      dispatch(updateRequestStatus({ type, id, status }));
+      await dispatch(updateRequestStatus({ type, id, status }));
       setSelectedKeys((prev) => prev.filter((key) => key !== `${type}-${id}`));
+      const params = filterDate
+        ? { date: filterDate }
+        : { startDate: cycleRange.startDate, endDate: cycleRange.endDate };
+      dispatch(getPendingRequests(params));
+      dispatch(getRequestHistory(params));
     }
   };
 
@@ -108,7 +113,10 @@ const Approvals = () => {
     const map = new Map();
     [...(list1 || []), ...(list2 || [])].forEach((item) => {
       if (item && item.id) {
-        map.set(item.id, item);
+        const existing = map.get(item.id);
+        if (!existing || new Date(item.updatedAt || item.createdAt) >= new Date(existing.updatedAt || existing.createdAt)) {
+          map.set(item.id, item);
+        }
       }
     });
     return Array.from(map.values());
@@ -214,6 +222,10 @@ const Approvals = () => {
       if (isDirectUpdate) return false;
       if (req.status === "REJECTED") return false;
       if (!isApproved) return false;
+    } else if (categoryFilter === "rejected") {
+      if (isDirectUpdate) return false;
+      const isRejected = req.status === "REJECTED" || req.bhStatus === "REJECTED" || req.hrStatus === "REJECTED";
+      if (!isRejected) return false;
     }
  
     return true;
@@ -282,12 +294,18 @@ const Approvals = () => {
       )
     )
       return;
-    selectedKeys.forEach((key) => {
+    const promises = selectedKeys.map((key) => {
       const [type, idStr] = key.split("-");
       const id = parseInt(idStr);
-      dispatch(updateRequestStatus({ type, id, status: "APPROVED" }));
+      return dispatch(updateRequestStatus({ type, id, status: "APPROVED" }));
     });
     setSelectedKeys([]);
+    await Promise.all(promises);
+    const params = filterDate
+      ? { date: filterDate }
+      : { startDate: cycleRange.startDate, endDate: cycleRange.endDate };
+    dispatch(getPendingRequests(params));
+    dispatch(getRequestHistory(params));
   };
 
   const handleBulkReject = async () => {
@@ -298,12 +316,18 @@ const Approvals = () => {
       )
     )
       return;
-    selectedKeys.forEach((key) => {
+    const promises = selectedKeys.map((key) => {
       const [type, idStr] = key.split("-");
       const id = parseInt(idStr);
-      dispatch(updateRequestStatus({ type, id, status: "REJECTED" }));
+      return dispatch(updateRequestStatus({ type, id, status: "REJECTED" }));
     });
     setSelectedKeys([]);
+    await Promise.all(promises);
+    const params = filterDate
+      ? { date: filterDate }
+      : { startDate: cycleRange.startDate, endDate: cycleRange.endDate };
+    dispatch(getPendingRequests(params));
+    dispatch(getRequestHistory(params));
   };
 
   if (isLoading && activeTab === "pending" && !pendingRequests.leaves)
@@ -727,7 +751,8 @@ const Approvals = () => {
               {[
                 { value: "requests", label: "Approval Requests" },
                 { value: "direct", label: "Direct Updates" },
-                { value: "approved", label: "Approved History" }
+                { value: "approved", label: "Approved History" },
+                { value: "rejected", label: "Rejected" }
               ].map((opt) => (
                 <button
                   key={opt.label}
