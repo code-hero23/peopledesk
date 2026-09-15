@@ -116,11 +116,15 @@ export const uploadVoucherProof = createAsyncThunk(
 // Pay Voucher
 export const payVoucher = createAsyncThunk(
     'voucher/pay',
-    async (id, thunkAPI) => {
+    async (payload, thunkAPI) => {
         try {
+            const id = typeof payload === 'object' ? payload.id : payload;
+            const body = typeof payload === 'object' 
+                ? { amount: payload.amount, remarks: payload.remarks } 
+                : {};
             const token = thunkAPI.getState().auth.user.token;
             const config = { headers: { Authorization: `Bearer ${token}` } };
-            const response = await axios.put(`${API_URL}/${id}/pay`, {}, config);
+            const response = await axios.put(`${API_URL}/${id}/pay`, body, config);
             // Refresh finance summary after payment
             thunkAPI.dispatch(getFinanceSummary());
             return response.data;
@@ -188,7 +192,8 @@ export const getDepositHistory = createAsyncThunk('voucher/getDepositHistory', a
         });
         return response.data;
     } catch (error) {
-        return thunkAPI.rejectWithValue(error.response.data.message);
+        const message = error.response?.data?.message || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
     }
 });
 
@@ -201,7 +206,8 @@ export const addCash = createAsyncThunk('voucher/addCash', async (data, thunkAPI
         });
         return response.data;
     } catch (error) {
-        return thunkAPI.rejectWithValue(error.response.data.message);
+        const message = error.response?.data?.message || error.message || error.toString();
+        return thunkAPI.rejectWithValue(message);
     }
 });
 

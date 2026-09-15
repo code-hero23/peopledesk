@@ -1,10 +1,29 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+const ExcelJS = require('exceljs');
 
-// Helper to check for COO/AM/Admin roles
+// Helper to check for COO/AM/Admin roles (View & Export access)
 const isAuthorized = (user) => {
+    if (!user) return false;
     if (user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') return true;
-    if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) return true;
+    if (user.role === 'BUSINESS_HEAD') {
+        const desig = (user.designation || '').toUpperCase();
+        return desig === 'COO' || desig.includes('CHIEF OPERATIONAL OFFICER') || (user.email || '').toLowerCase() === 'designs.cookscape@gmail.com';
+    }
+    if ((user.email || '').toLowerCase() === 'designs.cookscape@gmail.com') return true;
+    return false;
+};
+
+// Helper to check for modification access (Admin is view-only)
+const canEditCarpenter = (user) => {
+    if (!user) return false;
+    if (user.role === 'ADMIN') return false; // Admin has view-only access
+    if (user.role === 'ACCOUNTS_MANAGER') return true;
+    if (user.role === 'BUSINESS_HEAD') {
+        const desig = (user.designation || '').toUpperCase();
+        return desig === 'COO' || desig.includes('CHIEF OPERATIONAL OFFICER') || (user.email || '').toLowerCase() === 'designs.cookscape@gmail.com';
+    }
+    if ((user.email || '').toLowerCase() === 'designs.cookscape@gmail.com') return true;
     return false;
 };
 
@@ -28,10 +47,10 @@ const getCarpenterRecords = async (req, res) => {
 
 // @desc    Create a new carpenter record
 // @route   POST /api/carpenter
-// @access  Private (Admin, COO, AM)
+// @access  Private (COO, AM)
 const createCarpenterRecord = async (req, res) => {
-    if (!isAuthorized(req.user)) {
-        return res.status(403).json({ message: 'Not authorized' });
+    if (!canEditCarpenter(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to create carpenter records. Administrators have view-only access.' });
     }
     try {
         const { aeName, clientName, siteName, carpenterName, workOrderValue, cookscapeRate, advance, remarks, status } = req.body;
@@ -68,10 +87,10 @@ const createCarpenterRecord = async (req, res) => {
 
 // @desc    Update a carpenter record
 // @route   PUT /api/carpenter/:id
-// @access  Private (Admin, COO, AM)
+// @access  Private (COO, AM)
 const updateCarpenterRecord = async (req, res) => {
-    if (!isAuthorized(req.user)) {
-        return res.status(403).json({ message: 'Not authorized' });
+    if (!canEditCarpenter(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to update carpenter records. Administrators have view-only access.' });
     }
     try {
         const { id } = req.params;
@@ -110,10 +129,10 @@ const updateCarpenterRecord = async (req, res) => {
 
 // @desc    Delete a carpenter record
 // @route   DELETE /api/carpenter/:id
-// @access  Private (Admin, COO, AM)
+// @access  Private (COO, AM)
 const deleteCarpenterRecord = async (req, res) => {
-    if (!isAuthorized(req.user)) {
-        return res.status(403).json({ message: 'Not authorized' });
+    if (!canEditCarpenter(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to delete carpenter records. Administrators have view-only access.' });
     }
     try {
         const { id } = req.params;
@@ -126,8 +145,6 @@ const deleteCarpenterRecord = async (req, res) => {
         res.status(500).json({ message: 'Server Error', error: error.message });
     }
 };
-
-const ExcelJS = require('exceljs');
 
 // @desc    Export carpenter records to Excel
 // @route   GET /api/carpenter/export

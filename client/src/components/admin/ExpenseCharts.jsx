@@ -15,13 +15,15 @@ import {
     Area
 } from 'recharts';
 
-const ExpenseCharts = ({ spentHistory }) => {
+const ExpenseCharts = ({ spentHistory = [] }) => {
+    const validHistory = Array.isArray(spentHistory) ? spentHistory : [];
+
     // 1. Prepare data for Spending Trend (Grouped by Date)
-    const trendData = spentHistory
-        .filter(v => v.status === 'PAID' || v.status === 'COMPLETED' || v.status === 'WAITING')
+    const trendData = validHistory
+        .filter(v => v && (v.status === 'PAID' || v.status === 'COMPLETED' || v.status === 'WAITING'))
         .reduce((acc, v) => {
-            const date = new Date(v.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' });
-            acc[date] = (acc[date] || 0) + v.amount;
+            const date = v.date ? new Date(v.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short' }) : 'Unknown';
+            acc[date] = (acc[date] || 0) + (v.amount || 0);
             return acc;
         }, {});
 
@@ -30,9 +32,10 @@ const ExpenseCharts = ({ spentHistory }) => {
         .slice(-7); // Last 7 unique dates with spending
 
     // 2. Prepare data for Category Distribution
-    const categoryDataMap = spentHistory.reduce((acc, v) => {
-        const type = v.type.replace(/_/g, ' ');
-        acc[type] = (acc[type] || 0) + v.amount;
+    const categoryDataMap = validHistory.reduce((acc, v) => {
+        if (!v) return acc;
+        const type = (v.type || 'OTHER').replace(/_/g, ' ');
+        acc[type] = (acc[type] || 0) + (v.amount || 0);
         return acc;
     }, {});
 
@@ -54,45 +57,51 @@ const ExpenseCharts = ({ spentHistory }) => {
                     </div>
                 </div>
                 <div className="h-64 w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <AreaChart data={trendChartData}>
-                            <defs>
-                                <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
-                                    <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
-                                </linearGradient>
-                            </defs>
-                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                            <XAxis 
-                                dataKey="date" 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }}
-                                dy={10}
-                            />
-                            <YAxis 
-                                axisLine={false} 
-                                tickLine={false} 
-                                tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }}
-                                tickFormatter={(value) => `₹${value >= 1000 ? value / 1000 + 'k' : value}`}
-                            />
-                            <Tooltip 
-                                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '1rem' }}
-                                labelStyle={{ fontWeight: 'black', marginBottom: '0.25rem', color: '#1e293b' }}
-                                itemStyle={{ fontWeight: 'bold', color: '#2563eb' }}
-                                formatter={(value) => [`₹${value.toLocaleString()}`, 'Spent']}
-                            />
-                            <Area 
-                                type="monotone" 
-                                dataKey="amount" 
-                                stroke="#2563eb" 
-                                strokeWidth={4}
-                                fillOpacity={1} 
-                                fill="url(#colorAmount)" 
-                                animationDuration={1500}
-                            />
-                        </AreaChart>
-                    </ResponsiveContainer>
+                    {trendChartData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <AreaChart data={trendChartData}>
+                                <defs>
+                                    <linearGradient id="colorAmount" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.1}/>
+                                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0}/>
+                                    </linearGradient>
+                                </defs>
+                                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                <XAxis 
+                                    dataKey="date" 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }}
+                                    dy={10}
+                                />
+                                <YAxis 
+                                    axisLine={false} 
+                                    tickLine={false} 
+                                    tick={{ fontSize: 10, fontWeight: 'bold', fill: '#94a3b8' }}
+                                    tickFormatter={(value) => `₹${value >= 1000 ? value / 1000 + 'k' : value}`}
+                                />
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '1rem' }}
+                                    labelStyle={{ fontWeight: 'black', marginBottom: '0.25rem', color: '#1e293b' }}
+                                    itemStyle={{ fontWeight: 'bold', color: '#2563eb' }}
+                                    formatter={(value) => [`₹${value.toLocaleString()}`, 'Spent']}
+                                />
+                                <Area 
+                                    type="monotone" 
+                                    dataKey="amount" 
+                                    stroke="#2563eb" 
+                                    strokeWidth={4}
+                                    fillOpacity={1} 
+                                    fill="url(#colorAmount)" 
+                                    animationDuration={1500}
+                                />
+                            </AreaChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-slate-300 font-bold uppercase tracking-widest text-xs">
+                            No spending history available yet
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -105,35 +114,41 @@ const ExpenseCharts = ({ spentHistory }) => {
                     </div>
                 </div>
                 <div className="h-64 w-full flex items-center justify-center">
-                    <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                            <Pie
-                                data={pieData}
-                                cx="50%"
-                                cy="50%"
-                                innerRadius={60}
-                                outerRadius={80}
-                                paddingAngle={5}
-                                dataKey="value"
-                                animationDuration={1500}
-                            >
-                                {pieData.map((entry, index) => (
-                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                ))}
-                            </Pie>
-                            <Tooltip 
-                                contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '1rem' }}
-                                formatter={(value) => `₹${value.toLocaleString()}`}
-                            />
-                            <Legend 
-                                verticalAlign="middle" 
-                                align="right" 
-                                layout="vertical" 
-                                iconType="circle"
-                                wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}
-                            />
-                        </PieChart>
-                    </ResponsiveContainer>
+                    {pieData.length > 0 ? (
+                        <ResponsiveContainer width="100%" height="100%">
+                            <PieChart>
+                                <Pie
+                                    data={pieData}
+                                    cx="50%"
+                                    cy="50%"
+                                    innerRadius={60}
+                                    outerRadius={80}
+                                    paddingAngle={5}
+                                    dataKey="value"
+                                    animationDuration={1500}
+                                >
+                                    {pieData.map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip 
+                                    contentStyle={{ borderRadius: '1rem', border: 'none', boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)', padding: '1rem' }}
+                                    formatter={(value) => `₹${value.toLocaleString()}`}
+                                />
+                                <Legend 
+                                    verticalAlign="middle" 
+                                    align="right" 
+                                    layout="vertical" 
+                                    iconType="circle"
+                                    wrapperStyle={{ fontSize: '10px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.05em' }}
+                                />
+                            </PieChart>
+                        </ResponsiveContainer>
+                    ) : (
+                        <div className="h-full flex items-center justify-center text-slate-300 font-bold uppercase tracking-widest text-xs">
+                            No category data available yet
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

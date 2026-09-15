@@ -7,8 +7,12 @@ const { parseRobustDate } = require('../utils/dateHelpers');
 // @access  Private (Employee)
 const createVoucher = async (req, res) => {
     try {
+        if (req.user.role === 'ADMIN') {
+            return res.status(403).json({ message: 'Administrators have view-only access to vouchers.' });
+        }
+
         console.log('DEBUG: Full req.body:', JSON.stringify(req.body, null, 2));
-        const userId = (req.user.role === 'ADMIN' || req.user.role === 'ACCOUNTS_MANAGER') && req.body.targetUserId 
+        const userId = req.user.role === 'ACCOUNTS_MANAGER' && req.body.targetUserId 
             ? parseInt(req.body.targetUserId) 
             : req.user.id;
         
@@ -110,27 +114,25 @@ const getMyVouchers = async (req, res) => {
 // @access  Private (ACCOUNTS_MANAGER, BUSINESS_HEAD, ADMIN)
 const getManageableVouchers = async (req, res) => {
     try {
-        const { role, designation } = req.user;
+        const { role, designation, email } = req.user;
         let where = {};
 
         const userDesignation = (designation || '').toUpperCase();
-        const isCOOUser = userDesignation.includes('COO') || userDesignation.includes('CHIEF OPERATIONAL OFFICER');
+        const isCOOUser = (role === 'BUSINESS_HEAD' && (userDesignation === 'COO' || userDesignation.includes('CHIEF OPERATIONAL OFFICER'))) || email === 'designs.cookscape@gmail.com';
 
         if (role === 'ACCOUNTS_MANAGER') {
-            // Accounts Manager needs to see items needing approval AND items needing payment
+            // Accounts Manager needs to see items needing AM approval OR items approved by COO waiting for payment
             where = { 
                 status: {
                     in: ['PENDING', 'APPROVED']
                 }
             };
-        } else if (role === 'BUSINESS_HEAD' && isCOOUser) {
+        } else if (isCOOUser) {
             // COO only needs to see items specifically waiting for COO approval
-            where = { amStatus: 'APPROVED', cooStatus: 'PENDING' };
+            where = { amStatus: 'APPROVED', cooStatus: 'PENDING', status: { in: ['PENDING', 'APPROVED'] } };
         } else if (role === 'ADMIN') {
-            // Admin sees all items that haven't been fully approved yet
-            where = { 
-                status: 'PENDING'
-            };
+            // Admin has view-only access to pending items
+            where = { status: { in: ['PENDING', 'APPROVED'] } };
         } else {
             return res.status(403).json({ message: 'Not authorized' });
         }
@@ -160,10 +162,9 @@ const approveVoucherAM = async (req, res) => {
         const { id } = req.params;
         const { status, remarks } = req.body; // 'APPROVED' or 'REJECTED'
         const amId = req.user.id;
-        const isAdmin = req.user.role === 'ADMIN';
 
-        if (req.user.role !== 'ACCOUNTS_MANAGER' && !isAdmin) {
-            return res.status(403).json({ message: 'Not authorized for AM approval' });
+        if (req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only Accounts Manager can review/approve at the AM stage. Administrators have view-only access.' });
         }
 
         const voucher = await prisma.voucher.findUnique({
@@ -196,17 +197,18 @@ const approveVoucherAM = async (req, res) => {
 
 // @desc    Approve/Reject Voucher (COO)
 // @route   PUT /api/vouchers/:id/approve-coo
-// @access  Private (BUSINESS_HEAD)
+// @access  Private (BUSINESS_HEAD / COO)
 const approveVoucherCOO = async (req, res) => {
     try {
         const { id } = req.params;
         const { status, remarks } = req.body;
         const cooId = req.user.id;
-        const { designation, role } = req.user;
-        const isAdmin = role === 'ADMIN';
+        const { designation, role, email } = req.user;
 
-        if (!isAdmin && designation !== 'COO' && designation !== 'Chief Operational Officer') {
-            return res.status(403).json({ message: 'Not authorized as COO' });
+        const isCOOUser = (role === 'BUSINESS_HEAD' && (designation === 'COO' || designation === 'Chief Operational Officer')) || email === 'designs.cookscape@gmail.com';
+
+        if (!isCOOUser) {
+            return res.status(403).json({ message: 'Not authorized as COO. Only designs.cookscape@gmail.com / COO can review and confirm. Administrators have view-only access.' });
         }
 
         const voucher = await prisma.voucher.findUnique({
@@ -262,11 +264,11 @@ const uploadProof = async (req, res) => {
             where: { id: parseInt(id) }
         });
 
-        if (!voucher || voucher.userId !== userId) {
+        if (!voucher || (voucher.userId !== userId && !['ADMIN', 'SUPERADMIN', 'ACCOUNTS_MANAGER'].includes(req.user.role))) {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
-        if (voucher.status !== 'WAITING' && (voucher.type === 'PREPAID' || voucher.type === 'ADVANCE')) {
+        if (voucher.status !== 'WAITING') {
             return res.status(400).json({ message: 'Voucher must be in WAITING state before uploading settlement proof' });
         }
 
@@ -289,12 +291,16 @@ const uploadProof = async (req, res) => {
 
 // @desc    Add Admin Note to Voucher
 // @route   PUT /api/vouchers/:id/admin-note
-// @access  Private (Admin)
+// @access  Private (ACCOUNTS_MANAGER)
 const addAdminNote = async (req, res) => {
     try {
         const { id } = req.params;
         const { remarks } = req.body;
         const adminId = req.user.id;
+
+        if (req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only Accounts Manager can add notes. Administrators have view-only access.' });
+        }
 
         const voucher = await prisma.voucher.findUnique({
             where: { id: parseInt(id) }
@@ -321,15 +327,14 @@ const addAdminNote = async (req, res) => {
 
 // @desc    Mark Voucher as Paid (AM)
 // @route   PUT /api/vouchers/:id/pay
-// @access  Private (ACCOUNTS_MANAGER, ADMIN)
+// @access  Private (ACCOUNTS_MANAGER)
 const payVoucher = async (req, res) => {
     try {
         const { id } = req.params;
         const amId = req.user.id;
-        const isAdmin = req.user.role === 'ADMIN';
 
-        if (req.user.role !== 'ACCOUNTS_MANAGER' && !isAdmin) {
-            return res.status(403).json({ message: 'Not authorized' });
+        if (req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only Accounts Manager can mark vouchers as paid. Administrators have view-only access.' });
         }
 
         const voucher = await prisma.voucher.findUnique({
@@ -340,59 +345,35 @@ const payVoucher = async (req, res) => {
             return res.status(404).json({ message: 'Voucher not found' });
         }
 
-        // Allow any voucher type to be force-paid if user is AM/Admin
-        // (Access check for AM/Admin is already done at the top)
-
         if (voucher.amStatus === 'REJECTED' || voucher.cooStatus === 'REJECTED') {
             return res.status(400).json({ message: 'Cannot pay a rejected voucher' });
         }
 
-        // If force paid, notify COO
-        if (voucher.cooStatus !== 'APPROVED') {
-            try {
-                const coos = await prisma.user.findMany({
-                    where: {
-                        role: 'BUSINESS_HEAD',
-                        OR: [
-                            { designation: 'COO' },
-                            { designation: 'Chief Operational Officer' }
-                        ]
-                    }
-                });
-
-                for (const coo of coos) {
-                    await prisma.notification.create({
-                        data: {
-                            userId: coo.id,
-                            title: '🚨 Voucher Force Paid',
-                            message: `Voucher #${voucher.id} for ₹${voucher.amount.toLocaleString()} was force-paid by AM (${req.user.name}) without COO approval.`,
-                            type: 'URGENT',
-                            relatedId: voucher.id
-                        }
-                    });
-                }
-            } catch (notifyError) {
-                console.error('Non-critical: Failed to send force-pay notification to COO:', notifyError);
-            }
+        if (voucher.amStatus !== 'APPROVED') {
+            return res.status(400).json({ message: 'Voucher must be reviewed and approved by Accounts Manager first' });
         }
 
-        // In the new flow, payVoucher marks it as PAID (confirmed at bank level)
-        // Disbursement will be a separate step
+        if (voucher.cooStatus !== 'APPROVED') {
+            return res.status(400).json({ message: 'Voucher must be reviewed and confirmed by COO before marking as PAID' });
+        }
+
+        // AM gives amount and changes paid status
+        const parsedAmount = (req.body.amount !== undefined && req.body.amount !== '') 
+            ? parseFloat(req.body.amount) 
+            : voucher.amount;
+
+        if (isNaN(parsedAmount) || parsedAmount <= 0) {
+            return res.status(400).json({ message: 'Invalid payment amount' });
+        }
+
+        const paymentNote = req.body.remarks ? `: ${req.body.remarks}` : '';
         const updateData = {
             status: 'PAID',
+            amount: parsedAmount,
             adminRemarks: voucher.adminRemarks 
-                ? `${voucher.adminRemarks} | Payment confirmed by ${req.user.name}` 
-                : `Payment confirmed by ${req.user.name}`
+                ? `${voucher.adminRemarks} | Payment of ₹${parsedAmount.toLocaleString()} confirmed by ${req.user.name}${paymentNote}` 
+                : `Payment of ₹${parsedAmount.toLocaleString()} confirmed by ${req.user.name}${paymentNote}`
         };
-
-        // If force paid, also update COO status to maintain workflow integrity
-        if (voucher.cooStatus !== 'APPROVED') {
-            updateData.cooStatus = 'APPROVED';
-            updateData.cooRemarks = `Force Paid by AM: ${req.user.name}`;
-            updateData.cooApprovedAt = new Date();
-            updateData.cooId = req.user.id;
-        }
-
 
         const updatedVoucher = await prisma.voucher.update({
             where: { id: parseInt(id) },
@@ -429,15 +410,14 @@ const payVoucher = async (req, res) => {
 
 // @desc    Mark Voucher as Disbursed (AM)
 // @route   PUT /api/vouchers/:id/disburse
-// @access  Private (ACCOUNTS_MANAGER, ADMIN)
+// @access  Private (ACCOUNTS_MANAGER)
 const disburseVoucher = async (req, res) => {
     try {
         const { id } = req.params;
         const amId = req.user.id;
-        const isAdmin = req.user.role === 'ADMIN';
 
-        if (req.user.role !== 'ACCOUNTS_MANAGER' && !isAdmin) {
-            return res.status(403).json({ message: 'Not authorized' });
+        if (req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only Accounts Manager can disburse vouchers. Administrators have view-only access.' });
         }
 
         const voucher = await prisma.voucher.findUnique({
@@ -479,16 +459,15 @@ const disburseVoucher = async (req, res) => {
     }
 };
 
-// @desc    Delete Voucher (Admin only)
+// @desc    Delete Voucher (ACCOUNTS_MANAGER only)
 // @route   DELETE /api/vouchers/:id
-// @access  Private (ADMIN)
+// @access  Private (ACCOUNTS_MANAGER)
 const deleteVoucher = async (req, res) => {
     try {
         const { id } = req.params;
 
-        // Double check it's an ADMIN or ACCOUNTS_MANAGER
-        if (req.user.role !== 'ADMIN' && req.user.role !== 'ACCOUNTS_MANAGER') {
-            return res.status(403).json({ message: 'Only admins or accounts managers can delete vouchers' });
+        if (req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only accounts managers can delete vouchers. Administrators have view-only access.' });
         }
 
         const voucher = await prisma.voucher.findUnique({
@@ -500,7 +479,7 @@ const deleteVoucher = async (req, res) => {
         }
 
         // Financial reversal if money was already deducted
-        // Status COMPLETED or WAITING means money was deducted after AM marked as Paid
+        // Status COMPLETED or WAITING or PAID means money was deducted after AM marked as Paid
         if (voucher.status === 'COMPLETED' || voucher.status === 'WAITING' || voucher.status === 'PAID') {
             const finance = await prisma.finance.findFirst();
             if (finance) {

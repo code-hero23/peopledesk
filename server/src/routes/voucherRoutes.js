@@ -25,24 +25,24 @@ router.route('/manage')
     .get(protect, authorize('ADMIN', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'), getManageableVouchers);
 
 router.route('/:id/approve-am')
-    .put(protect, authorize('ACCOUNTS_MANAGER', 'ADMIN'), approveVoucherAM);
+    .put(protect, authorize('ACCOUNTS_MANAGER'), approveVoucherAM);
 
 router.route('/:id/approve-coo')
-    .put(protect, authorize('BUSINESS_HEAD', 'ADMIN'), approveVoucherCOO);
+    .put(protect, authorize('BUSINESS_HEAD'), approveVoucherCOO);
 
 router.route('/:id/pay')
-    .put(protect, authorize('ACCOUNTS_MANAGER', 'ADMIN'), payVoucher);
+    .put(protect, authorize('ACCOUNTS_MANAGER'), payVoucher);
 
 router.route('/:id/disburse')
-    .put(protect, authorize('ACCOUNTS_MANAGER', 'ADMIN'), disburseVoucher);
+    .put(protect, authorize('ACCOUNTS_MANAGER'), disburseVoucher);
 
 router.route('/:id/proof')
     .put(protect, upload.single('proof'), uploadProof);
 
 router.route('/:id/admin-note')
-    .put(protect, authorize('ADMIN'), addAdminNote);
+    .put(protect, authorize('ACCOUNTS_MANAGER'), addAdminNote);
 
 router.route('/:id')
-    .delete(protect, authorize('ADMIN', 'ACCOUNTS_MANAGER'), deleteVoucher);
+    .delete(protect, authorize('ACCOUNTS_MANAGER'), deleteVoucher);
 
 module.exports = router;

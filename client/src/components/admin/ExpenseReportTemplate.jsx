@@ -25,21 +25,22 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
         year: 'numeric'
     });
 
-    const filteredData = data.filter(item => {
-        const matchesSearch = !filters.search || 
-            item.user?.name.toLowerCase().includes(filters.search.toLowerCase()) ||
-            item.purpose.toLowerCase().includes(filters.search.toLowerCase()) ||
-            item.type.toLowerCase().includes(filters.search.toLowerCase()) ||
-            item.amount.toString().includes(filters.search);
+    const filteredData = (data || []).filter(item => {
+        if (!item) return false;
+        const matchesSearch = !filters?.search || 
+            (item.user?.name || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            (item.purpose || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            (item.type || '').toLowerCase().includes(filters.search.toLowerCase()) ||
+            (item.amount?.toString() || '').includes(filters.search);
             
-        const matchesStatus = filters.status === 'ALL' ? true : 
+        const matchesStatus = !filters?.status || filters.status === 'ALL' ? true : 
                               filters.status === 'UNPAID' ? (['PENDING', 'APPROVED'].includes(item.status)) :
                               filters.status === 'PAID_SETTLED' ? (['PAID', 'WAITING', 'COMPLETED'].includes(item.status)) :
                               item.status === filters.status;
 
         const itemDate = new Date(item.updatedAt);
-        const matchesStartDate = !filters.startDate || itemDate >= new Date(filters.startDate);
-        const matchesEndDate = !filters.endDate || itemDate <= new Date(filters.endDate + 'T23:59:59');
+        const matchesStartDate = !filters?.startDate || itemDate >= new Date(filters.startDate);
+        const matchesEndDate = !filters?.endDate || itemDate <= new Date(filters.endDate + 'T23:59:59');
 
         return matchesSearch && matchesStatus && matchesStartDate && matchesEndDate;
     });
@@ -87,7 +88,7 @@ const ExpenseReportTemplate = forwardRef(({ data, summary, filters }, ref) => {
                                     </td>
                                     <td className="px-4 py-3">
                                         <span className="text-[9px] font-black uppercase tracking-widest" style={{ color: ['PAID', 'WAITING', 'COMPLETED'].includes(item.status) ? colors.emerald600 : colors.slate500 }}>
-                                            {item.status}
+                                            {['PENDING', 'APPROVED'].includes(item.status) ? 'UNPAID' : item.status}
                                         </span>
                                     </td>
                                     <td className="px-4 py-3 text-right">

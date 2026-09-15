@@ -1,10 +1,26 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Helper to check for COO designation if role is BUSINESS_HEAD
 const isCOO = (user) => {
+    if (!user) return false;
+    const designation = (user.designation || '').toUpperCase();
+    return (user.role === 'BUSINESS_HEAD' && (designation === 'COO' || designation.includes('CHIEF OPERATIONAL OFFICER'))) ||
+           (user.email || '').toLowerCase() === 'designs.cookscape@gmail.com';
+};
+
+// Helpers to check for financial view and edit authorizations
+const canViewFinance = (user) => {
+    if (!user) return false;
     if (user.role === 'ADMIN' || user.role === 'ACCOUNTS_MANAGER') return true;
-    if (user.role === 'BUSINESS_HEAD' && (user.designation === 'COO' || user.designation === 'Chief Operational Officer')) return true;
+    if (isCOO(user)) return true;
+    return false;
+};
+
+const canEditFinance = (user) => {
+    if (!user) return false;
+    if (user.role === 'ADMIN') return false; // Administrators have view-only access
+    if (user.role === 'ACCOUNTS_MANAGER') return true;
+    if (isCOO(user)) return true;
     return false;
 };
 
@@ -12,8 +28,8 @@ const isCOO = (user) => {
 // @route   GET /api/finance/summary
 // @access  Private (AM, COO, Admin)
 const getFinanceSummary = async (req, res) => {
-    if (!isCOO(req.user)) {
-        return res.status(403).json({ message: 'Not authorized as COO' });
+    if (!canViewFinance(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to view financial summary' });
     }
     try {
         let finance = await prisma.finance.findFirst();
@@ -64,8 +80,8 @@ const getFinanceSummary = async (req, res) => {
 // @route   POST /api/finance/add-cash
 // @access  Private (Admin, AM)
 const addCash = async (req, res) => {
-    if (!isCOO(req.user)) {
-        return res.status(403).json({ message: 'Not authorized as COO' });
+    if (!canEditFinance(req.user)) {
+        return res.status(403).json({ message: 'Only Accounts Manager or COO can add funds. Administrators have view-only access.' });
     }
     try {
         const { amount, source, reason } = req.body;
@@ -105,8 +121,8 @@ const addCash = async (req, res) => {
 // @route   GET /api/finance/deposits
 // @access  Private (AM, COO, Admin)
 const getDepositHistory = async (req, res) => {
-    if (!isCOO(req.user)) {
-        return res.status(403).json({ message: 'Not authorized as COO' });
+    if (!canViewFinance(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to view deposit history' });
     }
     try {
         const deposits = await prisma.deposit.findMany({
@@ -126,8 +142,8 @@ const getDepositHistory = async (req, res) => {
 // @route   GET /api/finance/history
 // @access  Private (AM, COO, Admin)
 const getSpentHistory = async (req, res) => {
-    if (!isCOO(req.user)) {
-        return res.status(403).json({ message: 'Not authorized as COO' });
+    if (!canViewFinance(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to view spent history' });
     }
     try {
         const history = await prisma.voucher.findMany({
@@ -145,8 +161,8 @@ const getSpentHistory = async (req, res) => {
 };
 
 const exportFinanceData = async (req, res) => {
-    if (!isCOO(req.user)) {
-        return res.status(403).json({ message: 'Not authorized as COO' });
+    if (!canViewFinance(req.user)) {
+        return res.status(403).json({ message: 'Not authorized to export financial data' });
     }
     try {
         const ExcelJS = require('exceljs');
@@ -448,9 +464,9 @@ const exportFinanceData = async (req, res) => {
 
 const wipeFinanceData = async (req, res) => {
     try {
-        // Double check it's an ADMIN
-        if (req.user.role !== 'ADMIN') {
-            return res.status(403).json({ message: 'Only superadmins can reset the accounting cycle' });
+        // Double check it's an ACCOUNTS_MANAGER (Admin is view-only)
+        if (req.user.role !== 'ACCOUNTS_MANAGER') {
+            return res.status(403).json({ message: 'Only Accounts Manager can reset the accounting cycle. Administrators have view-only access.' });
         }
 
         // Wipe Vouchers and Deposits
