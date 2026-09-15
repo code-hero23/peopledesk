@@ -1,14 +1,24 @@
 import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { useNavigate } from 'react-router-dom';
-import { login, googleLogin, reset } from '../features/auth/authSlice';
+import { login, googleLogin, logout, reset } from '../features/auth/authSlice';
 import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
 import CallSyncDeviceSetup from '../components/CallSyncDeviceSetup';
+import { getCallLogPlugin } from '../utils/capacitorPlugins';
 
 function Login() {
-    const [showCallSyncSetup, setShowCallSyncSetup] = useState(Capacitor.isNativePlatform());
+    const [isAEManagerApp, setIsAEManagerApp] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            return params.get('app') === 'aemanager' || params.get('flavor') === 'ae';
+        }
+        return false;
+    });
+
+    const [showCallSyncSetup, setShowCallSyncSetup] = useState(Capacitor.isNativePlatform() && !isAEManagerApp);
+    const [accessDeniedError, setAccessDeniedError] = useState('');
 
     const [formData, setFormData] = useState({
         email: '',
@@ -24,8 +34,56 @@ function Login() {
         (state) => state.auth
     );
 
+    // Detect if running native AE Manager APK
+    useEffect(() => {
+        const checkAppFlavor = async () => {
+            if (!Capacitor.isNativePlatform()) return;
+            try {
+                const plugin = getCallLogPlugin();
+                if (plugin && plugin.getAppInfo) {
+                    const info = await plugin.getAppInfo();
+                    const isAE = Boolean(
+                        info?.isAEManager ||
+                        (info?.packageName && info.packageName.toLowerCase().includes('aemanager'))
+                    );
+                    if (isAE) {
+                        setIsAEManagerApp(true);
+                        setShowCallSyncSetup(false);
+                    }
+                }
+            } catch (err) {
+                console.warn("Could not determine app flavor:", err);
+            }
+        };
+        checkAppFlavor();
+    }, []);
+
+    const isAERole = (u) => {
+        if (!u) return false;
+        const r = (u.role || '').toUpperCase();
+        const d = (u.designation || '').toUpperCase();
+        return (
+            r === 'AE_MANAGER' ||
+            r === 'ADMIN' ||
+            r === 'BUSINESS_HEAD' ||
+            d.includes('AE') ||
+            d.includes('AREA EXECUTIVE') ||
+            d.includes('ARCHITECT')
+        );
+    };
+
     useEffect(() => {
         if (isSuccess || user) {
+            // Guard: If running AE Manager APK, only allow AE or Manager roles
+            if (isAEManagerApp && !isAERole(user)) {
+                setAccessDeniedError(
+                    'Access Denied: This application is exclusively for Area Executives (AE) and AE Managers. Please use the Call Sync APK or the standard PeopleDesk portal.'
+                );
+                dispatch(logout());
+                dispatch(reset());
+                return;
+            }
+
             if (user?.role === 'FRONT_DESK_MANAGER') {
                 navigate('/dashboard/visitors-record', { replace: true });
             } else if (['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user?.role)) {
@@ -38,9 +96,9 @@ function Login() {
         }
 
         dispatch(reset());
-    }, [user, isSuccess, navigate, dispatch]);
+    }, [user, isSuccess, isAEManagerApp, navigate, dispatch]);
 
-    if (showCallSyncSetup && Capacitor.isNativePlatform()) {
+    if (showCallSyncSetup && Capacitor.isNativePlatform() && !isAEManagerApp) {
         return (
             <div className="relative min-h-screen bg-slate-950">
                 <CallSyncDeviceSetup />
@@ -152,9 +210,26 @@ function Login() {
                                 {/* Mobile Logo */}
                                 <img src="/orbix-logo.png" alt="Logo" className="h-16 mx-auto lg:hidden mb-8 bg-white rounded-xl p-3 shadow-xl" />
 
-                                <h2 className="text-5xl font-black text-white tracking-tighter mb-2 bg-gradient-to-br from-white via-white to-white/20 bg-clip-text text-transparent">Sign In</h2>
-                                <p className="text-red-500 font-black uppercase tracking-[0.2em] text-[10px] mb-8">Access your workspace</p>
+                                <h2 className="text-5xl font-black text-white tracking-tighter mb-2 bg-gradient-to-br from-white via-white to-white/20 bg-clip-text text-transparent">
+                                    {isAEManagerApp ? 'AE Portal' : 'Sign In'}
+                                </h2>
+                                {isAEManagerApp ? (
+                                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/10 border border-blue-500/30 text-blue-400 text-[10px] font-black uppercase tracking-wider mb-6">
+                                        <span>👷</span> AE & Manager Exclusive APK
+                                    </div>
+                                ) : (
+                                    <p className="text-red-500 font-black uppercase tracking-[0.2em] text-[10px] mb-8">Access your workspace</p>
+                                )}
                             </div>
+
+                            {accessDeniedError && (
+                                <div className="mb-6 p-4 rounded-xl border border-rose-500/40 bg-rose-500/10 text-rose-300 text-xs font-semibold leading-relaxed shadow-lg">
+                                    <p className="font-bold flex items-center gap-1.5 text-rose-200 mb-1">
+                                        <span>⛔</span> Area Executive Login Only
+                                    </p>
+                                    {accessDeniedError}
+                                </div>
+                            )}
 
                             <form onSubmit={onSubmit} className="space-y-6">
                                 {isError && (

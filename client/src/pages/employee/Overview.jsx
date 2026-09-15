@@ -576,10 +576,28 @@ const Overview = () => {
                     addr.country
                 ].filter(Boolean);
 
-                setLocation({ lat, lng, address: parts.join(', ') || data.display_name || 'Address Found', error: false });
+                const formattedAddr = parts.join(', ') || data.display_name || 'Address Found';
+                setLocation({ lat, lng, address: formattedAddr, error: false });
+
+                // If logged in user is an AE, immediately sync to AELocationLog
+                if (user?.token && (user?.role === 'AE_MANAGER' || user?.designation?.toUpperCase()?.includes('AE') || user?.designation?.toUpperCase()?.includes('AREA EXECUTIVE'))) {
+                    axios.post(
+                        `${import.meta.env.VITE_API_BASE_URL || '/api'}/location/ping`,
+                        { latitude: lat, longitude: lng, address: formattedAddr },
+                        { headers: { Authorization: `Bearer ${user.token}` } }
+                    ).catch(() => {});
+                }
             } catch (err) {
                 console.error("Geocoding error:", err);
                 setLocation({ lat, lng, address: `${lat.toFixed(4)}, ${lng.toFixed(4)}`, error: false });
+
+                if (user?.token && (user?.role === 'AE_MANAGER' || user?.designation?.toUpperCase()?.includes('AE') || user?.designation?.toUpperCase()?.includes('AREA EXECUTIVE'))) {
+                    axios.post(
+                        `${import.meta.env.VITE_API_BASE_URL || '/api'}/location/ping`,
+                        { latitude: lat, longitude: lng },
+                        { headers: { Authorization: `Bearer ${user.token}` } }
+                    ).catch(() => {});
+                }
             }
         };
 

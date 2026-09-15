@@ -12,6 +12,7 @@ import { formatTime } from '../../utils/dateUtils';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import { motion, AnimatePresence } from 'framer-motion';
+import axios from 'axios';
 
 const AEWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
@@ -117,9 +118,22 @@ const AEWorkLogForm = ({ onSuccess }) => {
                 const { latitude, longitude } = position.coords;
                 setOpeningData(prev => ({
                     ...prev,
-                    ae_gpsCoordinates: `${latitude}, ${longitude} `
+                    ae_gpsCoordinates: `${latitude}, ${longitude}`
                 }));
                 setLocationLoading(false);
+
+                if (user?.token) {
+                    axios.post(
+                        `${import.meta.env.VITE_API_BASE_URL || '/api'}/location/ping`,
+                        {
+                            latitude,
+                            longitude,
+                            accuracy: position.coords.accuracy,
+                            speed: position.coords.speed
+                        },
+                        { headers: { Authorization: `Bearer ${user.token}` } }
+                    ).catch(() => {});
+                }
             },
             () => {
                 alert("Unable to retrieve your location");

@@ -36,14 +36,16 @@ const recordLocation = async (req, res) => {
 // Fetch real-time live location of all active AEs
 const getLiveLocations = async (req, res) => {
   try {
-    // Find all active users who are AEs or have location logs
-    const aeUsers = await prisma.user.findMany({
+    // Find all active users who are AEs, have assigned sites, or have location logs
+    let aeUsers = await prisma.user.findMany({
       where: {
         status: 'ACTIVE',
         OR: [
+          { role: 'AE_MANAGER' },
           { designation: { contains: 'AE', mode: 'insensitive' } },
+          { designation: { contains: 'Area', mode: 'insensitive' } },
           { designation: { contains: 'Architect', mode: 'insensitive' } },
-          { role: 'EMPLOYEE', designation: { contains: 'AE', mode: 'insensitive' } },
+          { siteAssignments: { some: {} } },
           { aeLocationLogs: { some: {} } }
         ]
       },
@@ -54,8 +56,30 @@ const getLiveLocations = async (req, res) => {
         phone: true,
         designation: true,
         role: true
+      },
+      orderBy: {
+        name: 'asc'
       }
     });
+
+    if (aeUsers.length === 0) {
+      aeUsers = await prisma.user.findMany({
+        where: {
+          status: 'ACTIVE',
+          role: { in: ['EMPLOYEE', 'AE_MANAGER'] }
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          phone: true,
+          designation: true,
+          role: true
+        },
+        take: 25,
+        orderBy: { name: 'asc' }
+      });
+    }
 
     const now = new Date();
 

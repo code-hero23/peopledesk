@@ -44,22 +44,36 @@ public class LocationSyncWorker extends Worker {
         try {
             Context context = getApplicationContext();
 
-            // Work hours window check: 10:00 AM to 10:00 PM IST
+            // Work hours window check: 7:00 AM to 11:00 PM IST
             Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
             int currentMinutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
-            int startMinutes = 10 * 60;        // 10:00 AM
-            int endMinutes = 22 * 60;          // 10:00 PM
+            int startMinutes = 7 * 60;         // 7:00 AM
+            int endMinutes = 23 * 60;          // 11:00 PM
 
             if (currentMinutes < startMinutes || currentMinutes > endMinutes) {
-                Log.d(TAG, "Location ping skipped: outside 10:00 AM - 10:00 PM IST window.");
+                Log.d(TAG, "Location ping skipped: outside 7:00 AM - 11:00 PM IST window.");
                 return Result.success();
             }
 
             String apiUrl = readPreference(context, "apiUrl", "https://peopledesk.orbixdesigns.com/api");
             String deviceToken = readPreference(context, "call_sync_device_token", null);
+            String authToken = readPreference(context, "auth_token", null);
 
-            if (deviceToken == null) {
-                Log.w(TAG, "Location ping skipped: device is not enrolled/activated.");
+            // If auth_token not stored directly, extract from user JSON
+            if (authToken == null || authToken.trim().isEmpty()) {
+                String userJson = readPreference(context, "user", null);
+                if (userJson != null && userJson.contains("\"token\":")) {
+                    try {
+                        JSONObject uObj = new JSONObject(userJson);
+                        if (uObj.has("token")) {
+                            authToken = uObj.optString("token", null);
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
+            if ((deviceToken == null || deviceToken.trim().isEmpty()) && (authToken == null || authToken.trim().isEmpty())) {
+                Log.w(TAG, "Location ping skipped: neither Call Sync device nor authenticated user token found.");
                 return Result.success();
             }
 
@@ -114,7 +128,11 @@ public class LocationSyncWorker extends Worker {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("POST");
             conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("Authorization", "Device " + deviceToken);
+            if (deviceToken != null && !deviceToken.trim().isEmpty()) {
+                conn.setRequestProperty("Authorization", "Device " + deviceToken);
+            } else {
+                conn.setRequestProperty("Authorization", "Bearer " + authToken);
+            }
             conn.setConnectTimeout(15000);
             conn.setReadTimeout(15000);
             conn.setDoOutput(true);

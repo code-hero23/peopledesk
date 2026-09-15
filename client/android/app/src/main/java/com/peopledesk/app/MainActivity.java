@@ -41,12 +41,41 @@ public class MainActivity extends BridgeActivity {
             && getPreferenceValue(prefs, "apiUrl") != null;
     }
 
+    private boolean isUserAuthenticated() {
+        SharedPreferences prefs = getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        return getPreferenceValue(prefs, "auth_token") != null
+            || getPreferenceValue(prefs, "user") != null;
+    }
+
     private void ensureCallSyncScheduling() {
-        if (!isCallSyncActivated()) {
-            return;
+        if (isCallSyncActivated()) {
+            scheduleBackgroundSync();
+            CallSyncAlarmReceiver.schedule(this);
+        } else if (isUserAuthenticated()) {
+            scheduleAELocationSync();
         }
-        scheduleBackgroundSync();
-        CallSyncAlarmReceiver.schedule(this);
+    }
+
+    private void scheduleAELocationSync() {
+        try {
+            Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+            PeriodicWorkRequest locSyncRequest = new PeriodicWorkRequest.Builder(
+                LocationSyncWorker.class,
+                15,
+                TimeUnit.MINUTES
+            ).setConstraints(constraints).build();
+
+            WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+                "AELocationSync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                locSyncRequest
+            );
+        } catch (Exception e) {
+            android.util.Log.e("MainActivity", "Error scheduling AE location sync", e);
+        }
     }
 
     private void scheduleBackgroundSync() {

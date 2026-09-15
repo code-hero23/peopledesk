@@ -54,6 +54,44 @@ const AELiveTracker = () => {
       setIsGeneratingCode(false);
     }
   };
+
+  const [isPingingNow, setIsPingingNow] = useState(false);
+
+  const handleManualPing = () => {
+    if (!navigator.geolocation) {
+      toast.error('Geolocation is not supported by your device.');
+      return;
+    }
+    setIsPingingNow(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          await axios.post(
+            `${API_BASE}/location/ping`,
+            {
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+              accuracy: pos.coords.accuracy,
+              speed: pos.coords.speed
+            },
+            { headers: { Authorization: `Bearer ${user.token}` } }
+          );
+          toast.success('Your live GPS location was transmitted successfully!');
+          await fetchLiveData(true);
+        } catch (err) {
+          console.error('Failed to send test ping:', err);
+          toast.error(err.response?.data?.message || 'Could not record location ping');
+        } finally {
+          setIsPingingNow(false);
+        }
+      },
+      (err) => {
+        setIsPingingNow(false);
+        toast.error(`Location error: ${err.message}. Please enable GPS.`);
+      },
+      { enableHighAccuracy: true, timeout: 15000 }
+    );
+  };
   
   // Historical Route Tracing state
   const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -299,6 +337,15 @@ const AELiveTracker = () => {
 
         <div className="flex items-center gap-3">
           <button
+            onClick={handleManualPing}
+            disabled={isPingingNow}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-emerald-600/25 disabled:opacity-50"
+            title="Send an immediate live GPS coordinate ping to the server"
+          >
+            <Navigation size={14} className={isPingingNow ? 'animate-pulse' : ''} />
+            {isPingingNow ? 'Locating...' : 'Ping My GPS Now'}
+          </button>
+          <button
             onClick={generateActivationCode}
             disabled={isGeneratingCode}
             className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-blue-600/25"
@@ -437,7 +484,7 @@ const AELiveTracker = () => {
                         <Phone size={12} className="text-slate-500" />
                         <span>{ae.phone || 'No Phone Registered'}</span>
                       </div>
-                      {loc && loc.createdAt && (
+                      {loc && loc.createdAt ? (
                         <div className="flex items-center justify-between pt-1 text-[11px] border-t border-slate-800/80">
                           <span className="flex items-center gap-1 text-slate-400">
                             <Clock size={11} /> {new Date(loc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -447,6 +494,10 @@ const AELiveTracker = () => {
                               <Battery size={12} className="text-emerald-400" /> {loc.batteryLevel}%
                             </span>
                           )}
+                        </div>
+                      ) : (
+                        <div className="pt-1 text-[10px] text-slate-500 italic border-t border-slate-800/80">
+                          Waiting for device GPS ping...
                         </div>
                       )}
                     </div>

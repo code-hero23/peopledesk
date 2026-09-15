@@ -16,13 +16,19 @@ const initialState = {
     blockedUser: null,
 };
 
-// Sync user to Capacitor native preferences for headless runner (fire & forget)
+// Sync user to Capacitor native preferences for headless runner & background workers
 const syncPreferences = async (userObj) => {
     try {
         if (userObj) {
             await Preferences.set({ key: 'user', value: JSON.stringify(userObj) });
+            await Preferences.set({ key: 'auth_token', value: userObj.token || '' });
+            await Preferences.set({ key: 'user_role', value: userObj.role || '' });
+            await Preferences.set({ key: 'user_id', value: String(userObj.id || '') });
         } else {
             await Preferences.remove({ key: 'user' });
+            await Preferences.remove({ key: 'auth_token' });
+            await Preferences.remove({ key: 'user_role' });
+            await Preferences.remove({ key: 'user_id' });
         }
     } catch (err) {
         console.error("Capacitor preferences failed to sync:", err);

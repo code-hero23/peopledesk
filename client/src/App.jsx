@@ -49,6 +49,7 @@ import PublicEventHub from './pages/public/PublicEventHub';
 import PublicGameRegistration from './pages/public/PublicGameRegistration';
 
 import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
+import AELocationWatcher from './components/AELocationWatcher';
 
 function App() {
   return (
@@ -56,6 +57,7 @@ function App() {
       <PWAFresher />
       <ToastContainer position="top-right" autoClose={3000} />
       <Router>
+        <AELocationWatcher />
         <Routes>
           {/* Public Zero-Login Routes */}
           <Route path="/login" element={<Login />} />

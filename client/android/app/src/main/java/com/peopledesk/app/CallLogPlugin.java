@@ -16,6 +16,8 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 import android.content.Intent;
+import android.content.IntentFilter;
+import android.os.BatteryManager;
 import android.net.Uri;
 import android.provider.Settings;
 import android.app.AlarmManager;
@@ -407,6 +409,78 @@ public class CallLogPlugin extends Plugin {
         } catch (Exception e) {
             Log.e("CallLogPlugin", "Failed to schedule sync", e);
             if (call != null) call.reject(e.getMessage());
+        }
+    }
+
+    @PluginMethod
+    public void getAppInfo(PluginCall call) {
+        JSObject ret = new JSObject();
+        try {
+            String pkg = getContext().getPackageName();
+            ret.put("packageName", pkg);
+            boolean isAE = pkg != null && pkg.toLowerCase().contains("aemanager");
+            ret.put("isAEManager", isAE);
+            ret.put("isNative", true);
+            call.resolve(ret);
+        } catch (Exception e) {
+            ret.put("packageName", "unknown");
+            ret.put("isAEManager", false);
+            ret.put("isNative", true);
+            call.resolve(ret);
+        }
+    }
+
+    @PluginMethod
+    public void getBatteryLevel(PluginCall call) {
+        JSObject ret = new JSObject();
+        try {
+            IntentFilter ifilter = new IntentFilter(Intent.ACTION_BATTERY_CHANGED);
+            Intent batteryStatus = getContext().registerReceiver(null, ifilter);
+            int batteryLevel = -1;
+            if (batteryStatus != null) {
+                int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+                int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+                if (level >= 0 && scale > 0) {
+                    batteryLevel = Math.round((level / (float) scale) * 100);
+                }
+            }
+            ret.put("batteryLevel", batteryLevel);
+            call.resolve(ret);
+        } catch (Exception e) {
+            ret.put("batteryLevel", -1);
+            call.resolve(ret);
+        }
+    }
+
+    @PluginMethod
+    public void startAELocationWorker(PluginCall call) {
+        try {
+            Constraints constraints = new Constraints.Builder()
+                .setRequiredNetworkType(NetworkType.CONNECTED)
+                .build();
+
+            PeriodicWorkRequest locSyncRequest = new PeriodicWorkRequest.Builder(
+                LocationSyncWorker.class,
+                15, TimeUnit.MINUTES
+            ).setConstraints(constraints).build();
+
+            WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork(
+                "AELocationSync",
+                ExistingPeriodicWorkPolicy.KEEP,
+                locSyncRequest
+            );
+
+            // Immediate one-time ping
+            OneTimeWorkRequest immediateLocRequest = new OneTimeWorkRequest.Builder(LocationSyncWorker.class)
+                .setConstraints(constraints)
+                .build();
+            WorkManager.getInstance(getContext()).enqueue(immediateLocRequest);
+
+            Log.d("CallLogPlugin", "AE Location Worker enqueued successfully.");
+            call.resolve();
+        } catch (Exception e) {
+            Log.e("CallLogPlugin", "Failed to start AE Location Worker", e);
+            call.reject(e.getMessage());
         }
     }
 }
