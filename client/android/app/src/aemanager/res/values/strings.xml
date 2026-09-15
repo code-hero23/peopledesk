@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">AE Manager App</string>
+    <string name="title_activity_main">AE Manager App</string>
+    <string name="package_name">com.peopledesk.aemanager</string>
+    <string name="custom_url_scheme">com.peopledesk.aemanager</string>
+</resources>

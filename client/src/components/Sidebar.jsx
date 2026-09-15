@@ -231,6 +231,21 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
                 {isAdmin ? (
                     <>
+                        {(user?.role === 'AE_MANAGER' || user?.designation === 'AE MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER')) && (
+                            <div className="mb-4">
+                                {!isCollapsed && <p className="px-3 py-2 text-[9px] text-blue-400 font-black uppercase tracking-[0.22em]">My Workspace</p>}
+                                <NavItem to="/dashboard" icon={LayoutDashboard} label="My Dashboard" />
+                                <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
+                                <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
+                                <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
+                                <NavItem to="/dashboard/my-location-history" icon={Navigation} label="My Travel History" />
+                                <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
+                                <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
+                                <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI Scoreboard" />
+                                <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
+                            </div>
+                        )}
+
                         <NavGroup id="operations" label="Operations" icon={Boxes}>
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" indent />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Daily Attendance" indent />

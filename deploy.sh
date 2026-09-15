@@ -30,19 +30,31 @@ if [ -d "android" ] && command -v java &> /dev/null && [ -n "$ANDROID_HOME" -o -
     cd android
     chmod +x ./gradlew || true
     
-    echo "Building Release APK..."
+    echo "Building Release APKs (PeopleDesk & AE Manager)..."
     ./gradlew assembleRelease || true
     ./gradlew assembleDebug || true
 
     mkdir -p ../../server/uploads/apks/
     
-    if [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
+    # PeopleDesk APKs
+    if [ -f "app/build/outputs/apk/peopledesk/release/app-peopledesk-release-unsigned.apk" ]; then
+        cp app/build/outputs/apk/peopledesk/release/app-peopledesk-release-unsigned.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
+        echo "📍 PeopleDesk Release APK Location: server/uploads/apks/peopledesk-release-latest.apk"
+    elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
         cp app/build/outputs/apk/release/app-release-unsigned.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
-        echo "📍 Release APK Location: server/uploads/apks/peopledesk-release-latest.apk (~24 MB)"
     fi
 
-    if [ -f "app/build/outputs/apk/debug/app-debug.apk" ]; then
-        cp app/build/outputs/apk/debug/app-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk || true
+    # AE Manager APKs
+    if [ -f "app/build/outputs/apk/aemanager/release/app-aemanager-release-unsigned.apk" ]; then
+        cp app/build/outputs/apk/aemanager/release/app-aemanager-release-unsigned.apk ../../server/uploads/apks/ae-manager-latest.apk || true
+        echo "📍 AE Manager Release APK Location: server/uploads/apks/ae-manager-latest.apk"
+    elif [ -f "app/build/outputs/apk/aemanager/debug/app-aemanager-debug.apk" ]; then
+        cp app/build/outputs/apk/aemanager/debug/app-aemanager-debug.apk ../../server/uploads/apks/ae-manager-latest.apk || true
+        echo "📍 AE Manager Debug APK Location: server/uploads/apks/ae-manager-latest.apk"
+    fi
+
+    if [ -f "app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk" ]; then
+        cp app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk || true
         echo "📍 Debug APK Location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
     fi
 
