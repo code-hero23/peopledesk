@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { Navigate } from 'react-router-dom';
 import axios from 'axios';
 import { useSelector } from 'react-redux';
 import { 
@@ -35,6 +36,21 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const AELiveTracker = () => {
   const { user } = useSelector((state) => state.auth);
+
+  // Strictly block regular Employee AEs from live tracking; allow AE Manager & Management
+  const role = (user?.role || '').toUpperCase();
+  const designation = (user?.designation || '').toUpperCase();
+  const isAuthorizedManager = [
+    'ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'
+  ].includes(role) ||
+    designation === 'AE MANAGER' ||
+    designation === 'AR MANAGER' ||
+    designation.includes('AE MANAGER') ||
+    designation.includes('AR MANAGER');
+
+  if (!isAuthorizedManager) {
+    return <Navigate to="/dashboard" replace />;
+  }
   const [liveData, setLiveData] = useState([]);
   const [trackingInfo, setTrackingInfo] = useState({
     isCurrentlyInWindow: true,

@@ -179,7 +179,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         );
     };
 
-    const isAdmin = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ANALYZER'].includes(user?.role);
+    const isAdmin = ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER', 'ANALYZER'].includes(user?.role) ||
+        (user?.designation || '').toUpperCase() === 'AE MANAGER' ||
+        (user?.designation || '').toUpperCase() === 'AR MANAGER' ||
+        (user?.designation || '').toUpperCase().includes('AE MANAGER') ||
+        (user?.designation || '').toUpperCase().includes('AR MANAGER');
     const isFullAdmin = user?.role === 'ADMIN';
 
     return (
@@ -257,7 +261,11 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
-                            {['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(user?.role) && (
+                            {((['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(user?.role)) ||
+                                (user?.designation || '').toUpperCase() === 'AE MANAGER' ||
+                                (user?.designation || '').toUpperCase() === 'AR MANAGER' ||
+                                (user?.designation || '').toUpperCase().includes('AE MANAGER') ||
+                                (user?.designation || '').toUpperCase().includes('AR MANAGER')) && (
                                 <NavItem to="/admin/live-tracker" icon={Navigation} label="AE Live Tracker" badge="Live" indent />
                             )}
                             {(['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(user?.role) || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (

@@ -48,7 +48,7 @@ import EmployeeAttendanceDetail from './pages/admin/EmployeeAttendanceDetail';
 import PublicEventHub from './pages/public/PublicEventHub';
 import PublicGameRegistration from './pages/public/PublicGameRegistration';
 
-import { EmployeeGuard, RootRedirect } from './components/RoleGuards';
+import { EmployeeGuard, RootRedirect, AELiveTrackerGuard } from './components/RoleGuards';
 import AELocationWatcher from './components/AELocationWatcher';
 
 function App() {
@@ -90,7 +90,9 @@ function App() {
               {/* Admin Routes */}
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/admin/overview" element={<OverviewDashboard />} />
-              <Route path="/admin/live-tracker" element={<AELiveTracker />} />
+              <Route element={<AELiveTrackerGuard />}>
+                <Route path="/admin/live-tracker" element={<AELiveTracker />} />
+              </Route>
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/vouchers" element={<VoucherManagement />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />

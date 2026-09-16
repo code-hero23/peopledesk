@@ -27,7 +27,7 @@ export const RootRedirect = () => {
 
     if (user && user.role === 'FRONT_DESK_MANAGER') {
         return <Navigate to="/dashboard/visitors-record" replace />;
-    } else if (user && ['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role)) {
+    } else if (user && (['ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(user.role) || (user.designation || '').toUpperCase().includes('AE MANAGER'))) {
         return <Navigate to="/admin-dashboard" replace />;
     } else if (user && user.role === 'ACCOUNTS_MANAGER') {
         return <Navigate to="/admin/vouchers" replace />;
@@ -38,3 +38,31 @@ export const RootRedirect = () => {
     // Default to employee dashboard
     return <Navigate to="/dashboard" replace />;
 };
+
+// Guards AE Live Tracker: strictly hides & blocks regular Employee AEs.
+// Only AE Managers, Admin, Super Admin, BH, and HR can access.
+export const AELiveTrackerGuard = () => {
+    const { user } = useSelector((state) => state.auth);
+
+    if (!user) {
+        return <Navigate to="/login" replace />;
+    }
+
+    const role = (user?.role || '').toUpperCase();
+    const designation = (user?.designation || '').toUpperCase();
+
+    const isAuthorizedManager = [
+        'ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'
+    ].includes(role) ||
+        designation === 'AE MANAGER' ||
+        designation === 'AR MANAGER' ||
+        designation.includes('AE MANAGER') ||
+        designation.includes('AR MANAGER');
+
+    if (!isAuthorizedManager) {
+        return <Navigate to="/dashboard" replace />;
+    }
+
+    return <Outlet />;
+};
+

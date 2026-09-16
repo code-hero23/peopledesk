@@ -18,15 +18,19 @@ const protectDeviceOrUser = (req, res, next) => {
   return protect(req, res, next);
 };
 
-// Permission check for viewing live tracker
+// Permission check for viewing live tracker (Managers only: Admin, Super Admin, BH, HR, AE Manager - NOT Employee AE)
 const canViewLive = (req, res, next) => {
   const role = (req.user?.role || '').toUpperCase();
   const designation = (req.user?.designation || '').toUpperCase();
-  const isAuthorized = [
+  const isAuthorizedManager = [
     'ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'
-  ].includes(role) || designation.includes('AE') || designation.includes('AREA EXECUTIVE');
+  ].includes(role) ||
+    designation === 'AE MANAGER' ||
+    designation === 'AR MANAGER' ||
+    designation.includes('AE MANAGER') ||
+    designation.includes('AR MANAGER');
 
-  if (isAuthorized) {
+  if (isAuthorizedManager) {
     return next();
   }
   return res.status(403).json({ message: 'Not authorized to view live tracking' });
@@ -37,7 +41,14 @@ const canViewHistory = (req, res, next) => {
   const targetUserId = Number(req.params.userId);
   const currentUserId = Number(req.user?.id);
   const role = (req.user?.role || '').toUpperCase();
-  const isManager = ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(role);
+  const designation = (req.user?.designation || '').toUpperCase();
+  const isManager = [
+    'ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'
+  ].includes(role) ||
+    designation === 'AE MANAGER' ||
+    designation === 'AR MANAGER' ||
+    designation.includes('AE MANAGER') ||
+    designation.includes('AR MANAGER');
 
   if (isManager || targetUserId === currentUserId) {
     return next();
