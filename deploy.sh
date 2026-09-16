@@ -36,26 +36,24 @@ if [ -d "android" ] && command -v java &> /dev/null && [ -n "$ANDROID_HOME" -o -
 
     mkdir -p ../../server/uploads/apks/
     
-    # PeopleDesk APKs
-    if [ -f "app/build/outputs/apk/peopledesk/release/app-peopledesk-release-unsigned.apk" ]; then
-        cp app/build/outputs/apk/peopledesk/release/app-peopledesk-release-unsigned.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
+    # PeopleDesk APKs (Prioritize signed release or debug APK)
+    if [ -f "app/build/outputs/apk/peopledesk/release/app-peopledesk-release.apk" ]; then
+        cp app/build/outputs/apk/peopledesk/release/app-peopledesk-release.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
         echo "📍 PeopleDesk Release APK Location: server/uploads/apks/peopledesk-release-latest.apk"
-    elif [ -f "app/build/outputs/apk/release/app-release-unsigned.apk" ]; then
-        cp app/build/outputs/apk/release/app-release-unsigned.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
+    elif [ -f "app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk" ]; then
+        cp app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
+        echo "📍 PeopleDesk Debug APK Location (Signed): server/uploads/apks/peopledesk-release-latest.apk"
     fi
 
-    # AE Manager APKs
-    if [ -f "app/build/outputs/apk/aemanager/release/app-aemanager-release-unsigned.apk" ]; then
-        cp app/build/outputs/apk/aemanager/release/app-aemanager-release-unsigned.apk ../../server/uploads/apks/ae-manager-latest.apk || true
+    # AE Manager APKs (Prioritize signed release or debug APK)
+    if [ -f "app/build/outputs/apk/aemanager/release/app-aemanager-release.apk" ]; then
+        cp app/build/outputs/apk/aemanager/release/app-aemanager-release.apk ../../server/uploads/apks/ae-manager-latest.apk || true
         echo "📍 AE Manager Release APK Location: server/uploads/apks/ae-manager-latest.apk"
     elif [ -f "app/build/outputs/apk/aemanager/debug/app-aemanager-debug.apk" ]; then
         cp app/build/outputs/apk/aemanager/debug/app-aemanager-debug.apk ../../server/uploads/apks/ae-manager-latest.apk || true
-        echo "📍 AE Manager Debug APK Location: server/uploads/apks/ae-manager-latest.apk"
-    fi
-
-    if [ -f "app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk" ]; then
-        cp app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk ../../server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk || true
-        echo "📍 Debug APK Location: server/uploads/apks/test-1peopledesk-latest-v1.0.3.apk"
+        echo "📍 AE Manager Debug APK Location (Signed): server/uploads/apks/ae-manager-latest.apk"
+    elif [ -f "app/build/outputs/apk/aemanager/release/app-aemanager-release-unsigned.apk" ]; then
+        cp app/build/outputs/apk/aemanager/release/app-aemanager-release-unsigned.apk ../../server/uploads/apks/ae-manager-latest.apk || true
     fi
 
     cd ../..

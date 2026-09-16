@@ -456,58 +456,102 @@ const updateRequestStatus = async (req, res) => {
             approvedByDesignation: hrUser?.designation || null
         };
 
-        // Send Email Notification to employee when BH approves or rejects an exceeded leave/permission request
-        if ((userRole === 'BUSINESS_HEAD' || userRole === 'AE_MANAGER') && (type === 'leave' || type === 'permission')) {
+        // Send Email Notification to employee when BH, AE Manager, or HR approves or rejects an exceeded leave/permission request
+        if ((userRole === 'BUSINESS_HEAD' || userRole === 'AE_MANAGER' || userRole === 'HR') && (type === 'leave' || type === 'permission')) {
             if (request.isExceededLimit && request.user?.email) {
                 try {
                     const employeeEmail = request.user.email;
                     const employeeName = request.user.name;
-                    const bhName = req.user.name || 'Business Head';
+                    const reviewerName = req.user.name || (userRole === 'HR' ? 'HR' : 'Business Head');
+                    const reviewerDesignation = req.user.designation || (userRole === 'BUSINESS_HEAD' ? 'Business Head' : userRole === 'AE_MANAGER' ? 'AE Manager' : userRole === 'HR' ? 'HR' : userRole);
+                    const reviewerDisplay = reviewerDesignation ? `${reviewerName} (${reviewerDesignation})` : reviewerName;
                     const isApproved = status === 'APPROVED';
                     const actionWord = isApproved ? 'Verified & Approved' : 'Rejected';
                     const reqTypeLabel = type === 'leave' ? 'Exceeded Leave Request' : 'Exceeded Permission Request';
 
                     let detailsHtml = '';
+                    let officeAttendanceNotice = '';
+
                     if (type === 'leave') {
                         const sDate = new Date(request.startDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
                         const eDate = new Date(request.endDate).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
+                        const durationText = sDate === eDate ? sDate : `${sDate} - ${eDate}`;
+
                         detailsHtml = `
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0; width: 35%;">Request Type:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">Exceeded Leave Request</td></tr>
                             <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Leave Type:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.type || 'Standard'}</td></tr>
-                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Duration:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${sDate} - ${eDate}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Duration:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${durationText}</td></tr>
                             <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Reason:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.reason || 'N/A'}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Payroll Impact:</td><td style="padding: 10px 12px; color: #dc2626; font-weight: bold; border-bottom: 1px solid #e2e8f0;">Loss of Pay (LOP)</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569;">Actioned By:</td><td style="padding: 10px 12px; color: #1e293b;">${reviewerDisplay}</td></tr>
                         `;
+
+                        if (isApproved) {
+                            officeAttendanceNotice = `
+                                <div style="background-color: #fffbeb; border: 1px solid #fde68a; border-left: 4px solid #f59e0b; padding: 14px 16px; border-radius: 6px; margin: 20px 0;">
+                                    <strong style="color: #92400e; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Policy Notice: Exceeded Leave (Loss of Pay - LOP)</strong>
+                                    <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">
+                                        This is an <strong>exceeded leave</strong> beyond your monthly limit. As per company policy, this approved leave will be treated as <strong>Loss of Pay (LOP)</strong>.
+                                    </p>
+                                </div>
+                            `;
+                        } else {
+                            officeAttendanceNotice = `
+                                <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-left: 4px solid #e11d48; padding: 14px 16px; border-radius: 6px; margin: 20px 0;">
+                                    <strong style="color: #9f1239; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Important Notice: Office Attendance Required</strong>
+                                    <p style="margin: 0; font-size: 13px; color: #881337; line-height: 1.5;">
+                                        Please note that this is an <strong>exceeded leave</strong> and has been <strong>rejected</strong>. You have to come to the office on that day (${durationText}). Unapproved absence will be marked as <strong>Loss of Pay (LOP)</strong>.
+                                    </p>
+                                </div>
+                            `;
+                        }
                     } else {
                         const pDate = new Date(request.date).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata', day: '2-digit', month: 'short', year: 'numeric' });
                         detailsHtml = `
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0; width: 35%;">Request Type:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">Exceeded Permission Request</td></tr>
                             <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Date:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${pDate}</td></tr>
                             <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Time Window:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.startTime || ''} - ${request.endTime || ''}</td></tr>
                             <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569; border-bottom: 1px solid #e2e8f0;">Reason:</td><td style="padding: 10px 12px; color: #1e293b; border-bottom: 1px solid #e2e8f0;">${request.reason || 'N/A'}</td></tr>
+                            <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569;">Actioned By:</td><td style="padding: 10px 12px; color: #1e293b;">${reviewerDisplay}</td></tr>
                         `;
+
+                        if (!isApproved) {
+                            officeAttendanceNotice = `
+                                <div style="background-color: #fff1f2; border: 1px solid #fecdd3; border-left: 4px solid #e11d48; padding: 14px 16px; border-radius: 6px; margin: 20px 0;">
+                                    <strong style="color: #9f1239; font-size: 14px; display: block; margin-bottom: 4px;">⚠️ Important Notice: Office Attendance Required</strong>
+                                    <p style="margin: 0; font-size: 13px; color: #881337; line-height: 1.5;">
+                                        Please note that since your permission request has been <strong>rejected</strong>, you are required to attend regular working hours at the office on that day (${pDate}).
+                                    </p>
+                                </div>
+                            `;
+                        }
                     }
 
-                    const emailSubject = `[PeopleDesk] Your ${reqTypeLabel} has been ${actionWord} by Business Head`;
+                    const emailSubject = `[PeopleDesk] Your ${reqTypeLabel} has been ${actionWord} by ${reviewerDisplay}`;
                     const statusColor = isApproved ? '#10b981' : '#ef4444';
                     const statusBg = isApproved ? '#ecfdf5' : '#fef2f2';
                     const nextStepText = isApproved
-                        ? 'Your exceeded limit request has been <strong>verified and approved by your Business Head</strong> and forwarded to HR for final sign-off.'
-                        : 'Your exceeded limit request has been <strong>rejected by your Business Head</strong>.';
+                        ? (userRole === 'HR'
+                            ? `Your exceeded leave request has been <strong>verified and approved by HR (${reviewerDisplay})</strong> with Loss of Pay (LOP) applied.`
+                            : `Your exceeded leave request has been <strong>verified and approved by ${reviewerDisplay}</strong> (subject to Loss of Pay / LOP) and forwarded to HR for final sign-off.`)
+                        : `Your exceeded request has been <strong>rejected by ${reviewerDisplay}</strong>.`;
 
                     const html = `
                         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; background-color: #ffffff;">
                             <div style="background-color: #1e293b; padding: 24px; text-align: center; color: #ffffff;">
-                                <h2 style="margin: 0; font-size: 20px; font-weight: bold;">PeopleDesk Notification</h2>
+                                <h2 style="margin: 0; font-size: 20px; font-weight: bold; color: #ffffff;">PeopleDesk Notification</h2>
                                 <p style="margin: 6px 0 0; font-size: 13px; color: #94a3b8;">Human Resource Management System</p>
                             </div>
                             <div style="padding: 24px;">
                                 <p style="font-size: 15px; color: #334155; margin-top: 0;">Dear <strong>${employeeName}</strong>,</p>
                                 <div style="background-color: ${statusBg}; border-left: 4px solid ${statusColor}; padding: 14px 18px; border-radius: 6px; margin-bottom: 20px;">
                                     <span style="display: block; font-size: 11px; font-weight: bold; text-transform: uppercase; color: ${statusColor}; letter-spacing: 0.05em;">Request Status Update</span>
-                                    <span style="font-size: 15px; font-weight: bold; color: #0f172a;">${actionWord} by Business Head (${bhName})</span>
+                                    <span style="font-size: 15px; font-weight: bold; color: #0f172a;">${actionWord} by ${reviewerDisplay}</span>
                                 </div>
                                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 20px; background-color: #f8fafc; border-radius: 8px; overflow: hidden; font-size: 14px; border: 1px solid #e2e8f0;">
                                     ${detailsHtml}
-                                    <tr><td style="padding: 10px 12px; font-weight: bold; color: #475569;">Reviewed By:</td><td style="padding: 10px 12px; color: #1e293b;">${bhName} (Business Head)</td></tr>
                                 </table>
+                                ${officeAttendanceNotice}
                                 <p style="font-size: 14px; color: #475569; line-height: 1.5; margin-bottom: 24px;">
                                     ${nextStepText}
                                 </p>
