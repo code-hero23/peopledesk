@@ -48,7 +48,10 @@ const WORK_TYPES = [
 
 const SiteAssignments = () => {
     const { user } = useSelector((state) => state.auth);
-    const isAEManager = user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation === 'AE MANAGER' || user?.designation === 'AE_MANAGER' || user?.designation === 'AR MANAGER' || user?.designation === 'AR_MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER');
+    const isAEManager = ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(user?.role) ||
+        ['AE MANAGER', 'AE_MANAGER', 'AR MANAGER', 'AR_MANAGER', 'ADMIN', 'BUSINESS HEAD'].includes(user?.designation?.toUpperCase()) ||
+        user?.designation?.toUpperCase()?.includes('AE MANAGER') ||
+        user?.designation?.toUpperCase()?.includes('AR MANAGER');
 
     const [assignments, setAssignments] = useState([]);
     const [aeList, setAeList] = useState([]);

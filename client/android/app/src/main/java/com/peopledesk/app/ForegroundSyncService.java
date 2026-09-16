@@ -100,6 +100,11 @@ public class ForegroundSyncService extends Service {
                 } catch (Exception e) {
                     Log.e(TAG, "Direct sync execution error", e);
                 }
+                try {
+                    LocationSyncWorker.performSync(getApplicationContext());
+                } catch (Exception e) {
+                    Log.e(TAG, "Direct location sync execution error", e);
+                }
             });
         } catch (Exception e) {
             Log.e(TAG, "Failed to trigger sync worker from service", e);
@@ -116,10 +121,10 @@ public class ForegroundSyncService extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             NotificationChannel channel = new NotificationChannel(
                 CHANNEL_ID,
-                "PeopleDesk Call Sync Service",
+                "PeopleDesk Field & Call Sync Service",
                 NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Ensures automatic call log syncing operates in the background");
+            channel.setDescription("Ensures continuous call log and live location tracking operates in the background (7 AM – 8 PM IST)");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -129,8 +134,8 @@ public class ForegroundSyncService extends Service {
 
     private Notification createNotification() {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("PeopleDesk Auto Call Sync")
-            .setContentText("Background call log synchronization active")
+            .setContentTitle("PeopleDesk Field Service Active")
+            .setContentText("Continuous call and live GPS tracking active (7:00 AM – 8:00 PM IST)")
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true);

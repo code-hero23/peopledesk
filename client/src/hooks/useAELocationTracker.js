@@ -19,9 +19,23 @@ export const isAEUser = (user) => {
     );
 };
 
+function getDistanceMeters(lat1, lon1, lat2, lon2) {
+    const R = 6371e3;
+    const φ1 = lat1 * Math.PI / 180;
+    const φ2 = lat2 * Math.PI / 180;
+    const Δφ = (lat2 - lat1) * Math.PI / 180;
+    const Δλ = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+              Math.cos(φ1) * Math.cos(φ2) *
+              Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
 export const useAELocationTracker = () => {
     const { user } = useSelector((state) => state.auth);
     const lastPingRef = useRef(0);
+    const lastValidCoordsRef = useRef(null);
     const isPingingRef = useRef(false);
 
     const getBatteryLevel = async () => {
@@ -56,7 +70,32 @@ export const useAELocationTracker = () => {
 
         isPingingRef.current = true;
 
-        const sendPayload = async (lat, lng, accuracy = null, speed = null) => {
+        const sendPayload = async (rawLat, rawLng, accuracy = null, speed = null) => {
+            // Filter out coarse network/cell tower triangulation (error > 150 meters)
+            if (accuracy != null && accuracy > 150) {
+                console.log(`[AELocationTracker] Discarding low-accuracy GPS fix (±${Math.round(accuracy)}m)`);
+                isPingingRef.current = false;
+                return;
+            }
+
+            let lat = rawLat;
+            let lng = rawLng;
+
+            // Stabilize stationary jitter when idle/sitting indoors
+            if (lastValidCoordsRef.current) {
+                const dist = getDistanceMeters(
+                    lastValidCoordsRef.current.lat,
+                    lastValidCoordsRef.current.lng,
+                    lat,
+                    lng
+                );
+
+                // If stationary (speed < 0.5 m/s or null) and movement is within 15 meters, preserve anchor
+                if ((speed == null || speed < 0.5) && dist < 15 && accuracy != null && accuracy >= lastValidCoordsRef.current.accuracy) {
+                    lat = lastValidCoordsRef.current.lat;
+                    lng = lastValidCoordsRef.current.lng;
+                }
+            }
             try {
                 const battery = await getBatteryLevel();
                 await axios.post(
@@ -75,6 +114,7 @@ export const useAELocationTracker = () => {
                     }
                 );
                 lastPingRef.current = Date.now();
+                lastValidCoordsRef.current = { lat, lng, accuracy: accuracy || 10, time: Date.now() };
                 console.log(`[AELocationTracker] Location ping sent (${triggerReason}):`, lat, lng);
             } catch (err) {
                 console.warn('[AELocationTracker] Failed to send location ping:', err.message);
@@ -141,6 +181,15 @@ export const useAELocationTracker = () => {
             pingLocation(null, 'periodic');
         }, 60000);
 
+        // Immediate high-accuracy ping when device screen wakes up or app gains focus
+        const handleWakeup = () => {
+            if (document.visibilityState === 'visible') {
+                pingLocation(null, 'screen_wake');
+            }
+        };
+        document.addEventListener('visibilitychange', handleWakeup);
+        window.addEventListener('focus', handleWakeup);
+
         // Optional watchPosition for moving updates
         let watchId = null;
         if (navigator.geolocation) {
@@ -166,6 +215,8 @@ export const useAELocationTracker = () => {
 
         return () => {
             clearInterval(intervalId);
+            document.removeEventListener('visibilitychange', handleWakeup);
+            window.removeEventListener('focus', handleWakeup);
             if (watchId !== null && navigator.geolocation) {
                 try {
                     navigator.geolocation.clearWatch(watchId);

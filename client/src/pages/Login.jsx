@@ -5,6 +5,7 @@ import { login, googleLogin, logout, reset } from '../features/auth/authSlice';
 import { GoogleLogin } from '@react-oauth/google';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Capacitor } from '@capacitor/core';
+import { Smartphone } from 'lucide-react';
 import CallSyncDeviceSetup from '../components/CallSyncDeviceSetup';
 import { getCallLogPlugin } from '../utils/capacitorPlugins';
 
@@ -324,6 +325,30 @@ PeopleDesk User`)}`}
                                     />
                                 </div>
                             </form>
+
+                            {!Capacitor.isNativePlatform() && (
+                                <div className="mt-8 pt-6 border-t border-white/5 text-center">
+                                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-3">Download Mobile Applications</p>
+                                    <div className="grid grid-cols-2 gap-2.5">
+                                        <a
+                                            href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/downloads/peopledesk-apk`}
+                                            download="PeopleDesk-latest.apk"
+                                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-slate-300 hover:text-white border border-white/5 text-xs font-bold transition-all group"
+                                        >
+                                            <Smartphone size={13} className="text-blue-400 group-hover:scale-110 transition-transform" />
+                                            <span>PeopleDesk APK</span>
+                                        </a>
+                                        <a
+                                            href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/downloads/ae-manager-apk`}
+                                            download="AEManager-latest.apk"
+                                            className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-slate-300 hover:text-white border border-white/5 text-xs font-bold transition-all group"
+                                        >
+                                            <Smartphone size={13} className="text-emerald-400 group-hover:scale-110 transition-transform" />
+                                            <span>AE Manager APK</span>
+                                        </a>
+                                    </div>
+                                </div>
+                            )}
                         </div >
                     </div >
                 </motion.div >

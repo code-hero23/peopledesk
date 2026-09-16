@@ -4,12 +4,14 @@ const XLSX = require('xlsx');
 const fs = require('fs');
 const axios = require('axios');
 
-// Helper to determine if user has management permissions for Site Assignments (Only AE Manager)
+// Helper to determine if user has management permissions for Site Assignments
 const isSiteManager = (user) => {
     if (!user) return false;
     const role = (user.role || '').toUpperCase();
     const designation = (user.designation || '').toUpperCase();
-    return role === 'AE_MANAGER' || designation === 'AE MANAGER' || designation === 'AE_MANAGER';
+    return ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(role) ||
+        ['AE MANAGER', 'AE_MANAGER', 'AR MANAGER', 'AR_MANAGER', 'ADMIN', 'BUSINESS HEAD'].includes(designation) ||
+        designation.includes('AE MANAGER');
 };
 
 // @desc    Get dropdown list of active AE employees

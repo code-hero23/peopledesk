@@ -1,13 +1,14 @@
 {
-	"appId": "com.peopledesk.aemanager",
-	"appName": "AE Manager App",
-	"webDir": "dist",
-	"server": {
-		"androidScheme": "http",
-		"cleartext": true,
-		"allowNavigation": [
-			"192.168.1.121"
-		]
-	},
-	"plugins": {}
+  "appId": "com.peopledesk.aemanager",
+  "appName": "AE Manager App",
+  "webDir": "dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true,
+    "allowNavigation": [
+      "*"
+    ]
+  },
+  "plugins": {
+  }
 }

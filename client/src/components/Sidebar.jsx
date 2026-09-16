@@ -34,9 +34,11 @@ import {
     Boxes,
     Award,
     Sparkle,
-    Activity
+    Activity,
+    Smartphone
 } from 'lucide-react';
 import ThemeSelector from './common/ThemeSelector';
+import ApkDownloadModal from './common/ApkDownloadModal';
 
 const Sidebar = ({ isMobileOpen, onMobileClose }) => {
     const navigate = useNavigate();
@@ -51,6 +53,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
         utilities: true,
         operations: true
     });
+    const [showApkModal, setShowApkModal] = useState(false);
 
     const toggleGroup = (group) => {
         setOpenGroups(prev => ({ ...prev, [group]: !prev[group] }));
@@ -257,8 +260,8 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(user?.role) && (
                                 <NavItem to="/admin/live-tracker" icon={Navigation} label="AE Live Tracker" badge="Live" indent />
                             )}
-                            {(user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (
-                                <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites" indent />
+                            {(['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(user?.role) || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (
+                                <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites (AE Manager)" indent />
                             )}
                             {(['ADMIN', 'BUSINESS_HEAD'].includes(user?.role) || user?.designation === 'BH' || user?.designation === 'FRONT DESK MANAGER') && (
                                 <NavItem to="/admin/visitors-record" icon={BookOpen} label="Visitors Book" indent />
@@ -297,6 +300,22 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>
                             <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" indent />
                             <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" indent />
+                            <button
+                                onClick={() => {
+                                    onMobileClose?.();
+                                    setShowApkModal(true);
+                                }}
+                                title={isCollapsed ? "Mobile Apps" : ""}
+                                className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-xs tracking-wide transition-all duration-300 mb-1 select-none text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent w-full text-left ${isCollapsed ? 'justify-center px-2' : ''} ${!isCollapsed ? 'ml-3' : ''}`}
+                            >
+                                <Smartphone size={isCollapsed ? 20 : 17} className="flex-shrink-0 text-slate-400 group-hover:text-blue-400" />
+                                {!isCollapsed && (
+                                    <div className="flex items-center justify-between w-full pr-2">
+                                        <span>Mobile APKs</span>
+                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">2 Builds</span>
+                                    </div>
+                                )}
+                            </button>
                         </NavGroup>
                     </>
                 ) : (user?.role === 'FRONT_DESK_MANAGER' || user?.designation === 'FRONT DESK MANAGER' || user?.designation === 'FRONT_DESK' || user?.designation === 'FRONT DESK') ? (
@@ -344,6 +363,22 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>
                             <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" indent />
                             <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" indent />
+                            <button
+                                onClick={() => {
+                                    onMobileClose?.();
+                                    setShowApkModal(true);
+                                }}
+                                title={isCollapsed ? "Mobile Apps" : ""}
+                                className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-xs tracking-wide transition-all duration-300 mb-1 select-none text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent w-full text-left ${isCollapsed ? 'justify-center px-2' : ''} ${!isCollapsed ? 'ml-3' : ''}`}
+                            >
+                                <Smartphone size={isCollapsed ? 20 : 17} className="flex-shrink-0 text-slate-400 group-hover:text-blue-400" />
+                                {!isCollapsed && (
+                                    <div className="flex items-center justify-between w-full pr-2">
+                                        <span>Mobile APKs</span>
+                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">2 Builds</span>
+                                    </div>
+                                )}
+                            </button>
                         </NavGroup>
                     </>
                 )}
@@ -377,6 +412,13 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
 
                 <div className="flex gap-2 pt-1 border-t border-white/5">
                     <button
+                        onClick={() => setShowApkModal(true)}
+                        title="Download Mobile APKs"
+                        className="flex-1 flex items-center gap-2 bg-white/[0.04] hover:bg-blue-600/20 hover:border-blue-500/30 text-slate-400 hover:text-blue-400 py-2 rounded-xl transition-all duration-200 group justify-center border border-white/5"
+                    >
+                        <Smartphone size={14} className="text-slate-400 group-hover:text-blue-400" />
+                    </button>
+                    <button
                         onClick={handleRefresh}
                         title="Refresh Application"
                         className="flex-1 flex items-center gap-2 bg-white/[0.04] hover:bg-white/10 text-slate-400 hover:text-white py-2 rounded-xl transition-all duration-200 group justify-center border border-white/5"
@@ -392,6 +434,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                     </button>
                 </div>
             </div>
+
+            {/* Modal: Dual APK Downloads */}
+            <ApkDownloadModal isOpen={showApkModal} onClose={() => setShowApkModal(false)} />
         </aside>
     );
 };

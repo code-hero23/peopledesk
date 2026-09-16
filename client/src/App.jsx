@@ -95,6 +95,8 @@ function App() {
               <Route path="/admin/vouchers" element={<VoucherManagement />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />
               <Route path="/admin/site-assignments" element={<SiteAssignments />} />
+              <Route path="/admin/ae-manager" element={<Navigate to="/admin/site-assignments" replace />} />
+              <Route path="/ae-manager" element={<Navigate to="/admin/site-assignments" replace />} />
               <Route path="/admin/visitors-record" element={<VisitorRecordBook />} />
               <Route path="/admin/employees" element={<ManageEmployees />} />
               <Route path="/admin/employees/:id/attendance" element={<EmployeeAttendanceDetail />} />

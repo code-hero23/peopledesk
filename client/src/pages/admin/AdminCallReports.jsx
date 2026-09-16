@@ -1670,6 +1670,28 @@ const AdminCallReports = () => {
                                 </ol>
                             </div>
 
+                            <div className="pt-2 border-t border-slate-800 space-y-2 text-left">
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-wider text-center">Direct APK Downloads</p>
+                                <div className="grid grid-cols-2 gap-2">
+                                    <a
+                                        href={`${baseUrl}/downloads/peopledesk-apk`}
+                                        download="PeopleDesk-latest.apk"
+                                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-[11px] font-bold shadow-md shadow-indigo-600/20 transition-all text-center"
+                                    >
+                                        <Download size={13} />
+                                        <span>PeopleDesk APK</span>
+                                    </a>
+                                    <a
+                                        href={`${baseUrl}/downloads/ae-manager-apk`}
+                                        download="AEManager-latest.apk"
+                                        className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md shadow-emerald-600/20 transition-all text-center"
+                                    >
+                                        <Download size={13} />
+                                        <span>AE Manager APK</span>
+                                    </a>
+                                </div>
+                            </div>
+
                             <div className="flex items-center justify-between pt-2">
                                 <button
                                     onClick={() => handleCreateAdminActivationCode(selectedUserForActivation?.id || selectedUserForActivation?.userId)}

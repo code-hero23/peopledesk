@@ -15,7 +15,7 @@ const {
 const { protect } = require('../middlewares/authMiddleware');
 const { uploadExcel } = require('../middlewares/uploadMiddleware');
 
-// Custom middleware ensuring ONLY AE Manager can assign/manage sites
+// Middleware ensuring AE Manager, Admin, and Business Head can assign/manage sites
 const authorizeAEManager = (req, res, next) => {
     if (!req.user) {
         return res.status(401).json({ message: 'Not authenticated' });
@@ -23,11 +23,16 @@ const authorizeAEManager = (req, res, next) => {
     const role = (req.user.role || '').toUpperCase();
     const designation = (req.user.designation || '').toUpperCase();
 
-    if (role === 'AE_MANAGER' || designation === 'AE MANAGER' || designation === 'AE_MANAGER') {
+    if (
+        ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(role) ||
+        ['AE MANAGER', 'AE_MANAGER', 'AR MANAGER', 'AR_MANAGER', 'ADMIN', 'BUSINESS HEAD'].includes(designation) ||
+        designation.includes('AE MANAGER') ||
+        designation.includes('AR MANAGER')
+    ) {
         return next();
     }
 
-    return res.status(403).json({ message: 'Access denied. Only AE Manager can assign or manage site allocations.' });
+    return res.status(403).json({ message: 'Access denied. Only AE Manager, Admin, or Business Head can manage site allocations.' });
 };
 
 // Get assigned sites for current logged-in employee (Dropdown)

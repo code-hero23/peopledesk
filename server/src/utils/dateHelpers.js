@@ -178,12 +178,64 @@ const normalizeBiometricDate = (dateInput, targetYear) => {
     return d;
 };
 
+/**
+ * Calculates the active tracking window (7:00 AM to 8:00 PM IST)
+
+ * converted to exact UTC Date boundaries for the database.
+ * 
+ * Server is in UTC (5h 30m behind IST).
+ * 7:00 AM IST = 01:30 AM UTC
+ * 8:00 PM IST = 14:30 (2:30 PM) UTC
+ */
+const getTrackingWindowIST = (dateInput = new Date()) => {
+    let validDate;
+    if (typeof dateInput === 'string' && dateInput.includes('-') && !dateInput.includes('T')) {
+        // e.g. "2026-09-16"
+        const [y, m, d] = dateInput.split('-').map(Number);
+        // Create as noon UTC to avoid date boundaries shifting when converting to IST
+        validDate = new Date(Date.UTC(y, m - 1, d, 12, 0, 0));
+    } else {
+        const d = dateInput instanceof Date ? dateInput : new Date(dateInput);
+        validDate = isNaN(d.getTime()) ? new Date() : d;
+    }
+
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istTime = new Date(validDate.getTime() + istOffset);
+
+    const year = istTime.getUTCFullYear();
+    const month = istTime.getUTCMonth();
+    const date = istTime.getUTCDate();
+
+    // 7:00 AM IST (01:30 UTC)
+    const startIST = new Date(Date.UTC(year, month, date, 7, 0, 0, 0));
+    const startUTC = new Date(startIST.getTime() - istOffset);
+
+    // 8:00 PM IST = 20:00 (14:30 UTC)
+    const endIST = new Date(Date.UTC(year, month, date, 20, 0, 0, 0));
+    const endUTC = new Date(endIST.getTime() - istOffset);
+
+    const nowUTC = new Date();
+    // If checking today's window, determine if currently within active hours
+    const isCurrentlyInWindow = nowUTC.getTime() >= startUTC.getTime() && nowUTC.getTime() <= endUTC.getTime();
+
+    return {
+        startUTC,
+        endUTC,
+        isCurrentlyInWindow,
+        currentIST: new Date(nowUTC.getTime() + istOffset),
+        targetDateIST: istTime
+    };
+};
+
 module.exports = {
+    getISTDate,
     getStartOfDayIST,
     getEndOfDayIST,
     getCycleStartDateIST,
     getCycleEndDateIST,
     getLatestCompletedCycle,
     parseRobustDate,
-    normalizeBiometricDate
+    normalizeBiometricDate,
+    getTrackingWindowIST
 };
+

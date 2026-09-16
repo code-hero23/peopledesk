@@ -107,6 +107,7 @@ app.use('/api/seating', require('./routes/seatingRoutes'));
 app.use('/api/site-assignments', require('./routes/siteAssignmentRoutes'));
 app.use('/api/public-events', require('./routes/publicEventRoutes'));
 app.use('/api/location', require('./routes/locationRoutes'));
+app.use('/api/downloads', require('./routes/downloadRoutes'));
 
 app.get('/api', (req, res) => {
     res.json({ message: 'Welcome to PeopleDesk API', status: 'Running' });

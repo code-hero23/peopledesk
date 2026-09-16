@@ -18,25 +18,64 @@ import {
   XCircle, 
   Layers,
   Smartphone,
-  Copy
+  Copy,
+  Moon,
+  Sun,
+  X,
+  Compass,
+  ChevronRight,
+  Eye,
+  SlidersHorizontal,
+  Download
 } from 'lucide-react';
 import { toast } from 'react-toastify';
+import ApkDownloadModal from '../../components/common/ApkDownloadModal';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
 
 const AELiveTracker = () => {
   const { user } = useSelector((state) => state.auth);
   const [liveData, setLiveData] = useState([]);
+  const [trackingInfo, setTrackingInfo] = useState({
+    isCurrentlyInWindow: true,
+    startIST: '07:00 AM',
+    endIST: '08:00 PM',
+    windowLabel: '7:00 AM – 8:00 PM IST'
+  });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('ALL');
   const [selectedAE, setSelectedAE] = useState(null);
   
+  // Mobile active tab: 'map' or 'list'
+  const [mobileTab, setMobileTab] = useState('map');
+
   // APK Activation Code Modal state
   const [activationCode, setActivationCode] = useState(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
   const [showCodeModal, setShowCodeModal] = useState(false);
+  const [showApkDownloadModal, setShowApkDownloadModal] = useState(false);
+
+  // Live IST Clock
+  const [currentISTTime, setCurrentISTTime] = useState('');
+
+  useEffect(() => {
+    const updateClock = () => {
+      const now = new Date();
+      const istStr = now.toLocaleTimeString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      });
+      setCurrentISTTime(istStr);
+    };
+    updateClock();
+    const timer = setInterval(updateClock, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   const generateActivationCode = async () => {
     setIsGeneratingCode(true);
@@ -66,7 +105,7 @@ const AELiveTracker = () => {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         try {
-          await axios.post(
+          const res = await axios.post(
             `${API_BASE}/location/ping`,
             {
               latitude: pos.coords.latitude,
@@ -76,7 +115,11 @@ const AELiveTracker = () => {
             },
             { headers: { Authorization: `Bearer ${user.token}` } }
           );
-          toast.success('Your live GPS location was transmitted successfully!');
+          if (res.data?.trackingActive === false) {
+            toast.warning('Ping received, but tracking is paused outside 7:00 AM – 8:00 PM IST.');
+          } else {
+            toast.success('Your live GPS location was transmitted successfully!');
+          }
           await fetchLiveData(true);
         } catch (err) {
           console.error('Failed to send test ping:', err);
@@ -94,14 +137,22 @@ const AELiveTracker = () => {
   };
   
   // Historical Route Tracing state
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState(() => {
+    // Current IST date in YYYY-MM-DD
+    const now = new Date();
+    const istOffset = 5.5 * 60 * 60 * 1000;
+    const istDate = new Date(now.getTime() + istOffset);
+    return istDate.toISOString().split('T')[0];
+  });
   const [historyLogs, setHistoryLogs] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
 
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersRef = useRef({});
+  const circlesRef = useRef({});
   const polylineRef = useRef(null);
+  const historyMarkersRef = useRef([]);
 
   // Load Leaflet CSS and JS dynamically if not present
   useEffect(() => {
@@ -161,16 +212,62 @@ const AELiveTracker = () => {
       }
       const config = getTileConfig(type);
       tileLayerRef.current = window.L.tileLayer(config.url, config.options).addTo(leafletMap.current);
+      setTimeout(() => leafletMap.current?.invalidateSize(), 80);
     }
   };
 
   const initMap = () => {
     if (mapRef.current && !leafletMap.current && window.L) {
-      leafletMap.current = window.L.map(mapRef.current).setView([13.0827, 80.2707], 11);
+      leafletMap.current = window.L.map(mapRef.current, {
+        zoomControl: false,
+        preferCanvas: true
+      }).setView([13.0827, 80.2707], 11);
+
+      // Add zoom control at top-left
+      window.L.control.zoom({ position: 'topleft' }).addTo(leafletMap.current);
+
       const config = getTileConfig('google_roadmap');
       tileLayerRef.current = window.L.tileLayer(config.url, config.options).addTo(leafletMap.current);
+
+      // Trigger size invalidations as DOM finishes layout
+      setTimeout(() => leafletMap.current?.invalidateSize(), 100);
+      setTimeout(() => leafletMap.current?.invalidateSize(), 400);
+      setTimeout(() => leafletMap.current?.invalidateSize(), 1200);
     }
   };
+
+  // Robust container resize observer to guarantee full tile coverage without grey blank spaces
+  useEffect(() => {
+    if (!mapRef.current) return;
+
+    const observer = new ResizeObserver(() => {
+      if (leafletMap.current) {
+        leafletMap.current.invalidateSize();
+      }
+    });
+    observer.observe(mapRef.current);
+
+    const handleWindowResize = () => {
+      if (leafletMap.current) {
+        leafletMap.current.invalidateSize();
+      }
+    };
+    window.addEventListener('resize', handleWindowResize);
+
+    return () => {
+      observer.disconnect();
+      window.removeEventListener('resize', handleWindowResize);
+    };
+  }, []);
+
+  // Re-invalidate map size when mobile tab changes
+  useEffect(() => {
+    if (leafletMap.current) {
+      setTimeout(() => {
+        leafletMap.current?.invalidateSize();
+      }, 150);
+    }
+  }, [mobileTab]);
 
   const fetchLiveData = async (isManual = false) => {
     if (isManual) setRefreshing(true);
@@ -178,7 +275,16 @@ const AELiveTracker = () => {
       const res = await axios.get(`${API_BASE}/location/live`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
-      setLiveData(res.data || []);
+      
+      // Support both legacy array format and object format with trackingWindow info
+      if (Array.isArray(res.data)) {
+        setLiveData(res.data);
+      } else if (res.data && res.data.liveData) {
+        setLiveData(res.data.liveData || []);
+        if (res.data.trackingWindow) {
+          setTrackingInfo(res.data.trackingWindow);
+        }
+      }
     } catch (err) {
       console.error('Failed to fetch AE live locations:', err);
       toast.error('Could not refresh AE location tracker data.');
@@ -198,9 +304,11 @@ const AELiveTracker = () => {
   useEffect(() => {
     if (!leafletMap.current || !window.L) return;
 
-    // Clear existing markers
+    // Clear existing markers and accuracy circles
     Object.values(markersRef.current).forEach(marker => marker.remove());
     markersRef.current = {};
+    Object.values(circlesRef.current).forEach(circle => circle.remove());
+    circlesRef.current = {};
 
     const bounds = [];
 
@@ -211,42 +319,75 @@ const AELiveTracker = () => {
       const latLng = [loc.latitude, loc.longitude];
       bounds.push(latLng);
 
-      const markerColor = status === 'ONLINE' ? '#10b981' : status === 'IDLE' ? '#f59e0b' : '#64748b';
+      const markerColor = 
+        status === 'ONLINE' ? '#10b981' : 
+        status === 'IDLE' ? '#f59e0b' : 
+        status === 'OUT_OF_HOURS' ? '#8b5cf6' : '#64748b';
+
+      // Subtle accuracy circle showing GPS confidence radius (skip if wildly inaccurate > 200m)
+      if (loc.accuracy && loc.accuracy > 0 && loc.accuracy <= 200) {
+        try {
+          const circle = window.L.circle(latLng, {
+            radius: loc.accuracy,
+            color: markerColor,
+            fillColor: markerColor,
+            fillOpacity: 0.08,
+            weight: 1,
+            dashArray: '4, 4'
+          }).addTo(leafletMap.current);
+          circlesRef.current[ae.id] = circle;
+        } catch (e) {}
+      }
 
       const customIcon = window.L.divIcon({
         className: 'custom-map-pin',
         html: `
           <div style="
             background-color: ${markerColor};
-            width: 32px;
-            height: 32px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            border: 3px solid #ffffff;
+            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            font-weight: bold;
+            font-weight: 800;
             font-size: 11px;
+            font-family: sans-serif;
+            position: relative;
           ">
             ${ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE'}
+            ${status === 'ONLINE' ? '<span style="position:absolute; top:-2px; right:-2px; width:10px; height:10px; background:#10b981; border:2px solid white; border-radius:50%;"></span>' : ''}
           </div>
         `,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16]
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
       });
 
       const marker = window.L.marker(latLng, { icon: customIcon }).addTo(leafletMap.current);
       
+      const lastActiveTime = loc.createdAt 
+        ? new Date(loc.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+        : 'N/A';
+
       const popupContent = `
-        <div style="font-family: sans-serif; padding: 4px;">
-          <h4 style="margin: 0 0 4px 0; font-weight: 800; font-size: 14px;">${ae.name}</h4>
-          <p style="margin: 0; font-size: 11px; color: #64748b;">${ae.designation || 'AE'} • ${ae.phone || 'No phone'}</p>
-          <hr style="margin: 6px 0; border: none; border-top: 1px solid #e2e8f0;" />
-          <p style="margin: 2px 0; font-size: 11px;"><strong>Status:</strong> <span style="color:${markerColor}; font-weight:bold;">${status}</span></p>
-          <p style="margin: 2px 0; font-size: 11px;"><strong>Battery:</strong> ${loc.batteryLevel != null ? loc.batteryLevel + '%' : 'N/A'}</p>
-          <p style="margin: 2px 0; font-size: 11px;"><strong>Last Active:</strong> ${new Date(loc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
+        <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 190px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
+            <h4 style="margin: 0; font-weight: 800; font-size: 14px; color: #0f172a;">${ae.name}</h4>
+            <span style="font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; background: ${markerColor}15; color: ${markerColor}; border: 1px solid ${markerColor}40;">
+              ${status}
+            </span>
+          </div>
+          <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">${ae.designation || 'Area Executive'}</p>
+          <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 6px 8px; font-size: 11px; color: #334155; line-height: 1.5;">
+            <div><strong>📞 Phone:</strong> ${ae.phone || 'N/A'}</div>
+            <div><strong>🔋 Battery:</strong> ${loc.batteryLevel != null ? loc.batteryLevel + '%' : 'N/A'}</div>
+            <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
+            ${loc.accuracy != null ? `<div><strong>🎯 GPS Accuracy:</strong> ±${Math.round(loc.accuracy)}m</div>` : ''}
+            ${loc.speed != null ? `<div><strong>⚡ Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</div>` : ''}
+          </div>
         </div>
       `;
       marker.bindPopup(popupContent);
@@ -254,18 +395,27 @@ const AELiveTracker = () => {
     });
 
     if (bounds.length > 0 && !selectedAE) {
-      leafletMap.current.fitBounds(bounds, { padding: [40, 40], maxZoom: 14 });
+      leafletMap.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
     }
+
+    // Guarantee full tile coverage
+    setTimeout(() => {
+      leafletMap.current?.invalidateSize();
+    }, 100);
   }, [liveData]);
 
   // Focus single AE on map
   const handleSelectAE = (aeItem) => {
     setSelectedAE(aeItem);
+    // On mobile, switch to map view when an AE is tapped
+    setMobileTab('map');
     const loc = aeItem.latestLocation;
     if (loc && loc.latitude && loc.longitude && leafletMap.current) {
       leafletMap.current.flyTo([loc.latitude, loc.longitude], 15, { duration: 1.2 });
       if (markersRef.current[aeItem.user.id]) {
-        markersRef.current[aeItem.user.id].openPopup();
+        setTimeout(() => {
+          markersRef.current[aeItem.user.id]?.openPopup();
+        }, 500);
       }
     }
   };
@@ -280,24 +430,49 @@ const AELiveTracker = () => {
       const logs = res.data.logs || [];
       setHistoryLogs(logs);
 
+      // Clean up previous polyline & markers
       if (polylineRef.current) {
         polylineRef.current.remove();
         polylineRef.current = null;
       }
+      historyMarkersRef.current.forEach(m => m.remove());
+      historyMarkersRef.current = [];
 
       if (logs.length > 0 && leafletMap.current && window.L) {
         const pathCoords = logs.map(l => [l.latitude, l.longitude]);
+        
+        // Draw route trail
         polylineRef.current = window.L.polyline(pathCoords, {
           color: '#3b82f6',
           weight: 4,
-          opacity: 0.8,
-          dashArray: '8, 8'
+          opacity: 0.85,
+          dashArray: '6, 6'
         }).addTo(leafletMap.current);
 
+        // Add Start marker (Green circle)
+        const startPoint = logs[0];
+        const startMarker = window.L.circleMarker([startPoint.latitude, startPoint.longitude], {
+          radius: 6,
+          color: '#10b981',
+          fillColor: '#10b981',
+          fillOpacity: 1
+        }).addTo(leafletMap.current).bindPopup(`<b>Start Point (7 AM - 8 PM IST)</b><br>${new Date(startPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}`);
+        historyMarkersRef.current.push(startMarker);
+
+        // Add End marker (Red circle)
+        const endPoint = logs[logs.length - 1];
+        const endMarker = window.L.circleMarker([endPoint.latitude, endPoint.longitude], {
+          radius: 6,
+          color: '#ef4444',
+          fillColor: '#ef4444',
+          fillOpacity: 1
+        }).addTo(leafletMap.current).bindPopup(`<b>End Point (7 AM - 8 PM IST)</b><br>${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}`);
+        historyMarkersRef.current.push(endMarker);
+
         leafletMap.current.fitBounds(polylineRef.current.getBounds(), { padding: [50, 50] });
-        toast.info(`Loaded ${logs.length} location points for ${selectedDate}`);
+        toast.info(`Traced ${logs.length} GPS points for ${selectedDate} (7 AM - 8 PM IST)`);
       } else {
-        toast.warning(`No location history logs found for ${selectedDate}`);
+        toast.warning(`No location logs found between 7:00 AM and 8:00 PM IST on ${selectedDate}`);
       }
     } catch (err) {
       console.error('Failed to load location history:', err);
@@ -307,10 +482,22 @@ const AELiveTracker = () => {
     }
   };
 
+  const handleClearRoute = () => {
+    if (polylineRef.current) {
+      polylineRef.current.remove();
+      polylineRef.current = null;
+    }
+    historyMarkersRef.current.forEach(m => m.remove());
+    historyMarkersRef.current = [];
+    setHistoryLogs([]);
+    toast.info('Route path cleared from map.');
+  };
+
   // Filter AEs
   const filteredData = liveData.filter(item => {
     const matchesSearch = item.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (item.user.phone && item.user.phone.includes(searchQuery));
+                          (item.user.phone && item.user.phone.includes(searchQuery)) ||
+                          (item.user.designation && item.user.designation.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -318,186 +505,308 @@ const AELiveTracker = () => {
   const onlineCount = liveData.filter(i => i.status === 'ONLINE').length;
   const idleCount = liveData.filter(i => i.status === 'IDLE').length;
   const offlineCount = liveData.filter(i => i.status === 'OFFLINE').length;
+  const outOfHoursCount = liveData.filter(i => i.status === 'OUT_OF_HOURS').length;
 
   return (
-    <div className="p-6 space-y-6 max-w-[1600px] mx-auto min-h-screen text-slate-100">
-      {/* Header Bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-900/90 border border-slate-800 p-6 rounded-3xl backdrop-blur-xl shadow-2xl">
+    <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-[1700px] mx-auto min-h-screen text-slate-100 font-sans">
+      
+      {/* Top Header Bar */}
+      <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/95 border border-slate-800/90 p-4 sm:p-6 rounded-2xl sm:rounded-3xl backdrop-blur-xl shadow-2xl">
         <div>
           <div className="flex items-center gap-3">
-            <div className="p-2.5 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400">
-              <Navigation size={24} className="animate-pulse" />
+            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-500/10 border border-blue-500/20 text-blue-400 shrink-0">
+              <Compass size={24} className="animate-spin-slow" />
             </div>
             <div>
-              <h1 className="text-2xl font-black tracking-tight text-white">AE Live Tracker</h1>
-              <p className="text-xs font-semibold text-slate-400">Real-time GPS location monitoring for Architectural Executives</p>
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">AE Live Tracker</h1>
+                
+                {/* 7 AM - 8 PM IST Tracking Window Badge */}
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider border ${
+                  trackingInfo.isCurrentlyInWindow
+                    ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
+                    : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${trackingInfo.isCurrentlyInWindow ? 'bg-emerald-400 animate-ping' : 'bg-purple-400'}`} />
+                  {trackingInfo.isCurrentlyInWindow ? 'Live Window: 7 AM – 8 PM IST' : 'Tracking Paused: Resumes 7 AM IST'}
+                </span>
+
+                {/* Live Clock Pill */}
+                {currentISTTime && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700">
+                    <Clock size={11} className="text-blue-400" />
+                    {currentISTTime} IST
+                  </span>
+                )}
+              </div>
+              <p className="text-xs font-medium text-slate-400 mt-1">
+                Real-time field monitoring active strictly within 7:00 AM – 8:00 PM IST (Offset sync applied)
+              </p>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3">
+        {/* Action Buttons Group */}
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           <button
             onClick={handleManualPing}
             disabled={isPingingNow}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-emerald-600/25 disabled:opacity-50"
-            title="Send an immediate live GPS coordinate ping to the server"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-emerald-600/25 disabled:opacity-50"
+            title="Transmit immediate device coordinate ping to server"
           >
             <Navigation size={14} className={isPingingNow ? 'animate-pulse' : ''} />
-            {isPingingNow ? 'Locating...' : 'Ping My GPS Now'}
+            <span>{isPingingNow ? 'Locating...' : 'Ping My GPS'}</span>
           </button>
+
           <button
             onClick={generateActivationCode}
             disabled={isGeneratingCode}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-blue-600/25"
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-blue-600/25 disabled:opacity-50"
           >
-            <Smartphone size={15} />
-            {isGeneratingCode ? 'Generating...' : 'Get APK Code'}
+            <Smartphone size={14} />
+            <span>{isGeneratingCode ? 'Generating...' : 'Get APK Code'}</span>
           </button>
+
+          <button
+            onClick={() => setShowApkDownloadModal(true)}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-xs font-bold text-white transition-all active:scale-95 shadow-lg shadow-blue-600/25"
+            title="Download PeopleDesk and AE Manager APK builds"
+          >
+            <Download size={14} />
+            <span>Download APKs</span>
+          </button>
+
           <button
             onClick={() => fetchLiveData(true)}
             disabled={refreshing}
-            className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition-all active:scale-95 disabled:opacity-50"
+            className="p-2 sm:px-3.5 sm:py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs font-bold text-slate-200 border border-slate-700 transition-all active:scale-95 disabled:opacity-50"
+            title="Refresh GPS Feed"
           >
-            <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
-            {refreshing ? 'Refreshing...' : 'Refresh GPS'}
+            <RefreshCw size={15} className={refreshing ? 'animate-spin text-blue-400' : ''} />
           </button>
         </div>
       </div>
 
       {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-lg">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+        <div className="bg-slate-900/80 border border-slate-800/90 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total AEs</p>
-            <h3 className="text-2xl font-black text-white mt-1">{liveData.length}</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-white mt-1">{liveData.length}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-slate-800 text-slate-300">
-            <User size={20} />
+          <div className="p-2.5 rounded-xl bg-slate-800/80 text-slate-300 border border-slate-700/50">
+            <User size={18} />
           </div>
         </div>
 
-        <div className="bg-slate-900/80 border border-emerald-500/20 p-5 rounded-2xl flex items-center justify-between shadow-lg">
+        <div className="bg-slate-900/80 border border-emerald-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">Online Now</p>
-            <h3 className="text-2xl font-black text-emerald-400 mt-1">{onlineCount}</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">{onlineCount}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-            <CheckCircle2 size={20} />
+          <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+            <CheckCircle2 size={18} />
           </div>
         </div>
 
-        <div className="bg-slate-900/80 border border-amber-500/20 p-5 rounded-2xl flex items-center justify-between shadow-lg">
+        <div className="bg-slate-900/80 border border-amber-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-amber-400">Idle (&lt; 1h)</p>
-            <h3 className="text-2xl font-black text-amber-400 mt-1">{idleCount}</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-amber-400 mt-1">{idleCount}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
-            <AlertTriangle size={20} />
+          <div className="p-2.5 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            <AlertTriangle size={18} />
           </div>
         </div>
 
-        <div className="bg-slate-900/80 border border-slate-800 p-5 rounded-2xl flex items-center justify-between shadow-lg">
+        <div className="bg-slate-900/80 border border-slate-800 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Offline</p>
-            <h3 className="text-2xl font-black text-slate-400 mt-1">{offlineCount}</h3>
+            <h3 className="text-xl sm:text-2xl font-black text-slate-400 mt-1">{offlineCount}</h3>
           </div>
-          <div className="p-3 rounded-xl bg-slate-800 text-slate-400">
-            <XCircle size={20} />
+          <div className="p-2.5 rounded-xl bg-slate-800 text-slate-400 border border-slate-700/50">
+            <XCircle size={18} />
+          </div>
+        </div>
+
+        <div className="col-span-2 sm:col-span-1 bg-slate-900/80 border border-purple-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
+          <div>
+            <p className="text-[10px] font-black uppercase tracking-wider text-purple-400">Working Window</p>
+            <h3 className="text-sm font-black text-purple-300 mt-1">7 AM – 8 PM</h3>
+            <span className="text-[9px] text-slate-400">Indian Standard Time</span>
+          </div>
+          <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
+            <Moon size={18} />
           </div>
         </div>
       </div>
 
-      {/* Main Content Area: Map + AE List Sidebar */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[680px]">
-        {/* Left Sidebar: AE Cards & Filters (4 columns) */}
-        <div className="lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-3xl p-5 flex flex-col h-full shadow-2xl backdrop-blur-xl">
-          {/* Search & Filter Tabs */}
-          <div className="space-y-3 pb-4 border-b border-slate-800">
+      {/* Mobile Tab Segmented Switcher (Visible only below lg breakpoint) */}
+      <div className="flex lg:hidden bg-slate-900 p-1.5 rounded-2xl border border-slate-800">
+        <button
+          onClick={() => setMobileTab('map')}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            mobileTab === 'map'
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <MapPin size={14} />
+          <span>Map View</span>
+        </button>
+        <button
+          onClick={() => setMobileTab('list')}
+          className={`flex-1 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-2 ${
+            mobileTab === 'list'
+              ? 'bg-blue-600 text-white shadow-lg'
+              : 'text-slate-400 hover:text-white'
+          }`}
+        >
+          <User size={14} />
+          <span>AE Directory ({filteredData.length})</span>
+        </button>
+      </div>
+
+      {/* Main Tracker Workspace (Grid on Desktop, Tabbed on Mobile) */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[600px] lg:h-[calc(100vh-220px)]">
+        
+        {/* Left Column: AE Directory & Filters (Hidden on mobile if map tab active) */}
+        <div className={`lg:col-span-4 bg-slate-900/90 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col shadow-2xl backdrop-blur-xl ${
+          mobileTab === 'list' ? 'flex' : 'hidden lg:flex'
+        }`}>
+          {/* Search & Filter Header */}
+          <div className="space-y-3 pb-3.5 border-b border-slate-800">
             <div className="relative">
-              <Search size={15} className="absolute left-3.5 top-3.5 text-slate-400" />
+              <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search AE name or phone..."
+                placeholder="Search by AE name, phone, designation..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-800/80 border border-slate-700 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
+                className="w-full pl-10 pr-8 py-2.5 bg-slate-800/70 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white p-0.5"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
 
-            <div className="flex gap-1 bg-slate-800/50 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
-              {['ALL', 'ONLINE', 'IDLE', 'OFFLINE'].map((status) => (
+            {/* Status Filter Chips */}
+            <div className="flex flex-wrap gap-1 bg-slate-800/40 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
+              {['ALL', 'ONLINE', 'IDLE', 'OFFLINE', 'OUT_OF_HOURS'].map((st) => (
                 <button
-                  key={status}
-                  onClick={() => setStatusFilter(status)}
-                  className={`flex-1 py-1.5 rounded-lg transition-all ${
-                    statusFilter === status
-                      ? 'bg-blue-600 text-white shadow-md'
-                      : 'text-slate-400 hover:text-slate-200'
+                  key={st}
+                  onClick={() => setStatusFilter(st)}
+                  className={`flex-1 min-w-[50px] py-1.5 px-2 rounded-lg transition-all text-center ${
+                    statusFilter === st
+                      ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
-                  {status}
+                  {st === 'OUT_OF_HOURS' ? 'OFF-HRS' : st}
                 </button>
               ))}
             </div>
           </div>
 
-          {/* AE Cards List */}
-          <div className="flex-1 overflow-y-auto space-y-3 pt-4 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
+          {/* AE Cards Scrollable List */}
+          <div className="flex-1 overflow-y-auto space-y-2.5 pt-3.5 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
             {loading ? (
-              <div className="p-8 text-center text-slate-400 text-xs font-medium">Loading AE live data...</div>
+              <div className="p-12 text-center text-slate-400 text-xs font-medium animate-pulse flex flex-col items-center gap-2">
+                <RefreshCw size={20} className="animate-spin text-blue-400" />
+                <span>Loading active AE GPS feeds...</span>
+              </div>
             ) : filteredData.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs font-medium">No AEs match your filter.</div>
+              <div className="p-12 text-center text-slate-400 text-xs font-medium space-y-2">
+                <p>No Area Executives match your filter criteria.</p>
+                <button 
+                  onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}
+                  className="px-3 py-1 bg-slate-800 text-blue-400 rounded-lg text-[11px] font-bold"
+                >
+                  Reset Filters
+                </button>
+              </div>
             ) : (
               filteredData.map((item) => {
                 const { user: ae, latestLocation: loc, status } = item;
                 const isSelected = selectedAE?.user?.id === ae.id;
 
+                const statusBg = 
+                  status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' :
+                  status === 'IDLE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' :
+                  status === 'OUT_OF_HOURS' ? 'bg-purple-500/10 text-purple-400 border-purple-500/25' :
+                  'bg-slate-800 text-slate-400 border-slate-700/60';
+
+                const statusDotColor = 
+                  status === 'ONLINE' ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' :
+                  status === 'IDLE' ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' :
+                  status === 'OUT_OF_HOURS' ? 'bg-purple-400' :
+                  'bg-slate-500';
+
                 return (
                   <div
                     key={ae.id}
                     onClick={() => handleSelectAE(item)}
-                    className={`p-4 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
+                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
                       isSelected
-                        ? 'bg-blue-600/15 border-blue-500 shadow-lg shadow-blue-500/10'
-                        : 'bg-slate-800/40 border-slate-800 hover:bg-slate-800/80 hover:border-slate-700'
+                        ? 'bg-blue-600/15 border-blue-500 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'
+                        : 'bg-slate-800/35 border-slate-800/80 hover:bg-slate-800/70 hover:border-slate-700/80'
                     }`}
                   >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <div className={`w-2.5 h-2.5 rounded-full ${
-                          status === 'ONLINE' ? 'bg-emerald-500 shadow-[0_0_8px_#10b981]' :
-                          status === 'IDLE' ? 'bg-amber-500 shadow-[0_0_8px_#f59e0b]' : 'bg-slate-500'
-                        }`} />
-                        <h4 className="text-sm font-bold text-white">{ae.name}</h4>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColor}`} />
+                        <h4 className="text-sm font-bold text-white truncate">{ae.name}</h4>
                       </div>
-                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md border ${
-                        status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' :
-                        status === 'IDLE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/20' :
-                        'bg-slate-800 text-slate-400 border-slate-700'
-                      }`}>
-                        {status}
+                      
+                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md border shrink-0 ${statusBg}`}>
+                        {status === 'OUT_OF_HOURS' ? 'OFF-HOURS' : status}
                       </span>
                     </div>
 
-                    <div className="text-xs text-slate-400 space-y-1">
-                      <div className="flex items-center gap-1.5">
-                        <Phone size={12} className="text-slate-500" />
-                        <span>{ae.phone || 'No Phone Registered'}</span>
+                    <div className="text-xs text-slate-400 space-y-1.5">
+                      <div className="flex items-center justify-between text-[11px]">
+                        <span className="truncate text-slate-400">{ae.designation || 'Area Executive'}</span>
+                        {ae.phone && (
+                          <a 
+                            href={`tel:${ae.phone}`} 
+                            onClick={(e) => e.stopPropagation()}
+                            className="flex items-center gap-1 text-slate-400 hover:text-blue-400 font-semibold"
+                          >
+                            <Phone size={11} className="text-blue-400" />
+                            <span>{ae.phone}</span>
+                          </a>
+                        )}
                       </div>
+
                       {loc && loc.createdAt ? (
-                        <div className="flex items-center justify-between pt-1 text-[11px] border-t border-slate-800/80">
-                          <span className="flex items-center gap-1 text-slate-400">
-                            <Clock size={11} /> {new Date(loc.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                        <div className="flex items-center justify-between pt-1.5 text-[11px] border-t border-slate-800/90 text-slate-400">
+                          <span className="flex items-center gap-1">
+                            <Clock size={11} className="text-slate-400" />
+                            <span>{new Date(loc.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</span>
                           </span>
-                          {loc.batteryLevel != null && (
-                            <span className="flex items-center gap-1 text-slate-300 font-semibold">
-                              <Battery size={12} className="text-emerald-400" /> {loc.batteryLevel}%
-                            </span>
-                          )}
+
+                          <div className="flex items-center gap-2.5">
+                            {loc.speed != null && loc.speed > 0.5 && (
+                              <span className="text-[10px] text-slate-300 font-medium">
+                                {(loc.speed * 3.6).toFixed(0)} km/h
+                              </span>
+                            )}
+                            {loc.batteryLevel != null && (
+                              <span className="flex items-center gap-1 font-bold text-slate-300">
+                                <Battery size={13} className={loc.batteryLevel < 20 ? 'text-rose-400' : loc.batteryLevel < 50 ? 'text-amber-400' : 'text-emerald-400'} />
+                                {loc.batteryLevel}%
+                              </span>
+                            )}
+                          </div>
                         </div>
                       ) : (
-                        <div className="pt-1 text-[10px] text-slate-500 italic border-t border-slate-800/80">
-                          Waiting for device GPS ping...
+                        <div className="pt-1 text-[10px] text-slate-400 italic border-t border-slate-800/90">
+                          No GPS pings recorded in 7 AM – 8 PM window today
                         </div>
                       )}
                     </div>
@@ -508,58 +817,82 @@ const AELiveTracker = () => {
           </div>
         </div>
 
-        {/* Right Area: Leaflet Map Container & Route Controls (8 columns) */}
-        <div className="lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex flex-col h-full shadow-2xl relative overflow-hidden">
-          {/* Map Controls Top Bar */}
-          {selectedAE && (
-            <div className="absolute top-7 left-7 z-20 bg-slate-900/95 border border-slate-700 p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-wrap items-center gap-3 max-w-lg">
-              <div>
-                <p className="text-xs font-bold text-white">{selectedAE.user.name}</p>
-                <p className="text-[10px] text-slate-400">Selected AE for route tracing</p>
-              </div>
-
-              <div className="flex items-center gap-2 ml-auto">
-                <input
-                  type="date"
-                  value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
-                  className="bg-slate-800 border border-slate-700 text-xs rounded-xl px-2.5 py-1.5 text-white outline-none"
-                />
-                <button
-                  onClick={() => fetchRouteHistory(selectedAE.user.id)}
-                  disabled={loadingHistory}
-                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all disabled:opacity-50"
-                >
-                  {loadingHistory ? 'Tracing...' : 'Trace Route'}
-                </button>
-              </div>
-            </div>
-          )}
-
-          {/* Map Type Switcher Floating Overlay */}
-          <div className="absolute top-4 right-4 z-20 flex items-center bg-slate-900/90 border border-slate-700/80 rounded-xl p-1 shadow-xl backdrop-blur-md">
+        {/* Right Column: Leaflet Interactive Map Container (Hidden on mobile if list tab active) */}
+        <div className={`lg:col-span-8 bg-slate-900/95 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-2 sm:p-3 flex flex-col shadow-2xl relative overflow-hidden min-h-[520px] h-[550px] sm:h-[650px] lg:h-full ${
+          mobileTab === 'map' ? 'flex' : 'hidden lg:flex'
+        }`}>
+          
+          {/* Floating Top Control Bar: Layer Switcher */}
+          <div className="absolute top-4 right-4 z-20 flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
             <button
               onClick={() => changeMapType('google_roadmap')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+              }`}
             >
-              🗺️ Google Map
+              🗺️ Map
             </button>
             <button
               onClick={() => changeMapType('google_satellite')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+              }`}
             >
               🛰️ Satellite
             </button>
             <button
               onClick={() => changeMapType('openstreetmap')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+              }`}
             >
               🌐 OpenStreet
             </button>
           </div>
 
+          {/* Floating Route Tracing Panel for Selected AE */}
+          {selectedAE && (
+            <div className="absolute top-4 left-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 max-w-[calc(100%-140px)] sm:max-w-md animate-fadeIn">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+                  <p className="text-xs font-bold text-white truncate">{selectedAE.user.name}</p>
+                </div>
+                <p className="text-[10px] text-slate-400">Trace route (7 AM – 8 PM IST)</p>
+              </div>
+
+              <div className="flex items-center gap-1.5 sm:ml-auto">
+                <input
+                  type="date"
+                  value={selectedDate}
+                  onChange={(e) => setSelectedDate(e.target.value)}
+                  className="bg-slate-800 border border-slate-700 text-xs rounded-xl px-2.5 py-1.5 text-white outline-none focus:border-blue-500"
+                />
+                <button
+                  onClick={() => fetchRouteHistory(selectedAE.user.id)}
+                  disabled={loadingHistory}
+                  className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all disabled:opacity-50 shrink-0"
+                >
+                  {loadingHistory ? 'Tracing...' : 'Trace'}
+                </button>
+                {historyLogs.length > 0 && (
+                  <button
+                    onClick={handleClearRoute}
+                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
+                    title="Clear path"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Leaflet Map DOM Element */}
-          <div ref={mapRef} className="w-full h-full rounded-2xl z-10 border border-slate-800" />
+          <div 
+            ref={mapRef} 
+            className="w-full flex-1 min-h-[480px] h-full rounded-xl sm:rounded-2xl z-10 border border-slate-800/90 overflow-hidden bg-slate-950 shadow-inner" 
+          />
         </div>
       </div>
 
@@ -593,8 +926,30 @@ const AELiveTracker = () => {
             </div>
 
             <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
-              ⏱️ Valid for 10 minutes. Device will sync Call Logs and 5-minute Live Location pings.
+              ⏱️ Valid for 10 minutes. Device will sync Call Logs and live GPS pings between 7:00 AM and 8:00 PM IST.
             </p>
+
+            <div className="pt-2 border-t border-slate-800 space-y-2 text-left">
+              <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider text-center">Direct APK Downloads</p>
+              <div className="grid grid-cols-2 gap-2">
+                <a
+                  href={`${API_BASE}/downloads/peopledesk-apk`}
+                  download="PeopleDesk-latest.apk"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-bold shadow-md shadow-blue-600/20 transition-all text-center"
+                >
+                  <Download size={13} />
+                  <span>PeopleDesk APK</span>
+                </a>
+                <a
+                  href={`${API_BASE}/downloads/ae-manager-apk`}
+                  download="AEManager-latest.apk"
+                  className="flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-[11px] font-bold shadow-md shadow-emerald-600/20 transition-all text-center"
+                >
+                  <Download size={13} />
+                  <span>AE Manager APK</span>
+                </a>
+              </div>
+            </div>
 
             <button
               onClick={() => setShowCodeModal(false)}
@@ -605,6 +960,9 @@ const AELiveTracker = () => {
           </div>
         </div>
       )}
+
+      {/* Modal: Dual APK Downloads */}
+      <ApkDownloadModal isOpen={showApkDownloadModal} onClose={() => setShowApkDownloadModal(false)} />
     </div>
   );
 };

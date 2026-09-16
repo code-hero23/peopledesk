@@ -23,7 +23,8 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
     private static final int REQUEST_START = 1001;
     private static final int REQUEST_TICK = 1002;
     private static final int REQUEST_FINAL = 1003;
-    private static final int WINDOW_END_MINUTES = 22 * 60; // 10:00 PM IST
+    private static final int WINDOW_START_MINUTES = 7 * 60; // 07:00 AM IST
+    private static final int WINDOW_END_MINUTES = 20 * 60; // 08:00 PM IST
 
     @Override
     public void onReceive(Context context, Intent intent) {
@@ -59,8 +60,8 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
     public static void schedule(Context context) {
         AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
         if (alarms == null) return;
-        setAlarm(context, alarms, ACTION_START, 10, 0, REQUEST_START);
-        setAlarm(context, alarms, ACTION_FINAL, 22, 0, REQUEST_FINAL);
+        setAlarm(context, alarms, ACTION_START, 7, 0, REQUEST_START);
+        setAlarm(context, alarms, ACTION_FINAL, 20, 0, REQUEST_FINAL);
         scheduleNextWindowTick(context);
     }
 
@@ -94,7 +95,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
 
         Calendar now = Calendar.getInstance(TimeZone.getTimeZone("Asia/Kolkata"));
         int minutes = now.get(Calendar.HOUR_OF_DAY) * 60 + now.get(Calendar.MINUTE);
-        if (minutes < (10 * 60) || minutes >= WINDOW_END_MINUTES) {
+        if (minutes < WINDOW_START_MINUTES || minutes >= WINDOW_END_MINUTES) {
             cancelAlarm(context, REQUEST_TICK, ACTION_TICK);
             return;
         }
@@ -106,7 +107,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
 
         int nextMinutes = next.get(Calendar.HOUR_OF_DAY) * 60 + next.get(Calendar.MINUTE);
         if (nextMinutes > WINDOW_END_MINUTES) {
-            next.set(Calendar.HOUR_OF_DAY, 22);
+            next.set(Calendar.HOUR_OF_DAY, 20);
             next.set(Calendar.MINUTE, 0);
         }
 

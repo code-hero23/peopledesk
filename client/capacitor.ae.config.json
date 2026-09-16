@@ -3,10 +3,10 @@
   "appName": "AE Manager App",
   "webDir": "dist",
   "server": {
-    "androidScheme": "http",
+    "androidScheme": "https",
     "cleartext": true,
     "allowNavigation": [
-      "192.168.1.121"
+      "*"
     ]
   },
   "plugins": {
