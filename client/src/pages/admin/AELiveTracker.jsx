@@ -27,7 +27,11 @@ import {
   ChevronRight,
   Eye,
   SlidersHorizontal,
-  Download
+  Download,
+  Play,
+  Pause,
+  RotateCcw,
+  Route
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ApkDownloadModal from '../../components/common/ApkDownloadModal';
@@ -152,6 +156,90 @@ const AELiveTracker = () => {
     );
   };
   
+  // Helper: Haversine distance in meters
+  const getDistanceMeters = (lat1, lon1, lat2, lon2) => {
+    const R = 6371e3;
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+  };
+
+  // Helper: Detect stationary visit stops (remained within 45m for >= 8 mins)
+  const detectStops = (logs) => {
+    if (!logs || logs.length < 2) return [];
+    const stops = [];
+    let cluster = [logs[0]];
+
+    for (let i = 1; i < logs.length; i++) {
+      const prev = cluster[0];
+      const curr = logs[i];
+      const dist = getDistanceMeters(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+
+      if (dist <= 45) {
+        cluster.push(curr);
+      } else {
+        const startTime = new Date(cluster[0].createdAt).getTime();
+        const endTime = new Date(cluster[cluster.length - 1].createdAt).getTime();
+        const durationMins = Math.round((endTime - startTime) / (1000 * 60));
+
+        if (durationMins >= 8) {
+          const avgLat = cluster.reduce((sum, p) => sum + p.latitude, 0) / cluster.length;
+          const avgLng = cluster.reduce((sum, p) => sum + p.longitude, 0) / cluster.length;
+          stops.push({
+            latitude: avgLat,
+            longitude: avgLng,
+            arrivedAt: cluster[0].createdAt,
+            departedAt: cluster[cluster.length - 1].createdAt,
+            durationMins,
+            stopNumber: stops.length + 1
+          });
+        }
+        cluster = [curr];
+      }
+    }
+
+    if (cluster.length > 1) {
+      const startTime = new Date(cluster[0].createdAt).getTime();
+      const endTime = new Date(cluster[cluster.length - 1].createdAt).getTime();
+      const durationMins = Math.round((endTime - startTime) / (1000 * 60));
+      if (durationMins >= 8) {
+        const avgLat = cluster.reduce((sum, p) => sum + p.latitude, 0) / cluster.length;
+        const avgLng = cluster.reduce((sum, p) => sum + p.longitude, 0) / cluster.length;
+        stops.push({
+          latitude: avgLat,
+          longitude: avgLng,
+          arrivedAt: cluster[0].createdAt,
+          departedAt: cluster[cluster.length - 1].createdAt,
+          durationMins,
+          stopNumber: stops.length + 1
+        });
+      }
+    }
+
+    return stops;
+  };
+
+  // Helper: Calculate total path distance in km
+  const calculateTotalDistanceKm = (logs) => {
+    if (!logs || logs.length < 2) return '0.0';
+    let totalMeters = 0;
+    for (let i = 1; i < logs.length; i++) {
+      totalMeters += getDistanceMeters(
+        logs[i - 1].latitude,
+        logs[i - 1].longitude,
+        logs[i].latitude,
+        logs[i].longitude
+      );
+    }
+    return (totalMeters / 1000).toFixed(1);
+  };
+
   // Historical Route Tracing state
   const [selectedDate, setSelectedDate] = useState(() => {
     // Current IST date in YYYY-MM-DD
@@ -162,13 +250,20 @@ const AELiveTracker = () => {
   });
   const [historyLogs, setHistoryLogs] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [detectedStopsList, setDetectedStopsList] = useState([]);
+
+  // Playback animation state
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [playbackIndex, setPlaybackIndex] = useState(0);
+  const [playbackSpeed, setPlaybackSpeed] = useState(1);
 
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersRef = useRef({});
-  const circlesRef = useRef({});
   const polylineRef = useRef(null);
   const historyMarkersRef = useRef([]);
+  const stopMarkersRef = useRef([]);
+  const playbackMarkerRef = useRef(null);
 
   // Load Leaflet CSS and JS dynamically if not present
   useEffect(() => {
@@ -320,11 +415,9 @@ const AELiveTracker = () => {
   useEffect(() => {
     if (!leafletMap.current || !window.L) return;
 
-    // Clear existing markers and accuracy circles
+    // Clear existing markers
     Object.values(markersRef.current).forEach(marker => marker.remove());
     markersRef.current = {};
-    Object.values(circlesRef.current).forEach(circle => circle.remove());
-    circlesRef.current = {};
 
     const bounds = [];
 
@@ -339,21 +432,6 @@ const AELiveTracker = () => {
         status === 'ONLINE' ? '#10b981' : 
         status === 'IDLE' ? '#f59e0b' : 
         status === 'OUT_OF_HOURS' ? '#8b5cf6' : '#64748b';
-
-      // Subtle accuracy circle showing GPS confidence radius (skip if wildly inaccurate > 200m)
-      if (loc.accuracy && loc.accuracy > 0 && loc.accuracy <= 200) {
-        try {
-          const circle = window.L.circle(latLng, {
-            radius: loc.accuracy,
-            color: markerColor,
-            fillColor: markerColor,
-            fillOpacity: 0.08,
-            weight: 1,
-            dashArray: '4, 4'
-          }).addTo(leafletMap.current);
-          circlesRef.current[ae.id] = circle;
-        } catch (e) {}
-      }
 
       const customIcon = window.L.divIcon({
         className: 'custom-map-pin',
@@ -401,8 +479,6 @@ const AELiveTracker = () => {
             <div><strong>📞 Phone:</strong> ${ae.phone || 'N/A'}</div>
             <div><strong>🔋 Battery:</strong> ${loc.batteryLevel != null ? loc.batteryLevel + '%' : 'N/A'}</div>
             <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
-            ${loc.accuracy != null ? `<div><strong>🎯 GPS Accuracy:</strong> ±${Math.round(loc.accuracy)}m</div>` : ''}
-            ${loc.speed != null ? `<div><strong>⚡ Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</div>` : ''}
           </div>
         </div>
       `;
@@ -420,7 +496,7 @@ const AELiveTracker = () => {
     }, 100);
   }, [liveData]);
 
-  // Focus single AE on map
+  // Focus single AE on map & automatically trace their route for today
   const handleSelectAE = (aeItem) => {
     setSelectedAE(aeItem);
     // On mobile, switch to map view when an AE is tapped
@@ -434,13 +510,18 @@ const AELiveTracker = () => {
         }, 500);
       }
     }
+    // Auto-fetch & trace route for selected AE
+    fetchRouteHistory(aeItem.user.id, selectedDate);
   };
 
   // Fetch and trace history path for selected AE
-  const fetchRouteHistory = async (aeUserId) => {
+  const fetchRouteHistory = async (aeUserId, dateToFetch = null) => {
+    const targetDate = dateToFetch || selectedDate;
     setLoadingHistory(true);
+    setIsPlaying(false);
+    setPlaybackIndex(0);
     try {
-      const res = await axios.get(`${API_BASE}/location/history/${aeUserId}?date=${selectedDate}`, {
+      const res = await axios.get(`${API_BASE}/location/history/${aeUserId}?date=${targetDate}`, {
         headers: { Authorization: `Bearer ${user.token}` }
       });
       const logs = res.data.logs || [];
@@ -453,42 +534,108 @@ const AELiveTracker = () => {
       }
       historyMarkersRef.current.forEach(m => m.remove());
       historyMarkersRef.current = [];
+      stopMarkersRef.current.forEach(m => m.remove());
+      stopMarkersRef.current = [];
+      if (playbackMarkerRef.current) {
+        playbackMarkerRef.current.remove();
+        playbackMarkerRef.current = null;
+      }
 
       if (logs.length > 0 && leafletMap.current && window.L) {
         const pathCoords = logs.map(l => [l.latitude, l.longitude]);
         
-        // Draw route trail
+        // Draw primary route line (Google Maps style vibrant blue)
         polylineRef.current = window.L.polyline(pathCoords, {
-          color: '#3b82f6',
-          weight: 4,
-          opacity: 0.85,
-          dashArray: '6, 6'
+          color: '#2563eb',
+          weight: 5,
+          opacity: 0.9,
+          lineJoin: 'round',
+          lineCap: 'round'
         }).addTo(leafletMap.current);
 
         // Add Start marker (Green circle)
         const startPoint = logs[0];
         const startMarker = window.L.circleMarker([startPoint.latitude, startPoint.longitude], {
-          radius: 6,
-          color: '#10b981',
+          radius: 7,
+          color: '#ffffff',
+          weight: 2,
           fillColor: '#10b981',
           fillOpacity: 1
-        }).addTo(leafletMap.current).bindPopup(`<b>Start Point (7 AM - 8 PM IST)</b><br>${new Date(startPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}`);
+        }).addTo(leafletMap.current).bindPopup(`
+          <div style="font-family: system-ui; padding: 4px;">
+            <b style="color: #059669;">🟢 Start Point (7 AM - 8 PM IST)</b><br>
+            Time: ${new Date(startPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}
+          </div>
+        `);
         historyMarkersRef.current.push(startMarker);
 
-        // Add End marker (Red circle)
-        const endPoint = logs[logs.length - 1];
-        const endMarker = window.L.circleMarker([endPoint.latitude, endPoint.longitude], {
-          radius: 6,
-          color: '#ef4444',
-          fillColor: '#ef4444',
-          fillOpacity: 1
-        }).addTo(leafletMap.current).bindPopup(`<b>End Point (7 AM - 8 PM IST)</b><br>${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' })}`);
-        historyMarkersRef.current.push(endMarker);
+        // Add End marker (Red circle) if more than 1 point
+        if (logs.length > 1) {
+          const endPoint = logs[logs.length - 1];
+          const endMarker = window.L.circleMarker([endPoint.latitude, endPoint.longitude], {
+            radius: 7,
+            color: '#ffffff',
+            weight: 2,
+            fillColor: '#ef4444',
+            fillOpacity: 1
+          }).addTo(leafletMap.current).bindPopup(`
+            <div style="font-family: system-ui; padding: 4px;">
+              <b style="color: #dc2626;">🔴 Latest / End Point</b><br>
+              Time: ${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}
+            </div>
+          `);
+          historyMarkersRef.current.push(endMarker);
+        }
+
+        // Detect and place Stop markers with durations
+        const detectedStops = detectStops(logs);
+        setDetectedStopsList(detectedStops);
+
+        detectedStops.forEach((stop) => {
+          const stopIcon = window.L.divIcon({
+            className: 'custom-stop-pin',
+            html: `
+              <div style="
+                background: linear-gradient(135deg, #f59e0b, #d97706);
+                width: 26px;
+                height: 26px;
+                border-radius: 8px;
+                border: 2px solid #ffffff;
+                box-shadow: 0 4px 12px rgba(245, 158, 11, 0.45);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 900;
+                font-size: 10px;
+              ">
+                🛑${stop.stopNumber}
+              </div>
+            `,
+            iconSize: [26, 26],
+            iconAnchor: [13, 13]
+          });
+
+          const stopMarker = window.L.marker([stop.latitude, stop.longitude], { icon: stopIcon })
+            .addTo(leafletMap.current)
+            .bindPopup(`
+              <div style="font-family: system-ui, sans-serif; padding: 4px; min-width: 170px;">
+                <h4 style="margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #b45309;">🛑 Stop #${stop.stopNumber} - Site Visit</h4>
+                <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #92400e; line-height: 1.5;">
+                  <div><strong>🕒 Duration:</strong> ${stop.durationMins} minutes</div>
+                  <div><strong>📥 Arrived:</strong> ${new Date(stop.arrivedAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+                  <div><strong>📤 Departed:</strong> ${new Date(stop.departedAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}</div>
+                </div>
+              </div>
+            `);
+          stopMarkersRef.current.push(stopMarker);
+        });
 
         leafletMap.current.fitBounds(polylineRef.current.getBounds(), { padding: [50, 50] });
-        toast.info(`Traced ${logs.length} GPS points for ${selectedDate} (7 AM - 8 PM IST)`);
+        toast.info(`Traced ${logs.length} route points (${detectedStops.length} stops detected) for ${targetDate}`);
       } else {
-        toast.warning(`No location logs found between 7:00 AM and 8:00 PM IST on ${selectedDate}`);
+        setDetectedStopsList([]);
+        toast.warning(`No location logs found between 7:00 AM and 8:00 PM IST on ${targetDate}`);
       }
     } catch (err) {
       console.error('Failed to load location history:', err);
@@ -505,9 +652,81 @@ const AELiveTracker = () => {
     }
     historyMarkersRef.current.forEach(m => m.remove());
     historyMarkersRef.current = [];
+    stopMarkersRef.current.forEach(m => m.remove());
+    stopMarkersRef.current = [];
+    if (playbackMarkerRef.current) {
+      playbackMarkerRef.current.remove();
+      playbackMarkerRef.current = null;
+    }
+    setIsPlaying(false);
+    setPlaybackIndex(0);
     setHistoryLogs([]);
+    setDetectedStopsList([]);
     toast.info('Route path cleared from map.');
   };
+
+  // Playback Marker Update
+  useEffect(() => {
+    if (!leafletMap.current || !window.L || historyLogs.length === 0) return;
+    const currentPoint = historyLogs[playbackIndex] || historyLogs[0];
+    if (!currentPoint) return;
+
+    const latLng = [currentPoint.latitude, currentPoint.longitude];
+
+    if (!playbackMarkerRef.current) {
+      const playbackIcon = window.L.divIcon({
+        className: 'custom-playback-pin',
+        html: `
+          <div style="
+            background: #2563eb;
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            border: 3px solid #ffffff;
+            box-shadow: 0 0 16px rgba(37,99,235,0.9), 0 4px 10px rgba(0,0,0,0.4);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            animation: pulse 1.5s infinite;
+          ">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+            </svg>
+          </div>
+        `,
+        iconSize: [34, 34],
+        iconAnchor: [17, 17]
+      });
+
+      playbackMarkerRef.current = window.L.marker(latLng, { 
+        icon: playbackIcon,
+        zIndexOffset: 1000 
+      }).addTo(leafletMap.current);
+    } else {
+      playbackMarkerRef.current.setLatLng(latLng);
+    }
+  }, [playbackIndex, historyLogs]);
+
+  // Playback Timer Loop
+  useEffect(() => {
+    let timer = null;
+    if (isPlaying && historyLogs.length > 1) {
+      const intervalMs = Math.max(80, Math.round(500 / playbackSpeed));
+      timer = setInterval(() => {
+        setPlaybackIndex((prev) => {
+          if (prev >= historyLogs.length - 1) {
+            setIsPlaying(false);
+            return prev;
+          }
+          return prev + 1;
+        });
+      }, intervalMs);
+    }
+    return () => {
+      if (timer) clearInterval(timer);
+    };
+  }, [isPlaying, historyLogs.length, playbackSpeed]);
 
   // Filter AEs
   const filteredData = liveData.filter(item => {
@@ -807,11 +1026,6 @@ const AELiveTracker = () => {
                           </span>
 
                           <div className="flex items-center gap-2.5">
-                            {loc.speed != null && loc.speed > 0.5 && (
-                              <span className="text-[10px] text-slate-300 font-medium">
-                                {(loc.speed * 3.6).toFixed(0)} km/h
-                              </span>
-                            )}
                             {loc.batteryLevel != null && (
                               <span className="flex items-center gap-1 font-bold text-slate-300">
                                 <Battery size={13} className={loc.batteryLevel < 20 ? 'text-rose-400' : loc.batteryLevel < 50 ? 'text-amber-400' : 'text-emerald-400'} />
@@ -868,24 +1082,39 @@ const AELiveTracker = () => {
 
           {/* Floating Route Tracing Panel for Selected AE */}
           {selectedAE && (
-            <div className="absolute top-4 left-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 max-w-[calc(100%-140px)] sm:max-w-md animate-fadeIn">
+            <div className="absolute top-4 left-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 max-w-[calc(100%-140px)] sm:max-w-xl animate-fadeIn">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
                   <p className="text-xs font-bold text-white truncate">{selectedAE.user.name}</p>
                 </div>
-                <p className="text-[10px] text-slate-400">Trace route (7 AM – 8 PM IST)</p>
+                <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
+                  <span>{historyLogs.length} points</span>
+                  {historyLogs.length > 1 && (
+                    <>
+                      <span>•</span>
+                      <span className="text-emerald-400 font-semibold">{calculateTotalDistanceKm(historyLogs)} km</span>
+                      <span>•</span>
+                      <span className="text-amber-400 font-semibold">{detectedStopsList.length} stops</span>
+                    </>
+                  )}
+                </div>
               </div>
 
               <div className="flex items-center gap-1.5 sm:ml-auto">
                 <input
                   type="date"
                   value={selectedDate}
-                  onChange={(e) => setSelectedDate(e.target.value)}
+                  onChange={(e) => {
+                    setSelectedDate(e.target.value);
+                    if (selectedAE) {
+                      fetchRouteHistory(selectedAE.user.id, e.target.value);
+                    }
+                  }}
                   className="bg-slate-800 border border-slate-700 text-xs rounded-xl px-2.5 py-1.5 text-white outline-none focus:border-blue-500"
                 />
                 <button
-                  onClick={() => fetchRouteHistory(selectedAE.user.id)}
+                  onClick={() => fetchRouteHistory(selectedAE.user.id, selectedDate)}
                   disabled={loadingHistory}
                   className="px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-xs font-bold text-white transition-all disabled:opacity-50 shrink-0"
                 >
@@ -900,6 +1129,69 @@ const AELiveTracker = () => {
                     <X size={14} />
                   </button>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Floating Bottom Journey Playback Bar */}
+          {selectedAE && historyLogs.length > 1 && (
+            <div className="absolute bottom-4 left-4 right-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row items-center gap-3 animate-fadeIn">
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setIsPlaying(!isPlaying)}
+                  className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
+                  title={isPlaying ? "Pause" : "Play Journey"}
+                >
+                  {isPlaying ? <Pause size={16} /> : <Play size={16} className="fill-white" />}
+                </button>
+                <button
+                  onClick={() => { setIsPlaying(false); setPlaybackIndex(0); }}
+                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
+                  title="Reset to Start"
+                >
+                  <RotateCcw size={16} />
+                </button>
+              </div>
+
+              {/* Scrubber Range Slider */}
+              <div className="flex-1 w-full flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0}
+                  max={historyLogs.length - 1}
+                  value={playbackIndex}
+                  onChange={(e) => {
+                    setPlaybackIndex(Number(e.target.value));
+                  }}
+                  className="w-full accent-blue-500 h-1.5 bg-slate-700 rounded-lg cursor-pointer"
+                />
+                <span className="text-xs font-mono font-bold text-blue-400 shrink-0 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
+                  {historyLogs[playbackIndex]?.createdAt 
+                    ? new Date(historyLogs[playbackIndex].createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                    : '--:--'}
+                </span>
+              </div>
+
+              {/* Speed Multipliers & Trip Distance */}
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-[10px] font-bold">
+                  {[1, 2, 5].map((spd) => (
+                    <button
+                      key={spd}
+                      onClick={() => setPlaybackSpeed(spd)}
+                      className={`px-2 py-1 rounded-lg transition-all ${
+                        playbackSpeed === spd ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      }`}
+                    >
+                      {spd}x
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-[11px] font-bold text-slate-300 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5">
+                  <Route size={12} className="text-emerald-400" />
+                  <span>{calculateTotalDistanceKm(historyLogs)} km</span>
+                </div>
               </div>
             </div>
           )}

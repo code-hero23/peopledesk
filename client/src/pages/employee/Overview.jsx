@@ -32,6 +32,7 @@ import ConfirmationModal from '../../components/ConfirmationModal';
 import WorkLogFormSelector from '../../components/worklogs/WorkLogFormSelector';
 import NotificationBell from '../../components/NotificationBell';
 import SeatSelectionModal from '../../components/seating/SeatSelectionModal';
+import { Capacitor } from '@capacitor/core';
 
 // Helper: DataURL to Blob
 function dataURLtoBlob(dataurl) {
@@ -105,15 +106,26 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                     >
                         {/* Crisp Uncropped Mascot Animation */}
                         {(() => {
-                            const breakSrc = activeBreak.breakType === 'LUNCH' 
-                                ? '/lunch-break.gif' 
-                                : activeBreak.breakType === 'TEA' 
-                                    ? '/tea-break.gif' 
-                                    : activeBreak.breakType === 'CLIENT_MEETING'
-                                        ? '/client-meeting-break.gif'
-                                        : activeBreak.breakType === 'BH_MEETING'
-                                            ? '/bh-meeting-break.gif'
-                                            : '/break.gif';
+                            const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+                            const breakSrc = isNative
+                                ? (activeBreak.breakType === 'LUNCH' 
+                                    ? '/lunch-break.mp4' 
+                                    : activeBreak.breakType === 'TEA' 
+                                        ? '/tea-break.mp4' 
+                                        : activeBreak.breakType === 'CLIENT_MEETING'
+                                            ? '/client-meeting-break.mp4'
+                                            : activeBreak.breakType === 'BH_MEETING'
+                                                ? '/bh-meeting-break.mp4'
+                                                : '/break.gif')
+                                : (activeBreak.breakType === 'LUNCH' 
+                                    ? '/lunch-break.gif' 
+                                    : activeBreak.breakType === 'TEA' 
+                                        ? '/tea-break.gif' 
+                                        : activeBreak.breakType === 'CLIENT_MEETING'
+                                            ? '/client-meeting-break.gif'
+                                            : activeBreak.breakType === 'BH_MEETING'
+                                                ? '/bh-meeting-break.gif'
+                                                : '/break.gif');
 
                             const isVideo = breakSrc.endsWith('.mp4') || breakSrc.endsWith('.webm');
 
@@ -1029,15 +1041,26 @@ const Overview = () => {
                                     <div className="relative">
                                         <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-amber-400/40 flex items-center justify-center">
                                             {(() => {
-                                                const breakSrc = activeBreak.breakType === 'LUNCH' 
-                                                    ? '/lunch-break.gif' 
-                                                    : activeBreak.breakType === 'TEA' 
-                                                        ? '/tea-break.gif' 
-                                                        : activeBreak.breakType === 'CLIENT_MEETING'
-                                                            ? '/client-meeting-break.gif'
-                                                            : activeBreak.breakType === 'BH_MEETING'
-                                                                ? '/bh-meeting-break.gif'
-                                                                : '/break.gif';
+                                                const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+                                                const breakSrc = isNative
+                                                    ? (activeBreak.breakType === 'LUNCH' 
+                                                        ? '/lunch-break.mp4' 
+                                                        : activeBreak.breakType === 'TEA' 
+                                                            ? '/tea-break.mp4' 
+                                                            : activeBreak.breakType === 'CLIENT_MEETING'
+                                                                ? '/client-meeting-break.mp4'
+                                                                : activeBreak.breakType === 'BH_MEETING'
+                                                                    ? '/bh-meeting-break.mp4'
+                                                                    : '/break.gif')
+                                                    : (activeBreak.breakType === 'LUNCH' 
+                                                        ? '/lunch-break.gif' 
+                                                        : activeBreak.breakType === 'TEA' 
+                                                            ? '/tea-break.gif' 
+                                                            : activeBreak.breakType === 'CLIENT_MEETING'
+                                                                ? '/client-meeting-break.gif'
+                                                                : activeBreak.breakType === 'BH_MEETING'
+                                                                    ? '/bh-meeting-break.gif'
+                                                                    : '/break.gif');
 
                                                 if (breakSrc.endsWith('.mp4') || breakSrc.endsWith('.webm')) {
                                                     return (
@@ -1472,12 +1495,15 @@ const Overview = () => {
                 {activeModal === 'break' && (
                     <Modal isOpen onClose={() => setActiveModal(null)} title="Take Break">
                         <div className="grid grid-cols-2 gap-4 p-4">
-                            {[
-                                { id: 'TEA', icon: Coffee, title: 'Tea Break', color: 'indigo', image: '/tea-break.gif' },
-                                { id: 'LUNCH', icon: Utensils, title: 'Lunch Break', color: 'rose', image: '/lunch-break.gif' },
-                                { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client Meeting', color: 'emerald', image: '/client-meeting-break.gif' },
-                                { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'amber', image: '/bh-meeting-break.gif' }
-                            ].map((t) => (
+                            {(() => {
+                                const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+                                return [
+                                    { id: 'TEA', icon: Coffee, title: 'Tea Break', color: 'indigo', image: isNative ? '/tea-break.mp4' : '/tea-break.gif' },
+                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break', color: 'rose', image: isNative ? '/lunch-break.mp4' : '/lunch-break.gif' },
+                                    { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client Meeting', color: 'emerald', image: isNative ? '/client-meeting-break.mp4' : '/client-meeting-break.gif' },
+                                    { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'amber', image: isNative ? '/bh-meeting-break.mp4' : '/bh-meeting-break.gif' }
+                                ];
+                            })().map((t) => (
                                 <button
                                     key={t.id}
                                     onClick={() => {
@@ -1498,10 +1524,14 @@ const Overview = () => {
                                 >
                                     {t.image ? (
                                         <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-950 mb-3 shadow-inner group-hover:scale-[1.03] transition-transform duration-300 flex items-center justify-center">
-                                            {/* Ambient Background Glow */}
-                                            <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover blur-md scale-125 opacity-40 group-hover:opacity-60 transition-opacity" />
-                                            {/* Foreground Mascot */}
-                                            <img src={t.image} alt={t.title} className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" />
+                                            {t.image.endsWith('.mp4') ? (
+                                                <video src={t.image} autoPlay loop muted playsInline className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" />
+                                            ) : (
+                                                <>
+                                                    <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover blur-md scale-125 opacity-40 group-hover:opacity-60 transition-opacity" />
+                                                    <img src={t.image} alt={t.title} className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" />
+                                                </>
+                                            )}
                                         </div>
                                     ) : (
                                         <div className={`p-5 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform mb-3`}>
