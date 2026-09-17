@@ -53,9 +53,6 @@ const AELiveTracker = () => {
     designation.includes('AE MANAGER') ||
     designation.includes('AR MANAGER');
 
-  if (!isAuthorizedManager) {
-    return <Navigate to="/dashboard" replace />;
-  }
   const [liveData, setLiveData] = useState([]);
   const [trackingInfo, setTrackingInfo] = useState({
     isCurrentlyInWindow: true,
@@ -332,6 +329,9 @@ const AELiveTracker = () => {
   const [historyLogs, setHistoryLogs] = useState([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [detectedStopsList, setDetectedStopsList] = useState([]);
+  const [snappedPathCoords, setSnappedPathCoords] = useState([]);
+  const [isRoadSnapped, setIsRoadSnapped] = useState(false);
+  const [roadDistanceKm, setRoadDistanceKm] = useState(null);
 
   // Playback animation state
   const [isPlaying, setIsPlaying] = useState(false);
@@ -342,6 +342,7 @@ const AELiveTracker = () => {
   const leafletMap = useRef(null);
   const markersRef = useRef({});
   const polylineRef = useRef(null);
+  const casingPolylineRef = useRef(null);
   const historyMarkersRef = useRef([]);
   const stopMarkersRef = useRef([]);
   const playbackMarkerRef = useRef(null);
@@ -1020,7 +1021,10 @@ const AELiveTracker = () => {
   const stationaryCount = liveData.filter(i => (i.status === 'STATIONARY' || i.status === 'ONLINE') && !i.isMoving).length;
   const idleCount = liveData.filter(i => i.status === 'IDLE').length;
   const offlineCount = liveData.filter(i => i.status === 'OFFLINE').length;
-  const outOfHoursCount = liveData.filter(i => i.status === 'OUT_OF_HOURS').length;
+
+  if (!isAuthorizedManager) {
+    return <Navigate to="/dashboard" replace />;
+  }
 
   return (
     <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-[1700px] mx-auto min-h-screen text-slate-100 font-sans">
@@ -1396,9 +1400,15 @@ const AELiveTracker = () => {
                   {historyLogs.length > 1 && (
                     <>
                       <span>•</span>
-                      <span className="text-emerald-400 font-semibold">{calculateTotalDistanceKm(historyLogs)} km</span>
+                      <span className="text-emerald-400 font-semibold">{roadDistanceKm ? `${roadDistanceKm} km road` : `${calculateTotalDistanceKm(historyLogs)} km`}</span>
                       <span>•</span>
                       <span className="text-amber-400 font-semibold">{detectedStopsList.length} stops</span>
+                      {isRoadSnapped && (
+                        <>
+                          <span>•</span>
+                          <span className="text-blue-400 font-bold">🛣️ Snapped</span>
+                        </>
+                      )}
                     </>
                   )}
                 </div>
@@ -1499,7 +1509,7 @@ const AELiveTracker = () => {
 
                 <div className="text-[11px] font-bold text-slate-300 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5">
                   <Route size={12} className="text-emerald-400" />
-                  <span>{calculateTotalDistanceKm(historyLogs)} km</span>
+                  <span>{roadDistanceKm ? `${roadDistanceKm} km` : `${calculateTotalDistanceKm(historyLogs)} km`}</span>
                 </div>
               </div>
             </div>
