@@ -31,7 +31,8 @@ import {
   Play,
   Pause,
   RotateCcw,
-  Route
+  Route,
+  Car
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ApkDownloadModal from '../../components/common/ApkDownloadModal';
@@ -240,6 +241,86 @@ const AELiveTracker = () => {
     return (totalMeters / 1000).toFixed(1);
   };
 
+  // Helper: Convert sequential GPS breadcrumbs to street-following road path using OSRM
+  const getRoadSnappedRoute = async (rawLogs) => {
+    if (!rawLogs || rawLogs.length < 2) {
+      return {
+        pathCoords: rawLogs ? rawLogs.map(l => [l.latitude, l.longitude]) : [],
+        isSnapped: false,
+        roadDistanceKm: null
+      };
+    }
+
+    // Filter out jitter (consecutive points closer than 15m)
+    const filtered = [rawLogs[0]];
+    for (let i = 1; i < rawLogs.length; i++) {
+      const prev = filtered[filtered.length - 1];
+      const curr = rawLogs[i];
+      const dist = getDistanceMeters(prev.latitude, prev.longitude, curr.latitude, curr.longitude);
+      if (dist >= 15 || i === rawLogs.length - 1) {
+        filtered.push(curr);
+      }
+    }
+
+    if (filtered.length < 2) {
+      return {
+        pathCoords: rawLogs.map(l => [l.latitude, l.longitude]),
+        isSnapped: false,
+        roadDistanceKm: null
+      };
+    }
+
+    // Query public OSRM in chunks of 25 coordinates with 1-point overlap
+    const CHUNK_SIZE = 25;
+    const allSnappedCoords = [];
+    let totalRoadMeters = 0;
+    let anySnapped = false;
+
+    for (let i = 0; i < filtered.length - 1; i += (CHUNK_SIZE - 1)) {
+      const chunk = filtered.slice(i, Math.min(filtered.length, i + CHUNK_SIZE));
+      if (chunk.length < 2) break;
+
+      const coordString = chunk.map(p => `${p.longitude.toFixed(6)},${p.latitude.toFixed(6)}`).join(';');
+      const osrmUrl = `https://router.project-osrm.org/route/v1/driving/${coordString}?overview=full&geometries=geojson`;
+
+      try {
+        const response = await fetch(osrmUrl);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.code === 'Ok' && data.routes && data.routes[0]) {
+            const legCoords = data.routes[0].geometry.coordinates.map(c => [c[1], c[0]]); // [lat, lng]
+            totalRoadMeters += data.routes[0].distance || 0;
+            anySnapped = true;
+
+            if (allSnappedCoords.length === 0) {
+              allSnappedCoords.push(...legCoords);
+            } else {
+              // Avoid duplicate stitch coordinate
+              allSnappedCoords.push(...legCoords.slice(1));
+            }
+            continue;
+          }
+        }
+      } catch (err) {
+        console.warn('OSRM chunk routing fallback to direct GPS coordinates:', err);
+      }
+
+      // Fallback for this chunk: direct points
+      const directChunk = chunk.map(p => [p.latitude, p.longitude]);
+      if (allSnappedCoords.length === 0) {
+        allSnappedCoords.push(...directChunk);
+      } else {
+        allSnappedCoords.push(...directChunk.slice(1));
+      }
+    }
+
+    return {
+      pathCoords: allSnappedCoords.length > 0 ? allSnappedCoords : rawLogs.map(l => [l.latitude, l.longitude]),
+      isSnapped: anySnapped,
+      roadDistanceKm: totalRoadMeters > 0 ? (totalRoadMeters / 1000).toFixed(1) : null
+    };
+  };
+
   // Historical Route Tracing state
   const [selectedDate, setSelectedDate] = useState(() => {
     // Current IST date in YYYY-MM-DD
@@ -428,36 +509,79 @@ const AELiveTracker = () => {
       const latLng = [loc.latitude, loc.longitude];
       bounds.push(latLng);
 
+      const isMoving = item.isMoving || status === 'MOVING';
+      const isStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
+
       const markerColor = 
-        status === 'ONLINE' ? '#10b981' : 
+        isMoving ? '#2563eb' : 
+        isStationary ? '#10b981' : 
         status === 'IDLE' ? '#f59e0b' : 
         status === 'OUT_OF_HOURS' ? '#8b5cf6' : '#64748b';
 
       const customIcon = window.L.divIcon({
         className: 'custom-map-pin',
         html: `
-          <div style="
-            background-color: ${markerColor};
-            width: 34px;
-            height: 34px;
-            border-radius: 50%;
-            border: 3px solid #ffffff;
-            box-shadow: 0 4px 14px rgba(0,0,0,0.35);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-            font-weight: 800;
-            font-size: 11px;
-            font-family: sans-serif;
-            position: relative;
-          ">
-            ${ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE'}
-            ${status === 'ONLINE' ? '<span style="position:absolute; top:-2px; right:-2px; width:10px; height:10px; background:#10b981; border:2px solid white; border-radius:50%;"></span>' : ''}
+          <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+            ${isMoving ? `
+              <!-- Pulsing Radar Wave (Swiggy / Uber style) -->
+              <div style="
+                position: absolute;
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                background: rgba(37, 99, 235, 0.25);
+                border: 1.5px solid rgba(59, 130, 246, 0.6);
+                animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+              "></div>
+            ` : ''}
+            <div style="
+              background-color: ${markerColor};
+              width: 36px;
+              height: 36px;
+              border-radius: 50%;
+              border: 3px solid #ffffff;
+              box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              color: white;
+              font-weight: 800;
+              font-size: 11px;
+              font-family: sans-serif;
+              position: relative;
+              z-index: 2;
+            ">
+              ${isMoving ? '🚗' : (ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE')}
+              ${(isMoving || isStationary) ? `<span style="position:absolute; top:-2px; right:-2px; width:10px; height:10px; background:${isMoving ? '#3b82f6' : '#10b981'}; border:2px solid white; border-radius:50%;"></span>` : ''}
+            </div>
+            ${isMoving ? `
+              <div style="
+                position: absolute;
+                bottom: -16px;
+                left: 50%;
+                transform: translateX(-50%);
+                white-space: nowrap;
+                background: #0f172a;
+                color: #60a5fa;
+                border: 1px solid #3b82f6;
+                font-size: 9px;
+                font-weight: 800;
+                padding: 1px 5px;
+                border-radius: 4px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+                display: flex;
+                align-items: center;
+                gap: 3px;
+                z-index: 3;
+              ">
+                <span style="width: 4px; height: 4px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+                MOVING
+              </div>
+            ` : ''}
           </div>
         `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
+        iconSize: [40, 40],
+        iconAnchor: [20, 20]
       });
 
       const marker = window.L.marker(latLng, { icon: customIcon }).addTo(leafletMap.current);
@@ -471,7 +595,7 @@ const AELiveTracker = () => {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
             <h4 style="margin: 0; font-weight: 800; font-size: 14px; color: #0f172a;">${ae.name}</h4>
             <span style="font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; background: ${markerColor}15; color: ${markerColor}; border: 1px solid ${markerColor}40;">
-              ${status}
+              ${isMoving ? '🚗 MOVING' : isStationary ? '📍 AT SITE' : status}
             </span>
           </div>
           <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">${ae.designation || 'Area Executive'}</p>
@@ -479,6 +603,7 @@ const AELiveTracker = () => {
             <div><strong>📞 Phone:</strong> ${ae.phone || 'N/A'}</div>
             <div><strong>🔋 Battery:</strong> ${loc.batteryLevel != null ? loc.batteryLevel + '%' : 'N/A'}</div>
             <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
+            <div><strong>🚦 Status:</strong> ${isMoving ? 'In Transit / Moving' : isStationary ? 'Stationary (At Site/Visit)' : status}</div>
           </div>
         </div>
       `;
@@ -542,50 +667,101 @@ const AELiveTracker = () => {
       }
 
       if (logs.length > 0 && leafletMap.current && window.L) {
-        const pathCoords = logs.map(l => [l.latitude, l.longitude]);
-        
-        // Draw primary route line (Google Maps style vibrant blue)
-        polylineRef.current = window.L.polyline(pathCoords, {
-          color: '#2563eb',
-          weight: 5,
-          opacity: 0.9,
+        // Road-snapped street navigation route (following actual city streets)
+        const snapped = await getRoadSnappedRoute(logs);
+        const pathCoords = snapped.pathCoords;
+        setSnappedPathCoords(pathCoords);
+        setRoadDistanceKm(snapped.roadDistanceKm);
+        setIsRoadSnapped(snapped.isSnapped);
+
+        // Draw street route: Outer glow casing + vibrant navigation blue
+        casingPolylineRef.current = window.L.polyline(pathCoords, {
+          color: '#1e40af',
+          weight: 8,
+          opacity: 0.35,
           lineJoin: 'round',
           lineCap: 'round'
         }).addTo(leafletMap.current);
 
-        // Add Start marker (Green circle)
+        polylineRef.current = window.L.polyline(pathCoords, {
+          color: '#2563eb',
+          weight: 5,
+          opacity: 0.95,
+          lineJoin: 'round',
+          lineCap: 'round'
+        }).addTo(leafletMap.current);
+
+        // Add Directional Arrows along the actual road segments
+        if (pathCoords.length > 1) {
+          const arrowCount = Math.min(8, Math.max(3, Math.floor(pathCoords.length / 15)));
+          const step = Math.max(1, Math.floor(pathCoords.length / arrowCount));
+          for (let i = 0; i < pathCoords.length - 1; i += step) {
+            const p1 = pathCoords[i];
+            const p2 = pathCoords[i + 1];
+            const y = Math.sin((p2[1] - p1[1]) * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180);
+            const x = Math.cos(p1[0] * Math.PI / 180) * Math.sin(p2[0] * Math.PI / 180) -
+                      Math.sin(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.cos((p2[1] - p1[1]) * Math.PI / 180);
+            const bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+
+            const midLat = (p1[0] + p2[0]) / 2;
+            const midLng = (p1[1] + p2[1]) / 2;
+
+            const arrowIcon = window.L.divIcon({
+              className: 'custom-dir-arrow',
+              html: `
+                <div style="transform: rotate(${bearing}deg); display: flex; align-items: center; justify-content: center;">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="#1d4ed8" stroke="#ffffff" stroke-width="2" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">
+                    <polygon points="12,2 22,22 12,17 2,22" />
+                  </svg>
+                </div>
+              `,
+              iconSize: [18, 18],
+              iconAnchor: [9, 9]
+            });
+            const arrowMarker = window.L.marker([midLat, midLng], { icon: arrowIcon, interactive: false }).addTo(leafletMap.current);
+            historyMarkersRef.current.push(arrowMarker);
+          }
+        }
+
+        // Add Start marker (Green circle - Site Sign-in / Departure)
         const startPoint = logs[0];
         const startMarker = window.L.circleMarker([startPoint.latitude, startPoint.longitude], {
-          radius: 7,
+          radius: 8,
           color: '#ffffff',
-          weight: 2,
+          weight: 2.5,
           fillColor: '#10b981',
           fillOpacity: 1
         }).addTo(leafletMap.current).bindPopup(`
           <div style="font-family: system-ui; padding: 4px;">
-            <b style="color: #059669;">🟢 Start Point (7 AM - 8 PM IST)</b><br>
-            Time: ${new Date(startPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}
+            <b style="color: #059669; font-size: 12px;">🟢 Departure Point (Start)</b><br>
+            Time: ${new Date(startPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
           </div>
         `);
         historyMarkersRef.current.push(startMarker);
 
-        // Add End marker (Red circle) if more than 1 point
+        // Add End marker (Red circle / Blue rotating vehicle if currently moving)
         if (logs.length > 1) {
           const endPoint = logs[logs.length - 1];
+          const isCurrentlyMoving = selectedAE?.status === 'MOVING' || selectedAE?.isMoving;
           const endMarker = window.L.circleMarker([endPoint.latitude, endPoint.longitude], {
-            radius: 7,
+            radius: 8,
             color: '#ffffff',
-            weight: 2,
-            fillColor: '#ef4444',
+            weight: 2.5,
+            fillColor: isCurrentlyMoving ? '#2563eb' : '#ef4444',
             fillOpacity: 1
           }).addTo(leafletMap.current).bindPopup(`
             <div style="font-family: system-ui; padding: 4px;">
-              <b style="color: #dc2626;">🔴 Latest / End Point</b><br>
-              Time: ${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })}
+              <b style="color: ${isCurrentlyMoving ? '#2563eb' : '#dc2626'}; font-size: 12px;">
+                ${isCurrentlyMoving ? '🚗 Currently Moving' : '📍 Current / Latest Location'}
+              </b><br>
+              Last Seen: ${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
             </div>
           `);
           historyMarkersRef.current.push(endMarker);
         }
+
+        // Set playback scrubber to the latest point by default
+        setPlaybackIndex(pathCoords.length - 1);
 
         // Detect and place Stop markers with durations
         const detectedStops = detectStops(logs);
@@ -632,7 +808,8 @@ const AELiveTracker = () => {
         });
 
         leafletMap.current.fitBounds(polylineRef.current.getBounds(), { padding: [50, 50] });
-        toast.info(`Traced ${logs.length} route points (${detectedStops.length} stops detected) for ${targetDate}`);
+        const distanceLabel = snapped.roadDistanceKm ? `${snapped.roadDistanceKm} km road route` : `${calculateTotalDistanceKm(logs)} km`;
+        toast.info(`Traced ${logs.length} GPS fixes (${distanceLabel}, ${detectedStops.length} stops) for ${targetDate}`);
       } else {
         setDetectedStopsList([]);
         toast.warning(`No location logs found between 7:00 AM and 8:00 PM IST on ${targetDate}`);
@@ -650,6 +827,10 @@ const AELiveTracker = () => {
       polylineRef.current.remove();
       polylineRef.current = null;
     }
+    if (casingPolylineRef.current) {
+      casingPolylineRef.current.remove();
+      casingPolylineRef.current = null;
+    }
     historyMarkersRef.current.forEach(m => m.remove());
     historyMarkersRef.current = [];
     stopMarkersRef.current.forEach(m => m.remove());
@@ -661,61 +842,139 @@ const AELiveTracker = () => {
     setIsPlaying(false);
     setPlaybackIndex(0);
     setHistoryLogs([]);
+    setSnappedPathCoords([]);
+    setRoadDistanceKm(null);
+    setIsRoadSnapped(false);
     setDetectedStopsList([]);
     toast.info('Route path cleared from map.');
   };
 
-  // Playback Marker Update
+  // Swiggy / Ola / Uber Style Rotating Vehicle Playback Marker Update
   useEffect(() => {
-    if (!leafletMap.current || !window.L || historyLogs.length === 0) return;
-    const currentPoint = historyLogs[playbackIndex] || historyLogs[0];
-    if (!currentPoint) return;
+    if (!leafletMap.current || !window.L) return;
 
-    const latLng = [currentPoint.latitude, currentPoint.longitude];
+    const playbackPoints = snappedPathCoords.length > 0 
+      ? snappedPathCoords 
+      : historyLogs.map(l => [l.latitude, l.longitude]);
 
-    if (!playbackMarkerRef.current) {
-      const playbackIcon = window.L.divIcon({
-        className: 'custom-playback-pin',
-        html: `
+    if (playbackPoints.length === 0) return;
+
+    // Only show animated vehicle pin during active playback or when scrubbing historical timeline
+    const isInteracting = isPlaying || (playbackIndex >= 0 && playbackIndex < playbackPoints.length - 1);
+    if (!isInteracting) {
+      if (playbackMarkerRef.current) {
+        playbackMarkerRef.current.remove();
+        playbackMarkerRef.current = null;
+      }
+      return;
+    }
+
+    const latLng = playbackPoints[playbackIndex];
+    if (!latLng) return;
+
+    // Calculate heading/bearing angle in degrees along the road segment
+    let bearing = 0;
+    if (playbackIndex < playbackPoints.length - 1) {
+      const p1 = playbackPoints[playbackIndex];
+      const p2 = playbackPoints[playbackIndex + 1];
+      const y = Math.sin((p2[1] - p1[1]) * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180);
+      const x = Math.cos(p1[0] * Math.PI / 180) * Math.sin(p2[0] * Math.PI / 180) -
+                Math.sin(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.cos((p2[1] - p1[1]) * Math.PI / 180);
+      bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    } else if (playbackIndex > 0) {
+      const p1 = playbackPoints[playbackIndex - 1];
+      const p2 = playbackPoints[playbackIndex];
+      const y = Math.sin((p2[1] - p1[1]) * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180);
+      const x = Math.cos(p1[0] * Math.PI / 180) * Math.sin(p2[0] * Math.PI / 180) -
+                Math.sin(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.cos((p2[1] - p1[1]) * Math.PI / 180);
+      bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+    }
+
+    const vehicleIcon = window.L.divIcon({
+      className: 'swiggy-uber-vehicle-pin',
+      html: `
+        <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
+          <!-- Pulsing Radar Wave (Swiggy / Uber style) -->
           <div style="
-            background: #2563eb;
-            width: 34px;
-            height: 34px;
+            position: absolute;
+            inset: 0;
             border-radius: 50%;
-            border: 3px solid #ffffff;
-            box-shadow: 0 0 16px rgba(37,99,235,0.9), 0 4px 10px rgba(0,0,0,0.4);
+            background: rgba(37, 99, 235, 0.25);
+            border: 1.5px solid rgba(59, 130, 246, 0.6);
+            animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+          "></div>
+
+          <!-- Rotating Vehicle Marker pointing down the road -->
+          <div style="
+            transform: rotate(${Math.round(bearing)}deg);
+            transition: transform 0.25s ease-out;
+            width: 38px;
+            height: 38px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #1d4ed8, #2563eb);
+            border: 2.5px solid #ffffff;
+            box-shadow: 0 4px 18px rgba(37,99,235,0.7), 0 2px 6px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
             color: white;
-            animation: pulse 1.5s infinite;
           ">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="3 11 22 2 13 21 11 13 3 11"/>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5">
+              <polygon points="12,2 22,21 12,16 2,21" />
             </svg>
           </div>
-        `,
-        iconSize: [34, 34],
-        iconAnchor: [17, 17]
-      });
+          
+          <!-- Live Moving Status Tag -->
+          <div style="
+            position: absolute;
+            bottom: -18px;
+            left: 50%;
+            transform: translateX(-50%);
+            white-space: nowrap;
+            background: #0f172a;
+            color: #60a5fa;
+            border: 1px solid #3b82f6;
+            font-size: 9px;
+            font-weight: 800;
+            padding: 1px 6px;
+            border-radius: 6px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+            display: flex;
+            align-items: center;
+            gap: 3px;
+          ">
+            <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
+            MOVING
+          </div>
+        </div>
+      `,
+      iconSize: [44, 44],
+      iconAnchor: [22, 22]
+    });
 
+    if (!playbackMarkerRef.current) {
       playbackMarkerRef.current = window.L.marker(latLng, { 
-        icon: playbackIcon,
+        icon: vehicleIcon,
         zIndexOffset: 1000 
       }).addTo(leafletMap.current);
     } else {
+      playbackMarkerRef.current.setIcon(vehicleIcon);
       playbackMarkerRef.current.setLatLng(latLng);
     }
-  }, [playbackIndex, historyLogs]);
+  }, [playbackIndex, historyLogs, snappedPathCoords, isPlaying]);
 
   // Playback Timer Loop
   useEffect(() => {
     let timer = null;
-    if (isPlaying && historyLogs.length > 1) {
-      const intervalMs = Math.max(80, Math.round(500 / playbackSpeed));
+    const playbackPoints = snappedPathCoords.length > 0 
+      ? snappedPathCoords 
+      : historyLogs.map(l => [l.latitude, l.longitude]);
+
+    if (isPlaying && playbackPoints.length > 1) {
+      const intervalMs = Math.max(60, Math.round(350 / playbackSpeed));
       timer = setInterval(() => {
         setPlaybackIndex((prev) => {
-          if (prev >= historyLogs.length - 1) {
+          if (prev >= playbackPoints.length - 1) {
             setIsPlaying(false);
             return prev;
           }
@@ -726,18 +985,39 @@ const AELiveTracker = () => {
     return () => {
       if (timer) clearInterval(timer);
     };
-  }, [isPlaying, historyLogs.length, playbackSpeed]);
+  }, [isPlaying, historyLogs.length, snappedPathCoords.length, playbackSpeed]);
 
   // Filter AEs
   const filteredData = liveData.filter(item => {
     const matchesSearch = item.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           (item.user.phone && item.user.phone.includes(searchQuery)) ||
                           (item.user.designation && item.user.designation.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesStatus = statusFilter === 'ALL' || item.status === statusFilter;
+
+    const isMoving = item.isMoving || item.status === 'MOVING';
+    const isStationary = item.status === 'STATIONARY' || item.status === 'ONLINE' || (!isMoving && item.status !== 'IDLE' && item.status !== 'OFFLINE' && item.status !== 'OUT_OF_HOURS');
+
+    let matchesStatus = false;
+    if (statusFilter === 'ALL') {
+      matchesStatus = true;
+    } else if (statusFilter === 'MOVING') {
+      matchesStatus = isMoving;
+    } else if (statusFilter === 'STATIONARY') {
+      matchesStatus = isStationary;
+    } else if (statusFilter === 'IDLE') {
+      matchesStatus = item.status === 'IDLE';
+    } else if (statusFilter === 'OFFLINE') {
+      matchesStatus = item.status === 'OFFLINE';
+    } else if (statusFilter === 'OUT_OF_HOURS') {
+      matchesStatus = item.status === 'OUT_OF_HOURS';
+    } else {
+      matchesStatus = item.status === statusFilter;
+    }
+
     return matchesSearch && matchesStatus;
   });
 
-  const onlineCount = liveData.filter(i => i.status === 'ONLINE').length;
+  const movingCount = liveData.filter(i => i.isMoving || i.status === 'MOVING').length;
+  const stationaryCount = liveData.filter(i => (i.status === 'STATIONARY' || i.status === 'ONLINE') && !i.isMoving).length;
   const idleCount = liveData.filter(i => i.status === 'IDLE').length;
   const offlineCount = liveData.filter(i => i.status === 'OFFLINE').length;
   const outOfHoursCount = liveData.filter(i => i.status === 'OUT_OF_HOURS').length;
@@ -822,8 +1102,8 @@ const AELiveTracker = () => {
         </div>
       </div>
 
-      {/* KPI Stats Grid */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+      {/* KPI Stats Grid - 6 columns */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
         <div className="bg-slate-900/80 border border-slate-800/90 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">Total AEs</p>
@@ -834,10 +1114,23 @@ const AELiveTracker = () => {
           </div>
         </div>
 
+        <div className="bg-slate-900/80 border border-blue-500/30 p-4 rounded-2xl flex items-center justify-between shadow-lg ring-1 ring-blue-500/20">
+          <div>
+            <div className="flex items-center gap-1.5">
+              <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+              <p className="text-[10px] font-black uppercase tracking-wider text-blue-400">Moving Now</p>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-black text-blue-400 mt-1">{movingCount}</h3>
+          </div>
+          <div className="p-2.5 rounded-xl bg-blue-500/15 text-blue-400 border border-blue-500/30">
+            <Car size={18} />
+          </div>
+        </div>
+
         <div className="bg-slate-900/80 border border-emerald-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">Online Now</p>
-            <h3 className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">{onlineCount}</h3>
+            <p className="text-[10px] font-black uppercase tracking-wider text-emerald-400">At Site</p>
+            <h3 className="text-xl sm:text-2xl font-black text-emerald-400 mt-1">{stationaryCount}</h3>
           </div>
           <div className="p-2.5 rounded-xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
             <CheckCircle2 size={18} />
@@ -866,9 +1159,9 @@ const AELiveTracker = () => {
 
         <div className="col-span-2 sm:col-span-1 bg-slate-900/80 border border-purple-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
-            <p className="text-[10px] font-black uppercase tracking-wider text-purple-400">Working Window</p>
-            <h3 className="text-sm font-black text-purple-300 mt-1">7 AM – 8 PM</h3>
-            <span className="text-[9px] text-slate-400">Indian Standard Time</span>
+            <p className="text-[10px] font-black uppercase tracking-wider text-purple-400">Window</p>
+            <h3 className="text-xs sm:text-sm font-black text-purple-300 mt-1">7 AM – 8 PM</h3>
+            <span className="text-[9px] text-slate-400">IST Daily</span>
           </div>
           <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
             <Moon size={18} />
@@ -932,17 +1225,17 @@ const AELiveTracker = () => {
 
             {/* Status Filter Chips */}
             <div className="flex flex-wrap gap-1 bg-slate-800/40 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
-              {['ALL', 'ONLINE', 'IDLE', 'OFFLINE', 'OUT_OF_HOURS'].map((st) => (
+              {['ALL', 'MOVING', 'STATIONARY', 'IDLE', 'OFFLINE', 'OUT_OF_HOURS'].map((st) => (
                 <button
                   key={st}
                   onClick={() => setStatusFilter(st)}
-                  className={`flex-1 min-w-[50px] py-1.5 px-2 rounded-lg transition-all text-center ${
+                  className={`flex-1 min-w-[45px] py-1.5 px-1.5 rounded-lg transition-all text-center ${
                     statusFilter === st
                       ? 'bg-blue-600 text-white shadow-md font-extrabold'
                       : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                   }`}
                 >
-                  {st === 'OUT_OF_HOURS' ? 'OFF-HRS' : st}
+                  {st === 'MOVING' ? '🚗 MOVING' : st === 'STATIONARY' ? '📍 SITE' : st === 'OUT_OF_HOURS' ? 'OFF-HRS' : st}
                 </button>
               ))}
             </div>
@@ -970,17 +1263,27 @@ const AELiveTracker = () => {
                 const { user: ae, latestLocation: loc, status } = item;
                 const isSelected = selectedAE?.user?.id === ae.id;
 
+                const isItemMoving = item.isMoving || status === 'MOVING';
+                const isItemStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isItemMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
+
                 const statusBg = 
-                  status === 'ONLINE' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' :
+                  isItemMoving ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' :
+                  isItemStationary ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' :
                   status === 'IDLE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' :
                   status === 'OUT_OF_HOURS' ? 'bg-purple-500/10 text-purple-400 border-purple-500/25' :
                   'bg-slate-800 text-slate-400 border-slate-700/60';
 
                 const statusDotColor = 
-                  status === 'ONLINE' ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' :
+                  isItemMoving ? 'bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse' :
+                  isItemStationary ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' :
                   status === 'IDLE' ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' :
                   status === 'OUT_OF_HOURS' ? 'bg-purple-400' :
                   'bg-slate-500';
+
+                const statusLabel = 
+                  isItemMoving ? 'MOVING' :
+                  isItemStationary ? 'AT SITE' :
+                  status === 'OUT_OF_HOURS' ? 'OFF-HOURS' : status;
 
                 return (
                   <div
@@ -999,7 +1302,7 @@ const AELiveTracker = () => {
                       </div>
                       
                       <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md border shrink-0 ${statusBg}`}>
-                        {status === 'OUT_OF_HOURS' ? 'OFF-HOURS' : status}
+                        {statusLabel}
                       </span>
                     </div>
 
@@ -1158,7 +1461,7 @@ const AELiveTracker = () => {
                 <input
                   type="range"
                   min={0}
-                  max={historyLogs.length - 1}
+                  max={Math.max(1, (snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length) - 1)}
                   value={playbackIndex}
                   onChange={(e) => {
                     setPlaybackIndex(Number(e.target.value));
@@ -1166,9 +1469,15 @@ const AELiveTracker = () => {
                   className="w-full accent-blue-500 h-1.5 bg-slate-700 rounded-lg cursor-pointer"
                 />
                 <span className="text-xs font-mono font-bold text-blue-400 shrink-0 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
-                  {historyLogs[playbackIndex]?.createdAt 
-                    ? new Date(historyLogs[playbackIndex].createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-                    : '--:--'}
+                  {(() => {
+                    if (historyLogs.length === 0) return '--:--';
+                    const totalPoints = snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length;
+                    const logIdx = Math.min(historyLogs.length - 1, Math.round((playbackIndex / Math.max(1, totalPoints - 1)) * (historyLogs.length - 1)));
+                    const log = historyLogs[logIdx];
+                    return log?.createdAt 
+                      ? new Date(log.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                      : '--:--';
+                  })()}
                 </span>
               </div>
 

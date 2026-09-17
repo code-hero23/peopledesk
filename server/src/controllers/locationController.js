@@ -116,8 +116,8 @@ const getLiveLocations = async (req, res) => {
 
     const liveData = await Promise.all(
       aeUsers.map(async (ae) => {
-        // Query only locations recorded within today's 7:00 AM - 8:00 PM IST window
-        const latestLog = await prisma.aELocationLog.findFirst({
+        // Query locations recorded within today's 7:00 AM - 8:00 PM IST window (take top 2 for motion detection)
+        const recentLogs = await prisma.aELocationLog.findMany({
           where: { 
             userId: ae.id,
             createdAt: {
@@ -125,19 +125,44 @@ const getLiveLocations = async (req, res) => {
               lte: endUTC
             }
           },
-          orderBy: { createdAt: 'desc' }
+          orderBy: { createdAt: 'desc' },
+          take: 2
         });
 
+        const latestLog = recentLogs[0] || null;
+        const prevLog = recentLogs[1] || null;
+
         let status = 'OFFLINE';
+        let isMoving = false;
         let lastPingMinutesAgo = null;
+
         if (!isCurrentlyInWindow) {
           // Outside 7 AM - 8 PM IST
           status = 'OUT_OF_HOURS';
         } else if (latestLog) {
           const diffMinutes = Math.max(0, Math.round((now.getTime() - new Date(latestLog.createdAt).getTime()) / (1000 * 60)));
           lastPingMinutesAgo = diffMinutes;
+
           if (diffMinutes <= 20) {
-            status = 'ONLINE';
+            // Determine if moving: speed > 0.8 m/s (~3 km/h) or moved >= 35m in last 15 min
+            if (latestLog.speed != null && latestLog.speed > 0.8) {
+              isMoving = true;
+            } else if (prevLog) {
+              const dLat = (latestLog.latitude - prevLog.latitude) * Math.PI / 180;
+              const dLng = (latestLog.longitude - prevLog.longitude) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(prevLog.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
+                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+              const distMeters = 6371000 * c;
+              const timeDiffMins = (new Date(latestLog.createdAt).getTime() - new Date(prevLog.createdAt).getTime()) / (1000 * 60);
+
+              if (distMeters >= 35 && timeDiffMins <= 15) {
+                isMoving = true;
+              }
+            }
+
+            status = isMoving ? 'MOVING' : 'STATIONARY';
           } else if (diffMinutes <= 60) {
             status = 'IDLE';
           } else {
@@ -149,6 +174,7 @@ const getLiveLocations = async (req, res) => {
           user: ae,
           latestLocation: latestLog || null,
           status,
+          isMoving,
           lastPingMinutesAgo
         };
       })
