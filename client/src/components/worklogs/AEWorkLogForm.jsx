@@ -5,7 +5,7 @@ import { getProjects, createProject } from '../../features/projects/projectSlice
 import {
     Send, MapPin, Building, Info, Calendar, Clock, Camera,
     Navigation, Briefcase, Clipboard, HardHat, UserCheck,
-    Wrench, AlertOctagon, CornerDownRight, CheckSquare, Plus, ChevronRight, CheckCircle, X
+    Wrench, AlertOctagon, CornerDownRight, CheckSquare, Plus, ChevronRight, CheckCircle, X, AlertTriangle
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import { formatTime } from '../../utils/dateUtils';
@@ -40,6 +40,10 @@ const AEWorkLogForm = ({ onSuccess }) => {
     // Derived States
     const isTodayClosed = todayLog && todayLog.logStatus === 'CLOSED';
     const isTodayOpen = todayLog && todayLog.logStatus === 'OPEN';
+    const projectReportsList = todayLog?.ae_project_reports
+        ? (typeof todayLog.ae_project_reports === 'string' ? JSON.parse(todayLog.ae_project_reports) : todayLog.ae_project_reports)
+        : [];
+    const hasProjectReports = Array.isArray(projectReportsList) && projectReportsList.length > 0;
 
     // --- OPENING FORM STATE ---
     const [openingData, setOpeningData] = useState({
@@ -305,6 +309,12 @@ const AEWorkLogForm = ({ onSuccess }) => {
         e.preventDefault();
         if (isSubmitting) return;
 
+        if (!hasProjectReports) {
+            toast.error("Please add at least one Project Wise report before submitting your closing report.");
+            setReportType('project');
+            return;
+        }
+
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
@@ -333,20 +343,9 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
     if (isLoading) return <div className="p-8 text-center text-slate-500 dark:text-slate-400 animate-pulse transition-colors">Loading...</div>;
 
-    if (isTodayClosed) {
-        return (
-            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-3xl text-center border border-emerald-100 dark:border-emerald-900/50 transition-colors">
-                <CheckCircle className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" size={48} />
-                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
-                <p className="text-emerald-600 dark:text-emerald-400 font-bold">You have successfully submitted your daily reports.</p>
-            </div>
-        );
-    }
-
     // --- UI COMPONENTS ---
 
-
-    if (isTodayOpen) {
+    if (isTodayOpen || isTodayClosed) {
         return (
             <div className="space-y-8">
                 {/* Top Card Switcher */}
@@ -383,7 +382,7 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                     <Briefcase size={28} strokeWidth={2.5} />
                                 </div>
                                 <h3 className={`text-xl font-black mb-1 transition-colors ${reportType === 'project' ? 'text-white' : 'text-slate-800 dark:text-white'} `}>Project Wise</h3>
-                                <p className={`text-xs font-bold uppercase tracking-widest transition-colors ${reportType === 'project' ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'} `}>Detailed Task Logs</p>
+                                <p className={`text-xs font-bold uppercase tracking-widest transition-colors ${reportType === 'project' ? 'text-blue-200' : 'text-slate-400 dark:text-slate-500'} `}>Detailed Task Logs (Add anytime)</p>
                             </div>
                             {reportType === 'project' && <ChevronRight size={20} className="text-white bg-white/20 rounded-full p-1" />}
                         </div>
@@ -392,30 +391,74 @@ const AEWorkLogForm = ({ onSuccess }) => {
 
                 <AnimatePresence mode="wait">
                     {reportType === 'daily' ? (
-                        <motion.form
-                            key="daily" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-                            onSubmit={handleClosingSubmit} className="space-y-6"
-                        >
-                            <Card title="Final Remarks" icon={Clipboard} color="slate">
-                                <Label text="Daily Summary / Remarks" />
-                                <textarea
-                                    name="remarks" value={closingData.remarks} onChange={(e) => setClosingData({ ...closingData, remarks: e.target.value })}
-                                    rows="4" className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 font-medium text-sm outline-none resize-none focus:ring-2 ring-slate-100 dark:ring-slate-800 dark:text-white transition-colors"
-                                    placeholder="Write any final notes about your day..."
-                                />
-                                <div className="mt-4">
-                                    <Label text="Daily Notes (for Admin & HR)" />
-                                    <textarea
-                                        name="notes" value={closingData.notes} onChange={(e) => setClosingData({ ...closingData, notes: e.target.value })}
-                                        rows="3" className="w-full bg-blue-50/30 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/50 font-medium text-sm outline-none resize-none focus:ring-2 ring-blue-100 dark:ring-blue-900/40 dark:text-white transition-colors"
-                                        placeholder="Share daily summary or issues with Admin/HR..."
-                                    />
+                        isTodayClosed ? (
+                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-3xl text-center border border-emerald-100 dark:border-emerald-900/50 transition-colors">
+                                <CheckCircle className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" size={48} />
+                                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
+                                <p className="text-emerald-600 dark:text-emerald-400 font-bold">You have successfully submitted your daily reports.</p>
+                                <div className="mt-6 flex justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => setReportType('project')}
+                                        className="px-6 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-black text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg transition-all inline-flex items-center gap-2 active:scale-95"
+                                    >
+                                        <Plus size={16} /> Add / Manage Project Reports
+                                    </button>
                                 </div>
-                            </Card>
-                            <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-5 rounded-2xl shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
-                                {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Complete Day & Check-Out</>}
-                            </button>
-                        </motion.form>
+                            </div>
+                        ) : (
+                            <motion.form
+                                key="daily" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+                                onSubmit={handleClosingSubmit} className="space-y-6"
+                            >
+                                {!hasProjectReports && (
+                                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-700 dark:text-amber-400">
+                                        <div className="flex items-center gap-3">
+                                            <AlertTriangle className="flex-shrink-0 text-amber-500" size={22} />
+                                            <div>
+                                                <p className="text-xs font-black uppercase tracking-wider">Project Wise Report Required</p>
+                                                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">You must add at least one Project Wise report before submitting your Closing Report.</p>
+                                            </div>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={() => setReportType('project')}
+                                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                                        >
+                                            <Plus size={14} /> Add Project Report
+                                        </button>
+                                    </div>
+                                )}
+                                <Card title="Final Remarks" icon={Clipboard} color="slate">
+                                    <Label text="Daily Summary / Remarks" />
+                                    <textarea
+                                        name="remarks" value={closingData.remarks} onChange={(e) => setClosingData({ ...closingData, remarks: e.target.value })}
+                                        rows="4" className="w-full bg-slate-50 dark:bg-slate-800 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 font-medium text-sm outline-none resize-none focus:ring-2 ring-slate-100 dark:ring-slate-800 dark:text-white transition-colors"
+                                        placeholder="Write any final notes about your day..."
+                                    />
+                                    <div className="mt-4">
+                                        <Label text="Daily Notes (for Admin & HR)" />
+                                        <textarea
+                                            name="notes" value={closingData.notes} onChange={(e) => setClosingData({ ...closingData, notes: e.target.value })}
+                                            rows="3" className="w-full bg-blue-50/30 dark:bg-blue-900/20 p-4 rounded-2xl border border-blue-100 dark:border-blue-900/50 font-medium text-sm outline-none resize-none focus:ring-2 ring-blue-100 dark:ring-blue-900/40 dark:text-white transition-colors"
+                                            placeholder="Share daily summary or issues with Admin/HR..."
+                                        />
+                                    </div>
+                                </Card>
+                                <button 
+                                    type="submit" 
+                                    disabled={isSubmitting || isLoading || !hasProjectReports} 
+                                    className={`w-full ${!hasProjectReports ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed text-slate-200' : 'bg-slate-900 hover:bg-black text-white active:scale-[0.98]'} font-bold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2`}
+                                >
+                                    {isSubmitting || isLoading ? 'Submitting...' : (
+                                        <>
+                                            <CheckSquare size={18} /> 
+                                            {!hasProjectReports ? 'Add Project Wise Report First to Complete Day' : 'Complete Day & Check-Out'}
+                                        </>
+                                    )}
+                                </button>
+                            </motion.form>
+                        )
                     ) : (
                         <motion.div
                             key="project" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}

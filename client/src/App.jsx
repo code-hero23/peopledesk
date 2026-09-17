@@ -75,7 +75,9 @@ function App() {
                 <Route path="/dashboard/worklogs" element={<MyWorkLogs />} />
                 <Route path="/dashboard/requests" element={<MyRequests />} />
                 <Route path="/dashboard/site-assignments" element={<MySiteAssignments />} />
-                <Route path="/dashboard/my-location-history" element={<MyLocationHistory />} />
+                <Route element={<AELiveTrackerGuard />}>
+                  <Route path="/dashboard/my-location-history" element={<MyLocationHistory />} />
+                </Route>
                 <Route path="/dashboard/attendance" element={<MyAttendance />} />
                 <Route path="/dashboard/salary" element={<MySalary />} />
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />

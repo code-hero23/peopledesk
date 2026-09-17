@@ -308,22 +308,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>
                             <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" indent />
                             <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" indent />
-                            <button
-                                onClick={() => {
-                                    onMobileClose?.();
-                                    setShowApkModal(true);
-                                }}
-                                title={isCollapsed ? "Mobile Apps" : ""}
-                                className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-xs tracking-wide transition-all duration-300 mb-1 select-none text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent w-full text-left ${isCollapsed ? 'justify-center px-2' : ''} ${!isCollapsed ? 'ml-3' : ''}`}
-                            >
-                                <Smartphone size={isCollapsed ? 20 : 17} className="flex-shrink-0 text-slate-400 group-hover:text-blue-400" />
-                                {!isCollapsed && (
-                                    <div className="flex items-center justify-between w-full pr-2">
-                                        <span>Mobile APKs</span>
-                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">2 Builds</span>
-                                    </div>
-                                )}
-                            </button>
                         </NavGroup>
                     </>
                 ) : (user?.role === 'FRONT_DESK_MANAGER' || user?.designation === 'FRONT DESK MANAGER' || user?.designation === 'FRONT_DESK' || user?.designation === 'FRONT DESK') ? (
@@ -340,10 +324,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                             {(user?.role === 'AE' || user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation?.toUpperCase()?.includes('AE') || user?.designation?.toUpperCase()?.includes('ARCHITECT')) && (
-                                <>
-                                    <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
-                                    <NavItem to="/dashboard/my-location-history" icon={Navigation} label="My Travel History" />
-                                </>
+                                <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
                             )}
                             <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                             <NavItem to="/seating" icon={Armchair} label="Seating Layout" />
@@ -371,22 +352,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                         <NavGroup id="utilities" label="Utilities" icon={Settings}>
                             <NavItem to="/osc-directory" icon={LifeBuoy} label="OSC Directory" indent />
                             <NavItem to="/decora-ai" icon={Sparkles} label="Decora AI" indent />
-                            <button
-                                onClick={() => {
-                                    onMobileClose?.();
-                                    setShowApkModal(true);
-                                }}
-                                title={isCollapsed ? "Mobile Apps" : ""}
-                                className={`group relative flex items-center gap-3.5 px-3.5 py-2.5 rounded-xl font-medium text-xs tracking-wide transition-all duration-300 mb-1 select-none text-slate-400 hover:text-white hover:bg-white/[0.06] border border-transparent w-full text-left ${isCollapsed ? 'justify-center px-2' : ''} ${!isCollapsed ? 'ml-3' : ''}`}
-                            >
-                                <Smartphone size={isCollapsed ? 20 : 17} className="flex-shrink-0 text-slate-400 group-hover:text-blue-400" />
-                                {!isCollapsed && (
-                                    <div className="flex items-center justify-between w-full pr-2">
-                                        <span>Mobile APKs</span>
-                                        <span className="text-[9px] font-black uppercase px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">2 Builds</span>
-                                    </div>
-                                )}
-                            </button>
                         </NavGroup>
                     </>
                 )}

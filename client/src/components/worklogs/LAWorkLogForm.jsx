@@ -7,7 +7,7 @@ import ConfirmationModal from '../ConfirmationModal';
 import {
     FileText, Box, PenTool, Layout, DollarSign,
     MessageCircle, Users, CheckSquare, Plus, Clock, X,
-    ImageIcon, Briefcase, Calendar, ChevronRight, MapPin, Monitor
+    ImageIcon, Briefcase, Calendar, ChevronRight, MapPin, Monitor, AlertTriangle
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
@@ -32,6 +32,10 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const isTodayClosed = todayLog?.logStatus === 'CLOSED';
     const isTodayOpen = todayLog?.logStatus === 'OPEN';
+    const projectReportsList = todayLog?.la_project_reports
+        ? (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports) : todayLog.la_project_reports)
+        : [];
+    const hasProjectReports = Array.isArray(projectReportsList) && projectReportsList.length > 0;
 
     useEffect(() => {
         dispatch(getTodayLogStatus());
@@ -167,6 +171,12 @@ const LAWorkLogForm = ({ onSuccess }) => {
     const handleClosingSubmit = (e) => {
         e.preventDefault();
         if (isSubmitting) return;
+
+        if (!hasProjectReports) {
+            toast.error("Please add at least one Project Wise report before submitting your closing report.");
+            setReportType('project');
+            return;
+        }
 
         setConfirmationConfig({
             isOpen: true,
@@ -357,6 +367,15 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                 <CheckSquare size={48} className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" />
                                 <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
                                 <p className="text-emerald-600 dark:text-emerald-400 font-medium">All daily reports have been submitted successfully.</p>
+                                <div className="mt-6 flex justify-center">
+                                    <button
+                                        type="button"
+                                        onClick={() => setReportType('project')}
+                                        className="px-6 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-black text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg transition-all inline-flex items-center gap-2 active:scale-95"
+                                    >
+                                        <Plus size={16} /> Add / Manage Project Reports
+                                    </button>
+                                </div>
                             </div>
                         ) : isTodayOpen ? (
                             <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-emerald-100 dark:border-slate-800 shadow-xl shadow-emerald-100/20 dark:shadow-none relative overflow-hidden transition-colors">
@@ -371,7 +390,16 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                             <p className="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase transition-colors">End of day submission</p>
                                         </div>
                                     </div>
-                                    <MetricsForm data={closingData} setData={setClosingData} onSubmit={handleClosingSubmit} type="closing" isSubmitting={isSubmitting} isLoading={isLoading} />
+                                    <MetricsForm 
+                                        data={closingData} 
+                                        setData={setClosingData} 
+                                        onSubmit={handleClosingSubmit} 
+                                        type="closing" 
+                                        isSubmitting={isSubmitting} 
+                                        isLoading={isLoading} 
+                                        hasProjectReports={hasProjectReports}
+                                        onGoToProject={() => setReportType('project')}
+                                    />
                                     <div className="mt-6 bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-[1.5rem] border border-blue-100 dark:border-blue-900/30 space-y-3 transition-colors">
                                         <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
                                             <MessageCircle size={18} />
@@ -441,15 +469,13 @@ const LAWorkLogForm = ({ onSuccess }) => {
                         exit={{ opacity: 0, y: -10 }}
                         className="space-y-6"
                     >
-                        {/* Project Report Content (Same as previous implementation) */}
-                        {!isTodayOpen ? (
+                        {/* Project Report Content */}
+                        {!isTodayOpen && !isTodayClosed ? (
                             <div className="p-6 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-2xl border border-amber-100 dark:border-amber-900/30 flex items-center gap-4 transition-colors">
                                 <Layout size={24} />
                                 <span className="font-bold">Please submit the daily OPENING report before adding project wise reports.</span>
                             </div>
                         ) : (
-                            // ... Existing Project Form ...
-
                             <div className={`p-6 rounded-[2.5rem] relative overflow-hidden transition-all duration-300 border border-blue-100 dark:border-slate-800 shadow-xl shadow-blue-200/20 dark:shadow-none bg-white dark:bg-slate-900`}>
                                 <div className="flex items-center gap-4 mb-8">
                                     <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600 dark:text-blue-400 transition-colors">
@@ -457,17 +483,11 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                     </div>
                                     <div>
                                         <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Project Wise Reports</h2>
-                                        <p className="text-blue-400 dark:text-blue-500 font-bold text-xs uppercase tracking-widest transition-colors">Detailed Task Logging</p>
+                                        <p className="text-blue-400 dark:text-blue-500 font-bold text-xs uppercase tracking-widest transition-colors">Detailed Task Logging (Add anytime)</p>
                                     </div>
                                 </div>
 
-                                {!isTodayOpen ? (
-                                    <div className="p-6 bg-amber-50 text-amber-800 rounded-2xl border border-amber-100 flex items-center gap-4">
-                                        <Layout size={24} />
-                                        <span className="font-bold">Please submit the daily OPENING report before adding project wise reports.</span>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-8">
+                                <div className="space-y-8">
                                         {/* Form Card */}
                                         <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none relative overflow-hidden transition-colors">
                                             <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 dark:from-blue-900/10 to-transparent rounded-full -mr-20 -mt-20 pointer-events-none opacity-50"></div>
@@ -731,30 +751,29 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                             <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">{todayLog?.la_project_reports ? (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports).length : todayLog.la_project_reports.length) : 0}</span>
                                         </h4>
                                             {todayLog && todayLog.la_project_reports &&
-                                                ((typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports) : todayLog.la_project_reports).map((r, idx) => (
+                                                (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports) : todayLog.la_project_reports).map((r, idx) => (
                                                     <motion.div
-                                                    initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                                    key={idx} className="bg-white dark:bg-slate-900 p-5 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-md dark:hover:border-slate-700 transition-all flex justify-between items-center group cursor-default transition-all"
-                                                >
-                                                    <div>
-                                                        <p className="font-black text-slate-800 dark:text-white text-base mb-1 transition-colors">{r.clientName || 'Unknown Project'}</p>
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="text-[10px] font-bold uppercase text-white bg-violet-500 px-2 py-0.5 rounded-md transition-colors">{r.process}</span>
-                                                            <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md transition-colors"><Clock size={10} /> {r.startTime} - {r.endTime}</span>
+                                                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+                                                        key={idx} className="bg-white dark:bg-slate-900 p-5 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-md dark:hover:border-slate-700 transition-all flex justify-between items-center group cursor-default transition-all"
+                                                    >
+                                                        <div>
+                                                            <p className="font-black text-slate-800 dark:text-white text-base mb-1 transition-colors">{r.clientName || 'Unknown Project'}</p>
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="text-[10px] font-bold uppercase text-white bg-violet-500 px-2 py-0.5 rounded-md transition-colors">{r.process}</span>
+                                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md transition-colors"><Clock size={10} /> {r.startTime} - {r.endTime}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                    <div className="text-right">
-                                                        <div className="flex items-center gap-1 bg-slate-900 dark:bg-slate-800 text-white px-4 py-2 rounded-xl font-bold font-mono transition-colors">
-                                                            <span className="text-emerald-400 transition-colors">{r.completedImages}</span>
-                                                            <span className="text-slate-500 transition-colors">/</span>
-                                                            <span className="text-slate-400 transition-colors">{r.imageCount}</span>
+                                                        <div className="text-right">
+                                                            <div className="flex items-center gap-1 bg-slate-900 dark:bg-slate-800 text-white px-4 py-2 rounded-xl font-bold font-mono transition-colors">
+                                                                <span className="text-emerald-400 transition-colors">{r.completedImages}</span>
+                                                                <span className="text-slate-500 transition-colors">/</span>
+                                                                <span className="text-slate-400 transition-colors">{r.imageCount}</span>
+                                                            </div>
                                                         </div>
-                                                    </div>
-                                                </motion.div>
-                                                )))}
+                                                    </motion.div>
+                                                ))}
                                         </div>
                                     </div>
-                                )}
                             </div>
                         )}
                     </motion.div>
@@ -775,13 +794,14 @@ const LAWorkLogForm = ({ onSuccess }) => {
 };
 
 // Sub-component for the Metrics Grid
-const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading }) => {
+const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading, hasProjectReports = true, onGoToProject }) => {
     const update = (key, field, val) => {
         setData(prev => ({ ...prev, [key]: { ...prev[key], [field]: val } }));
     };
 
     const isOpening = type === 'opening';
-    const btnColor = isOpening ? 'bg-blue-600' : 'bg-emerald-600';
+    const isClosingBlocked = !isOpening && !hasProjectReports;
+    const btnColor = isOpening ? 'bg-blue-600' : (isClosingBlocked ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed' : 'bg-emerald-600');
 
     // Config with Icons
     const fields = [
@@ -801,6 +821,27 @@ const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading })
 
     return (
         <form onSubmit={onSubmit} className="space-y-6">
+            {!isOpening && !hasProjectReports && (
+                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-700 dark:text-amber-400">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="flex-shrink-0 text-amber-500" size={22} />
+                        <div>
+                            <p className="text-xs font-black uppercase tracking-wider">Project Wise Report Required</p>
+                            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">You must add at least one Project Wise report before submitting your Closing Report.</p>
+                        </div>
+                    </div>
+                    {onGoToProject && (
+                        <button
+                            type="button"
+                            onClick={onGoToProject}
+                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center gap-1.5"
+                        >
+                            <Plus size={14} /> Add Project Report
+                        </button>
+                    )}
+                </div>
+            )}
+
             <div className="border border-slate-100 dark:border-slate-800 rounded-[1.5rem] overflow-hidden bg-white dark:bg-slate-900 shadow-sm transition-colors">
                 <table className="w-full text-left">
                     <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 transition-colors">
@@ -862,8 +903,17 @@ const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading })
                 </table>
             </div>
 
-            <button type="submit" disabled={isSubmitting || isLoading} className={`w-full ${btnColor} hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2`}>
-                {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={20} /> {isOpening ? 'Submit Opening Report' : 'Submit Closing Report'}</>}
+            <button 
+                type="submit" 
+                disabled={isSubmitting || isLoading || isClosingBlocked} 
+                className={`w-full ${btnColor} hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg transition-transform ${isClosingBlocked ? '' : 'active:scale-95'} flex justify-center items-center gap-2`}
+            >
+                {isSubmitting || isLoading ? 'Submitting...' : (
+                    <>
+                        <CheckSquare size={20} /> 
+                        {isOpening ? 'Submit Opening Report' : (isClosingBlocked ? 'Add Project Wise Report First to Submit Closing' : 'Submit Closing Report')}
+                    </>
+                )}
             </button>
         </form>
     );

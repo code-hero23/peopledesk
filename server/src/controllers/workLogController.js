@@ -64,15 +64,30 @@ const createWorkLog = async (req, res) => {
         if (existingLog) {
             // If trying to OPEN a new log but one exists
             if (req.body.logStatus === 'OPEN') {
-                return res.status(400).json({ message: 'You already have a work log for today.' });
+                const hasExistingOpening = existingLog.ae_opening_metrics || existingLog.fa_opening_metrics || existingLog.la_opening_metrics || existingLog.cre_opening_metrics;
+                if (!hasExistingOpening) {
+                    const updatedLog = await prisma.workLog.update({
+                        where: { id: existingLog.id },
+                        data: {
+                            ae_opening_metrics: typeof ae_opening_metrics === 'string' ? JSON.parse(ae_opening_metrics) : ae_opening_metrics,
+                            fa_opening_metrics: typeof fa_opening_metrics === 'string' ? JSON.parse(fa_opening_metrics) : fa_opening_metrics,
+                            la_opening_metrics: typeof la_opening_metrics === 'string' ? JSON.parse(la_opening_metrics) : la_opening_metrics,
+                            cre_opening_metrics: typeof cre_opening_metrics === 'string' ? JSON.parse(cre_opening_metrics) : cre_opening_metrics,
+                            startTime: startTime || existingLog.startTime,
+                            ae_gpsCoordinates: ae_gpsCoordinates || existingLog.ae_gpsCoordinates,
+                            ae_siteLocation: ae_siteLocation || existingLog.ae_siteLocation,
+                            ae_siteStatus: ae_siteStatus || existingLog.ae_siteStatus,
+                            ae_plannedWork: ae_plannedWork || existingLog.ae_plannedWork
+                        }
+                    });
+                    return res.json(updatedLog);
+                }
+                return res.status(400).json({ message: 'You already have an open work log for today.' });
             }
             // If one exists and it's closed, block new creation
             if (existingLog.logStatus === 'CLOSED') {
                 return res.status(400).json({ message: 'You have already submitted a work log for today.' });
             }
-            // If exists and OPEN, and we are not specifically hitting the 'close' endpoint (this is create),
-            // we might allow separate updates or just block 'create'. 
-            // Better to block 'create' and force use of 'close' endpoint for closing.
             return res.status(400).json({ message: 'Work log already open. Please submit closing report.' });
         }
 
@@ -234,18 +249,41 @@ const closeWorkLog = async (req, res) => {
             return res.status(404).json({ message: 'No open work log found for today to close.' });
         }
 
+        // Enforce project-wise report check for AE, FA, LA roles/designations
+        const designation = (req.user.designation || '').toUpperCase();
+        const role = (req.user.role || '').toUpperCase();
+        const isAE = role.includes('AE') || designation.includes('AE') || designation.includes('AREA EXECUTIVE');
+        const isFA = role.includes('FA') || designation.includes('FA');
+        const isLA = role.includes('LA') || designation.includes('LA') || designation.includes('ARCHITECT');
+
+        if (isAE || isFA || isLA) {
+            let reports = [];
+            if (isAE && existingLog.ae_project_reports) {
+                reports = typeof existingLog.ae_project_reports === 'string'
+                    ? JSON.parse(existingLog.ae_project_reports)
+                    : existingLog.ae_project_reports;
+            } else if (isFA && existingLog.fa_project_reports) {
+                reports = typeof existingLog.fa_project_reports === 'string'
+                    ? JSON.parse(existingLog.fa_project_reports)
+                    : existingLog.fa_project_reports;
+            } else if (existingLog.la_project_reports) {
+                reports = typeof existingLog.la_project_reports === 'string'
+                    ? JSON.parse(existingLog.la_project_reports)
+                    : existingLog.la_project_reports;
+            }
+
+            if (!Array.isArray(reports) || reports.length === 0) {
+                return res.status(400).json({
+                    message: 'You must add at least one Project Wise report before submitting your closing report.'
+                });
+            }
+        }
+
         const updatedLog = await prisma.workLog.update({
             where: { id: existingLog.id },
             data: {
                 logStatus: 'CLOSED',
-                cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : (cre_closing_metrics ? cre_closing_metrics : undefined), // Prisma expects Json Object so if it came as Object leave it, if string parse it. Wait, Prisma Json input needs strict handling.
-                // Correction: Prisma Client expects *Object* or *Array* for Json type.
-                // If multipart -> String -> Parse to Object.
-                // If JSON -> Object -> Use as is.
-                // So: typeof === 'string' ? JSON.parse() : val.
-                // But wait, my previous fix used `JSON.parse`?  Yes.
-                // AND previous code used `JSON.stringify`? Yes, which was WRONG for Object input (double stringify).
-                // So now:
+                cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : (cre_closing_metrics ? cre_closing_metrics : undefined),
                 cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : cre_closing_metrics,
                 fa_closing_metrics: typeof fa_closing_metrics === 'string' ? JSON.parse(fa_closing_metrics) : fa_closing_metrics,
                 la_closing_metrics: typeof la_closing_metrics === 'string' ? JSON.parse(la_closing_metrics) : la_closing_metrics,
@@ -260,7 +298,7 @@ const closeWorkLog = async (req, res) => {
                 customFields: customFields ? {
                     ...(existingLog.customFields && typeof existingLog.customFields === 'object' ? existingLog.customFields : {}),
                     ...customFields
-                } : undefined, // Merge customFields
+                } : undefined,
                 process: process || undefined,
                 remarks: remarks || undefined,
                 cre_synced_calls: typeof req.body.cre_synced_calls === 'string' ? JSON.parse(req.body.cre_synced_calls) : req.body.cre_synced_calls,
@@ -276,7 +314,7 @@ const closeWorkLog = async (req, res) => {
     }
 };
 
-// @desc    Add a Project Report to an OPEN work log
+// @desc    Add a Project Report to a daily work log (can add anytime: now or later)
 // @route   PUT /api/worklogs/project-report
 // @access  Private (Employee)
 const addProjectReport = async (req, res) => {
@@ -289,21 +327,12 @@ const addProjectReport = async (req, res) => {
         const endOfDay = new Date();
         endOfDay.setHours(23, 59, 59, 999);
 
-        const existingLog = await prisma.workLog.findFirst({
+        let existingLog = await prisma.workLog.findFirst({
             where: {
                 userId,
-                date: { gte: startOfDay, lte: endOfDay },
-                logStatus: 'OPEN'
+                date: { gte: startOfDay, lte: endOfDay }
             }
         });
-
-        if (!existingLog) {
-            return res.status(404).json({ message: 'No open work log found for today.' });
-        }
-
-        // Determine which field to update based on user designation
-        const updateData = {};
-        const designation = req.user.designation;
 
         // Parse projectReport if it comes as a string (FormData upload)
         let report = projectReport;
@@ -321,20 +350,57 @@ const addProjectReport = async (req, res) => {
             report.ae_photos = [...(report.ae_photos || []), ...photoPaths];
         }
 
-        if (designation === 'AE') {
+        const designation = (req.user.designation || '').toUpperCase();
+        const role = (req.user.role || '').toUpperCase();
+        const isAE = role.includes('AE') || designation.includes('AE') || designation.includes('AREA EXECUTIVE');
+        const isFA = role.includes('FA') || designation.includes('FA');
+
+        if (!existingLog) {
+            // Auto-create OPEN log for today if employee is adding project report before opening report
+            const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            const createData = {
+                userId,
+                date: new Date(),
+                logStatus: 'OPEN',
+                startTime: currentTime
+            };
+
+            if (isAE) {
+                createData.ae_project_reports = [report];
+            } else if (isFA) {
+                createData.fa_project_reports = [report];
+            } else {
+                createData.la_project_reports = [report];
+            }
+
+            const newLog = await prisma.workLog.create({
+                data: createData
+            });
+
+            await prisma.user.update({
+                where: { id: userId },
+                data: { lastWorkLogDate: new Date() },
+            });
+
+            return res.json(newLog);
+        }
+
+        // Determine which field to update based on user designation / role
+        const updateData = {};
+
+        if (isAE) {
             let existingAE = existingLog.ae_project_reports || [];
             if (typeof existingAE === 'string') existingAE = JSON.parse(existingAE);
             if (!Array.isArray(existingAE)) existingAE = [];
             existingAE.push(report);
             updateData.ae_project_reports = existingAE;
-        } else if (designation === 'FA') {
+        } else if (isFA) {
             let existingFA = existingLog.fa_project_reports || [];
             if (typeof existingFA === 'string') existingFA = JSON.parse(existingFA);
             if (!Array.isArray(existingFA)) existingFA = [];
             existingFA.push(report);
             updateData.fa_project_reports = existingFA;
         } else {
-            // Default to LA for backward compatibility or LA role
             let existingLA = existingLog.la_project_reports || [];
             if (typeof existingLA === 'string') existingLA = JSON.parse(existingLA);
             if (!Array.isArray(existingLA)) existingLA = [];
