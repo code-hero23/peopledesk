@@ -409,7 +409,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
             </div>
 
             {/* Modal: Dual APK Downloads */}
-            <ApkDownloadModal isOpen={showApkModal} onClose={() => setShowApkModal(false)} />
+            {/* <ApkDownloadModal isOpen={showApkModal} onClose={() => setShowApkModal(false)} /> */}
         </aside>
     );
 };
