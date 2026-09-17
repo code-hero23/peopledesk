@@ -160,12 +160,6 @@ const FAWorkLogForm = ({ onSuccess }) => {
         e.preventDefault();
         if (isSubmitting) return;
 
-        if (!hasProjectReports) {
-            toast.error("Please add at least one Project Wise report before submitting your closing report.");
-            setReportType('project');
-            return;
-        }
-
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
@@ -362,24 +356,6 @@ const FAWorkLogForm = ({ onSuccess }) => {
                         ) : isTodayOpen ? (
                             <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-emerald-100 dark:border-slate-800 shadow-xl shadow-emerald-100/20 dark:shadow-none relative overflow-hidden transition-colors">
                                 <MetricsFormLayout title="Closing Report" subtitle="End of day submission" icon={CheckSquare} color="emerald">
-                                    {!hasProjectReports && (
-                                        <div className="mb-6 p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-700 dark:text-amber-400">
-                                            <div className="flex items-center gap-3">
-                                                <AlertTriangle className="flex-shrink-0 text-amber-500" size={22} />
-                                                <div>
-                                                    <p className="text-xs font-black uppercase tracking-wider">Project Wise Report Required</p>
-                                                    <p className="text-xs font-medium text-slate-600 dark:text-slate-300">You must add at least one Project Wise report before submitting your Closing Report.</p>
-                                                </div>
-                                            </div>
-                                            <button
-                                                type="button"
-                                                onClick={() => setReportType('project')}
-                                                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center gap-1.5"
-                                            >
-                                                <Plus size={14} /> Add Project Report
-                                            </button>
-                                        </div>
-                                    )}
                                     <FAMetricsForm data={closingData} handleChange={handleClosingChange} />
                                     {/* Daily Notes */}
                                     <div className="mt-6 bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-[1.5rem] border border-blue-100 dark:border-blue-900/30 space-y-3 transition-colors">
@@ -394,17 +370,8 @@ const FAWorkLogForm = ({ onSuccess }) => {
                                             placeholder="Share daily summary, insights, or updates for Admin and HR..."
                                         ></textarea>
                                     </div>
-                                    <button 
-                                        onClick={handleClosingSubmit} 
-                                        disabled={isSubmitting || isLoading || !hasProjectReports} 
-                                        className={`w-full mt-6 ${!hasProjectReports ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed text-slate-200' : 'bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white active:scale-95'} font-bold py-4 rounded-xl shadow-lg transition-transform flex justify-center items-center gap-2`}
-                                    >
-                                        {isSubmitting || isLoading ? 'Submitting...' : (
-                                            <>
-                                                <CheckSquare size={20} /> 
-                                                {!hasProjectReports ? 'Add Project Wise Report First to Submit Closing' : 'Submit Closing Report'}
-                                            </>
-                                        )}
+                                    <button onClick={handleClosingSubmit} disabled={isSubmitting || isLoading} className="w-full mt-6 bg-emerald-600 hover:bg-emerald-700 dark:bg-emerald-600 dark:hover:bg-emerald-500 text-white font-bold py-4 rounded-xl shadow-lg transition-transform active:scale-95 flex justify-center items-center gap-2">
+                                        {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={20} /> Submit Closing Report</>}
                                     </button>
                                 </MetricsFormLayout>
                             </div>

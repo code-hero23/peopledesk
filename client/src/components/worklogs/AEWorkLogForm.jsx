@@ -309,12 +309,6 @@ const AEWorkLogForm = ({ onSuccess }) => {
         e.preventDefault();
         if (isSubmitting) return;
 
-        if (!hasProjectReports) {
-            toast.error("Please add at least one Project Wise report before submitting your closing report.");
-            setReportType('project');
-            return;
-        }
-
         setConfirmationConfig({
             isOpen: true,
             title: 'Submit Closing Report',
@@ -411,24 +405,6 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                 key="daily" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
                                 onSubmit={handleClosingSubmit} className="space-y-6"
                             >
-                                {!hasProjectReports && (
-                                    <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-700 dark:text-amber-400">
-                                        <div className="flex items-center gap-3">
-                                            <AlertTriangle className="flex-shrink-0 text-amber-500" size={22} />
-                                            <div>
-                                                <p className="text-xs font-black uppercase tracking-wider">Project Wise Report Required</p>
-                                                <p className="text-xs font-medium text-slate-600 dark:text-slate-300">You must add at least one Project Wise report before submitting your Closing Report.</p>
-                                            </div>
-                                        </div>
-                                        <button
-                                            type="button"
-                                            onClick={() => setReportType('project')}
-                                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center gap-1.5"
-                                        >
-                                            <Plus size={14} /> Add Project Report
-                                        </button>
-                                    </div>
-                                )}
                                 <Card title="Final Remarks" icon={Clipboard} color="slate">
                                     <Label text="Daily Summary / Remarks" />
                                     <textarea
@@ -445,17 +421,8 @@ const AEWorkLogForm = ({ onSuccess }) => {
                                         />
                                     </div>
                                 </Card>
-                                <button 
-                                    type="submit" 
-                                    disabled={isSubmitting || isLoading || !hasProjectReports} 
-                                    className={`w-full ${!hasProjectReports ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed text-slate-200' : 'bg-slate-900 hover:bg-black text-white active:scale-[0.98]'} font-bold py-5 rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2`}
-                                >
-                                    {isSubmitting || isLoading ? 'Submitting...' : (
-                                        <>
-                                            <CheckSquare size={18} /> 
-                                            {!hasProjectReports ? 'Add Project Wise Report First to Complete Day' : 'Complete Day & Check-Out'}
-                                        </>
-                                    )}
+                                <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-slate-900 hover:bg-black text-white font-bold py-5 rounded-2xl shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-2">
+                                    {isSubmitting || isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Complete Day & Check-Out</>}
                                 </button>
                             </motion.form>
                         )

@@ -249,24 +249,14 @@ const closeWorkLog = async (req, res) => {
             return res.status(404).json({ message: 'No open work log found for today to close.' });
         }
 
-        // Enforce project-wise report check for AE, FA, LA roles/designations
+        // Enforce project-wise report check strictly for LA designation only
         const designation = (req.user.designation || '').toUpperCase();
         const role = (req.user.role || '').toUpperCase();
-        const isAE = role.includes('AE') || designation.includes('AE') || designation.includes('AREA EXECUTIVE');
-        const isFA = role.includes('FA') || designation.includes('FA');
         const isLA = role.includes('LA') || designation.includes('LA') || designation.includes('ARCHITECT');
 
-        if (isAE || isFA || isLA) {
+        if (isLA) {
             let reports = [];
-            if (isAE && existingLog.ae_project_reports) {
-                reports = typeof existingLog.ae_project_reports === 'string'
-                    ? JSON.parse(existingLog.ae_project_reports)
-                    : existingLog.ae_project_reports;
-            } else if (isFA && existingLog.fa_project_reports) {
-                reports = typeof existingLog.fa_project_reports === 'string'
-                    ? JSON.parse(existingLog.fa_project_reports)
-                    : existingLog.fa_project_reports;
-            } else if (existingLog.la_project_reports) {
+            if (existingLog.la_project_reports) {
                 reports = typeof existingLog.la_project_reports === 'string'
                     ? JSON.parse(existingLog.la_project_reports)
                     : existingLog.la_project_reports;
