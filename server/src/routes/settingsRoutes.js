@@ -5,6 +5,11 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 
 router.route('/')
     .get(protect, getSettings)
-    .post(protect, authorize('ADMIN'), updateSetting);
+    .post(protect, (req, res, next) => {
+        if (req.user?.role === 'ANALYZER' && req.body?.key === 'EXCLUDED_EMPLOYEE_NUMBERS') {
+            return next();
+        }
+        return authorize('ADMIN')(req, res, next);
+    }, updateSetting);
 
 module.exports = router;

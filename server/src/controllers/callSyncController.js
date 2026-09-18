@@ -34,7 +34,7 @@ const getLatestRemoteSyncRequest = async (deviceId, userId) => {
 const createActivationCode = async (req, res) => {
   try {
     const userId = Number(req.body.userId || req.user.id);
-    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
+    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not allowed to activate this employee device' });
     }
     const employee = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, role: true, status: true, designation: true } });
@@ -77,7 +77,7 @@ const enrollDevice = async (req, res) => {
 const getSyncStatus = async (req, res) => {
   try {
     const userId = Number(req.query.userId || req.user.id);
-    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
+    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not allowed to view this device status' });
     }
     const device = await prisma.callSyncDevice.findFirst({
@@ -110,7 +110,7 @@ const getSyncStatus = async (req, res) => {
 const requestRemoteSync = async (req, res) => {
   try {
     const userId = Number(req.body.userId || req.user.id);
-    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
+    if (userId !== Number(req.user.id) && !['ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not allowed to trigger sync for this employee' });
     }
 
@@ -149,7 +149,7 @@ const requestRemoteSync = async (req, res) => {
 
 const requestRemoteSyncForAll = async (req, res) => {
   try {
-    if (!['ADMIN', 'HR'].includes(req.user.role)) {
+    if (!['ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not allowed to trigger sync for all employees' });
     }
 
@@ -263,7 +263,7 @@ const recordDeviceAttempt = async (req, res, next) => {
 
 const getBulkSyncStatus = async (req, res) => {
   try {
-    if (!['ADMIN', 'HR', 'BUSINESS_HEAD'].includes(req.user.role)) {
+    if (!['ADMIN', 'HR', 'BUSINESS_HEAD', 'ANALYZER'].includes(req.user.role)) {
       return res.status(403).json({ message: 'Not allowed to view bulk sync status' });
     }
 

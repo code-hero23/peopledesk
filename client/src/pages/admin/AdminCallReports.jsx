@@ -20,6 +20,7 @@ import { toast } from 'react-toastify';
 
 const AdminCallReports = () => {
     const dispatch = useDispatch();
+    const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
     const { callStats, excludedNumbers, isLoading } = useSelector((state) => state.admin);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedEmployee, setSelectedEmployee] = useState(null);
