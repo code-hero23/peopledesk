@@ -523,8 +523,6 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Status</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">In Device</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Out Device</th>
-                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Time In</th>
-                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Time Out</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Tea Break</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Lunch Break</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Meetings</th>
@@ -534,14 +532,14 @@ const Attendance = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="10" className="text-center py-12 text-slate-400 font-bold uppercase tracking-widest">
+                                    <td colSpan="8" className="text-center py-12 text-slate-400 font-bold uppercase tracking-widest">
                                         <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-blue-500 opacity-60" />
                                         Loading Daily Attendance Matrix...
                                     </td>
                                 </tr>
                             ) : filteredAttendance.length === 0 ? (
                                 <tr>
-                                    <td colSpan="10" className="text-center py-12 text-slate-400 font-bold text-xs italic">
+                                    <td colSpan="8" className="text-center py-12 text-slate-400 font-bold text-xs italic">
                                         No attendance records matching your criteria.
                                     </td>
                                 </tr>
@@ -592,68 +590,86 @@ const Attendance = () => {
                                             </div>
                                         </td>
 
-                                        {/* In Device */}
+                                        {/* In Device & Time In */}
                                         <td className="px-6 py-4 text-center">
-                                            {record.deviceInfo ? (
-                                                <div className="flex justify-center" title={record.deviceInfo}>
-                                                    {(() => {
-                                                        const info = record.deviceInfo.toLowerCase();
-                                                        const isMobile = info.startsWith('mobile') ||
-                                                            info.includes('android') ||
-                                                            info.includes('iphone') ||
-                                                            info.includes('ipad');
+                                            {record.status === 'PRESENT' || record.timeIn || record.deviceInfo ? (
+                                                <div className="flex flex-col items-center justify-center gap-1.5">
+                                                    {record.deviceInfo ? (
+                                                        <div className="flex justify-center" title={record.deviceInfo}>
+                                                            {(() => {
+                                                                const info = record.deviceInfo.toLowerCase();
+                                                                const isMobile = info.startsWith('mobile') ||
+                                                                    info.includes('android') ||
+                                                                    info.includes('iphone') ||
+                                                                    info.includes('ipad');
 
-                                                        return isMobile ? (
-                                                            <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500">
-                                                                <Smartphone size={14} />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500">
-                                                                <Monitor size={14} />
-                                                            </div>
-                                                        );
-                                                    })()}
+                                                                return isMobile ? (
+                                                                    <div className="p-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 shadow-xs" title={`Mobile: ${record.deviceInfo}`}>
+                                                                        <Smartphone size={14} />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 shadow-xs" title={`Desktop: ${record.deviceInfo}`}>
+                                                                        <Monitor size={14} />
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-slate-300 dark:text-slate-700 text-xs font-bold">-</span>
+                                                    )}
+
+                                                    {record.timeIn ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 shadow-xs whitespace-nowrap">
+                                                            {formatTime(record.timeIn)}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400 dark:text-slate-600 font-mono text-[10px]">--:--</span>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <span className="text-slate-300 dark:text-slate-700">-</span>
                                             )}
                                         </td>
 
-                                        {/* Out Device */}
+                                        {/* Out Device & Time Out */}
                                         <td className="px-6 py-4 text-center">
-                                            {record.checkoutDeviceInfo ? (
-                                                <div className="flex justify-center" title={record.checkoutDeviceInfo}>
-                                                    {(() => {
-                                                        const info = record.checkoutDeviceInfo.toLowerCase();
-                                                        const isMobile = info.startsWith('mobile') ||
-                                                            info.includes('android') ||
-                                                            info.includes('iphone') ||
-                                                            info.includes('ipad');
+                                            {record.status === 'PRESENT' || record.timeOut || record.checkoutDeviceInfo ? (
+                                                <div className="flex flex-col items-center justify-center gap-1.5">
+                                                    {record.checkoutDeviceInfo ? (
+                                                        <div className="flex justify-center" title={record.checkoutDeviceInfo}>
+                                                            {(() => {
+                                                                const info = record.checkoutDeviceInfo.toLowerCase();
+                                                                const isMobile = info.startsWith('mobile') ||
+                                                                    info.includes('android') ||
+                                                                    info.includes('iphone') ||
+                                                                    info.includes('ipad');
 
-                                                        return isMobile ? (
-                                                            <div className="p-1.5 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500">
-                                                                <Smartphone size={14} />
-                                                            </div>
-                                                        ) : (
-                                                            <div className="p-1.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500">
-                                                                <Monitor size={14} />
-                                                            </div>
-                                                        );
-                                                    })()}
+                                                                return isMobile ? (
+                                                                    <div className="p-1 rounded-lg bg-rose-50 dark:bg-rose-950/40 text-rose-500 shadow-xs" title={`Mobile: ${record.checkoutDeviceInfo}`}>
+                                                                        <Smartphone size={14} />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="p-1 rounded-lg bg-emerald-50 dark:bg-emerald-950/40 text-emerald-500 shadow-xs" title={`Desktop: ${record.checkoutDeviceInfo}`}>
+                                                                        <Monitor size={14} />
+                                                                    </div>
+                                                                );
+                                                            })()}
+                                                        </div>
+                                                    ) : (
+                                                        <span className="text-slate-300 dark:text-slate-700 text-xs font-bold">-</span>
+                                                    )}
+
+                                                    {record.timeOut ? (
+                                                        <span className="inline-flex items-center px-2 py-0.5 rounded-md font-mono font-bold text-[11px] bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 shadow-xs whitespace-nowrap">
+                                                            {formatTime(record.timeOut)}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-slate-400 dark:text-slate-600 font-mono text-[10px]">--:--</span>
+                                                    )}
                                                 </div>
                                             ) : (
                                                 <span className="text-slate-300 dark:text-slate-700">-</span>
                                             )}
-                                        </td>
-
-                                        {/* Time In */}
-                                        <td className="px-6 py-4 text-center font-mono text-slate-700 dark:text-slate-300 font-bold">
-                                            {record.timeIn ? formatTime(record.timeIn) : '--:--'}
-                                        </td>
-
-                                        {/* Time Out */}
-                                        <td className="px-6 py-4 text-center font-mono text-slate-700 dark:text-slate-300 font-bold">
-                                            {record.timeOut ? formatTime(record.timeOut) : '--:--'}
                                         </td>
 
                                         {/* Tea Break */}
