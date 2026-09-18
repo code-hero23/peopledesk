@@ -32,7 +32,8 @@ import {
   Pause,
   RotateCcw,
   Route,
-  Car
+  Car,
+  Crosshair
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ApkDownloadModal from '../../components/common/ApkDownloadModal';
@@ -347,6 +348,26 @@ const AELiveTracker = () => {
   const stopMarkersRef = useRef([]);
   const playbackMarkerRef = useRef(null);
 
+  // Helper to remove all route polylines and history markers cleanly
+  const clearMapRoute = () => {
+    if (polylineRef.current) {
+      polylineRef.current.remove();
+      polylineRef.current = null;
+    }
+    if (casingPolylineRef.current) {
+      casingPolylineRef.current.remove();
+      casingPolylineRef.current = null;
+    }
+    historyMarkersRef.current.forEach(m => m.remove());
+    historyMarkersRef.current = [];
+    stopMarkersRef.current.forEach(m => m.remove());
+    stopMarkersRef.current = [];
+    if (playbackMarkerRef.current) {
+      playbackMarkerRef.current.remove();
+      playbackMarkerRef.current = null;
+    }
+  };
+
   // Load Leaflet CSS and JS dynamically if not present
   useEffect(() => {
     if (!document.getElementById('leaflet-css')) {
@@ -382,18 +403,18 @@ const AELiveTracker = () => {
     if (type === 'google_satellite') {
       return {
         url: 'https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',
-        options: { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' }
+        options: { maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' }
       };
     }
     if (type === 'google_roadmap') {
       return {
         url: 'https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}',
-        options: { maxZoom: 20, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' }
+        options: { maxZoom: 21, subdomains: ['mt0', 'mt1', 'mt2', 'mt3'], attribution: '&copy; Google Maps' }
       };
     }
     return {
       url: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-      options: { attribution: '&copy; OpenStreetMap contributors' }
+      options: { maxZoom: 19, attribution: '&copy; OpenStreetMap contributors' }
     };
   };
 
@@ -413,8 +434,9 @@ const AELiveTracker = () => {
     if (mapRef.current && !leafletMap.current && window.L) {
       leafletMap.current = window.L.map(mapRef.current, {
         zoomControl: false,
-        preferCanvas: true
-      }).setView([13.0827, 80.2707], 11);
+        preferCanvas: true,
+        maxZoom: 21
+      }).setView([13.0827, 80.2707], 12);
 
       // Add zoom control at top-left
       window.L.control.zoom({ position: 'topleft' }).addTo(leafletMap.current);
@@ -627,9 +649,21 @@ const AELiveTracker = () => {
     setSelectedAE(aeItem);
     // On mobile, switch to map view when an AE is tapped
     setMobileTab('map');
+
+    // Immediately remove previous employee's route & markers so old paths don't linger
+    clearMapRoute();
+    setHistoryLogs([]);
+    setSnappedPathCoords([]);
+    setRoadDistanceKm(null);
+    setIsRoadSnapped(false);
+    setDetectedStopsList([]);
+    setIsPlaying(false);
+    setPlaybackIndex(0);
+
     const loc = aeItem.latestLocation;
     if (loc && loc.latitude && loc.longitude && leafletMap.current) {
-      leafletMap.current.flyTo([loc.latitude, loc.longitude], 15, { duration: 1.2 });
+      // Zoom deeply into the employee's current area (street level zoom 17)
+      leafletMap.current.flyTo([loc.latitude, loc.longitude], 17, { duration: 1.2 });
       if (markersRef.current[aeItem.user.id]) {
         setTimeout(() => {
           markersRef.current[aeItem.user.id]?.openPopup();
@@ -646,6 +680,10 @@ const AELiveTracker = () => {
     setLoadingHistory(true);
     setIsPlaying(false);
     setPlaybackIndex(0);
+
+    // Clean up previous polyline, casing, & markers immediately
+    clearMapRoute();
+
     try {
       const res = await axios.get(`${API_BASE}/location/history/${aeUserId}?date=${targetDate}`, {
         headers: { Authorization: `Bearer ${user.token}` }
@@ -653,19 +691,8 @@ const AELiveTracker = () => {
       const logs = res.data.logs || [];
       setHistoryLogs(logs);
 
-      // Clean up previous polyline & markers
-      if (polylineRef.current) {
-        polylineRef.current.remove();
-        polylineRef.current = null;
-      }
-      historyMarkersRef.current.forEach(m => m.remove());
-      historyMarkersRef.current = [];
-      stopMarkersRef.current.forEach(m => m.remove());
-      stopMarkersRef.current = [];
-      if (playbackMarkerRef.current) {
-        playbackMarkerRef.current.remove();
-        playbackMarkerRef.current = null;
-      }
+      // Clean up previous polyline & markers again before rendering new route
+      clearMapRoute();
 
       if (logs.length > 0 && leafletMap.current && window.L) {
         // Road-snapped street navigation route (following actual city streets)
@@ -738,6 +765,10 @@ const AELiveTracker = () => {
             Time: ${new Date(startPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
           </div>
         `);
+        // Add click handler on start marker to zoom in deep
+        startMarker.on('click', () => {
+          leafletMap.current?.flyTo([startPoint.latitude, startPoint.longitude], 18, { duration: 0.8 });
+        });
         historyMarkersRef.current.push(startMarker);
 
         // Add End marker (Red circle / Blue rotating vehicle if currently moving)
@@ -758,6 +789,9 @@ const AELiveTracker = () => {
               Last Seen: ${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
             </div>
           `);
+          endMarker.on('click', () => {
+            leafletMap.current?.flyTo([endPoint.latitude, endPoint.longitude], 18, { duration: 0.8 });
+          });
           historyMarkersRef.current.push(endMarker);
         }
 
@@ -805,13 +839,17 @@ const AELiveTracker = () => {
                 </div>
               </div>
             `);
+          stopMarker.on('click', () => {
+            leafletMap.current?.flyTo([stop.latitude, stop.longitude], 18, { duration: 0.8 });
+          });
           stopMarkersRef.current.push(stopMarker);
         });
 
-        leafletMap.current.fitBounds(polylineRef.current.getBounds(), { padding: [50, 50] });
+        leafletMap.current.fitBounds(polylineRef.current.getBounds(), { padding: [40, 40], maxZoom: 18 });
         const distanceLabel = snapped.roadDistanceKm ? `${snapped.roadDistanceKm} km road route` : `${calculateTotalDistanceKm(logs)} km`;
         toast.info(`Traced ${logs.length} GPS fixes (${distanceLabel}, ${detectedStops.length} stops) for ${targetDate}`);
       } else {
+        clearMapRoute();
         setDetectedStopsList([]);
         toast.warning(`No location logs found between 7:00 AM and 8:00 PM IST on ${targetDate}`);
       }
@@ -824,22 +862,7 @@ const AELiveTracker = () => {
   };
 
   const handleClearRoute = () => {
-    if (polylineRef.current) {
-      polylineRef.current.remove();
-      polylineRef.current = null;
-    }
-    if (casingPolylineRef.current) {
-      casingPolylineRef.current.remove();
-      casingPolylineRef.current = null;
-    }
-    historyMarkersRef.current.forEach(m => m.remove());
-    historyMarkersRef.current = [];
-    stopMarkersRef.current.forEach(m => m.remove());
-    stopMarkersRef.current = [];
-    if (playbackMarkerRef.current) {
-      playbackMarkerRef.current.remove();
-      playbackMarkerRef.current = null;
-    }
+    clearMapRoute();
     setIsPlaying(false);
     setPlaybackIndex(0);
     setHistoryLogs([]);
@@ -1415,6 +1438,20 @@ const AELiveTracker = () => {
               </div>
 
               <div className="flex items-center gap-1.5 sm:ml-auto">
+                <button
+                  onClick={() => {
+                    const loc = selectedAE?.latestLocation;
+                    if (loc?.latitude && loc?.longitude && leafletMap.current) {
+                      leafletMap.current.flyTo([loc.latitude, loc.longitude], 18, { duration: 1.0 });
+                      markersRef.current[selectedAE.user.id]?.openPopup();
+                    }
+                  }}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white text-xs font-bold transition-all flex items-center gap-1 border border-slate-700 shrink-0"
+                  title="Deep zoom into current location (Street level)"
+                >
+                  <Crosshair size={13} />
+                  <span className="hidden md:inline">Deep Focus</span>
+                </button>
                 <input
                   type="date"
                   value={selectedDate}
