@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
+const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
 
 // @desc    Submit a daily work log
 // @route   POST /api/worklogs
@@ -531,35 +531,39 @@ const syncCallLogs = async (req, res) => {
         const simFilterUpper = String(simFilter || '').trim().toUpperCase();
         const isAllSims = !simFilter || simFilterUpper === '0' || simFilterUpper === 'ALL' || simFilterUpper === 'BOTH';
 
-        const canonicalSimSlot = !isAllSims ? String(simFilter).trim() : null;
-        const matchesSelectedSim = (log, target) => {
-            const normalizedTarget = normalizeText(target);
-            const logSlot = normalizeText(log.simSlot);
-            const logId = normalizeText(log.simId);
-
-            return (
-                logSlot === normalizedTarget ||
-                logId === normalizedTarget
-            );
-        };
+        const canonicalSimSlot = !isAllSims ? String(simFilter).trim().replace(/^(sim|slot)\s*/i, '') : null;
         const normalizeAcceptedLog = (log) => {
             const normalized = { ...log };
-            const existingSlot = String(normalized.simSlot || '').trim();
-            if (canonicalSimSlot && (existingSlot === '' || existingSlot === '0' || existingSlot === 'unknown')) {
+            const existingSlot = String(normalized.simSlot || '').trim().toLowerCase().replace(/^(sim|slot)\s*/i, '');
+            if (canonicalSimSlot && (existingSlot === '' || existingSlot === '0' || existingSlot === 'unknown' || existingSlot === 'undefined')) {
                 normalized.simSlot = canonicalSimSlot;
             }
             return normalized;
         };
 
-        let newLogs = rawLogs;
+        const matchesSelectedSim = (log, target) => {
+            if (!target || isAllSims) return true;
+            const normalizedTarget = normalizeText(target).replace(/^(sim|slot)\s*/i, '');
+            const logSlot = normalizeText(log.simSlot).replace(/^(sim|slot)\s*/i, '');
+            const logId = normalizeText(log.simId);
+            const logLabel = normalizeText(log.simLabel);
+
+            if (logSlot === normalizedTarget || logId === normalizedTarget) return true;
+            if (logLabel && (logLabel.includes(`sim ${normalizedTarget}`) || logLabel.includes(`slot ${normalizedTarget}`))) return true;
+            // If the incoming log doesn't specify a distinct other slot (0/unknown/empty), accept it under this official SIM
+            if (!logSlot || logSlot === '0' || logSlot === 'unknown' || logSlot === 'undefined') return true;
+            return false;
+        };
+
+        // Normalize first so slot 0/unknown is properly attributed to the device's designated official SIM
+        let newLogs = rawLogs.map(normalizeAcceptedLog);
         if (!isAllSims) {
-            newLogs = rawLogs.filter(log => matchesSelectedSim(log, simFilter));
+            newLogs = newLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
-        newLogs = newLogs.map(normalizeAcceptedLog);
 
-        // HEARTBEAT LOGIC: If no logs after filtering, still perform an upsert for "today" to update updatedAt
-        const isHeartbeat = !newLogs || newLogs.length === 0;
+        // HEARTBEAT LOGIC: Only true if the device actually sent 0 raw logs (a heartbeat ping) or nothing left after processing
+        const isHeartbeat = rawReceived === 0 || !newLogs || newLogs.length === 0;
         
         const user = await prisma.user.findUnique({ 
             where: { id: parseInt(userId) }, 
@@ -572,8 +576,8 @@ const syncCallLogs = async (req, res) => {
                          user.designation.toUpperCase().includes('ARCHITECT')
                      ));
 
-        if (isAE || !user?.callAnalyticsViewEnabled) {
-            console.log(`[Call Sync Blocked] Ignoring call log sync for AE / disabled user ${userId} (${user?.name || 'No User'})`);
+        if (isAE) {
+            console.log(`[Call Sync Blocked] Ignoring call log sync for AE user ${userId} (${user?.name || 'No User'})`);
             return res.status(200).json({ 
                 message: 'Call sync is disabled for AE / this employee role',
                 totalCalls: 0,
@@ -582,21 +586,21 @@ const syncCallLogs = async (req, res) => {
             });
         }
 
+        // Ensure call analytics view is enabled for enrolled syncing employees
+        if (!user?.callAnalyticsViewEnabled) {
+            await prisma.user.update({ where: { id: userId }, data: { callAnalyticsViewEnabled: true } }).catch(() => {});
+        }
+
         console.log(`[Sync] User ${userId} (${user?.name || "No User"}) syncing ${isHeartbeat ? '0 (Heartbeat)' : newLogs.length} logs. SIM Filter: ${simFilter}`);
 
         if (isHeartbeat) {
-            // Create a dummy group for today so the upsert loop runs and updates updatedAt
-            const todayIST = new Date(Date.now() + (5.5 * 60 * 60 * 1000));
-            const dateStr = todayIST.toISOString().split('T')[0];
-            const targetDate = new Date(dateStr);
-            targetDate.setHours(0, 0, 0, 0);
-
+            const todayIST = getStartOfDayIST();
             await prisma.callLog.upsert({
-                where: { userId_date: { userId, date: targetDate } },
+                where: { userId_date: { userId, date: todayIST } },
                 update: { updatedAt: new Date() }, // Force update timestamp
                 create: {
                     userId,
-                    date: targetDate,
+                    date: todayIST,
                     calls: [],
                     totalCalls: 0
                 }
@@ -618,6 +622,11 @@ const syncCallLogs = async (req, res) => {
             // Handle some plugins returning seconds instead of ms (10-digit)
             if (typeof timestamp === 'number' && timestamp < 10000000000) {
                 timestamp = timestamp * 1000;
+            } else if (typeof timestamp === 'string') {
+                const num = Number(timestamp.trim());
+                if (!isNaN(num) && num > 0) {
+                    timestamp = num < 10000000000 ? num * 1000 : num;
+                }
             }
 
             // Normalization: Ensure the object itself has the ms timestamp
@@ -643,8 +652,7 @@ const syncCallLogs = async (req, res) => {
 
         // Process each day group
         for (const [dateStr, dayLogs] of Object.entries(groupedLogs)) {
-            const targetDate = new Date(dateStr);
-            targetDate.setHours(0, 0, 0, 0);
+            const targetDate = getStartOfDayIST(dateStr);
 
             const existingCallLog = await prisma.callLog.findUnique({
                 where: { userId_date: { userId, date: targetDate } }
@@ -652,7 +660,7 @@ const syncCallLogs = async (req, res) => {
 
             let consolidatedLogs = [];
             if (existingCallLog) {
-                const shouldReplaceExistingForSim = Boolean(replaceExistingForSim) && !isAllSims;
+                const shouldReplaceExistingForSim = Boolean(replaceExistingForSim) && !isAllSims && dayLogs.length > 0;
 
                 if (shouldReplaceExistingForSim) {
                     consolidatedLogs = dayLogs.map(normalizeAcceptedLog);
@@ -769,27 +777,49 @@ const getMyCallLogs = async (req, res) => {
     }
 };
 
+const getCallTimestamp = (c) => {
+    if (!c) return null;
+    const raw = c.date ?? c.timestamp ?? c.time;
+    if (raw === undefined || raw === null || raw === '') return null;
+    if (raw instanceof Date) return raw.getTime();
+    if (typeof raw === 'number') {
+        return raw < 10000000000 ? raw * 1000 : raw;
+    }
+    if (typeof raw === 'string') {
+        const num = Number(raw.trim());
+        if (!isNaN(num) && num > 0) {
+            return num < 10000000000 ? num * 1000 : num;
+        }
+        const parsed = new Date(raw).getTime();
+        if (!isNaN(parsed)) return parsed;
+    }
+    return null;
+};
+
 // @desc    Get all call stats for Admin
 // @route   GET /api/worklogs/call-stats
 // @access  Private (Admin)
 const getAllCallStats = async (req, res) => {
     try {
         const { startDate, endDate, simFilter } = req.query;
-        // Interpret date strings with safe boundaries to prevent timezone clipping (IST vs UTC)
-        let start = startDate ? new Date(startDate + 'T00:00:00') : new Date();
-        start.setHours(0, 0, 0, 0);
-        let startUtc = startDate ? new Date(startDate + 'T00:00:00Z') : new Date();
-        let queryStart = start < startUtc ? start : startUtc;
 
-        let end = endDate ? new Date(endDate + 'T23:59:59.999') : new Date();
-        let endUtc = endDate ? new Date(endDate + 'T23:59:59.999Z') : new Date();
-        let queryEnd = end > endUtc ? end : endUtc;
+        // Expanded query bounds (+/- 24 hours) to guarantee records are never clipped by UTC vs IST DB storage
+        let queryStart, queryEnd;
+        if (startDate && endDate) {
+            queryStart = new Date(getStartOfDayIST(startDate).getTime() - (24 * 60 * 60 * 1000));
+            queryEnd = new Date(getEndOfDayIST(endDate).getTime() + (24 * 60 * 60 * 1000));
+        } else {
+            const defaultStart = getCycleStartDateIST();
+            const defaultEnd = getCycleEndDateIST();
+            queryStart = new Date(defaultStart.getTime() - (24 * 60 * 60 * 1000));
+            queryEnd = new Date(defaultEnd.getTime() + (24 * 60 * 60 * 1000));
+        }
 
         const callLogs = await prisma.callLog.findMany({
             where: {
                 date: { gte: queryStart, lte: queryEnd },
                 user: {
-                    callAnalyticsViewEnabled: true,
+                    status: 'ACTIVE',
                     NOT: [
                         { designation: { contains: 'AE', mode: 'insensitive' } },
                         { designation: { contains: 'Architect', mode: 'insensitive' } }
@@ -817,40 +847,35 @@ const getAllCallStats = async (req, res) => {
 
         // Filter inner calls by specific date and SIM slot
         const stats = callLogs.map(log => {
-            let filteredCalls = log.calls || [];
+            let filteredCalls = Array.isArray(log.calls) ? [...log.calls] : [];
 
-            // 1. Filter by DATE (to remove昨日 logs synced today) - IST Aware
+            // 1. Filter by DATE in IST (UTC+5:30)
             if (startDate && endDate) {
-                const startOfIstDay = (dtStr) => {
-                    const utcDate = new Date(dtStr + 'T00:00:00Z'); // Force UTC parse
-                    return utcDate.getTime() - (5.5 * 60 * 60 * 1000);
-                };
-                
-                const s = startOfIstDay(startDate);
-                const e = startOfIstDay(endDate) + (24 * 60 * 60 * 1000) - 1; // End of IST day
+                const s = getStartOfDayIST(startDate).getTime();
+                const e = getEndOfDayIST(endDate).getTime();
 
                 filteredCalls = filteredCalls.filter(c => {
-                    if (!c.date) return false;
-                    const timestamp = !isNaN(c.date) ? parseInt(c.date) : new Date(c.date).getTime();
-                    return timestamp >= s && timestamp <= e;
+                    const ts = getCallTimestamp(c);
+                    // If call has no timestamp, keep it if parent log date falls in range
+                    if (ts === null) {
+                        const logDateTs = log.date ? new Date(log.date).getTime() : null;
+                        return logDateTs !== null ? (logDateTs >= s && logDateTs <= e) : true;
+                    }
+                    return ts >= s && ts <= e;
                 });
-                
-                if (log.userId === 1 || log.userId === 2 || filteredCalls.length > 0) { 
-                    console.log(`[Debug] User ${log.userId}: Found ${filteredCalls.length}/${log.calls.length} calls in range.`);
-                }
             }
 
             // 2. Filter by SIM if provided
-            if (simFilter && String(simFilter) !== 'ALL' && String(simFilter) !== '0') {
-                const slot = String(simFilter).toLowerCase();
+            if (simFilter && String(simFilter).toUpperCase() !== 'ALL' && String(simFilter) !== '0') {
+                const slot = String(simFilter).toLowerCase().replace(/^(sim|slot)\s*/i, '');
                 filteredCalls = filteredCalls.filter(c => {
-                    const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
-                    const cLabel = String(c.simLabel || "").toLowerCase().replace(/^sim\s*/i, '');
-                    return cSlot === slot || cLabel === slot;
+                    const cSlot = String(c.simSlot || c.simId || "").toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                    const cLabel = String(c.simLabel || "").toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                    return cSlot === slot || cLabel === slot || cLabel.includes(`sim ${slot}`) || cLabel.includes(`slot ${slot}`);
                 });
             }
 
-            const deviceLastSuccess = log.user.callSyncDevices?.[0]?.lastSuccessAt;
+            const deviceLastSuccess = log.user?.callSyncDevices?.[0]?.lastSuccessAt;
             const effectiveLastSync = deviceLastSuccess && new Date(deviceLastSuccess) > new Date(log.updatedAt)
                 ? deviceLastSuccess
                 : log.updatedAt;
@@ -859,11 +884,11 @@ const getAllCallStats = async (req, res) => {
                 id: log.id,
                 date: log.date,
                 lastSync: effectiveLastSync,
-                user: log.user.name,
-                designation: log.user.designation,
-                role: log.user.role,
-                userId: log.user.id,
-                empId: `EMP-${log.user.id}`,
+                user: log.user?.name || 'Unknown Personnel',
+                designation: log.user?.designation || 'OTHER',
+                role: log.user?.role || 'EMPLOYEE',
+                userId: log.user?.id || log.userId,
+                empId: `EMP-${log.user?.id || log.userId}`,
                 calls: filteredCalls,
                 totalCalls: filteredCalls.length
             };
@@ -873,7 +898,7 @@ const getAllCallStats = async (req, res) => {
         const excludedSetting = await prisma.globalSetting.findUnique({
             where: { key: 'EXCLUDED_EMPLOYEE_NUMBERS' }
         });
-        const excludedNumbers = excludedSetting ? excludedSetting.value.split(',').map(n => n.trim()) : [];
+        const excludedNumbers = excludedSetting ? excludedSetting.value.split(',').map(n => n.trim()).filter(Boolean) : [];
 
         res.json({ stats, excludedNumbers });
     } catch (error) {

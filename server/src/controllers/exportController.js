@@ -1142,13 +1142,15 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
     const defaultEnd = getCycleEndDateIST();
     const start = startDate ? getStartOfDayIST(startDate) : defaultStart;
     const end = endDate ? getEndOfDayIST(endDate) : defaultEnd;
+    const queryStart = new Date(start.getTime() - (24 * 60 * 60 * 1000));
+    const queryEnd = new Date(end.getTime() + (24 * 60 * 60 * 1000));
 
     // 2. Fetch Call Logs
     const callLogs = await prisma.callLog.findMany({
         where: {
-            date: { gte: start, lte: end },
+            date: { gte: queryStart, lte: queryEnd },
             user: {
-                callAnalyticsViewEnabled: true,
+                status: 'ACTIVE',
                 NOT: [
                     { designation: { contains: 'AE', mode: 'insensitive' } },
                     { designation: { contains: 'Architect', mode: 'insensitive' } }
@@ -1167,7 +1169,7 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
     const excludedSetting = await prisma.globalSetting.findUnique({
         where: { key: 'EXCLUDED_EMPLOYEE_NUMBERS' }
     });
-    const excludedNumbers = excludedSetting ? excludedSetting.value.split(',').map(n => n.trim()) : [];
+    const excludedNumbers = excludedSetting ? excludedSetting.value.split(',').map(n => n.trim()).filter(Boolean) : [];
 
     // 4. Process Data
     const userGroups = {};
@@ -1182,24 +1184,47 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
         return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
     };
 
+    const getCallTimestamp = (c) => {
+        if (!c) return null;
+        const raw = c.date ?? c.timestamp ?? c.time;
+        if (raw === undefined || raw === null || raw === '') return null;
+        if (raw instanceof Date) return raw.getTime();
+        if (typeof raw === 'number') {
+            return raw < 10000000000 ? raw * 1000 : raw;
+        }
+        if (typeof raw === 'string') {
+            const num = Number(raw.trim());
+            if (!isNaN(num) && num > 0) {
+                return num < 10000000000 ? num * 1000 : num;
+            }
+            const parsed = new Date(raw).getTime();
+            if (!isNaN(parsed)) return parsed;
+        }
+        return null;
+    };
+
     callLogs.forEach(log => {
-        let filteredCalls = log.calls || [];
+        let filteredCalls = Array.isArray(log.calls) ? [...log.calls] : [];
 
         if (startDate && endDate) {
             const sTime = getStartOfDayIST(startDate).getTime();
             const eTime = getEndOfDayIST(endDate).getTime();
             filteredCalls = filteredCalls.filter(c => {
-                const cDate = new Date(c.date).getTime();
-                return cDate >= sTime && cDate <= eTime;
+                const ts = getCallTimestamp(c);
+                if (ts === null) {
+                    const logDateTs = log.date ? new Date(log.date).getTime() : null;
+                    return logDateTs !== null ? (logDateTs >= sTime && logDateTs <= eTime) : true;
+                }
+                return ts >= sTime && ts <= eTime;
             });
         }
 
-        if (simFilter && String(simFilter) !== 'ALL' && String(simFilter) !== '0') {
-            const slot = String(simFilter).toLowerCase();
+        if (simFilter && String(simFilter).toUpperCase() !== 'ALL' && String(simFilter) !== '0') {
+            const slot = String(simFilter).toLowerCase().replace(/^(sim|slot)\s*/i, '');
             filteredCalls = filteredCalls.filter(c => {
-                const cSlot = String(c.simSlot || c.simId || "").toLowerCase();
-                const cLabel = String(c.simLabel || "").toLowerCase().replace(/^sim\s*/i, '');
-                return cSlot === slot || cLabel === slot;
+                const cSlot = String(c.simSlot || c.simId || "").toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                const cLabel = String(c.simLabel || "").toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                return cSlot === slot || cLabel === slot || cLabel.includes(`sim ${slot}`) || cLabel.includes(`slot ${slot}`);
             });
         }
 

@@ -119,7 +119,7 @@ const AdminCallReports = () => {
     const fetchBulkStatusOnce = async () => {
         try {
             setIsRefreshingStatus(true);
-            const token = JSON.parse(localStorage.getItem('user')).token;
+            const token = JSON.parse(localStorage.getItem('user') || '{}')?.token;
             const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
             const statusRes = await axios.get(`${baseUrl}/call-sync/status-all`, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -174,7 +174,7 @@ const AdminCallReports = () => {
             setSyncStatusData(null);
             setIsPollingSync(true);
 
-            const token = JSON.parse(localStorage.getItem('user')).token;
+            const token = JSON.parse(localStorage.getItem('user') || '{}')?.token;
             const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
 
             const response = await axios.post(`${baseUrl}/call-sync/request-sync-all`, {}, {
@@ -194,7 +194,7 @@ const AdminCallReports = () => {
 
     const handleRequestSingleDeviceSync = async (userId, userName) => {
         try {
-            const token = JSON.parse(localStorage.getItem('user')).token;
+            const token = JSON.parse(localStorage.getItem('user') || '{}')?.token;
             const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
             await axios.post(`${baseUrl}/call-sync/request-sync`, { userId }, {
                 headers: { Authorization: `Bearer ${token}` }
@@ -384,7 +384,7 @@ const AdminCallReports = () => {
         }
 
         const calls = log.calls || [];
-        const normExcluded = (excludedNumbers || []).map(normalize);
+        const normExcluded = (excludedNumbers || []).map(normalize).filter(Boolean);
         const filteredCalls = calls.filter(c => {
             if (!c || !c.number) return false;
             return !normExcluded.includes(normalize(c.number));
@@ -426,7 +426,7 @@ const AdminCallReports = () => {
     const handleSaveSettings = async () => {
         try {
             setIsSavingSettings(true);
-            const token = JSON.parse(localStorage.getItem('user')).token;
+            const token = JSON.parse(localStorage.getItem('user') || '{}')?.token;
             const baseUrl = (import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api');
             
             await axios.post(`${baseUrl}/settings`, {

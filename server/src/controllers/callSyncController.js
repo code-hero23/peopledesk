@@ -158,7 +158,6 @@ const requestRemoteSyncForAll = async (req, res) => {
         active: true,
         user: {
           status: 'ACTIVE',
-          callAnalyticsViewEnabled: true,
           NOT: [
             { designation: { contains: 'AE', mode: 'insensitive' } },
             { designation: { contains: 'Architect', mode: 'insensitive' } }
@@ -208,7 +207,7 @@ const getPendingSyncRequest = async (req, res) => {
     if (!device) return res.status(401).json({ message: 'Device is not active' });
 
     const isAE = device.user?.role === 'AE' || (device.user?.designation && (device.user.designation.toUpperCase().includes('AE') || device.user.designation.toUpperCase().includes('ARCHITECT')));
-    if (isAE || !device.user?.callAnalyticsViewEnabled) {
+    if (isAE) {
       return res.json({ pending: false, requestedAt: null, officialSim: null });
     }
 
@@ -272,7 +271,6 @@ const getBulkSyncStatus = async (req, res) => {
         active: true,
         user: {
           status: 'ACTIVE',
-          callAnalyticsViewEnabled: true,
           NOT: [
             { designation: { contains: 'AE', mode: 'insensitive' } },
             { designation: { contains: 'Architect', mode: 'insensitive' } }
