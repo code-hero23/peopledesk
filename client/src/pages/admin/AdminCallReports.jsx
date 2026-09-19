@@ -313,6 +313,7 @@ const AdminCallReports = () => {
     if (syncStatusData?.devices && Array.isArray(syncStatusData.devices)) {
         syncStatusData.devices.forEach(d => {
             if (!d.user) return;
+            if (d.user.callAnalyticsViewEnabled === false) return;
             const desg = (d.user.designation || '').toUpperCase();
             if (desg.includes('AE') || desg.includes('ARCHITECT')) return;
 
@@ -337,6 +338,7 @@ const AdminCallReports = () => {
     }
 
     const employeeMetrics = callStats.reduce((acc, log) => {
+        if (log.user?.callAnalyticsViewEnabled === false || log.callAnalyticsViewEnabled === false) return acc;
         const desg = (typeof log.user === 'object' ? log.user?.designation : (log.designation || '')).toUpperCase();
         if (desg.includes('AE') || desg.includes('ARCHITECT')) return acc;
 
@@ -1482,6 +1484,7 @@ const AdminCallReports = () => {
                             <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
                                 {syncStatusData?.devices
                                     ?.filter(dev => {
+                                        if (dev.user?.callAnalyticsViewEnabled === false) return false;
                                         if (syncModalTab === 'SYNCED') return !dev.requestPending;
                                         if (syncModalTab === 'PENDING') return dev.requestPending;
                                         return true;

@@ -272,6 +272,7 @@ const getBulkSyncStatus = async (req, res) => {
         user: {
           status: 'ACTIVE',
           NOT: [
+            { callAnalyticsViewEnabled: false },
             { designation: { contains: 'AE', mode: 'insensitive' } },
             { designation: { contains: 'Architect', mode: 'insensitive' } }
           ]

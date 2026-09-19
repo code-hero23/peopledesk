@@ -342,6 +342,8 @@ const AELiveTracker = () => {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersRef = useRef({});
+  const markerAnimationsRef = useRef({});
+  const liveTrailsRef = useRef({});
   const polylineRef = useRef(null);
   const casingPolylineRef = useRef(null);
   const historyMarkersRef = useRef([]);
@@ -389,6 +391,8 @@ const AELiveTracker = () => {
     }
 
     return () => {
+      Object.values(markerAnimationsRef.current).forEach(id => cancelAnimationFrame(id));
+      Object.values(liveTrailsRef.current).forEach(t => t.remove());
       if (leafletMap.current) {
         leafletMap.current.remove();
         leafletMap.current = null;
@@ -511,29 +515,66 @@ const AELiveTracker = () => {
 
   useEffect(() => {
     fetchLiveData();
-    const interval = setInterval(() => fetchLiveData(), 30000); // Auto refresh every 30s
+    const interval = setInterval(() => fetchLiveData(), 15000); // Auto refresh every 15s for live movement
     return () => clearInterval(interval);
   }, []);
 
-  // Update map markers when liveData changes
+  // Calculate bearing angle between two coordinates (0-360 degrees)
+  const calculateBearing = (lat1, lon1, lat2, lon2) => {
+    const φ1 = (lat1 * Math.PI) / 180;
+    const φ2 = (lat2 * Math.PI) / 180;
+    const Δλ = ((lon2 - lon1) * Math.PI) / 180;
+    const y = Math.sin(Δλ) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(Δλ);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+  };
+
+  // Smooth Marker Gliding function across street coordinates
+  const slideMarkerTo = (marker, startPos, endPos, duration = 2500) => {
+    if (!marker) return;
+    const startTime = performance.now();
+    const animId = requestAnimationFrame(function step(currentTime) {
+      const elapsed = currentTime - startTime;
+      const progress = Math.min(elapsed / duration, 1);
+      // Ease in-out quad for smooth vehicle acceleration & deceleration
+      const ease = progress < 0.5 
+        ? 2 * progress * progress 
+        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+      const currentLat = startPos[0] + (endPos[0] - startPos[0]) * ease;
+      const currentLng = startPos[1] + (endPos[1] - startPos[1]) * ease;
+      marker.setLatLng([currentLat, currentLng]);
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+      }
+    });
+    return animId;
+  };
+
+  // Update map markers when liveData changes with smooth gliding & larger icons
   useEffect(() => {
     if (!leafletMap.current || !window.L) return;
 
-    // Clear existing markers
-    Object.values(markersRef.current).forEach(marker => marker.remove());
-    markersRef.current = {};
-
+    const currentEmployeeIds = new Set();
     const bounds = [];
 
     liveData.forEach((item) => {
-      const { user: ae, latestLocation: loc, status } = item;
+      const { user: ae, latestLocation: loc, previousLocation: prevLoc, status } = item;
       if (!loc || !loc.latitude || !loc.longitude) return;
 
+      currentEmployeeIds.add(ae.id);
       const latLng = [loc.latitude, loc.longitude];
       bounds.push(latLng);
 
       const isMoving = item.isMoving || status === 'MOVING';
       const isStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
+
+      // Calculate bearing angle if moving and previous location exists
+      let bearing = 0;
+      if (prevLoc && prevLoc.latitude && prevLoc.longitude) {
+        bearing = calculateBearing(prevLoc.latitude, prevLoc.longitude, loc.latitude, loc.longitude);
+      }
 
       const markerColor = 
         isMoving ? '#2563eb' : 
@@ -544,77 +585,108 @@ const AELiveTracker = () => {
       const customIcon = window.L.divIcon({
         className: 'custom-map-pin',
         html: `
-          <div style="position: relative; display: flex; align-items: center; justify-content: center;">
+          <div style="position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
             ${isMoving ? `
-              <!-- Pulsing Radar Wave (Swiggy / Uber style) -->
+              <!-- Multi-tier Pulsing Radar Waves (Uber / Swiggy style) -->
               <div style="
                 position: absolute;
-                width: 48px;
-                height: 48px;
+                width: 68px;
+                height: 68px;
                 border-radius: 50%;
-                background: rgba(37, 99, 235, 0.25);
-                border: 1.5px solid rgba(59, 130, 246, 0.6);
-                animation: ping 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+                background: rgba(37, 99, 235, 0.22);
+                border: 2px solid rgba(59, 130, 246, 0.7);
+                animation: pingRadar 1.6s cubic-bezier(0, 0, 0.2, 1) infinite;
+              "></div>
+              <div style="
+                position: absolute;
+                width: 58px;
+                height: 58px;
+                border-radius: 50%;
+                background: rgba(37, 99, 235, 0.15);
+                animation: pingRadar 1.6s cubic-bezier(0, 0, 0.2, 1) infinite 0.5s;
               "></div>
             ` : ''}
+
+            <!-- Center Avatar / Vehicle Circle (Enlarged to 46px) -->
             <div style="
-              background-color: ${markerColor};
-              width: 36px;
-              height: 36px;
+              background: ${isMoving ? 'linear-gradient(135deg, #1d4ed8, #2563eb)' : markerColor};
+              width: 46px;
+              height: 46px;
               border-radius: 50%;
-              border: 3px solid #ffffff;
-              box-shadow: 0 4px 14px rgba(0,0,0,0.35);
+              border: 3.5px solid #ffffff;
+              box-shadow: ${isMoving ? '0 6px 22px rgba(37,99,235,0.7), 0 2px 6px rgba(0,0,0,0.4)' : '0 6px 18px rgba(0,0,0,0.4)'};
               display: flex;
               align-items: center;
               justify-content: center;
               color: white;
-              font-weight: 800;
-              font-size: 11px;
-              font-family: sans-serif;
+              font-weight: 900;
+              font-size: 13px;
+              font-family: system-ui, -apple-system, sans-serif;
               position: relative;
               z-index: 2;
+              ${isMoving ? 'animation: liveVehicleBob 1.6s ease-in-out infinite alternate;' : ''}
             ">
-              ${isMoving ? '🚗' : (ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE')}
-              ${(isMoving || isStationary) ? `<span style="position:absolute; top:-2px; right:-2px; width:10px; height:10px; background:${isMoving ? '#3b82f6' : '#10b981'}; border:2px solid white; border-radius:50%;"></span>` : ''}
+              ${isMoving ? `
+                <div style="transform: rotate(${Math.round(bearing)}deg); display: flex; align-items: center; justify-content: center;">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
+                    <polygon points="12,2 22,21 12,16 2,21" />
+                  </svg>
+                </div>
+              ` : (ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE')}
+              ${(isMoving || isStationary) ? `
+                <span style="
+                  position: absolute;
+                  top: -2px;
+                  right: -2px;
+                  width: 12px;
+                  height: 12px;
+                  background: ${isMoving ? '#3b82f6' : '#10b981'};
+                  border: 2.5px solid white;
+                  border-radius: 50%;
+                  box-shadow: 0 0 8px ${isMoving ? '#3b82f6' : '#10b981'};
+                "></span>
+              ` : ''}
             </div>
-            ${isMoving ? `
-              <div style="
-                position: absolute;
-                bottom: -16px;
-                left: 50%;
-                transform: translateX(-50%);
-                white-space: nowrap;
-                background: #0f172a;
-                color: #60a5fa;
-                border: 1px solid #3b82f6;
-                font-size: 9px;
-                font-weight: 800;
-                padding: 1px 5px;
-                border-radius: 4px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.4);
-                display: flex;
-                align-items: center;
-                gap: 3px;
-                z-index: 3;
-              ">
-                <span style="width: 4px; height: 4px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
-                MOVING
-              </div>
-            ` : ''}
+
+            <!-- Floating Status Badge Pill Below Pin -->
+            <div style="
+              position: absolute;
+              bottom: -18px;
+              left: 50%;
+              transform: translateX(-50%);
+              white-space: nowrap;
+              background: #0f172a;
+              color: ${isMoving ? '#60a5fa' : markerColor};
+              border: 1px solid ${isMoving ? '#3b82f6' : markerColor + '60'};
+              font-size: 9.5px;
+              font-weight: 800;
+              padding: 1.5px 6px;
+              border-radius: 6px;
+              box-shadow: 0 3px 10px rgba(0,0,0,0.5);
+              display: flex;
+              align-items: center;
+              gap: 4px;
+              z-index: 3;
+            ">
+              ${isMoving ? `
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; animation: pulse 1s infinite; display: inline-block;"></span>
+                ${loc.speed && loc.speed > 0.5 ? `MOVING • ${(loc.speed * 3.6).toFixed(0)} km/h` : 'MOVING'}
+              ` : (
+                isStationary ? '📍 AT SITE' : status === 'IDLE' ? '⏳ IDLE' : status === 'OUT_OF_HOURS' ? 'OFF-HRS' : 'OFFLINE'
+              )}
+            </div>
           </div>
         `,
-        iconSize: [40, 40],
-        iconAnchor: [20, 20]
+        iconSize: [56, 56],
+        iconAnchor: [28, 28]
       });
 
-      const marker = window.L.marker(latLng, { icon: customIcon }).addTo(leafletMap.current);
-      
       const lastActiveTime = loc.createdAt 
         ? new Date(loc.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
         : 'N/A';
 
       const popupContent = `
-        <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 190px;">
+        <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 210px;">
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
             <h4 style="margin: 0; font-weight: 800; font-size: 14px; color: #0f172a;">${ae.name}</h4>
             <span style="font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; background: ${markerColor}15; color: ${markerColor}; border: 1px solid ${markerColor}40;">
@@ -627,15 +699,75 @@ const AELiveTracker = () => {
             <div><strong>🔋 Battery:</strong> ${loc.batteryLevel != null ? loc.batteryLevel + '%' : 'N/A'}</div>
             <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
             <div><strong>🚦 Status:</strong> ${isMoving ? 'In Transit / Moving' : isStationary ? 'Stationary (At Site/Visit)' : status}</div>
+            ${loc.speed ? `<div><strong>⚡ Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</div>` : ''}
           </div>
         </div>
       `;
-      marker.bindPopup(popupContent);
-      markersRef.current[ae.id] = marker;
+
+      // Check if marker already exists for this AE
+      const existingMarker = markersRef.current[ae.id];
+      if (existingMarker) {
+        existingMarker.setIcon(customIcon);
+        existingMarker.setPopupContent(popupContent);
+
+        const currentPos = existingMarker.getLatLng();
+        const dist = Math.hypot(currentPos.lat - loc.latitude, currentPos.lng - loc.longitude);
+        if (dist > 0.00002) {
+          // Smoothly glide marker to new position over 2.5 seconds
+          if (markerAnimationsRef.current[ae.id]) {
+            cancelAnimationFrame(markerAnimationsRef.current[ae.id]);
+          }
+          markerAnimationsRef.current[ae.id] = slideMarkerTo(existingMarker, [currentPos.lat, currentPos.lng], latLng, 2500);
+        }
+      } else {
+        const newMarker = window.L.marker(latLng, { 
+          icon: customIcon,
+          zIndexOffset: isMoving ? 500 : isStationary ? 200 : 0
+        }).addTo(leafletMap.current);
+        newMarker.bindPopup(popupContent);
+        markersRef.current[ae.id] = newMarker;
+      }
+
+      // Draw live motion trail polyline between previous and current location if moving
+      if (isMoving && prevLoc && prevLoc.latitude && prevLoc.longitude) {
+        const trailCoords = [[prevLoc.latitude, prevLoc.longitude], [loc.latitude, loc.longitude]];
+        const trailDist = getDistanceMeters(prevLoc.latitude, prevLoc.longitude, loc.latitude, loc.longitude);
+        if (trailDist >= 15) {
+          if (liveTrailsRef.current[ae.id]) {
+            liveTrailsRef.current[ae.id].setLatLngs(trailCoords);
+          } else {
+            liveTrailsRef.current[ae.id] = window.L.polyline(trailCoords, {
+              color: '#3b82f6',
+              weight: 4,
+              opacity: 0.85,
+              dashArray: '8, 10',
+              className: 'live-motion-trail'
+            }).addTo(leafletMap.current);
+          }
+        } else if (liveTrailsRef.current[ae.id]) {
+          liveTrailsRef.current[ae.id].remove();
+          delete liveTrailsRef.current[ae.id];
+        }
+      } else if (liveTrailsRef.current[ae.id]) {
+        liveTrailsRef.current[ae.id].remove();
+        delete liveTrailsRef.current[ae.id];
+      }
+    });
+
+    // Remove obsolete markers for employees not in current liveData
+    Object.keys(markersRef.current).forEach((empId) => {
+      if (!currentEmployeeIds.has(Number(empId))) {
+        markersRef.current[empId].remove();
+        delete markersRef.current[empId];
+        if (liveTrailsRef.current[empId]) {
+          liveTrailsRef.current[empId].remove();
+          delete liveTrailsRef.current[empId];
+        }
+      }
     });
 
     if (bounds.length > 0 && !selectedAE) {
-      leafletMap.current.fitBounds(bounds, { padding: [50, 50], maxZoom: 14 });
+      leafletMap.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
     }
 
     // Guarantee full tile coverage
@@ -1011,34 +1143,61 @@ const AELiveTracker = () => {
     };
   }, [isPlaying, historyLogs.length, snappedPathCoords.length, playbackSpeed]);
 
-  // Filter AEs
-  const filteredData = liveData.filter(item => {
-    const matchesSearch = item.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          (item.user.phone && item.user.phone.includes(searchQuery)) ||
-                          (item.user.designation && item.user.designation.toLowerCase().includes(searchQuery.toLowerCase()));
-
+  // Status Priority Rank: Active first (Moving -> Stationary) -> Idle second -> Offline last
+  const getStatusPriority = (item) => {
     const isMoving = item.isMoving || item.status === 'MOVING';
+    if (isMoving) return 1; // Active: Moving (Top Priority)
     const isStationary = item.status === 'STATIONARY' || item.status === 'ONLINE' || (!isMoving && item.status !== 'IDLE' && item.status !== 'OFFLINE' && item.status !== 'OUT_OF_HOURS');
+    if (isStationary) return 2; // Active: At Site / Online
+    if (item.status === 'IDLE') return 3; // Idle second
+    if (item.status === 'OFFLINE') return 4; // Offline last
+    if (item.status === 'OUT_OF_HOURS') return 5; // Out of hours last
+    return 6;
+  };
 
-    let matchesStatus = false;
-    if (statusFilter === 'ALL') {
-      matchesStatus = true;
-    } else if (statusFilter === 'MOVING') {
-      matchesStatus = isMoving;
-    } else if (statusFilter === 'STATIONARY') {
-      matchesStatus = isStationary;
-    } else if (statusFilter === 'IDLE') {
-      matchesStatus = item.status === 'IDLE';
-    } else if (statusFilter === 'OFFLINE') {
-      matchesStatus = item.status === 'OFFLINE';
-    } else if (statusFilter === 'OUT_OF_HOURS') {
-      matchesStatus = item.status === 'OUT_OF_HOURS';
-    } else {
-      matchesStatus = item.status === statusFilter;
-    }
+  // Filter and Sort AEs: Active first, Idle second, Offline last
+  const filteredData = liveData
+    .filter(item => {
+      const matchesSearch = item.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            (item.user.phone && item.user.phone.includes(searchQuery)) ||
+                            (item.user.designation && item.user.designation.toLowerCase().includes(searchQuery.toLowerCase()));
 
-    return matchesSearch && matchesStatus;
-  });
+      const isMoving = item.isMoving || item.status === 'MOVING';
+      const isStationary = item.status === 'STATIONARY' || item.status === 'ONLINE' || (!isMoving && item.status !== 'IDLE' && item.status !== 'OFFLINE' && item.status !== 'OUT_OF_HOURS');
+
+      let matchesStatus = false;
+      if (statusFilter === 'ALL') {
+        matchesStatus = true;
+      } else if (statusFilter === 'MOVING') {
+        matchesStatus = isMoving;
+      } else if (statusFilter === 'STATIONARY') {
+        matchesStatus = isStationary;
+      } else if (statusFilter === 'IDLE') {
+        matchesStatus = item.status === 'IDLE';
+      } else if (statusFilter === 'OFFLINE') {
+        matchesStatus = item.status === 'OFFLINE';
+      } else if (statusFilter === 'OUT_OF_HOURS') {
+        matchesStatus = item.status === 'OUT_OF_HOURS';
+      } else {
+        matchesStatus = item.status === statusFilter;
+      }
+
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      // Primary: Active (Moving -> Stationary) -> Idle -> Offline
+      const pA = getStatusPriority(a);
+      const pB = getStatusPriority(b);
+      if (pA !== pB) return pA - pB;
+
+      // Secondary: Most recent location timestamp first
+      const timeA = a.latestLocation?.createdAt ? new Date(a.latestLocation.createdAt).getTime() : 0;
+      const timeB = b.latestLocation?.createdAt ? new Date(b.latestLocation.createdAt).getTime() : 0;
+      if (timeB !== timeA) return timeB - timeA;
+
+      // Tertiary: Alphabetical name
+      return (a.user?.name || '').localeCompare(b.user?.name || '');
+    });
 
   const movingCount = liveData.filter(i => i.isMoving || i.status === 'MOVING').length;
   const stationaryCount = liveData.filter(i => (i.status === 'STATIONARY' || i.status === 'ONLINE') && !i.isMoving).length;
@@ -1051,6 +1210,27 @@ const AELiveTracker = () => {
 
   return (
     <div className="p-3 sm:p-5 lg:p-6 space-y-4 sm:space-y-6 max-w-[1700px] mx-auto min-h-screen text-slate-100 font-sans">
+      <style>{`
+        @keyframes pingRadar {
+          0% { transform: scale(0.92); opacity: 0.85; }
+          70% { transform: scale(1.65); opacity: 0; }
+          100% { transform: scale(1.65); opacity: 0; }
+        }
+        @keyframes liveVehicleBob {
+          0% { transform: translateY(0px); filter: drop-shadow(0 4px 14px rgba(37,99,235,0.6)); }
+          50% { transform: translateY(-3px) scale(1.04); filter: drop-shadow(0 8px 24px rgba(37,99,235,0.9)); }
+          100% { transform: translateY(0px); filter: drop-shadow(0 4px 14px rgba(37,99,235,0.6)); }
+        }
+        @keyframes trailDashMove {
+          to {
+            stroke-dashoffset: -30;
+          }
+        }
+        .live-motion-trail {
+          stroke-dasharray: 8, 10;
+          animation: trailDashMove 1.2s linear infinite;
+        }
+      `}</style>
       
       {/* Top Header Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-slate-900/95 border border-slate-800/90 p-4 sm:p-6 rounded-2xl sm:rounded-3xl backdrop-blur-xl shadow-2xl">

@@ -586,11 +586,6 @@ const syncCallLogs = async (req, res) => {
             });
         }
 
-        // Ensure call analytics view is enabled for enrolled syncing employees
-        if (!user?.callAnalyticsViewEnabled) {
-            await prisma.user.update({ where: { id: userId }, data: { callAnalyticsViewEnabled: true } }).catch(() => {});
-        }
-
         console.log(`[Sync] User ${userId} (${user?.name || "No User"}) syncing ${isHeartbeat ? '0 (Heartbeat)' : newLogs.length} logs. SIM Filter: ${simFilter}`);
 
         if (isHeartbeat) {
@@ -660,49 +655,62 @@ const syncCallLogs = async (req, res) => {
 
             let consolidatedLogs = [];
             if (existingCallLog) {
-                const shouldReplaceExistingForSim = Boolean(replaceExistingForSim) && !isAllSims && dayLogs.length > 0;
-
-                if (shouldReplaceExistingForSim) {
-                    consolidatedLogs = dayLogs.map(normalizeAcceptedLog);
-                    console.log(`[Sync] User ${userId} for ${dateStr}: Replaced existing SIM ${simFilter} logs with ${consolidatedLogs.length} freshly filtered logs.`);
-                } else {
+                // ALWAYS preserve existing calls and merge new calls - NEVER wipe out earlier calls of the day!
                 consolidatedLogs = Array.isArray(existingCallLog.calls) ? [...existingCallLog.calls] : [];
-                if (!isAllSims) {
-                    consolidatedLogs = consolidatedLogs
-                        .filter(log => matchesSelectedSim(log, simFilter))
-                        .map(normalizeAcceptedLog);
-                }
-                // Map existing logs for duplicate check and slot correction
-                const existingMap = new Map(
-                    consolidatedLogs.map((l, index) => [
-                        `${String(l.date)}-${String(l.number)}-${String(l.type || '')}-${String(l.duration || '')}`,
-                        { log: l, index }
-                    ])
-                );
+
+                const cleanNum = (num) => String(num || "").replace(/\D/g, "").slice(-10);
+                const getTs = (l) => {
+                    const raw = l.date ?? l.timestamp ?? l.time;
+                    const n = Number(raw);
+                    if (!isNaN(n) && n > 0) return n < 10000000000 ? n * 1000 : n;
+                    const d = new Date(raw).getTime();
+                    return isNaN(d) ? 0 : d;
+                };
+
+                const findExistingIndex = (newLog) => {
+                    const newNum = cleanNum(newLog.number);
+                    const newTs = getTs(newLog);
+                    const newType = String(newLog.type || '').toUpperCase();
+
+                    return consolidatedLogs.findIndex(ext => {
+                        const extNum = cleanNum(ext.number);
+                        if (newNum && extNum && newNum !== extNum) return false;
+                        
+                        const extTs = getTs(ext);
+                        if (newTs > 0 && extTs > 0 && Math.abs(newTs - extTs) > 3000) return false;
+
+                        const extType = String(ext.type || '').toUpperCase();
+                        if (newType && extType && newType !== extType) return false;
+
+                        return true;
+                    });
+                };
 
                 let addedCount = 0;
                 let updatedCount = 0;
                 dayLogs.forEach(log => {
                     const normalizedLog = normalizeAcceptedLog(log);
-                    const key = `${String(normalizedLog.date)}-${String(normalizedLog.number)}-${String(normalizedLog.type || '')}-${String(normalizedLog.duration || '')}`;
-                    
-                    if (existingMap.has(key)) {
-                        const existing = existingMap.get(key);
-                        if (existing.log.simSlot !== normalizedLog.simSlot) {
-                            consolidatedLogs[existing.index].simSlot = normalizedLog.simSlot;
-                            if (normalizedLog.simLabel) {
-                                consolidatedLogs[existing.index].simLabel = normalizedLog.simLabel;
-                            }
+                    const existingIdx = findExistingIndex(normalizedLog);
+
+                    if (existingIdx !== -1) {
+                        const existing = consolidatedLogs[existingIdx];
+                        if (normalizedLog.duration && (!existing.duration || existing.duration === 0)) {
+                            existing.duration = normalizedLog.duration;
                             updatedCount++;
+                        }
+                        if (normalizedLog.simSlot && (!existing.simSlot || existing.simSlot === '0')) {
+                            existing.simSlot = normalizedLog.simSlot;
+                            updatedCount++;
+                        }
+                        if (normalizedLog.simLabel && !existing.simLabel) {
+                            existing.simLabel = normalizedLog.simLabel;
                         }
                     } else {
                         consolidatedLogs.push(normalizedLog);
-                        existingMap.set(key, { log: normalizedLog, index: consolidatedLogs.length - 1 });
                         addedCount++;
                     }
                 });
-                console.log(`[Sync] User ${userId} for ${dateStr}: Found ${existingCallLog.calls.length} existing, added ${addedCount} new, corrected ${updatedCount} SIM slots.`);
-                }
+                console.log(`[Sync] User ${userId} for ${dateStr}: Preserved ${existingCallLog.calls.length} existing calls, merged ${addedCount} new calls.`);
             } else {
                 consolidatedLogs = dayLogs.map(normalizeAcceptedLog);
                 console.log(`[Sync] User ${userId} for ${dateStr}: Creating new record with ${dayLogs.length} logs.`);
@@ -821,6 +829,7 @@ const getAllCallStats = async (req, res) => {
                 user: {
                     status: 'ACTIVE',
                     NOT: [
+                        { callAnalyticsViewEnabled: false },
                         { designation: { contains: 'AE', mode: 'insensitive' } },
                         { designation: { contains: 'Architect', mode: 'insensitive' } }
                     ]
@@ -849,19 +858,22 @@ const getAllCallStats = async (req, res) => {
         const stats = callLogs.map(log => {
             let filteredCalls = Array.isArray(log.calls) ? [...log.calls] : [];
 
-            // 1. Filter by DATE in IST (UTC+5:30)
+            // 1. Filter by DATE in IST (UTC+5:30) with timezone boundary grace
             if (startDate && endDate) {
                 const s = getStartOfDayIST(startDate).getTime();
                 const e = getEndOfDayIST(endDate).getTime();
+                const logDateTs = log.date ? new Date(log.date).getTime() : null;
+                const isParentLogInRange = logDateTs !== null && logDateTs >= s && logDateTs <= e;
 
                 filteredCalls = filteredCalls.filter(c => {
                     const ts = getCallTimestamp(c);
-                    // If call has no timestamp, keep it if parent log date falls in range
-                    if (ts === null) {
-                        const logDateTs = log.date ? new Date(log.date).getTime() : null;
-                        return logDateTs !== null ? (logDateTs >= s && logDateTs <= e) : true;
+                    if (ts === null) return isParentLogInRange;
+                    if (ts >= s && ts <= e) return true;
+                    // Grace window if call belongs to today's parent log
+                    if (isParentLogInRange && ts >= (s - 6 * 3600 * 1000) && ts <= (e + 6 * 3600 * 1000)) {
+                        return true;
                     }
-                    return ts >= s && ts <= e;
+                    return false;
                 });
             }
 
@@ -889,6 +901,7 @@ const getAllCallStats = async (req, res) => {
                 role: log.user?.role || 'EMPLOYEE',
                 userId: log.user?.id || log.userId,
                 empId: `EMP-${log.user?.id || log.userId}`,
+                callAnalyticsViewEnabled: log.user?.callAnalyticsViewEnabled !== false,
                 calls: filteredCalls,
                 totalCalls: filteredCalls.length
             };

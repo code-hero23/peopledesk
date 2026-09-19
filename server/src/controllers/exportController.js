@@ -1152,6 +1152,7 @@ const generateCallStatsWorkbook = async (startDate, endDate, simFilter) => {
             user: {
                 status: 'ACTIVE',
                 NOT: [
+                    { callAnalyticsViewEnabled: false },
                     { designation: { contains: 'AE', mode: 'insensitive' } },
                     { designation: { contains: 'Architect', mode: 'insensitive' } }
                 ]

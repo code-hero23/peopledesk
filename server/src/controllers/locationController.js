@@ -173,6 +173,7 @@ const getLiveLocations = async (req, res) => {
         return {
           user: ae,
           latestLocation: latestLog || null,
+          previousLocation: prevLog || null,
           status,
           isMoving,
           lastPingMinutesAgo
