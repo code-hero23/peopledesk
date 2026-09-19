@@ -304,6 +304,51 @@ const closeWorkLog = async (req, res) => {
     }
 };
 
+// @desc    Update an active/open work log during the day (Midday tasks/notes update without closing)
+// @route   PUT /api/worklogs/update
+// @access  Private (Employee)
+const updateWorkLog = async (req, res) => {
+    const { customFields, notes, tasks, process, remarks } = req.body;
+
+    try {
+        const userId = req.user.id;
+
+        const startOfDay = new Date();
+        startOfDay.setHours(0, 0, 0, 0);
+        const endOfDay = new Date();
+        endOfDay.setHours(23, 59, 59, 999);
+
+        // Find today's OPEN log
+        const existingLog = await prisma.workLog.findFirst({
+            where: {
+                userId,
+                date: { gte: startOfDay, lte: endOfDay },
+                logStatus: 'OPEN'
+            }
+        });
+
+        if (!existingLog) {
+            return res.status(404).json({ message: 'No open work log found for today to update.' });
+        }
+
+        const updatedLog = await prisma.workLog.update({
+            where: { id: existingLog.id },
+            data: {
+                customFields: customFields !== undefined ? customFields : existingLog.customFields,
+                notes: notes !== undefined ? notes : existingLog.notes,
+                tasks: tasks !== undefined ? tasks : existingLog.tasks,
+                process: process !== undefined ? process : existingLog.process,
+                remarks: remarks !== undefined ? remarks : existingLog.remarks
+            }
+        });
+
+        res.json(updatedLog);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Add a Project Report to a daily work log (can add anytime: now or later)
 // @route   PUT /api/worklogs/project-report
 // @access  Private (Employee)
@@ -837,4 +882,4 @@ const getAllCallStats = async (req, res) => {
     }
 };
 
-module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, addProjectReport, syncCallLogs, getMyCallLogs, getAllCallStats };
+module.exports = { createWorkLog, getMyWorkLogs, closeWorkLog, updateWorkLog, addProjectReport, syncCallLogs, getMyCallLogs, getAllCallStats };

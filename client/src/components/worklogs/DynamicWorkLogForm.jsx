@@ -1,11 +1,12 @@
 import { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { createWorkLog, closeWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
+import { createWorkLog, closeWorkLog, updateWorkLog, getTodayLogStatus } from '../../features/employee/employeeSlice';
 import { WORK_LOG_CONFIG } from '../../config/workLogConfig';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
-import { Plus, Trash2, Layers, CheckSquare, List, Clock, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Layers, CheckSquare, List, Clock, TrendingUp, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { toast } from 'react-toastify';
 
 const getStatusSelectStyle = (val) => {
     if (!val) return 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200';
@@ -39,6 +40,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const [showSuccess, setShowSuccess] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
+    const [isUpdating, setIsUpdating] = useState(false);
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         onConfirm: () => { }
@@ -141,17 +143,54 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
         const table = activeTables[tableIndex];
         if (table.predefinedRows && !table.allowAddRows) return;
         setTableData(prev => {
-            if (prev[tableIndex]?.length <= 1 && !table.allowAddRows) return prev;
-            const newTable = (prev[tableIndex] || []).filter((_, i) => i !== rowIndex);
+            const currentRows = prev[tableIndex] || [];
+            const newTable = currentRows.filter((_, i) => i !== rowIndex);
             return { ...prev, [tableIndex]: newTable };
         });
     };
 
-    const handleConfirmSubmit = () => {
+    const getPayloadCustomFields = () => {
         const customFields = {};
         activeTables.forEach((table, index) => {
-            customFields[table.label] = tableData[index];
+            const rows = (tableData[index] || []).filter(row => {
+                return Object.entries(row).some(([k, v]) => k !== '_id' && String(v || '').trim().length > 0);
+            });
+            customFields[table.label] = rows;
         });
+        return customFields;
+    };
+
+    const handleUpdateReport = async () => {
+        const customFields = getPayloadCustomFields();
+        const totalRows = Object.values(customFields).reduce((acc, rows) => acc + rows.length, 0);
+        if (totalRows === 0) {
+            toast.error("Please add at least one task entry before saving.");
+            return;
+        }
+
+        setIsUpdating(true);
+        try {
+            const payload = {
+                customFields,
+                notes: notes
+            };
+            await dispatch(updateWorkLog(payload)).unwrap();
+            setModalMessage("Tasks Saved! Your daily work log has been updated.");
+            setShowSuccess(true);
+        } catch (err) {
+            toast.error(err || "Failed to update work log.");
+        } finally {
+            setIsUpdating(false);
+        }
+    };
+
+    const handleConfirmSubmit = () => {
+        const customFields = getPayloadCustomFields();
+        const totalRows = Object.values(customFields).reduce((acc, rows) => acc + rows.length, 0);
+        if (totalRows === 0) {
+            toast.error("Please enter at least one task entry.");
+            return;
+        }
 
         if (isTodayOpen) {
             // CLOSING PHASE
@@ -161,9 +200,13 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 endTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                 logStatus: 'CLOSED'
             };
-            dispatch(closeWorkLog(payload)).then(() => {
-                setModalMessage("Closing Report Submitted! Successfully recorded.");
-                setShowSuccess(true);
+            dispatch(closeWorkLog(payload)).then((res) => {
+                if (!res.error) {
+                    setModalMessage("Closing Report Submitted! Successfully recorded.");
+                    setShowSuccess(true);
+                } else {
+                    toast.error(res.payload || "Failed to submit closing report.");
+                }
             });
         } else {
             // OPENING PHASE
@@ -173,9 +216,13 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 startTime: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }),
                 logStatus: 'OPEN'
             };
-            dispatch(createWorkLog(payload)).then(() => {
-                setModalMessage("Opening Report Submitted! Work session started.");
-                setShowSuccess(true);
+            dispatch(createWorkLog(payload)).then((res) => {
+                if (!res.error) {
+                    setModalMessage("Opening Report Submitted! Work session started.");
+                    setShowSuccess(true);
+                } else {
+                    toast.error(res.payload || "Failed to submit opening report.");
+                }
             });
         }
     };
@@ -205,7 +252,7 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                     <div>
                         <h3 className="font-black text-2xl tracking-tight">{config.title || (role.replace(/-/g, ' ') + ' Report')}</h3>
                         <p className="text-white/80 text-xs font-bold uppercase tracking-widest opacity-75">
-                            {isTodayOpen ? 'End of Day Report' : 'Current Date Reporting'}
+                            {isTodayOpen ? 'Session In Progress — Midday Update / Closing' : 'Current Date Reporting'}
                         </p>
                     </div>
                 </div>
@@ -261,6 +308,18 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                         </div>
 
                         <div className="space-y-3">
+                            {rows.length === 0 && (
+                                <div className="text-center py-6 border-2 border-dashed border-slate-200 dark:border-slate-800 rounded-2xl bg-slate-50/50 dark:bg-slate-800/30">
+                                    <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-2">No entries yet</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => addRow(tableIndex)}
+                                        className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-900/30 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 rounded-xl transition-all border border-indigo-100 dark:border-indigo-800 shadow-sm cursor-pointer"
+                                    >
+                                        <Plus size={14} className="stroke-[3]" /> Add Entry
+                                    </button>
+                                </div>
+                            )}
                             <AnimatePresence>
                                 {rows.map((row, rowIndex) => (
                                     <motion.div
@@ -286,6 +345,9 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                                             {field.options?.map(opt => (
                                                                 <option key={opt} value={opt} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold">{opt}</option>
                                                             ))}
+                                                            {row[field.name] && !field.options?.includes(row[field.name]) && (
+                                                                <option value={row[field.name]} className="bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 font-bold">{row[field.name]}</option>
+                                                            )}
                                                         </select>
                                                         {field.name === 'status' && row[field.name] && (
                                                             <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none flex items-center">
@@ -309,11 +371,11 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                                                 )}
                                             </div>
                                         ))}
-                                        {canAddRows && rows.length > 1 && (
+                                        {canAddRows && (
                                             <button
                                                 type="button"
                                                 onClick={() => removeRow(tableIndex, rowIndex)}
-                                                className="p-2 text-slate-300 dark:text-slate-600 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors self-end md:self-auto cursor-pointer"
+                                                className="p-2 text-slate-400 dark:text-slate-500 hover:text-red-500 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors self-end md:self-auto cursor-pointer"
                                                 title="Delete Row"
                                             >
                                                 <Trash2 size={18} />
@@ -352,21 +414,43 @@ const DynamicWorkLogForm = ({ onSuccess, role }) => {
                 </div>
             )}
 
-            <div className="flex gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0 transition-colors">
+            <div className="flex flex-col sm:flex-row gap-3 pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 sticky bottom-0 transition-colors">
                 <button
                     type="button"
                     onClick={onSuccess}
-                    className="flex-1 py-4 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors uppercase text-xs tracking-wider"
+                    className="py-4 px-6 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors uppercase text-xs tracking-wider cursor-pointer"
                 >
                     Cancel
                 </button>
-                <button
-                    type="submit"
-                    disabled={isLoading}
-                    className={`flex-1 ${isTodayOpen ? 'bg-emerald-600 hover:bg-emerald-700' : 'bg-indigo-600 hover:bg-indigo-700'} text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider`}
-                >
-                    {isLoading ? 'Submitting...' : <>{isTodayOpen ? <CheckSquare size={18} /> : <TrendingUp size={18} />} {isTodayOpen ? 'Finish Day' : 'Start Day'}</>}
-                </button>
+                {isTodayOpen ? (
+                    <>
+                        <button
+                            type="button"
+                            disabled={isLoading || isUpdating}
+                            onClick={handleUpdateReport}
+                            className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider cursor-pointer"
+                            title="Save tasks added or modified throughout the day without closing the session"
+                        >
+                            {isUpdating ? 'Saving...' : <><Save size={18} /> Save & Update Tasks</>}
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isLoading || isUpdating}
+                            className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider cursor-pointer"
+                            title="Finalize your daily work log and close your work session"
+                        >
+                            {isLoading ? 'Submitting...' : <><CheckSquare size={18} /> Finish Day</>}
+                        </button>
+                    </>
+                ) : (
+                    <button
+                        type="submit"
+                        disabled={isLoading}
+                        className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-4 rounded-xl shadow-xl transition-all active:scale-95 flex justify-center items-center gap-2 uppercase text-xs tracking-wider cursor-pointer"
+                    >
+                        {isLoading ? 'Submitting...' : <><TrendingUp size={18} /> Start Day</>}
+                    </button>
+                )}
             </div>
 
             <SuccessModal

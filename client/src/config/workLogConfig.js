@@ -4,6 +4,7 @@ export const WORK_LOG_CONFIG = {
         tables: [
             {
                 label: "Task Entries",
+                allowAddRows: true,
                 fields: [
                     { name: "description", label: "Task Description", type: "text" },
                     { name: "status", label: "Status", type: "text" }
@@ -16,6 +17,7 @@ export const WORK_LOG_CONFIG = {
         tables: [
             {
                 label: "Task Entries",
+                allowAddRows: true,
                 fields: [
                     { name: "task", label: "Task Description", type: "text", placeholder: "Task Description" },
                     { name: "status", label: "Status", type: "text", placeholder: "Status" },
@@ -29,21 +31,23 @@ export const WORK_LOG_CONFIG = {
         tables: [
             {
                 label: "Task Entries",
+                allowAddRows: true,
                 fields: [
-                    { name: "task", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "text" }
+                    { name: "task", label: "Task Description", type: "text", placeholder: "e.g. Bug fix, API design, frontend feature..." },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] }
                 ]
             }
         ]
     },
     "IT-DEVELOPEMENT": {
-        title: "IT (DEVELOPMENT) Daily Report",
+        title: "IT (Development) Daily Report",
         tables: [
             {
                 label: "Task Entries",
+                allowAddRows: true,
                 fields: [
-                    { name: "task", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "text" }
+                    { name: "task", label: "Task Description", type: "text", placeholder: "e.g. Bug fix, API design, frontend feature..." },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] }
                 ]
             }
         ]
@@ -53,21 +57,23 @@ export const WORK_LOG_CONFIG = {
         tables: [
             {
                 label: "Task Entries",
+                allowAddRows: true,
                 fields: [
-                    { name: "task", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "text" }
+                    { name: "task", label: "Task Description", type: "text", placeholder: "e.g. Bug fix, API design, frontend feature..." },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] }
                 ]
             }
         ]
     },
     "IT": {
-        title: "IT (DEVELOPMENT) Daily Report",
+        title: "IT (Development) Daily Report",
         tables: [
             {
                 label: "Task Entries",
+                allowAddRows: true,
                 fields: [
-                    { name: "task", label: "Task Description", type: "text" },
-                    { name: "status", label: "Status", type: "text" }
+                    { name: "task", label: "Task Description", type: "text", placeholder: "e.g. Bug fix, API design, frontend feature..." },
+                    { name: "status", label: "Status", type: "select", options: ["Yet to Start", "In Progress", "Completed", "On Hold"] }
                 ]
             }
         ]

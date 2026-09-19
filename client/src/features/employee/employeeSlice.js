@@ -256,6 +256,24 @@ export const closeWorkLog = createAsyncThunk(
     }
 );
 
+// Update work log (Save changes without closing)
+export const updateWorkLog = createAsyncThunk(
+    'employee/updateWorkLog',
+    async (logData, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+            };
+            const response = await axios.put(API_URL + 'worklogs/update', logData, config);
+            return response.data;
+        } catch (error) {
+            const message = (error.response?.data?.message) || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Add Project Report (LA)
 export const addProjectReport = createAsyncThunk(
     'employee/addProjectReport',
@@ -655,6 +673,24 @@ export const employeeSlice = createSlice({
                 state.todayLog = action.payload;
             })
             .addCase(closeWorkLog.rejected, (state, action) => {
+                state.isLoading = false;
+                state.isError = true;
+                state.message = action.payload;
+            })
+            // Update Work Log
+            .addCase(updateWorkLog.pending, (state) => {
+                state.isLoading = true;
+            })
+            .addCase(updateWorkLog.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                const index = state.workLogs.findIndex(log => log.id === action.payload.id);
+                if (index !== -1) {
+                    state.workLogs[index] = action.payload;
+                }
+                state.todayLog = action.payload;
+            })
+            .addCase(updateWorkLog.rejected, (state, action) => {
                 state.isLoading = false;
                 state.isError = true;
                 state.message = action.payload;

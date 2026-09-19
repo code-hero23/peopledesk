@@ -4,6 +4,7 @@ const {
     createWorkLog,
     getMyWorkLogs,
     closeWorkLog,
+    updateWorkLog,
     addProjectReport,
     syncCallLogs,
     getMyCallLogs,
@@ -14,6 +15,7 @@ const { protect, authorize } = require('../middlewares/authMiddleware');
 const { upload } = require('../middlewares/uploadMiddleware');
 
 router.post('/', protect, upload.array('ae_photos', 5), createWorkLog);
+router.put('/update', protect, updateWorkLog);
 router.put('/close', protect, upload.array('ae_photos', 5), closeWorkLog);
 router.put('/project-report', protect, upload.array('ae_photos', 5), addProjectReport);
 router.put('/sync-calls', protect, syncCallLogs);
