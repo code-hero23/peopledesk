@@ -170,10 +170,87 @@ const getLiveLocations = async (req, res) => {
           }
         }
 
+        // Today's attendance record (for Site Sign-in detection)
+        const dayStart = new Date(startUTC);
+        dayStart.setUTCHours(0, 0, 0, 0);
+        const dayEnd = new Date(endUTC);
+        dayEnd.setUTCHours(23, 59, 59, 999);
+
+        const attendanceRecord = await prisma.attendance.findFirst({
+          where: {
+            userId: ae.id,
+            date: {
+              gte: dayStart,
+              lte: dayEnd
+            }
+          },
+          select: {
+            id: true,
+            siteName: true,
+            checkoutSiteName: true,
+            latitude: true,
+            longitude: true,
+            locationAddress: true,
+            checkoutLatitude: true,
+            checkoutLongitude: true,
+            checkoutLocationAddress: true,
+            createdAt: true,
+            checkoutTime: true,
+            status: true
+          }
+        });
+
+        // Today's scheduled Site Assignments for this AE
+        const scheduledAssignments = await prisma.siteAssignment.findMany({
+          where: {
+            aeId: ae.id,
+            scheduledDate: {
+              gte: dayStart,
+              lte: dayEnd
+            },
+            status: { notIn: ['CANCELLED'] }
+          },
+          orderBy: { scheduledTime: 'asc' }
+        });
+
+        // First GPS ping of today (Morning departure / Point A)
+        const firstLogToday = await prisma.aELocationLog.findFirst({
+          where: {
+            userId: ae.id,
+            createdAt: {
+              gte: startUTC,
+              lte: endUTC
+            }
+          },
+          orderBy: { createdAt: 'asc' }
+        });
+
+        // Determine Site 1 Sign-In Point
+        let siteSignIn = null;
+        if (attendanceRecord && attendanceRecord.siteName) {
+          siteSignIn = {
+            siteNumber: 1,
+            siteName: attendanceRecord.siteName,
+            latitude: attendanceRecord.latitude || (firstLogToday ? firstLogToday.latitude : null),
+            longitude: attendanceRecord.longitude || (firstLogToday ? firstLogToday.longitude : null),
+            address: attendanceRecord.locationAddress || null,
+            signedInAt: attendanceRecord.createdAt,
+            checkoutSiteName: attendanceRecord.checkoutSiteName || null,
+            checkoutLatitude: attendanceRecord.checkoutLatitude || null,
+            checkoutLongitude: attendanceRecord.checkoutLongitude || null,
+            checkoutTime: attendanceRecord.checkoutTime || null,
+            status: attendanceRecord.checkoutTime ? 'CHECKED_OUT' : 'SIGNED_IN'
+          };
+        }
+
         return {
           user: ae,
           latestLocation: latestLog || null,
           previousLocation: prevLog || null,
+          firstLocation: firstLogToday || null,
+          siteSignIn,
+          scheduledAssignments,
+          activeAssignment: scheduledAssignments[0] || null,
           status,
           isMoving,
           lastPingMinutesAgo
@@ -226,11 +303,64 @@ const getLocationHistory = async (req, res) => {
       orderBy: { createdAt: 'asc' }
     });
 
+    const dayStart = new Date(startUTC);
+    dayStart.setUTCHours(0, 0, 0, 0);
+    const dayEnd = new Date(endUTC);
+    dayEnd.setUTCHours(23, 59, 59, 999);
+
+    const attendanceRecord = await prisma.attendance.findFirst({
+      where: {
+        userId,
+        date: { gte: dayStart, lte: dayEnd }
+      },
+      select: {
+        id: true,
+        siteName: true,
+        checkoutSiteName: true,
+        latitude: true,
+        longitude: true,
+        locationAddress: true,
+        checkoutLatitude: true,
+        checkoutLongitude: true,
+        createdAt: true,
+        checkoutTime: true
+      }
+    });
+
+    const scheduledAssignments = await prisma.siteAssignment.findMany({
+      where: {
+        aeId: userId,
+        scheduledDate: { gte: dayStart, lte: dayEnd },
+        status: { notIn: ['CANCELLED'] }
+      },
+      orderBy: { scheduledTime: 'asc' }
+    });
+
+    let siteSignIn = null;
+    if (attendanceRecord && attendanceRecord.siteName) {
+      siteSignIn = {
+        siteNumber: 1,
+        siteName: attendanceRecord.siteName,
+        latitude: attendanceRecord.latitude || (logs[0] ? logs[0].latitude : null),
+        longitude: attendanceRecord.longitude || (logs[0] ? logs[0].longitude : null),
+        address: attendanceRecord.locationAddress || null,
+        signedInAt: attendanceRecord.createdAt,
+        checkoutSiteName: attendanceRecord.checkoutSiteName || null,
+        checkoutLatitude: attendanceRecord.checkoutLatitude || null,
+        checkoutLongitude: attendanceRecord.checkoutLongitude || null,
+        checkoutTime: attendanceRecord.checkoutTime || null,
+        status: attendanceRecord.checkoutTime ? 'CHECKED_OUT' : 'SIGNED_IN'
+      };
+    }
+
     res.json({
       user,
       date: dateStr,
       window: '07:00 AM – 08:00 PM IST',
       totalPoints: logs.length,
+      siteSignIn,
+      scheduledAssignments,
+      activeAssignment: scheduledAssignments[0] || null,
       logs
     });
   } catch (error) {

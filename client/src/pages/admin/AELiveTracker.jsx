@@ -33,7 +33,13 @@ import {
   RotateCcw,
   Route,
   Car,
-  Crosshair
+  Crosshair,
+  Bike,
+  Building,
+  Flag,
+  ShieldCheck,
+  ChevronUp,
+  ChevronDown
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ApkDownloadModal from '../../components/common/ApkDownloadModal';
@@ -69,6 +75,18 @@ const AELiveTracker = () => {
   
   // Mobile active tab: 'map' or 'list'
   const [mobileTab, setMobileTab] = useState('map');
+
+  // Uber / Rapido Style Live Ride Tracking & Vehicle Mode
+  const [vehicleMode, setVehicleMode] = useState('bike'); // 'bike' (Rapido) or 'cab' (Uber)
+  const [isFollowMode, setIsFollowMode] = useState(false);
+  const [isSimulatingRide, setIsSimulatingRide] = useState(false);
+  const [simulationSpeed, setSimulationSpeed] = useState(1);
+  const [simulatedIndex, setSimulatedIndex] = useState(0);
+  const [isHudExpanded, setIsHudExpanded] = useState(true);
+
+  // Selected AE Site Sign-In and Scheduled Assignment metadata
+  const [selectedAESiteSignIn, setSelectedAESiteSignIn] = useState(null);
+  const [selectedAEAssignment, setSelectedAEAssignment] = useState(null);
 
   // APK Activation Code Modal state
   const [activationCode, setActivationCode] = useState(null);
@@ -342,6 +360,7 @@ const AELiveTracker = () => {
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersRef = useRef({});
+  const siteMarkersRef = useRef({});
   const markerAnimationsRef = useRef({});
   const liveTrailsRef = useRef({});
   const polylineRef = useRef(null);
@@ -529,6 +548,92 @@ const AELiveTracker = () => {
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
   };
 
+  // High-Definition Top-Down Bike/Scooter Vector (Rapido / Two-Wheeler style)
+  const getBikeSVG = (color = '#2563eb', bearing = 0) => `
+    <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+      <!-- Glowing Headlight Beam projecting forward -->
+      <div style="
+        position: absolute;
+        top: -24px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 0;
+        height: 0;
+        border-left: 14px solid transparent;
+        border-right: 14px solid transparent;
+        border-top: 26px solid rgba(254, 240, 138, 0.5);
+        filter: blur(2px);
+        pointer-events: none;
+      "></div>
+
+      <!-- Top-Down Bike/Scooter SVG -->
+      <svg width="42" height="42" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 4px 10px rgba(0,0,0,0.6));">
+        <ellipse cx="24" cy="25" rx="9" ry="20" fill="rgba(0,0,0,0.3)" filter="blur(1px)"/>
+        <rect x="22" y="4" width="4" height="10" rx="2" fill="#0f172a" stroke="#ffffff" stroke-width="1"/>
+        <rect x="13" y="13" width="22" height="3" rx="1.5" fill="#334155" stroke="#ffffff" stroke-width="0.8"/>
+        <circle cx="12" cy="11" r="2" fill="#94a3b8" stroke="#ffffff" stroke-width="0.5"/>
+        <circle cx="36" cy="11" r="2" fill="#94a3b8" stroke="#ffffff" stroke-width="0.5"/>
+        <path d="M21 12 H27 L25 15 H23 Z" fill="#fef08a"/>
+        <path d="M19 16 C19 14 29 14 29 16 L31 34 C31 36 17 36 17 34 Z" fill="${color}" stroke="#ffffff" stroke-width="1.2"/>
+        <path d="M20 22 C20 20 28 20 28 22 L27 33 C27 34 21 34 21 33 Z" fill="#1e293b"/>
+        <circle cx="24" cy="23" r="5" fill="#f8fafc" stroke="#334155" stroke-width="1.5"/>
+        <path d="M20 21 Q24 18 28 21" stroke="#0284c7" stroke-width="2.2" stroke-linecap="round"/>
+        <rect x="22" y="34" width="4" height="8" rx="2" fill="#0f172a" stroke="#ffffff" stroke-width="0.8"/>
+        <rect x="21.5" y="40" width="5" height="2" rx="1" fill="#ef4444"/>
+      </svg>
+    </div>
+  `;
+
+  // High-Definition Top-Down Cab/Car Vector (Uber / Four-Wheeler style)
+  const getCabSVG = (color = '#eab308', bearing = 0) => `
+    <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
+      <!-- Dual Headlight Beams projecting forward -->
+      <div style="
+        position: absolute;
+        top: -26px;
+        left: 14px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 26px solid rgba(254, 240, 138, 0.45);
+        filter: blur(2px);
+        pointer-events: none;
+      "></div>
+      <div style="
+        position: absolute;
+        top: -26px;
+        right: 14px;
+        width: 0;
+        height: 0;
+        border-left: 8px solid transparent;
+        border-right: 8px solid transparent;
+        border-top: 26px solid rgba(254, 240, 138, 0.45);
+        filter: blur(2px);
+        pointer-events: none;
+      "></div>
+
+      <!-- Top-Down Cab/Car SVG -->
+      <svg width="44" height="44" viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" style="filter: drop-shadow(0 5px 12px rgba(0,0,0,0.65));">
+        <ellipse cx="24" cy="25" rx="14" ry="20" fill="rgba(0,0,0,0.3)" filter="blur(2px)"/>
+        <rect x="7" y="10" width="3.5" height="8" rx="1.5" fill="#0f172a"/>
+        <rect x="37.5" y="10" width="3.5" height="8" rx="1.5" fill="#0f172a"/>
+        <rect x="7" y="30" width="3.5" height="8" rx="1.5" fill="#0f172a"/>
+        <rect x="37.5" y="30" width="3.5" height="8" rx="1.5" fill="#0f172a"/>
+        <rect x="9" y="6" width="30" height="36" rx="8" fill="${color}" stroke="#ffffff" stroke-width="1.5"/>
+        <path d="M12 16 L15 11 H33 L36 16 Z" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+        <rect x="13" y="17" width="22" height="15" rx="3" fill="#ffffff" opacity="0.25"/>
+        <rect x="18" y="21" width="12" height="5" rx="1.5" fill="#0f172a" stroke="#ffffff" stroke-width="0.8"/>
+        <text x="24" y="25" fill="#facc15" font-size="3.2" font-weight="900" text-anchor="middle" font-family="sans-serif">TAXI</text>
+        <path d="M14 33 H34 L32 37 H16 Z" fill="#1e293b" stroke="#475569" stroke-width="0.5"/>
+        <rect x="11" y="6" width="5" height="2" rx="1" fill="#fef08a"/>
+        <rect x="32" y="6" width="5" height="2" rx="1" fill="#fef08a"/>
+        <rect x="11" y="40" width="5" height="2" rx="1" fill="#ef4444"/>
+        <rect x="32" y="40" width="5" height="2" rx="1" fill="#ef4444"/>
+      </svg>
+    </div>
+  `;
+
   // Smooth Marker Gliding function across street coordinates
   const slideMarkerTo = (marker, startPos, endPos, duration = 2500) => {
     if (!marker) return;
@@ -552,15 +657,127 @@ const AELiveTracker = () => {
     return animId;
   };
 
-  // Update map markers when liveData changes with smooth gliding & larger icons
+  // Update map markers when liveData changes with smooth gliding, bike/cab icons & Site 1 pins
   useEffect(() => {
     if (!leafletMap.current || !window.L) return;
 
     const currentEmployeeIds = new Set();
+    const currentSiteEmpIds = new Set();
     const bounds = [];
 
     liveData.forEach((item) => {
-      const { user: ae, latestLocation: loc, previousLocation: prevLoc, status } = item;
+      const { user: ae, latestLocation: loc, previousLocation: prevLoc, status, siteSignIn } = item;
+
+      // 1. Check and Pin Site 1 Sign-In Point on Map if present
+      if (siteSignIn && siteSignIn.latitude && siteSignIn.longitude) {
+        currentSiteEmpIds.add(ae.id);
+        const siteLatLng = [siteSignIn.latitude, siteSignIn.longitude];
+        bounds.push(siteLatLng);
+
+        const site1Icon = window.L.divIcon({
+          className: 'custom-site-signin-pin',
+          html: `
+            <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
+              <!-- Outer Amber Glow Radar Ring -->
+              <div style="
+                position: absolute;
+                width: 58px;
+                height: 58px;
+                border-radius: 16px;
+                background: rgba(245, 158, 11, 0.22);
+                border: 2px solid rgba(245, 158, 11, 0.85);
+                animation: pingRadar 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+              "></div>
+
+              <!-- Main Pin Card -->
+              <div style="
+                background: linear-gradient(135deg, #92400e, #d97706, #f59e0b);
+                width: 44px;
+                height: 44px;
+                border-radius: 14px;
+                border: 3px solid #ffffff;
+                box-shadow: 0 6px 20px rgba(217, 119, 6, 0.7), 0 2px 6px rgba(0,0,0,0.4);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                position: relative;
+                z-index: 2;
+              ">
+                <span style="font-size: 16px; line-height: 1;">🏢</span>
+                <span style="font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;">SITE 1</span>
+              </div>
+
+              <!-- Floating Site Name Badge Below -->
+              <div style="
+                position: absolute;
+                bottom: -18px;
+                left: 50%;
+                transform: translateX(-50%);
+                white-space: nowrap;
+                background: #0f172a;
+                color: #fde68a;
+                border: 1.5px solid #f59e0b;
+                font-size: 9.5px;
+                font-weight: 800;
+                padding: 2px 7px;
+                border-radius: 6px;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                display: flex;
+                align-items: center;
+                gap: 4px;
+                z-index: 4;
+              ">
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: #f59e0b; animation: pulse 1.2s infinite; display: inline-block;"></span>
+                <span>Site 1: ${siteSignIn.siteName}</span>
+              </div>
+            </div>
+          `,
+          iconSize: [68, 68],
+          iconAnchor: [34, 34]
+        });
+
+        const sitePopup = `
+          <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 220px;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; border: 1.5px solid #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                🏢
+              </div>
+              <div>
+                <h4 style="margin: 0; font-size: 13.5px; font-weight: 800; color: #92400e;">Site 1: ${siteSignIn.siteName}</h4>
+                <span style="font-size: 9.5px; font-weight: 800; color: #059669; text-transform: uppercase;">
+                  ${siteSignIn.status === 'CHECKED_OUT' ? '✅ Completed / Checked Out' : '🟢 Logged In / Active Site'}
+                </span>
+              </div>
+            </div>
+            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 8px; font-size: 11px; color: #78350f; line-height: 1.5;">
+              <div><strong>👤 Executive:</strong> ${ae.name}</div>
+              <div><strong>🕒 Signed In:</strong> ${new Date(siteSignIn.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>
+              ${siteSignIn.address ? `<div><strong>📍 Address:</strong> ${siteSignIn.address}</div>` : ''}
+              ${siteSignIn.checkoutTime ? `<div><strong>📤 Departed:</strong> ${new Date(siteSignIn.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>` : ''}
+            </div>
+          </div>
+        `;
+
+        if (siteMarkersRef.current[ae.id]) {
+          siteMarkersRef.current[ae.id].setLatLng(siteLatLng);
+          siteMarkersRef.current[ae.id].setIcon(site1Icon);
+          siteMarkersRef.current[ae.id].setPopupContent(sitePopup);
+        } else {
+          const marker = window.L.marker(siteLatLng, {
+            icon: site1Icon,
+            zIndexOffset: 300
+          }).addTo(leafletMap.current);
+          marker.bindPopup(sitePopup);
+          marker.on('click', () => {
+            leafletMap.current?.flyTo(siteLatLng, 18, { duration: 0.8 });
+          });
+          siteMarkersRef.current[ae.id] = marker;
+        }
+      }
+
+      // 2. Render Live Moving AE Marker (Bike 🛵 or Cab 🚗)
       if (!loc || !loc.latitude || !loc.longitude) return;
 
       currentEmployeeIds.add(ae.id);
@@ -582,12 +799,16 @@ const AELiveTracker = () => {
         status === 'IDLE' ? '#f59e0b' : 
         status === 'OUT_OF_HOURS' ? '#8b5cf6' : '#64748b';
 
+      const vehicleSVG = vehicleMode === 'cab' 
+        ? getCabSVG('#2563eb', bearing) 
+        : getBikeSVG('#2563eb', bearing);
+
       const customIcon = window.L.divIcon({
         className: 'custom-map-pin',
         html: `
           <div style="position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
             ${isMoving ? `
-              <!-- Multi-tier Pulsing Radar Waves (Uber / Swiggy style) -->
+              <!-- Multi-tier Pulsing Radar Waves (Uber / Rapido style) -->
               <div style="
                 position: absolute;
                 width: 68px;
@@ -607,46 +828,45 @@ const AELiveTracker = () => {
               "></div>
             ` : ''}
 
-            <!-- Center Avatar / Vehicle Circle (Enlarged to 46px) -->
-            <div style="
-              background: ${isMoving ? 'linear-gradient(135deg, #1d4ed8, #2563eb)' : markerColor};
-              width: 46px;
-              height: 46px;
-              border-radius: 50%;
-              border: 3.5px solid #ffffff;
-              box-shadow: ${isMoving ? '0 6px 22px rgba(37,99,235,0.7), 0 2px 6px rgba(0,0,0,0.4)' : '0 6px 18px rgba(0,0,0,0.4)'};
-              display: flex;
-              align-items: center;
-              justify-content: center;
-              color: white;
-              font-weight: 900;
-              font-size: 13px;
-              font-family: system-ui, -apple-system, sans-serif;
-              position: relative;
-              z-index: 2;
-              ${isMoving ? 'animation: liveVehicleBob 1.6s ease-in-out infinite alternate;' : ''}
-            ">
-              ${isMoving ? `
-                <div style="transform: rotate(${Math.round(bearing)}deg); display: flex; align-items: center; justify-content: center;">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));">
-                    <polygon points="12,2 22,21 12,16 2,21" />
-                  </svg>
-                </div>
-              ` : (ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE')}
-              ${(isMoving || isStationary) ? `
-                <span style="
-                  position: absolute;
-                  top: -2px;
-                  right: -2px;
-                  width: 12px;
-                  height: 12px;
-                  background: ${isMoving ? '#3b82f6' : '#10b981'};
-                  border: 2.5px solid white;
-                  border-radius: 50%;
-                  box-shadow: 0 0 8px ${isMoving ? '#3b82f6' : '#10b981'};
-                "></span>
-              ` : ''}
-            </div>
+            <!-- Center Vehicle / Avatar Circle -->
+            ${isMoving ? `
+              <div style="transform: rotate(${Math.round(bearing)}deg); transition: transform 0.25s ease-out; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                ${vehicleSVG}
+              </div>
+            ` : `
+              <div style="
+                background: ${markerColor};
+                width: 44px;
+                height: 44px;
+                border-radius: 50%;
+                border: 3.5px solid #ffffff;
+                box-shadow: 0 6px 18px rgba(0,0,0,0.4);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                color: white;
+                font-weight: 900;
+                font-size: 13px;
+                font-family: system-ui, -apple-system, sans-serif;
+                position: relative;
+                z-index: 2;
+              ">
+                ${ae.name ? ae.name.substring(0, 2).toUpperCase() : 'AE'}
+                ${isStationary ? `
+                  <span style="
+                    position: absolute;
+                    top: -2px;
+                    right: -2px;
+                    width: 12px;
+                    height: 12px;
+                    background: #10b981;
+                    border: 2.5px solid white;
+                    border-radius: 50%;
+                    box-shadow: 0 0 8px #10b981;
+                  "></span>
+                ` : ''}
+              </div>
+            `}
 
             <!-- Floating Status Badge Pill Below Pin -->
             <div style="
@@ -670,7 +890,7 @@ const AELiveTracker = () => {
             ">
               ${isMoving ? `
                 <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; animation: pulse 1s infinite; display: inline-block;"></span>
-                ${loc.speed && loc.speed > 0.5 ? `MOVING • ${(loc.speed * 3.6).toFixed(0)} km/h` : 'MOVING'}
+                ${vehicleMode === 'cab' ? '🚗' : '🛵'} ${loc.speed && loc.speed > 0.5 ? `MOVING • ${(loc.speed * 3.6).toFixed(0)} km/h` : 'MOVING'}
               ` : (
                 isStationary ? '📍 AT SITE' : status === 'IDLE' ? '⏳ IDLE' : status === 'OUT_OF_HOURS' ? 'OFF-HRS' : 'OFFLINE'
               )}
@@ -690,7 +910,7 @@ const AELiveTracker = () => {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
             <h4 style="margin: 0; font-weight: 800; font-size: 14px; color: #0f172a;">${ae.name}</h4>
             <span style="font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; background: ${markerColor}15; color: ${markerColor}; border: 1px solid ${markerColor}40;">
-              ${isMoving ? '🚗 MOVING' : isStationary ? '📍 AT SITE' : status}
+              ${isMoving ? (vehicleMode === 'cab' ? '🚗 CAB EN ROUTE' : '🛵 BIKE EN ROUTE') : isStationary ? '📍 AT SITE' : status}
             </span>
           </div>
           <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">${ae.designation || 'Area Executive'}</p>
@@ -700,6 +920,7 @@ const AELiveTracker = () => {
             <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
             <div><strong>🚦 Status:</strong> ${isMoving ? 'In Transit / Moving' : isStationary ? 'Stationary (At Site/Visit)' : status}</div>
             ${loc.speed ? `<div><strong>⚡ Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</div>` : ''}
+            ${siteSignIn ? `<div><strong>🏢 Site 1:</strong> ${siteSignIn.siteName} (Signed In)</div>` : ''}
           </div>
         </div>
       `;
@@ -766,6 +987,14 @@ const AELiveTracker = () => {
       }
     });
 
+    // Remove obsolete Site 1 markers
+    Object.keys(siteMarkersRef.current).forEach((empId) => {
+      if (!currentSiteEmpIds.has(Number(empId))) {
+        siteMarkersRef.current[empId].remove();
+        delete siteMarkersRef.current[empId];
+      }
+    });
+
     if (bounds.length > 0 && !selectedAE) {
       leafletMap.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
     }
@@ -774,11 +1003,13 @@ const AELiveTracker = () => {
     setTimeout(() => {
       leafletMap.current?.invalidateSize();
     }, 100);
-  }, [liveData]);
+  }, [liveData, vehicleMode]);
 
   // Focus single AE on map & automatically trace their route for today
   const handleSelectAE = (aeItem) => {
     setSelectedAE(aeItem);
+    setSelectedAESiteSignIn(aeItem.siteSignIn || null);
+    setSelectedAEAssignment(aeItem.activeAssignment || null);
     // On mobile, switch to map view when an AE is tapped
     setMobileTab('map');
 
@@ -822,6 +1053,13 @@ const AELiveTracker = () => {
       });
       const logs = res.data.logs || [];
       setHistoryLogs(logs);
+
+      if (res.data.siteSignIn) {
+        setSelectedAESiteSignIn(res.data.siteSignIn);
+      }
+      if (res.data.activeAssignment) {
+        setSelectedAEAssignment(res.data.activeAssignment);
+      }
 
       // Clean up previous polyline & markers again before rendering new route
       clearMapRoute();
@@ -927,6 +1165,147 @@ const AELiveTracker = () => {
           historyMarkersRef.current.push(endMarker);
         }
 
+        // Add Site 1 Sign-In Pin if available
+        const siteSignInData = res.data.siteSignIn || selectedAE?.siteSignIn;
+        if (siteSignInData && siteSignInData.latitude && siteSignInData.longitude) {
+          const site1PinIcon = window.L.divIcon({
+            className: 'site1-history-pin',
+            html: `
+              <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center;">
+                <div style="
+                  position: absolute;
+                  width: 54px;
+                  height: 54px;
+                  border-radius: 50%;
+                  background: rgba(245, 158, 11, 0.25);
+                  border: 1.5px solid rgba(245, 158, 11, 0.6);
+                  animation: pingRadar 2s infinite;
+                "></div>
+                <div style="
+                  background: linear-gradient(135deg, #f59e0b, #d97706);
+                  width: 42px;
+                  height: 42px;
+                  border-radius: 12px;
+                  border: 3px solid #ffffff;
+                  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.45);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-size: 20px;
+                  z-index: 2;
+                ">
+                  🏢
+                </div>
+                <div style="
+                  position: absolute;
+                  bottom: -18px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  white-space: nowrap;
+                  background: #0f172a;
+                  color: #fde68a;
+                  border: 1.5px solid #f59e0b;
+                  font-size: 9.5px;
+                  font-weight: 800;
+                  padding: 2px 7px;
+                  border-radius: 6px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                  z-index: 4;
+                ">
+                  Site 1: ${siteSignInData.siteName}
+                </div>
+              </div>
+            `,
+            iconSize: [68, 68],
+            iconAnchor: [34, 34]
+          });
+
+          const site1Marker = window.L.marker([siteSignInData.latitude, siteSignInData.longitude], {
+            icon: site1PinIcon,
+            zIndexOffset: 450
+          }).addTo(leafletMap.current).bindPopup(`
+            <div style="font-family: system-ui; padding: 4px; min-width: 190px;">
+              <h4 style="margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #b45309;">🏢 Site 1: ${siteSignInData.siteName}</h4>
+              <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #92400e; line-height: 1.5;">
+                <div><strong>🕒 Signed In:</strong> ${siteSignInData.signedInAt ? new Date(siteSignInData.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Logged In'} IST</div>
+                ${siteSignInData.address ? `<div><strong>📍 Address:</strong> ${siteSignInData.address}</div>` : ''}
+                ${siteSignInData.checkoutTime ? `<div><strong>📤 Departed:</strong> ${new Date(siteSignInData.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>` : ''}
+              </div>
+            </div>
+          `);
+          site1Marker.on('click', () => {
+            leafletMap.current?.flyTo([siteSignInData.latitude, siteSignInData.longitude], 18, { duration: 0.8 });
+          });
+          historyMarkersRef.current.push(site1Marker);
+        }
+
+        // Add Place B Destination Pin if assignment has coordinates
+        const destData = res.data.activeAssignment || selectedAE?.activeAssignment;
+        if (destData && destData.latitude && destData.longitude) {
+          const destPinIcon = window.L.divIcon({
+            className: 'place-b-destination-pin',
+            html: `
+              <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center;">
+                <div style="
+                  background: linear-gradient(135deg, #ef4444, #b91c1c);
+                  width: 40px;
+                  height: 40px;
+                  border-radius: 12px;
+                  border: 3px solid #ffffff;
+                  box-shadow: 0 4px 14px rgba(220, 38, 38, 0.45);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  color: white;
+                  font-size: 18px;
+                  z-index: 2;
+                ">
+                  🏁
+                </div>
+                <div style="
+                  position: absolute;
+                  bottom: -18px;
+                  left: 50%;
+                  transform: translateX(-50%);
+                  white-space: nowrap;
+                  background: #0f172a;
+                  color: #fca5a5;
+                  border: 1.5px solid #ef4444;
+                  font-size: 9.5px;
+                  font-weight: 800;
+                  padding: 2px 7px;
+                  border-radius: 6px;
+                  box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                  z-index: 4;
+                ">
+                  Place B: ${destData.siteName}
+                </div>
+              </div>
+            `,
+            iconSize: [68, 68],
+            iconAnchor: [34, 34]
+          });
+
+          const destMarker = window.L.marker([destData.latitude, destData.longitude], {
+            icon: destPinIcon,
+            zIndexOffset: 460
+          }).addTo(leafletMap.current).bindPopup(`
+            <div style="font-family: system-ui; padding: 4px; min-width: 190px;">
+              <h4 style="margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #dc2626;">🏁 Place B: ${destData.siteName}</h4>
+              <div style="background: #fef2f2; border: 1px solid #fee2e2; border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #991b1b; line-height: 1.5;">
+                ${destData.clientName ? `<div><strong>👤 Client:</strong> ${destData.clientName}</div>` : ''}
+                ${destData.scheduledTime ? `<div><strong>🕒 Time:</strong> ${destData.scheduledTime}</div>` : ''}
+                ${destData.location ? `<div><strong>📍 Location:</strong> ${destData.location}</div>` : ''}
+              </div>
+            </div>
+          `);
+          destMarker.on('click', () => {
+            leafletMap.current?.flyTo([destData.latitude, destData.longitude], 18, { duration: 0.8 });
+          });
+          historyMarkersRef.current.push(destMarker);
+        }
+
         // Set playback scrubber to the latest point by default
         setPlaybackIndex(pathCoords.length - 1);
 
@@ -1002,6 +1381,8 @@ const AELiveTracker = () => {
     setRoadDistanceKm(null);
     setIsRoadSnapped(false);
     setDetectedStopsList([]);
+    setSelectedAESiteSignIn(null);
+    setSelectedAEAssignment(null);
     toast.info('Route path cleared from map.');
   };
 
@@ -1046,38 +1427,34 @@ const AELiveTracker = () => {
       bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
     }
 
+    const vehicleSVG = vehicleMode === 'cab'
+      ? getCabSVG('#2563eb', bearing)
+      : getBikeSVG('#2563eb', bearing);
+
     const vehicleIcon = window.L.divIcon({
       className: 'swiggy-uber-vehicle-pin',
       html: `
-        <div style="position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;">
-          <!-- Pulsing Radar Wave (Swiggy / Uber style) -->
+        <div style="position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
+          <!-- Pulsing Radar Wave (Uber / Rapido style) -->
           <div style="
             position: absolute;
-            inset: 0;
+            inset: -4px;
             border-radius: 50%;
-            background: rgba(37, 99, 235, 0.25);
+            background: rgba(37, 99, 235, 0.22);
             border: 1.5px solid rgba(59, 130, 246, 0.6);
-            animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+            animation: pingRadar 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
           "></div>
 
           <!-- Rotating Vehicle Marker pointing down the road -->
           <div style="
             transform: rotate(${Math.round(bearing)}deg);
             transition: transform 0.25s ease-out;
-            width: 38px;
-            height: 38px;
-            border-radius: 50%;
-            background: linear-gradient(135deg, #1d4ed8, #2563eb);
-            border: 2.5px solid #ffffff;
-            box-shadow: 0 4px 18px rgba(37,99,235,0.7), 0 2px 6px rgba(0,0,0,0.3);
             display: flex;
             align-items: center;
             justify-content: center;
-            color: white;
+            z-index: 2;
           ">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="#ffffff" stroke="#1d4ed8" stroke-width="1.5">
-              <polygon points="12,2 22,21 12,16 2,21" />
-            </svg>
+            ${vehicleSVG}
           </div>
           
           <!-- Live Moving Status Tag -->
@@ -1092,20 +1469,21 @@ const AELiveTracker = () => {
             border: 1px solid #3b82f6;
             font-size: 9px;
             font-weight: 800;
-            padding: 1px 6px;
+            padding: 1.5px 6px;
             border-radius: 6px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.5);
             display: flex;
             align-items: center;
             gap: 3px;
+            z-index: 3;
           ">
             <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
-            MOVING
+            ${vehicleMode === 'cab' ? '🚗 CAB' : '🛵 BIKE'} MOVING
           </div>
         </div>
       `,
-      iconSize: [44, 44],
-      iconAnchor: [22, 22]
+      iconSize: [56, 56],
+      iconAnchor: [28, 28]
     });
 
     if (!playbackMarkerRef.current) {
@@ -1117,7 +1495,12 @@ const AELiveTracker = () => {
       playbackMarkerRef.current.setIcon(vehicleIcon);
       playbackMarkerRef.current.setLatLng(latLng);
     }
-  }, [playbackIndex, historyLogs, snappedPathCoords, isPlaying]);
+
+    // Auto-center map camera in Follow Mode
+    if (isFollowMode && leafletMap.current) {
+      leafletMap.current.panTo(latLng, { animate: true, duration: 0.3 });
+    }
+  }, [playbackIndex, historyLogs, snappedPathCoords, isPlaying, vehicleMode, isFollowMode]);
 
   // Playback Timer Loop
   useEffect(() => {
@@ -1562,32 +1945,59 @@ const AELiveTracker = () => {
           mobileTab === 'map' ? 'flex' : 'hidden lg:flex'
         }`}>
           
-          {/* Floating Top Control Bar: Layer Switcher */}
-          <div className="absolute top-4 right-4 z-20 flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
-            <button
-              onClick={() => changeMapType('google_roadmap')}
-              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              🗺️ Map
-            </button>
-            <button
-              onClick={() => changeMapType('google_satellite')}
-              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              🛰️ Satellite
-            </button>
-            <button
-              onClick={() => changeMapType('openstreetmap')}
-              className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
-              }`}
-            >
-              🌐 OpenStreet
-            </button>
+          {/* Floating Top Control Bar: Layer Switcher & Vehicle Mode Toggle */}
+          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
+            {/* Global Vehicle Mode Switcher (Bike vs Cab) */}
+            <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
+              <button
+                onClick={() => setVehicleMode('bike')}
+                className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                  vehicleMode === 'bike' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-300 hover:text-white'
+                }`}
+                title="Rapido-style Bike / Two-Wheeler Tracking"
+              >
+                <Bike size={13} />
+                <span className="hidden sm:inline">Bike</span>
+              </button>
+              <button
+                onClick={() => setVehicleMode('cab')}
+                className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                  vehicleMode === 'cab' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-300 hover:text-white'
+                }`}
+                title="Uber-style Cab / Car Tracking"
+              >
+                <Car size={13} />
+                <span className="hidden sm:inline">Cab</span>
+              </button>
+            </div>
+
+            {/* Map Layer Switcher */}
+            <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
+              <button
+                onClick={() => changeMapType('google_roadmap')}
+                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                  mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                🗺️ Map
+              </button>
+              <button
+                onClick={() => changeMapType('google_satellite')}
+                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                  mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                🛰️ Sat
+              </button>
+              <button
+                onClick={() => changeMapType('openstreetmap')}
+                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                  mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                }`}
+              >
+                🌐 OSM
+              </button>
+            </div>
           </div>
 
           {/* Floating Route Tracing Panel for Selected AE */}
@@ -1663,72 +2073,306 @@ const AELiveTracker = () => {
             </div>
           )}
 
-          {/* Floating Bottom Journey Playback Bar */}
-          {selectedAE && historyLogs.length > 1 && (
-            <div className="absolute bottom-4 left-4 right-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row items-center gap-3 animate-fadeIn">
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setIsPlaying(!isPlaying)}
-                  className="p-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white shadow-lg shadow-blue-600/30 active:scale-95 transition-all"
-                  title={isPlaying ? "Pause" : "Play Journey"}
-                >
-                  {isPlaying ? <Pause size={16} /> : <Play size={16} className="fill-white" />}
-                </button>
-                <button
-                  onClick={() => { setIsPlaying(false); setPlaybackIndex(0); }}
-                  className="p-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
-                  title="Reset to Start"
-                >
-                  <RotateCcw size={16} />
-                </button>
-              </div>
-
-              {/* Scrubber Range Slider */}
-              <div className="flex-1 w-full flex items-center gap-3">
-                <input
-                  type="range"
-                  min={0}
-                  max={Math.max(1, (snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length) - 1)}
-                  value={playbackIndex}
-                  onChange={(e) => {
-                    setPlaybackIndex(Number(e.target.value));
-                  }}
-                  className="w-full accent-blue-500 h-1.5 bg-slate-700 rounded-lg cursor-pointer"
-                />
-                <span className="text-xs font-mono font-bold text-blue-400 shrink-0 bg-slate-800 px-2.5 py-1 rounded-lg border border-slate-700">
-                  {(() => {
-                    if (historyLogs.length === 0) return '--:--';
-                    const totalPoints = snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length;
-                    const logIdx = Math.min(historyLogs.length - 1, Math.round((playbackIndex / Math.max(1, totalPoints - 1)) * (historyLogs.length - 1)));
-                    const log = historyLogs[logIdx];
-                    return log?.createdAt 
-                      ? new Date(log.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-                      : '--:--';
-                  })()}
-                </span>
-              </div>
-
-              {/* Speed Multipliers & Trip Distance */}
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="flex items-center bg-slate-800 p-0.5 rounded-xl border border-slate-700 text-[10px] font-bold">
-                  {[1, 2, 5].map((spd) => (
+          {/* Uber / Rapido Style Live Ride Tracking HUD Drawer */}
+          {selectedAE && (
+            <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 z-30 max-w-2xl mx-auto bg-slate-900/95 border border-slate-700/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl backdrop-blur-2xl text-white animate-fadeIn">
+              {/* Header: Vehicle Mode Toggle, AE Profile, Status & Expand/Collapse */}
+              <div className="flex items-center justify-between gap-2.5 pb-2.5 border-b border-slate-800">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  {/* Vehicle Mode Switcher (Bike vs Cab) */}
+                  <div className="flex items-center bg-slate-800/80 p-0.5 rounded-xl border border-slate-700/80 shrink-0">
                     <button
-                      key={spd}
-                      onClick={() => setPlaybackSpeed(spd)}
-                      className={`px-2 py-1 rounded-lg transition-all ${
-                        playbackSpeed === spd ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                      onClick={() => setVehicleMode('bike')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                        vehicleMode === 'bike'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
                       }`}
+                      title="Switch to Rapido-style Bike/Two-Wheeler Tracking"
                     >
-                      {spd}x
+                      <Bike size={13} />
+                      <span className="hidden sm:inline">Bike</span>
                     </button>
-                  ))}
+                    <button
+                      onClick={() => setVehicleMode('cab')}
+                      className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-black transition-all ${
+                        vehicleMode === 'cab'
+                          ? 'bg-blue-600 text-white shadow-md'
+                          : 'text-slate-400 hover:text-white'
+                      }`}
+                      title="Switch to Uber-style Cab/Car Tracking"
+                    >
+                      <Car size={13} />
+                      <span className="hidden sm:inline">Cab</span>
+                    </button>
+                  </div>
+
+                  {/* AE Info */}
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-1.5">
+                      <h4 className="text-xs sm:text-sm font-black text-white truncate">{selectedAE.user.name}</h4>
+                      {selectedAE.user.phone && (
+                        <a
+                          href={`tel:${selectedAE.user.phone}`}
+                          className="p-1 rounded-md bg-blue-500/15 text-blue-400 hover:bg-blue-500/25 transition-all shrink-0"
+                          title="Call Executive"
+                        >
+                          <Phone size={10} />
+                        </a>
+                      )}
+                    </div>
+                    <p className="text-[10px] text-slate-400 truncate">{selectedAE.user.designation || 'Area Executive'}</p>
+                  </div>
                 </div>
 
-                <div className="text-[11px] font-bold text-slate-300 bg-slate-800 px-2.5 py-1.5 rounded-xl border border-slate-700 flex items-center gap-1.5">
-                  <Route size={12} className="text-emerald-400" />
-                  <span>{roadDistanceKm ? `${roadDistanceKm} km` : `${calculateTotalDistanceKm(historyLogs)} km`}</span>
+                {/* Right Header: Moving Status & HUD Toggle */}
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-black uppercase border ${
+                    selectedAE.isMoving || selectedAE.status === 'MOVING'
+                      ? 'bg-blue-500/20 text-blue-400 border-blue-500/40 animate-pulse'
+                      : selectedAESiteSignIn && selectedAESiteSignIn.status === 'SIGNED_IN'
+                        ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
+                        : selectedAE.status === 'STATIONARY'
+                          ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
+                          : 'bg-slate-800 text-slate-400 border-slate-700'
+                  }`}>
+                    <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                    <span>
+                      {selectedAE.isMoving || selectedAE.status === 'MOVING'
+                        ? `${vehicleMode === 'cab' ? '🚗 Cab' : '🛵 Bike'} Moving`
+                        : selectedAESiteSignIn && selectedAESiteSignIn.status === 'SIGNED_IN'
+                          ? '🏢 Site 1 Signed In'
+                          : selectedAE.status === 'STATIONARY'
+                            ? '📍 At Site'
+                            : selectedAE.status}
+                    </span>
+                  </span>
+
+                  <button
+                    onClick={() => setIsHudExpanded(!isHudExpanded)}
+                    className="p-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-400 hover:text-white transition-all"
+                    title={isHudExpanded ? 'Collapse HUD' : 'Expand HUD'}
+                  >
+                    {isHudExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+                  </button>
                 </div>
               </div>
+
+              {/* Collapsible Content */}
+              {isHudExpanded && (
+                <div className="space-y-3 pt-3">
+                  {/* Point-to-Place Journey Stepper ("Where he comes through") */}
+                  <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 space-y-2 text-xs">
+                    {/* Point A: Site 1 Sign-In or Departure */}
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex flex-col items-center shrink-0 mt-0.5">
+                        <div className="w-4 h-4 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                        </div>
+                        <div className="w-0.5 h-6 bg-gradient-to-b from-emerald-500/50 to-blue-500/50" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-extrabold text-[11px] text-emerald-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>🟢 POINT A</span>
+                            {selectedAESiteSignIn && (
+                              <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded text-[9px] font-black border border-amber-500/30">
+                                🏢 Site 1 Pinned
+                              </span>
+                            )}
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {selectedAESiteSignIn?.signedInAt
+                              ? new Date(selectedAESiteSignIn.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                              : historyLogs[0]?.createdAt
+                                ? new Date(historyLogs[0].createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                                : '09:00 AM'}
+                          </span>
+                        </div>
+                        <p className="text-white font-bold text-[11px] truncate">
+                          {selectedAESiteSignIn ? `Site 1: ${selectedAESiteSignIn.siteName}` : 'Morning Departure Point'}
+                        </p>
+                        {selectedAESiteSignIn?.address && (
+                          <p className="text-[10px] text-slate-400 truncate">{selectedAESiteSignIn.address}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Middle: Where he comes through (Street & Live Movement) */}
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex flex-col items-center shrink-0 mt-0.5">
+                        <div className="w-4 h-4 rounded-full bg-blue-500/20 border-2 border-blue-400 flex items-center justify-center animate-pulse">
+                          <span className="text-[9px]">{vehicleMode === 'cab' ? '🚗' : '🛵'}</span>
+                        </div>
+                        <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-rose-500/50" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-extrabold text-[11px] text-blue-400 uppercase tracking-wider flex items-center gap-1">
+                            <span>🛣️ COMING THROUGH</span>
+                            {selectedAE.latestLocation?.speed && selectedAE.latestLocation.speed > 0.5 ? (
+                              <span className="text-blue-300 font-bold">({(selectedAE.latestLocation.speed * 3.6).toFixed(0)} km/h)</span>
+                            ) : null}
+                          </span>
+                          <span className="text-[10px] font-mono text-blue-400 font-bold">
+                            {selectedAE.latestLocation?.batteryLevel != null ? `${selectedAE.latestLocation.batteryLevel}% 🔋` : ''}
+                          </span>
+                        </div>
+                        <p className="text-slate-200 font-medium text-[11px] truncate">
+                          {selectedAE.latestLocation?.address
+                            ? selectedAE.latestLocation.address
+                            : isRoadSnapped
+                              ? 'City Road Street Route'
+                              : 'Active Transit Segment'}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Point B: Destination (Scheduled Site Assignment or Next Stop) */}
+                    <div className="flex items-start gap-2.5">
+                      <div className="flex flex-col items-center shrink-0 mt-0.5">
+                        <div className="w-4 h-4 rounded-full bg-rose-500/20 border-2 border-rose-400 flex items-center justify-center">
+                          <Flag size={9} className="text-rose-400" />
+                        </div>
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between gap-1">
+                          <span className="font-extrabold text-[11px] text-rose-400 uppercase tracking-wider">
+                            🔴 PLACE B (DESTINATION)
+                          </span>
+                          <span className="text-[10px] font-mono text-slate-400">
+                            {selectedAEAssignment?.scheduledTime || 'Scheduled Today'}
+                          </span>
+                        </div>
+                        <p className="text-white font-bold text-[11px] truncate">
+                          {selectedAEAssignment
+                            ? `Site: ${selectedAEAssignment.siteName}`
+                            : selectedAESiteSignIn?.checkoutSiteName
+                              ? `Next Site: ${selectedAESiteSignIn.checkoutSiteName}`
+                              : 'Target Site Inspection'}
+                        </p>
+                        {selectedAEAssignment?.clientName && (
+                          <p className="text-[10px] text-slate-400 truncate">
+                            Client: {selectedAEAssignment.clientName} {selectedAEAssignment.location ? `• ${selectedAEAssignment.location}` : ''}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Trip Progress Bar & Metrics */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
+                      <span className="flex items-center gap-1 text-emerald-400 font-bold">
+                        <span>🟢 Start</span>
+                      </span>
+                      <span className="font-mono text-blue-400 font-bold">
+                        {roadDistanceKm ? `${roadDistanceKm} km total road` : `${calculateTotalDistanceKm(historyLogs)} km`}
+                      </span>
+                      <span className="flex items-center gap-1 text-rose-400 font-bold">
+                        <span>Place B 🏁</span>
+                      </span>
+                    </div>
+
+                    {/* Animated Progress Bar */}
+                    <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500 transition-all duration-300"
+                        style={{
+                          width: `${Math.min(
+                            100,
+                            Math.max(
+                              12,
+                              historyLogs.length > 1
+                                ? Math.round((playbackIndex / Math.max(1, (snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length) - 1)) * 100)
+                                : 50
+                            )
+                          )}%`
+                        }}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Playback Scrubber & Live Ride Simulation Controls */}
+                  <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <button
+                        onClick={() => setIsPlaying(!isPlaying)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 active:scale-95 transition-all"
+                        title={isPlaying ? 'Pause Ride' : 'Play Live Ride Movement'}
+                      >
+                        {isPlaying ? <Pause size={14} /> : <Play size={14} className="fill-white" />}
+                        <span>{isPlaying ? 'Pause' : 'Play Ride'}</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setIsPlaying(false);
+                          setPlaybackIndex(0);
+                        }}
+                        className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
+                        title="Reset to Start"
+                      >
+                        <RotateCcw size={14} />
+                      </button>
+
+                      {/* Camera Follow Mode Toggle */}
+                      <button
+                        onClick={() => setIsFollowMode(!isFollowMode)}
+                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1 ${
+                          isFollowMode
+                            ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-500/20'
+                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                        }`}
+                        title="Auto-center map camera on moving vehicle"
+                      >
+                        <Crosshair size={12} className={isFollowMode ? 'animate-spin-slow' : ''} />
+                        <span>{isFollowMode ? 'Following' : 'Follow'}</span>
+                      </button>
+                    </div>
+
+                    {/* Scrubber slider */}
+                    <div className="flex-1 w-full flex items-center gap-2">
+                      <input
+                        type="range"
+                        min={0}
+                        max={Math.max(1, (snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length) - 1)}
+                        value={playbackIndex}
+                        onChange={(e) => {
+                          setPlaybackIndex(Number(e.target.value));
+                        }}
+                        className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
+                      />
+                      <span className="text-[11px] font-mono font-bold text-blue-400 shrink-0 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                        {(() => {
+                          if (historyLogs.length === 0) return '--:--';
+                          const totalPoints = snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length;
+                          const logIdx = Math.min(historyLogs.length - 1, Math.round((playbackIndex / Math.max(1, totalPoints - 1)) * (historyLogs.length - 1)));
+                          const log = historyLogs[logIdx];
+                          return log?.createdAt
+                            ? new Date(log.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                            : '--:--';
+                        })()}
+                      </span>
+                    </div>
+
+                    {/* Speed Multipliers */}
+                    <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700 text-[10px] font-bold shrink-0">
+                      {[1, 2, 5].map((spd) => (
+                        <button
+                          key={spd}
+                          onClick={() => setPlaybackSpeed(spd)}
+                          className={`px-2 py-1 rounded-lg transition-all ${
+                            playbackSpeed === spd ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
+                          }`}
+                        >
+                          {spd}x
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
