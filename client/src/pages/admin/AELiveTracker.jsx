@@ -39,7 +39,8 @@ import {
   Flag,
   ShieldCheck,
   ChevronUp,
-  ChevronDown
+  ChevronDown,
+  Users
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ApkDownloadModal from '../../components/common/ApkDownloadModal';
@@ -79,12 +80,10 @@ const AELiveTracker = () => {
   // Uber / Rapido Style Live Ride Tracking & Vehicle Mode
   const [vehicleMode, setVehicleMode] = useState('bike'); // 'bike' (Rapido) or 'cab' (Uber)
   const [isFollowMode, setIsFollowMode] = useState(false);
-  const [isSimulatingRide, setIsSimulatingRide] = useState(false);
-  const [simulationSpeed, setSimulationSpeed] = useState(1);
-  const [simulatedIndex, setSimulatedIndex] = useState(0);
   const [isHudExpanded, setIsHudExpanded] = useState(true);
 
-  // Selected AE Site Sign-In and Scheduled Assignment metadata
+  // Selected AE Site Sign-Ins (Sequential Sites: Site 1, Site 2, Site 3...)
+  const [selectedAESiteSignIns, setSelectedAESiteSignIns] = useState([]);
   const [selectedAESiteSignIn, setSelectedAESiteSignIn] = useState(null);
   const [selectedAEAssignment, setSelectedAEAssignment] = useState(null);
 
@@ -352,11 +351,6 @@ const AELiveTracker = () => {
   const [isRoadSnapped, setIsRoadSnapped] = useState(false);
   const [roadDistanceKm, setRoadDistanceKm] = useState(null);
 
-  // Playback animation state
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [playbackIndex, setPlaybackIndex] = useState(0);
-  const [playbackSpeed, setPlaybackSpeed] = useState(1);
-
   const mapRef = useRef(null);
   const leafletMap = useRef(null);
   const markersRef = useRef({});
@@ -367,7 +361,6 @@ const AELiveTracker = () => {
   const casingPolylineRef = useRef(null);
   const historyMarkersRef = useRef([]);
   const stopMarkersRef = useRef([]);
-  const playbackMarkerRef = useRef(null);
 
   // Helper to remove all route polylines and history markers cleanly
   const clearMapRoute = () => {
@@ -383,10 +376,6 @@ const AELiveTracker = () => {
     historyMarkersRef.current = [];
     stopMarkersRef.current.forEach(m => m.remove());
     stopMarkersRef.current = [];
-    if (playbackMarkerRef.current) {
-      playbackMarkerRef.current.remove();
-      playbackMarkerRef.current = null;
-    }
   };
 
   // Load Leaflet CSS and JS dynamically if not present
@@ -657,46 +646,61 @@ const AELiveTracker = () => {
     return animId;
   };
 
-  // Update map markers when liveData changes with smooth gliding, bike/cab icons & Site 1 pins
+  // Update map markers when liveData changes with smooth gliding, bike/cab icons & sequential Site pins
   useEffect(() => {
     if (!leafletMap.current || !window.L) return;
 
     const currentEmployeeIds = new Set();
-    const currentSiteEmpIds = new Set();
+    const currentSiteKeys = new Set();
     const bounds = [];
 
-    liveData.forEach((item) => {
-      const { user: ae, latestLocation: loc, previousLocation: prevLoc, status, siteSignIn } = item;
+    // Filter items to render: if selectedAE is set, ONLY render that selected AE (show his data alone!)
+    // If selectedAE is null, render all AEs (overall view)
+    const itemsToRender = selectedAE
+      ? liveData.filter(item => item.user.id === selectedAE.user.id)
+      : liveData;
 
-      // 1. Check and Pin Site 1 Sign-In Point on Map if present
-      if (siteSignIn && siteSignIn.latitude && siteSignIn.longitude) {
-        currentSiteEmpIds.add(ae.id);
-        const siteLatLng = [siteSignIn.latitude, siteSignIn.longitude];
+    itemsToRender.forEach((item) => {
+      const { user: ae, latestLocation: loc, previousLocation: prevLoc, status } = item;
+
+      // 1. Check and Pin Sequential Sites (Site 1, Site 2, Site 3...) on Map if present
+      const sites = (item.siteSignIns && item.siteSignIns.length > 0)
+        ? item.siteSignIns
+        : (item.siteSignIn ? [item.siteSignIn] : []);
+
+      sites.forEach((site) => {
+        if (!site.latitude || !site.longitude) return;
+        const siteKey = `${ae.id}_site_${site.siteNumber}`;
+        currentSiteKeys.add(siteKey);
+        const siteLatLng = [site.latitude, site.longitude];
         bounds.push(siteLatLng);
 
-        const site1Icon = window.L.divIcon({
+        const isCompleted = site.isCompleted || site.status === 'COMPLETED';
+        const siteIcon = window.L.divIcon({
           className: 'custom-site-signin-pin',
           html: `
             <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
-              <!-- Outer Amber Glow Radar Ring -->
+              <!-- Outer Glow Radar Ring -->
               <div style="
                 position: absolute;
                 width: 58px;
                 height: 58px;
                 border-radius: 16px;
-                background: rgba(245, 158, 11, 0.22);
-                border: 2px solid rgba(245, 158, 11, 0.85);
-                animation: pingRadar 2s cubic-bezier(0, 0, 0.2, 1) infinite;
+                background: ${isCompleted ? 'rgba(16, 185, 129, 0.22)' : 'rgba(245, 158, 11, 0.25)'};
+                border: 2px solid ${isCompleted ? 'rgba(16, 185, 129, 0.7)' : 'rgba(245, 158, 11, 0.85)'};
+                ${isCompleted ? '' : 'animation: pingRadar 2s cubic-bezier(0, 0, 0.2, 1) infinite;'}
               "></div>
 
               <!-- Main Pin Card -->
               <div style="
-                background: linear-gradient(135deg, #92400e, #d97706, #f59e0b);
+                background: ${isCompleted 
+                  ? 'linear-gradient(135deg, #065f46, #059669, #10b981)' 
+                  : 'linear-gradient(135deg, #92400e, #d97706, #f59e0b)'};
                 width: 44px;
                 height: 44px;
                 border-radius: 14px;
                 border: 3px solid #ffffff;
-                box-shadow: 0 6px 20px rgba(217, 119, 6, 0.7), 0 2px 6px rgba(0,0,0,0.4);
+                box-shadow: 0 6px 20px ${isCompleted ? 'rgba(5, 150, 105, 0.6)' : 'rgba(217, 119, 6, 0.7)'};
                 display: flex;
                 flex-direction: column;
                 align-items: center;
@@ -705,8 +709,10 @@ const AELiveTracker = () => {
                 position: relative;
                 z-index: 2;
               ">
-                <span style="font-size: 16px; line-height: 1;">🏢</span>
-                <span style="font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;">SITE 1</span>
+                <span style="font-size: 15px; line-height: 1;">${isCompleted ? '✅' : '🏢'}</span>
+                <span style="font-size: 8px; font-weight: 900; letter-spacing: 0.5px; text-transform: uppercase; margin-top: 1px;">
+                  SITE ${site.siteNumber}
+                </span>
               </div>
 
               <!-- Floating Site Name Badge Below -->
@@ -717,8 +723,8 @@ const AELiveTracker = () => {
                 transform: translateX(-50%);
                 white-space: nowrap;
                 background: #0f172a;
-                color: #fde68a;
-                border: 1.5px solid #f59e0b;
+                color: ${isCompleted ? '#a7f3d0' : '#fde68a'};
+                border: 1.5px solid ${isCompleted ? '#10b981' : '#f59e0b'};
                 font-size: 9.5px;
                 font-weight: 800;
                 padding: 2px 7px;
@@ -729,8 +735,9 @@ const AELiveTracker = () => {
                 gap: 4px;
                 z-index: 4;
               ">
-                <span style="width: 5px; height: 5px; border-radius: 50%; background: #f59e0b; animation: pulse 1.2s infinite; display: inline-block;"></span>
-                <span>Site 1: ${siteSignIn.siteName}</span>
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: ${isCompleted ? '#10b981' : '#f59e0b'}; ${isCompleted ? '' : 'animation: pulse 1.2s infinite;'} display: inline-block;"></span>
+                <span>Site ${site.siteNumber}: ${site.siteName}</span>
+                ${isCompleted ? '<span style="color: #6ee7b7; font-size: 8.5px;">(Done)</span>' : ''}
               </div>
             </div>
           `,
@@ -739,43 +746,43 @@ const AELiveTracker = () => {
         });
 
         const sitePopup = `
-          <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 220px;">
+          <div style="font-family: system-ui, -apple-system, sans-serif; padding: 6px; min-width: 230px;">
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
-              <div style="width: 32px; height: 32px; border-radius: 8px; background: #fef3c7; border: 1.5px solid #f59e0b; display: flex; align-items: center; justify-content: center; font-size: 18px;">
-                🏢
+              <div style="width: 34px; height: 34px; border-radius: 8px; background: ${isCompleted ? '#ecfdf5' : '#fef3c7'}; border: 1.5px solid ${isCompleted ? '#10b981' : '#f59e0b'}; display: flex; align-items: center; justify-content: center; font-size: 18px;">
+                ${isCompleted ? '✅' : '🏢'}
               </div>
               <div>
-                <h4 style="margin: 0; font-size: 13.5px; font-weight: 800; color: #92400e;">Site 1: ${siteSignIn.siteName}</h4>
-                <span style="font-size: 9.5px; font-weight: 800; color: #059669; text-transform: uppercase;">
-                  ${siteSignIn.status === 'CHECKED_OUT' ? '✅ Completed / Checked Out' : '🟢 Logged In / Active Site'}
+                <h4 style="margin: 0; font-size: 13.5px; font-weight: 800; color: ${isCompleted ? '#065f46' : '#92400e'};">Site ${site.siteNumber}: ${site.siteName}</h4>
+                <span style="font-size: 9.5px; font-weight: 800; color: ${isCompleted ? '#059669' : '#d97706'}; text-transform: uppercase;">
+                  ${isCompleted ? '✅ Completed / Signed Out' : '🟢 Logged In / Active Site'}
                 </span>
               </div>
             </div>
-            <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 6px 8px; font-size: 11px; color: #78350f; line-height: 1.5;">
+            <div style="background: ${isCompleted ? '#f0fdf4' : '#fffbeb'}; border: 1px solid ${isCompleted ? '#bbf7d0' : '#fde68a'}; border-radius: 8px; padding: 6px 8px; font-size: 11px; color: ${isCompleted ? '#166534' : '#78350f'}; line-height: 1.5;">
               <div><strong>👤 Executive:</strong> ${ae.name}</div>
-              <div><strong>🕒 Signed In:</strong> ${new Date(siteSignIn.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>
-              ${siteSignIn.address ? `<div><strong>📍 Address:</strong> ${siteSignIn.address}</div>` : ''}
-              ${siteSignIn.checkoutTime ? `<div><strong>📤 Departed:</strong> ${new Date(siteSignIn.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>` : ''}
+              <div><strong>🕒 Signed In:</strong> ${new Date(site.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>
+              ${site.checkoutTime ? `<div><strong>📤 Completed:</strong> ${new Date(site.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>` : ''}
+              ${site.address ? `<div><strong>📍 Address:</strong> ${site.address}</div>` : ''}
             </div>
           </div>
         `;
 
-        if (siteMarkersRef.current[ae.id]) {
-          siteMarkersRef.current[ae.id].setLatLng(siteLatLng);
-          siteMarkersRef.current[ae.id].setIcon(site1Icon);
-          siteMarkersRef.current[ae.id].setPopupContent(sitePopup);
+        if (siteMarkersRef.current[siteKey]) {
+          siteMarkersRef.current[siteKey].setLatLng(siteLatLng);
+          siteMarkersRef.current[siteKey].setIcon(siteIcon);
+          siteMarkersRef.current[siteKey].setPopupContent(sitePopup);
         } else {
           const marker = window.L.marker(siteLatLng, {
-            icon: site1Icon,
+            icon: siteIcon,
             zIndexOffset: 300
           }).addTo(leafletMap.current);
           marker.bindPopup(sitePopup);
           marker.on('click', () => {
             leafletMap.current?.flyTo(siteLatLng, 18, { duration: 0.8 });
           });
-          siteMarkersRef.current[ae.id] = marker;
+          siteMarkersRef.current[siteKey] = marker;
         }
-      }
+      });
 
       // 2. Render Live Moving AE Marker (Bike 🛵 or Cab 🚗)
       if (!loc || !loc.latitude || !loc.longitude) return;
@@ -920,7 +927,11 @@ const AELiveTracker = () => {
             <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
             <div><strong>🚦 Status:</strong> ${isMoving ? 'In Transit / Moving' : isStationary ? 'Stationary (At Site/Visit)' : status}</div>
             ${loc.speed ? `<div><strong>⚡ Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</div>` : ''}
-            ${siteSignIn ? `<div><strong>🏢 Site 1:</strong> ${siteSignIn.siteName} (Signed In)</div>` : ''}
+            ${item.siteSignIns && item.siteSignIns.length > 0 ? (
+              `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;">` +
+              item.siteSignIns.map(s => `<div><strong>🏢 Site ${s.siteNumber}:</strong> ${s.siteName} (${s.status === 'COMPLETED' ? 'Done' : 'Active'})</div>`).join('') +
+              `</div>`
+            ) : item.siteSignIn ? `<div><strong>🏢 Site 1:</strong> ${item.siteSignIn.siteName}</div>` : ''}
           </div>
         </div>
       `;
@@ -975,7 +986,7 @@ const AELiveTracker = () => {
       }
     });
 
-    // Remove obsolete markers for employees not in current liveData
+    // Remove obsolete markers for employees not in current itemsToRender
     Object.keys(markersRef.current).forEach((empId) => {
       if (!currentEmployeeIds.has(Number(empId))) {
         markersRef.current[empId].remove();
@@ -987,11 +998,11 @@ const AELiveTracker = () => {
       }
     });
 
-    // Remove obsolete Site 1 markers
-    Object.keys(siteMarkersRef.current).forEach((empId) => {
-      if (!currentSiteEmpIds.has(Number(empId))) {
-        siteMarkersRef.current[empId].remove();
-        delete siteMarkersRef.current[empId];
+    // Remove obsolete Site markers
+    Object.keys(siteMarkersRef.current).forEach((siteKey) => {
+      if (!currentSiteKeys.has(siteKey)) {
+        siteMarkersRef.current[siteKey].remove();
+        delete siteMarkersRef.current[siteKey];
       }
     });
 
@@ -999,16 +1010,56 @@ const AELiveTracker = () => {
       leafletMap.current.fitBounds(bounds, { padding: [60, 60], maxZoom: 14 });
     }
 
+    if (isFollowMode && selectedAE?.latestLocation?.latitude) {
+      leafletMap.current.panTo([selectedAE.latestLocation.latitude, selectedAE.latestLocation.longitude], { animate: true, duration: 0.5 });
+    }
+
     // Guarantee full tile coverage
     setTimeout(() => {
       leafletMap.current?.invalidateSize();
     }, 100);
-  }, [liveData, vehicleMode]);
+  }, [liveData, vehicleMode, selectedAE, isFollowMode]);
 
-  // Focus single AE on map & automatically trace their route for today
+  // Reset selection & show overall view of all executives and all sites on map
+  const handleShowAll = () => {
+    setSelectedAE(null);
+    setSelectedAESiteSignIn(null);
+    setSelectedAESiteSignIns([]);
+    setSelectedAEAssignment(null);
+    clearMapRoute();
+    setHistoryLogs([]);
+    setSnappedPathCoords([]);
+    setRoadDistanceKm(null);
+    setIsRoadSnapped(false);
+    setDetectedStopsList([]);
+
+    // Fit map bounds to show all active employees if any exist
+    if (leafletMap.current && liveData.length > 0) {
+      const validPoints = liveData
+        .filter(i => i.latestLocation?.latitude && i.latestLocation?.longitude)
+        .map(i => [i.latestLocation.latitude, i.latestLocation.longitude]);
+      if (validPoints.length > 0) {
+        leafletMap.current.fitBounds(validPoints, { padding: [50, 50], maxZoom: 15 });
+      }
+    }
+    toast.info('Viewing all field executives on map');
+  };
+
+  // Focus single AE on map & isolate their data alone (hiding all other executives)
   const handleSelectAE = (aeItem) => {
+    if (selectedAE?.user?.id === aeItem.user.id) {
+      // Re-focus camera if already selected
+      const loc = aeItem.latestLocation;
+      if (loc?.latitude && loc?.longitude && leafletMap.current) {
+        leafletMap.current.flyTo([loc.latitude, loc.longitude], 17, { duration: 1.0 });
+        markersRef.current[aeItem.user.id]?.openPopup();
+      }
+      return;
+    }
+
     setSelectedAE(aeItem);
     setSelectedAESiteSignIn(aeItem.siteSignIn || null);
+    setSelectedAESiteSignIns(aeItem.siteSignIns || (aeItem.siteSignIn ? [aeItem.siteSignIn] : []));
     setSelectedAEAssignment(aeItem.activeAssignment || null);
     // On mobile, switch to map view when an AE is tapped
     setMobileTab('map');
@@ -1020,8 +1071,6 @@ const AELiveTracker = () => {
     setRoadDistanceKm(null);
     setIsRoadSnapped(false);
     setDetectedStopsList([]);
-    setIsPlaying(false);
-    setPlaybackIndex(0);
 
     const loc = aeItem.latestLocation;
     if (loc && loc.latitude && loc.longitude && leafletMap.current) {
@@ -1041,8 +1090,6 @@ const AELiveTracker = () => {
   const fetchRouteHistory = async (aeUserId, dateToFetch = null) => {
     const targetDate = dateToFetch || selectedDate;
     setLoadingHistory(true);
-    setIsPlaying(false);
-    setPlaybackIndex(0);
 
     // Clean up previous polyline, casing, & markers immediately
     clearMapRoute();
@@ -1054,6 +1101,9 @@ const AELiveTracker = () => {
       const logs = res.data.logs || [];
       setHistoryLogs(logs);
 
+      if (res.data.siteSignIns) {
+        setSelectedAESiteSignIns(res.data.siteSignIns);
+      }
       if (res.data.siteSignIn) {
         setSelectedAESiteSignIn(res.data.siteSignIn);
       }
@@ -1141,7 +1191,7 @@ const AELiveTracker = () => {
         });
         historyMarkersRef.current.push(startMarker);
 
-        // Add End marker (Red circle / Blue rotating vehicle if currently moving)
+        // Add End marker (Red circle / Blue if currently moving)
         if (logs.length > 1) {
           const endPoint = logs[logs.length - 1];
           const isCurrentlyMoving = selectedAE?.status === 'MOVING' || selectedAE?.isMoving;
@@ -1154,9 +1204,9 @@ const AELiveTracker = () => {
           }).addTo(leafletMap.current).bindPopup(`
             <div style="font-family: system-ui; padding: 4px;">
               <b style="color: ${isCurrentlyMoving ? '#2563eb' : '#dc2626'}; font-size: 12px;">
-                ${isCurrentlyMoving ? '🚗 Currently Moving' : '📍 Current / Latest Location'}
+                ${isCurrentlyMoving ? '🔵 Live Moving Position' : '🔴 Last Logged Fix'}
               </b><br>
-              Last Seen: ${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
+              Time: ${new Date(endPoint.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
             </div>
           `);
           endMarker.on('click', () => {
@@ -1165,29 +1215,36 @@ const AELiveTracker = () => {
           historyMarkersRef.current.push(endMarker);
         }
 
-        // Add Site 1 Sign-In Pin if available
-        const siteSignInData = res.data.siteSignIn || selectedAE?.siteSignIn;
-        if (siteSignInData && siteSignInData.latitude && siteSignInData.longitude) {
-          const site1PinIcon = window.L.divIcon({
-            className: 'site1-history-pin',
+        // Add Sequential Site Pins (Site 1, Site 2, Site 3...) matching Attendance display
+        const siteSignIns = (res.data.siteSignIns && res.data.siteSignIns.length > 0)
+          ? res.data.siteSignIns
+          : (res.data.siteSignIn ? [res.data.siteSignIn] : (selectedAE?.siteSignIns || (selectedAE?.siteSignIn ? [selectedAE.siteSignIn] : [])));
+
+        siteSignIns.forEach((site) => {
+          if (!site || !site.latitude || !site.longitude) return;
+          const siteNum = site.siteNumber || 1;
+          const isCompleted = site.isCompleted || site.status === 'COMPLETED';
+
+          const sitePinIcon = window.L.divIcon({
+            className: `site-history-pin-${siteNum}`,
             html: `
-              <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center;">
+              <div style="position: relative; width: 68px; height: 68px; display: flex; align-items: center; justify-content: center; cursor: pointer;">
                 <div style="
                   position: absolute;
                   width: 54px;
                   height: 54px;
                   border-radius: 50%;
-                  background: rgba(245, 158, 11, 0.25);
-                  border: 1.5px solid rgba(245, 158, 11, 0.6);
-                  animation: pingRadar 2s infinite;
+                  background: ${isCompleted ? 'rgba(16, 185, 129, 0.22)' : 'rgba(245, 158, 11, 0.25)'};
+                  border: 1.5px solid ${isCompleted ? 'rgba(16, 185, 129, 0.6)' : 'rgba(245, 158, 11, 0.6)'};
+                  ${isCompleted ? '' : 'animation: pingRadar 2s infinite;'}
                 "></div>
                 <div style="
-                  background: linear-gradient(135deg, #f59e0b, #d97706);
+                  background: ${isCompleted ? 'linear-gradient(135deg, #10b981, #059669)' : 'linear-gradient(135deg, #f59e0b, #d97706)'};
                   width: 42px;
                   height: 42px;
                   border-radius: 12px;
                   border: 3px solid #ffffff;
-                  box-shadow: 0 4px 14px rgba(217, 119, 6, 0.45);
+                  box-shadow: 0 4px 14px ${isCompleted ? 'rgba(16, 185, 129, 0.45)' : 'rgba(217, 119, 6, 0.45)'};
                   display: flex;
                   align-items: center;
                   justify-content: center;
@@ -1195,7 +1252,7 @@ const AELiveTracker = () => {
                   font-size: 20px;
                   z-index: 2;
                 ">
-                  🏢
+                  ${isCompleted ? '✅' : '🏢'}
                 </div>
                 <div style="
                   position: absolute;
@@ -1204,8 +1261,8 @@ const AELiveTracker = () => {
                   transform: translateX(-50%);
                   white-space: nowrap;
                   background: #0f172a;
-                  color: #fde68a;
-                  border: 1.5px solid #f59e0b;
+                  color: ${isCompleted ? '#a7f3d0' : '#fde68a'};
+                  border: 1.5px solid ${isCompleted ? '#10b981' : '#f59e0b'};
                   font-size: 9.5px;
                   font-weight: 800;
                   padding: 2px 7px;
@@ -1213,7 +1270,7 @@ const AELiveTracker = () => {
                   box-shadow: 0 4px 12px rgba(0,0,0,0.6);
                   z-index: 4;
                 ">
-                  Site 1: ${siteSignInData.siteName}
+                  Site ${siteNum}: ${site.siteName} ${isCompleted ? '(Done)' : '(Active)'}
                 </div>
               </div>
             `,
@@ -1221,24 +1278,26 @@ const AELiveTracker = () => {
             iconAnchor: [34, 34]
           });
 
-          const site1Marker = window.L.marker([siteSignInData.latitude, siteSignInData.longitude], {
-            icon: site1PinIcon,
-            zIndexOffset: 450
+          const siteMarker = window.L.marker([site.latitude, site.longitude], {
+            icon: sitePinIcon,
+            zIndexOffset: 450 + siteNum
           }).addTo(leafletMap.current).bindPopup(`
             <div style="font-family: system-ui; padding: 4px; min-width: 190px;">
-              <h4 style="margin: 0 0 4px; font-size: 13px; font-weight: 800; color: #b45309;">🏢 Site 1: ${siteSignInData.siteName}</h4>
-              <div style="background: #fffbeb; border: 1px solid #fef3c7; border-radius: 6px; padding: 6px 8px; font-size: 11px; color: #92400e; line-height: 1.5;">
-                <div><strong>🕒 Signed In:</strong> ${siteSignInData.signedInAt ? new Date(siteSignInData.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Logged In'} IST</div>
-                ${siteSignInData.address ? `<div><strong>📍 Address:</strong> ${siteSignInData.address}</div>` : ''}
-                ${siteSignInData.checkoutTime ? `<div><strong>📤 Departed:</strong> ${new Date(siteSignInData.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>` : ''}
+              <h4 style="margin: 0 0 4px; font-size: 13px; font-weight: 800; color: ${isCompleted ? '#059669' : '#b45309'};">
+                ${isCompleted ? '✅' : '🏢'} Site ${siteNum}: ${site.siteName} ${isCompleted ? '(Completed)' : '(Active)'}
+              </h4>
+              <div style="background: ${isCompleted ? '#ecfdf5' : '#fffbeb'}; border: 1px solid ${isCompleted ? '#d1fae5' : '#fef3c7'}; border-radius: 6px; padding: 6px 8px; font-size: 11px; color: ${isCompleted ? '#065f46' : '#92400e'}; line-height: 1.5;">
+                <div><strong>🕒 Signed In:</strong> ${site.signedInAt ? new Date(site.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true }) : 'Logged In'} IST</div>
+                ${site.address ? `<div><strong>📍 Address:</strong> ${site.address}</div>` : ''}
+                ${site.checkoutTime ? `<div><strong>📤 Departed:</strong> ${new Date(site.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</div>` : '<div><strong>⚡ Status:</strong> Currently Active Site</div>'}
               </div>
             </div>
           `);
-          site1Marker.on('click', () => {
-            leafletMap.current?.flyTo([siteSignInData.latitude, siteSignInData.longitude], 18, { duration: 0.8 });
+          siteMarker.on('click', () => {
+            leafletMap.current?.flyTo([site.latitude, site.longitude], 18, { duration: 0.8 });
           });
-          historyMarkersRef.current.push(site1Marker);
-        }
+          historyMarkersRef.current.push(siteMarker);
+        });
 
         // Add Place B Destination Pin if assignment has coordinates
         const destData = res.data.activeAssignment || selectedAE?.activeAssignment;
@@ -1306,9 +1365,6 @@ const AELiveTracker = () => {
           historyMarkersRef.current.push(destMarker);
         }
 
-        // Set playback scrubber to the latest point by default
-        setPlaybackIndex(pathCoords.length - 1);
-
         // Detect and place Stop markers with durations
         const detectedStops = detectStops(logs);
         setDetectedStopsList(detectedStops);
@@ -1374,157 +1430,17 @@ const AELiveTracker = () => {
 
   const handleClearRoute = () => {
     clearMapRoute();
-    setIsPlaying(false);
-    setPlaybackIndex(0);
     setHistoryLogs([]);
     setSnappedPathCoords([]);
     setRoadDistanceKm(null);
     setIsRoadSnapped(false);
     setDetectedStopsList([]);
     setSelectedAESiteSignIn(null);
+    setSelectedAESiteSignIns([]);
     setSelectedAEAssignment(null);
     toast.info('Route path cleared from map.');
   };
 
-  // Swiggy / Ola / Uber Style Rotating Vehicle Playback Marker Update
-  useEffect(() => {
-    if (!leafletMap.current || !window.L) return;
-
-    const playbackPoints = snappedPathCoords.length > 0 
-      ? snappedPathCoords 
-      : historyLogs.map(l => [l.latitude, l.longitude]);
-
-    if (playbackPoints.length === 0) return;
-
-    // Only show animated vehicle pin during active playback or when scrubbing historical timeline
-    const isInteracting = isPlaying || (playbackIndex >= 0 && playbackIndex < playbackPoints.length - 1);
-    if (!isInteracting) {
-      if (playbackMarkerRef.current) {
-        playbackMarkerRef.current.remove();
-        playbackMarkerRef.current = null;
-      }
-      return;
-    }
-
-    const latLng = playbackPoints[playbackIndex];
-    if (!latLng) return;
-
-    // Calculate heading/bearing angle in degrees along the road segment
-    let bearing = 0;
-    if (playbackIndex < playbackPoints.length - 1) {
-      const p1 = playbackPoints[playbackIndex];
-      const p2 = playbackPoints[playbackIndex + 1];
-      const y = Math.sin((p2[1] - p1[1]) * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180);
-      const x = Math.cos(p1[0] * Math.PI / 180) * Math.sin(p2[0] * Math.PI / 180) -
-                Math.sin(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.cos((p2[1] - p1[1]) * Math.PI / 180);
-      bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-    } else if (playbackIndex > 0) {
-      const p1 = playbackPoints[playbackIndex - 1];
-      const p2 = playbackPoints[playbackIndex];
-      const y = Math.sin((p2[1] - p1[1]) * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180);
-      const x = Math.cos(p1[0] * Math.PI / 180) * Math.sin(p2[0] * Math.PI / 180) -
-                Math.sin(p1[0] * Math.PI / 180) * Math.cos(p2[0] * Math.PI / 180) * Math.cos((p2[1] - p1[1]) * Math.PI / 180);
-      bearing = (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-    }
-
-    const vehicleSVG = vehicleMode === 'cab'
-      ? getCabSVG('#2563eb', bearing)
-      : getBikeSVG('#2563eb', bearing);
-
-    const vehicleIcon = window.L.divIcon({
-      className: 'swiggy-uber-vehicle-pin',
-      html: `
-        <div style="position: relative; width: 56px; height: 56px; display: flex; align-items: center; justify-content: center;">
-          <!-- Pulsing Radar Wave (Uber / Rapido style) -->
-          <div style="
-            position: absolute;
-            inset: -4px;
-            border-radius: 50%;
-            background: rgba(37, 99, 235, 0.22);
-            border: 1.5px solid rgba(59, 130, 246, 0.6);
-            animation: pingRadar 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
-          "></div>
-
-          <!-- Rotating Vehicle Marker pointing down the road -->
-          <div style="
-            transform: rotate(${Math.round(bearing)}deg);
-            transition: transform 0.25s ease-out;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 2;
-          ">
-            ${vehicleSVG}
-          </div>
-          
-          <!-- Live Moving Status Tag -->
-          <div style="
-            position: absolute;
-            bottom: -18px;
-            left: 50%;
-            transform: translateX(-50%);
-            white-space: nowrap;
-            background: #0f172a;
-            color: #60a5fa;
-            border: 1px solid #3b82f6;
-            font-size: 9px;
-            font-weight: 800;
-            padding: 1.5px 6px;
-            border-radius: 6px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.5);
-            display: flex;
-            align-items: center;
-            gap: 3px;
-            z-index: 3;
-          ">
-            <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; display: inline-block;"></span>
-            ${vehicleMode === 'cab' ? '🚗 CAB' : '🛵 BIKE'} MOVING
-          </div>
-        </div>
-      `,
-      iconSize: [56, 56],
-      iconAnchor: [28, 28]
-    });
-
-    if (!playbackMarkerRef.current) {
-      playbackMarkerRef.current = window.L.marker(latLng, { 
-        icon: vehicleIcon,
-        zIndexOffset: 1000 
-      }).addTo(leafletMap.current);
-    } else {
-      playbackMarkerRef.current.setIcon(vehicleIcon);
-      playbackMarkerRef.current.setLatLng(latLng);
-    }
-
-    // Auto-center map camera in Follow Mode
-    if (isFollowMode && leafletMap.current) {
-      leafletMap.current.panTo(latLng, { animate: true, duration: 0.3 });
-    }
-  }, [playbackIndex, historyLogs, snappedPathCoords, isPlaying, vehicleMode, isFollowMode]);
-
-  // Playback Timer Loop
-  useEffect(() => {
-    let timer = null;
-    const playbackPoints = snappedPathCoords.length > 0 
-      ? snappedPathCoords 
-      : historyLogs.map(l => [l.latitude, l.longitude]);
-
-    if (isPlaying && playbackPoints.length > 1) {
-      const intervalMs = Math.max(60, Math.round(350 / playbackSpeed));
-      timer = setInterval(() => {
-        setPlaybackIndex((prev) => {
-          if (prev >= playbackPoints.length - 1) {
-            setIsPlaying(false);
-            return prev;
-          }
-          return prev + 1;
-        });
-      }, intervalMs);
-    }
-    return () => {
-      if (timer) clearInterval(timer);
-    };
-  }, [isPlaying, historyLogs.length, snappedPathCoords.length, playbackSpeed]);
 
   // Status Priority Rank: Active first (Moving -> Stationary) -> Idle second -> Offline last
   const getStatusPriority = (item) => {
@@ -1833,6 +1749,31 @@ const AELiveTracker = () => {
 
           {/* AE Cards Scrollable List */}
           <div className="flex-1 overflow-y-auto space-y-2.5 pt-3.5 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+            {/* Show All Executives Card (Overall View) */}
+            <button
+              onClick={handleShowAll}
+              className={`w-full p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${
+                !selectedAE
+                  ? 'bg-blue-600/20 border-blue-500 shadow-lg shadow-blue-600/10 ring-1 ring-blue-500/40 text-white'
+                  : 'bg-slate-800/40 border-slate-800/80 text-slate-300 hover:bg-slate-800/80 hover:text-white'
+              }`}
+            >
+              <div className="flex items-center gap-2.5 min-w-0">
+                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${!selectedAE ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'bg-slate-800 text-slate-400'}`}>
+                  <Users size={16} />
+                </div>
+                <div className="min-w-0">
+                  <h4 className="text-xs font-black tracking-wide truncate">All Executives & Sites</h4>
+                  <p className="text-[10px] text-slate-400 truncate">Show overall fleet & all pins</p>
+                </div>
+              </div>
+              <span className={`px-2 py-0.5 text-[9px] font-black rounded-md border shrink-0 ${
+                !selectedAE ? 'bg-blue-500/30 text-blue-300 border-blue-400/40' : 'bg-slate-800 text-slate-400 border-slate-700'
+              }`}>
+                {liveData.length} ALL
+              </span>
+            </button>
+
             {loading ? (
               <div className="p-12 text-center text-slate-400 text-xs font-medium animate-pulse flex flex-col items-center gap-2">
                 <RefreshCw size={20} className="animate-spin text-blue-400" />
@@ -2000,20 +1941,21 @@ const AELiveTracker = () => {
             </div>
           </div>
 
-          {/* Floating Route Tracing Panel for Selected AE */}
+          {/* Floating Route Tracing & Isolation Panel for Selected AE */}
           {selectedAE && (
-            <div className="absolute top-4 left-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 max-w-[calc(100%-140px)] sm:max-w-xl animate-fadeIn">
+            <div className="absolute top-4 left-4 z-20 bg-slate-900/95 border border-slate-700/90 p-3 sm:p-3.5 rounded-2xl backdrop-blur-xl shadow-2xl flex flex-col sm:flex-row sm:items-center gap-2.5 sm:gap-3 max-w-[calc(100%-140px)] sm:max-w-2xl animate-fadeIn">
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping" />
+                  <span className="w-2 h-2 rounded-full bg-blue-400 animate-ping shrink-0" />
+                  <span className="text-[10px] font-black uppercase text-blue-400 tracking-wider">Viewing Alone:</span>
                   <p className="text-xs font-bold text-white truncate">{selectedAE.user.name}</p>
                 </div>
                 <div className="flex items-center gap-2 text-[10px] text-slate-400 mt-0.5">
-                  <span>{historyLogs.length} points</span>
-                  {historyLogs.length > 1 && (
+                  <span className="text-emerald-400 font-bold">{selectedAESiteSignIns.length || (selectedAESiteSignIn ? 1 : 0)} sites logged</span>
+                  {historyLogs.length > 0 && (
                     <>
                       <span>•</span>
-                      <span className="text-emerald-400 font-semibold">{roadDistanceKm ? `${roadDistanceKm} km road` : `${calculateTotalDistanceKm(historyLogs)} km`}</span>
+                      <span className="text-blue-300 font-semibold">{roadDistanceKm ? `${roadDistanceKm} km road` : `${calculateTotalDistanceKm(historyLogs)} km`}</span>
                       <span>•</span>
                       <span className="text-amber-400 font-semibold">{detectedStopsList.length} stops</span>
                       {isRoadSnapped && (
@@ -2029,6 +1971,15 @@ const AELiveTracker = () => {
 
               <div className="flex items-center gap-1.5 sm:ml-auto">
                 <button
+                  onClick={handleShowAll}
+                  className="px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 hover:text-white text-xs font-bold transition-all flex items-center gap-1.5 border border-slate-700 shrink-0 shadow-md"
+                  title="Show all field executives and all sites on map"
+                >
+                  <Users size={13} className="text-blue-400" />
+                  <span>Show All</span>
+                </button>
+
+                <button
                   onClick={() => {
                     const loc = selectedAE?.latestLocation;
                     if (loc?.latitude && loc?.longitude && leafletMap.current) {
@@ -2040,7 +1991,7 @@ const AELiveTracker = () => {
                   title="Deep zoom into current location (Street level)"
                 >
                   <Crosshair size={13} />
-                  <span className="hidden md:inline">Deep Focus</span>
+                  <span className="hidden md:inline">Focus</span>
                 </button>
                 <input
                   type="date"
@@ -2073,7 +2024,7 @@ const AELiveTracker = () => {
             </div>
           )}
 
-          {/* Uber / Rapido Style Live Ride Tracking HUD Drawer */}
+          {/* Uber / Rapido Style Live Journey Tracking HUD Drawer */}
           {selectedAE && (
             <div className="absolute bottom-3 left-3 right-3 sm:bottom-4 sm:left-4 sm:right-4 z-30 max-w-2xl mx-auto bg-slate-900/95 border border-slate-700/90 rounded-2xl sm:rounded-3xl p-3.5 sm:p-5 shadow-2xl backdrop-blur-2xl text-white animate-fadeIn">
               {/* Header: Vehicle Mode Toggle, AE Profile, Status & Expand/Collapse */}
@@ -2141,7 +2092,7 @@ const AELiveTracker = () => {
                       {selectedAE.isMoving || selectedAE.status === 'MOVING'
                         ? `${vehicleMode === 'cab' ? '🚗 Cab' : '🛵 Bike'} Moving`
                         : selectedAESiteSignIn && selectedAESiteSignIn.status === 'SIGNED_IN'
-                          ? '🏢 Site 1 Signed In'
+                          ? `🏢 Site ${selectedAESiteSignIn.siteNumber || 1} Signed In`
                           : selectedAE.status === 'STATIONARY'
                             ? '📍 At Site'
                             : selectedAE.status}
@@ -2161,55 +2112,99 @@ const AELiveTracker = () => {
               {/* Collapsible Content */}
               {isHudExpanded && (
                 <div className="space-y-3 pt-3">
-                  {/* Point-to-Place Journey Stepper ("Where he comes through") */}
-                  <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 space-y-2 text-xs">
-                    {/* Point A: Site 1 Sign-In or Departure */}
-                    <div className="flex items-start gap-2.5">
-                      <div className="flex flex-col items-center shrink-0 mt-0.5">
-                        <div className="w-4 h-4 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                  {/* Sequential Journey Stepper ("Where they are going from where") */}
+                  <div className="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-2.5 sm:p-3 space-y-2.5 text-xs max-h-56 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-800">
+                    {/* Multi-Site Sequential Journey Stepper (Site 1, Site 2, Site 3...) */}
+                    {selectedAESiteSignIns && selectedAESiteSignIns.length > 0 ? (
+                      selectedAESiteSignIns.map((site, sIdx) => {
+                        const isCompleted = site.isCompleted || site.status === 'COMPLETED';
+                        return (
+                          <div key={site.id || sIdx} className="flex items-start gap-2.5">
+                            <div className="flex flex-col items-center shrink-0 mt-0.5">
+                              <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                isCompleted 
+                                  ? 'bg-emerald-500/20 border-emerald-400 text-emerald-400' 
+                                  : 'bg-amber-500/20 border-amber-400 text-amber-400 animate-pulse'
+                              }`}>
+                                <span className="text-[8px] font-black">{isCompleted ? '✓' : site.siteNumber}</span>
+                              </div>
+                              <div className="w-0.5 h-6 bg-gradient-to-b from-emerald-500/50 to-blue-500/50" />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="flex items-center justify-between gap-1">
+                                <span className={`font-extrabold text-[11px] uppercase tracking-wider flex items-center gap-1.5 ${
+                                  isCompleted ? 'text-emerald-400' : 'text-amber-400'
+                                }`}>
+                                  <span>{isCompleted ? '✅' : '🏢'} SITE {site.siteNumber}: {site.siteName}</span>
+                                  <span className={`px-1.5 py-0.2 rounded text-[8.5px] font-black border ${
+                                    isCompleted 
+                                      ? 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30' 
+                                      : 'bg-amber-500/20 text-amber-300 border-amber-500/30'
+                                  }`}>
+                                    {isCompleted ? 'Done' : 'Active'}
+                                  </span>
+                                </span>
+                                <span className="text-[10px] font-mono text-slate-400">
+                                  {site.signedInAt
+                                    ? new Date(site.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
+                                    : 'Logged In'}
+                                </span>
+                              </div>
+                              {site.address && (
+                                <p className="text-[10px] text-slate-400 truncate">{site.address}</p>
+                              )}
+                              {site.checkoutTime && (
+                                <p className="text-[9.5px] text-emerald-400/90 font-medium">
+                                  Departed / Completed: {new Date(site.checkoutTime).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST
+                                </p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })
+                    ) : (
+                      /* Fallback Point A if no attendance site logged yet */
+                      <div className="flex items-start gap-2.5">
+                        <div className="flex flex-col items-center shrink-0 mt-0.5">
+                          <div className="w-4 h-4 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                          </div>
+                          <div className="w-0.5 h-6 bg-gradient-to-b from-emerald-500/50 to-blue-500/50" />
                         </div>
-                        <div className="w-0.5 h-6 bg-gradient-to-b from-emerald-500/50 to-blue-500/50" />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <div className="flex items-center justify-between gap-1">
-                          <span className="font-extrabold text-[11px] text-emerald-400 uppercase tracking-wider flex items-center gap-1">
-                            <span>🟢 POINT A</span>
-                            {selectedAESiteSignIn && (
-                              <span className="bg-amber-500/20 text-amber-300 px-1.5 py-0.2 rounded text-[9px] font-black border border-amber-500/30">
-                                🏢 Site 1 Pinned
-                              </span>
-                            )}
-                          </span>
-                          <span className="text-[10px] font-mono text-slate-400">
-                            {selectedAESiteSignIn?.signedInAt
-                              ? new Date(selectedAESiteSignIn.signedInAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-                              : historyLogs[0]?.createdAt
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-1">
+                            <span className="font-extrabold text-[11px] text-emerald-400 uppercase tracking-wider">
+                              🟢 MORNING DEPARTURE POINT
+                            </span>
+                            <span className="text-[10px] font-mono text-slate-400">
+                              {historyLogs[0]?.createdAt
                                 ? new Date(historyLogs[0].createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-                                : '09:00 AM'}
-                          </span>
+                                : '07:00 AM'}
+                            </span>
+                          </div>
+                          <p className="text-white font-bold text-[11px] truncate">
+                            First GPS logged start fix
+                          </p>
                         </div>
-                        <p className="text-white font-bold text-[11px] truncate">
-                          {selectedAESiteSignIn ? `Site 1: ${selectedAESiteSignIn.siteName}` : 'Morning Departure Point'}
-                        </p>
-                        {selectedAESiteSignIn?.address && (
-                          <p className="text-[10px] text-slate-400 truncate">{selectedAESiteSignIn.address}</p>
-                        )}
                       </div>
-                    </div>
+                    )}
 
                     {/* Middle: Where he comes through (Street & Live Movement) */}
                     <div className="flex items-start gap-2.5">
                       <div className="flex flex-col items-center shrink-0 mt-0.5">
-                        <div className="w-4 h-4 rounded-full bg-blue-500/20 border-2 border-blue-400 flex items-center justify-center animate-pulse">
+                        <div className={`w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                          selectedAE.isMoving || selectedAE.status === 'MOVING'
+                            ? 'bg-blue-500/20 border-blue-400 text-blue-400 animate-pulse'
+                            : 'bg-slate-700/40 border-slate-600 text-slate-400'
+                        }`}>
                           <span className="text-[9px]">{vehicleMode === 'cab' ? '🚗' : '🛵'}</span>
                         </div>
                         <div className="w-0.5 h-6 bg-gradient-to-b from-blue-500/50 to-rose-500/50" />
                       </div>
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
-                          <span className="font-extrabold text-[11px] text-blue-400 uppercase tracking-wider flex items-center gap-1">
-                            <span>🛣️ COMING THROUGH</span>
+                          <span className="font-extrabold text-[11px] text-blue-400 uppercase tracking-wider flex items-center gap-1.5">
+                            <span>🛣️ COMING THROUGH (LIVE TRANSIT)</span>
                             {selectedAE.latestLocation?.speed && selectedAE.latestLocation.speed > 0.5 ? (
                               <span className="text-blue-300 font-bold">({(selectedAE.latestLocation.speed * 3.6).toFixed(0)} km/h)</span>
                             ) : null}
@@ -2228,7 +2223,7 @@ const AELiveTracker = () => {
                       </div>
                     </div>
 
-                    {/* Point B: Destination (Scheduled Site Assignment or Next Stop) */}
+                    {/* Point B: Destination (Scheduled Site Assignment or Next Target) */}
                     <div className="flex items-start gap-2.5">
                       <div className="flex flex-col items-center shrink-0 mt-0.5">
                         <div className="w-4 h-4 rounded-full bg-rose-500/20 border-2 border-rose-400 flex items-center justify-center">
@@ -2238,7 +2233,7 @@ const AELiveTracker = () => {
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center justify-between gap-1">
                           <span className="font-extrabold text-[11px] text-rose-400 uppercase tracking-wider">
-                            🔴 PLACE B (DESTINATION)
+                            🔴 DESTINATION / TARGET SITE
                           </span>
                           <span className="text-[10px] font-mono text-slate-400">
                             {selectedAEAssignment?.scheduledTime || 'Scheduled Today'}
@@ -2260,116 +2255,75 @@ const AELiveTracker = () => {
                     </div>
                   </div>
 
-                  {/* Trip Progress Bar & Metrics */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between text-[10px] font-bold text-slate-400">
-                      <span className="flex items-center gap-1 text-emerald-400 font-bold">
-                        <span>🟢 Start</span>
-                      </span>
-                      <span className="font-mono text-blue-400 font-bold">
-                        {roadDistanceKm ? `${roadDistanceKm} km total road` : `${calculateTotalDistanceKm(historyLogs)} km`}
-                      </span>
-                      <span className="flex items-center gap-1 text-rose-400 font-bold">
-                        <span>Place B 🏁</span>
-                      </span>
-                    </div>
-
-                    {/* Animated Progress Bar */}
-                    <div className="relative w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                      <div
-                        className="h-full bg-gradient-to-r from-emerald-500 via-blue-500 to-indigo-500 transition-all duration-300"
-                        style={{
-                          width: `${Math.min(
-                            100,
-                            Math.max(
-                              12,
-                              historyLogs.length > 1
-                                ? Math.round((playbackIndex / Math.max(1, (snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length) - 1)) * 100)
-                                : 50
-                            )
-                          )}%`
-                        }}
-                      />
-                    </div>
+                  {/* Trip Summary Metrics Bar */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 bg-slate-950/60 px-3 py-2 rounded-xl border border-slate-800/80 text-[10px] font-bold">
+                    <span className="text-blue-400 font-mono">
+                      🛣️ {roadDistanceKm ? `${roadDistanceKm} km road` : `${calculateTotalDistanceKm(historyLogs)} km`}
+                    </span>
+                    <span className="text-slate-400">
+                      📍 {historyLogs.length} GPS fixes
+                    </span>
+                    <span className="text-amber-400">
+                      🛑 {detectedStopsList.length} stops
+                    </span>
+                    <span className="text-emerald-400 font-bold">
+                      🏢 {selectedAESiteSignIns.length} sites logged
+                    </span>
                   </div>
 
-                  {/* Playback Scrubber & Live Ride Simulation Controls */}
-                  <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-1">
-                    <div className="flex items-center gap-1.5 shrink-0">
-                      <button
-                        onClick={() => setIsPlaying(!isPlaying)}
-                        className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30 active:scale-95 transition-all"
-                        title={isPlaying ? 'Pause Ride' : 'Play Live Ride Movement'}
+                  {/* Live Tracking Controls (Follow Camera, Focus Vehicle, Show All, Call AE) */}
+                  <div className="flex flex-wrap items-center gap-2 pt-1">
+                    {/* Camera Follow Mode Toggle */}
+                    <button
+                      onClick={() => setIsFollowMode(!isFollowMode)}
+                      className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold transition-all border ${
+                        isFollowMode
+                          ? 'bg-emerald-600 text-white border-emerald-500 shadow-md shadow-emerald-600/30'
+                          : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
+                      }`}
+                      title="Auto-center map camera on moving vehicle"
+                    >
+                      <Crosshair size={13} className={isFollowMode ? 'animate-spin-slow' : ''} />
+                      <span>{isFollowMode ? 'Camera Following' : 'Follow Camera'}</span>
+                    </button>
+
+                    {/* Focus on Current Vehicle */}
+                    <button
+                      onClick={() => {
+                        const loc = selectedAE?.latestLocation;
+                        if (loc?.latitude && loc?.longitude && leafletMap.current) {
+                          leafletMap.current.flyTo([loc.latitude, loc.longitude], 18, { duration: 1.0 });
+                          markersRef.current[selectedAE.user.id]?.openPopup();
+                        }
+                      }}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-blue-400 hover:text-white text-xs font-bold transition-all border border-slate-700"
+                      title="Zoom directly to vehicle location"
+                    >
+                      <Navigation size={13} />
+                      <span>Focus Vehicle</span>
+                    </button>
+
+                    {/* Show All Executives Button */}
+                    <button
+                      onClick={handleShowAll}
+                      className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-xs font-bold transition-all border border-slate-700"
+                      title="Show all field executives and sites on map"
+                    >
+                      <Users size={13} className="text-blue-400" />
+                      <span>Show All Executives</span>
+                    </button>
+
+                    {/* Call Executive */}
+                    {selectedAE.user.phone && (
+                      <a
+                        href={`tel:${selectedAE.user.phone}`}
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold shadow-md shadow-blue-600/25 transition-all"
+                        title="Direct phone call"
                       >
-                        {isPlaying ? <Pause size={14} /> : <Play size={14} className="fill-white" />}
-                        <span>{isPlaying ? 'Pause' : 'Play Ride'}</span>
-                      </button>
-
-                      <button
-                        onClick={() => {
-                          setIsPlaying(false);
-                          setPlaybackIndex(0);
-                        }}
-                        className="p-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-all"
-                        title="Reset to Start"
-                      >
-                        <RotateCcw size={14} />
-                      </button>
-
-                      {/* Camera Follow Mode Toggle */}
-                      <button
-                        onClick={() => setIsFollowMode(!isFollowMode)}
-                        className={`px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all border flex items-center gap-1 ${
-                          isFollowMode
-                            ? 'bg-emerald-600/20 text-emerald-400 border-emerald-500/40 shadow-md shadow-emerald-500/20'
-                            : 'bg-slate-800 hover:bg-slate-700 text-slate-300 border-slate-700'
-                        }`}
-                        title="Auto-center map camera on moving vehicle"
-                      >
-                        <Crosshair size={12} className={isFollowMode ? 'animate-spin-slow' : ''} />
-                        <span>{isFollowMode ? 'Following' : 'Follow'}</span>
-                      </button>
-                    </div>
-
-                    {/* Scrubber slider */}
-                    <div className="flex-1 w-full flex items-center gap-2">
-                      <input
-                        type="range"
-                        min={0}
-                        max={Math.max(1, (snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length) - 1)}
-                        value={playbackIndex}
-                        onChange={(e) => {
-                          setPlaybackIndex(Number(e.target.value));
-                        }}
-                        className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg cursor-pointer"
-                      />
-                      <span className="text-[11px] font-mono font-bold text-blue-400 shrink-0 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
-                        {(() => {
-                          if (historyLogs.length === 0) return '--:--';
-                          const totalPoints = snappedPathCoords.length > 0 ? snappedPathCoords.length : historyLogs.length;
-                          const logIdx = Math.min(historyLogs.length - 1, Math.round((playbackIndex / Math.max(1, totalPoints - 1)) * (historyLogs.length - 1)));
-                          const log = historyLogs[logIdx];
-                          return log?.createdAt
-                            ? new Date(log.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-                            : '--:--';
-                        })()}
-                      </span>
-                    </div>
-
-                    {/* Speed Multipliers */}
-                    <div className="flex items-center gap-1 bg-slate-800/80 p-0.5 rounded-xl border border-slate-700 text-[10px] font-bold shrink-0">
-                      {[1, 2, 5].map((spd) => (
-                        <button
-                          key={spd}
-                          onClick={() => setPlaybackSpeed(spd)}
-                          className={`px-2 py-1 rounded-lg transition-all ${
-                            playbackSpeed === spd ? 'bg-blue-600 text-white shadow' : 'text-slate-400 hover:text-white'
-                          }`}
-                        >
-                          {spd}x
-                        </button>
-                      ))}
-                    </div>
+                        <Phone size={13} />
+                        <span>Call AE</span>
+                      </a>
+                    )}
                   </div>
                 </div>
               )}

@@ -129,54 +129,13 @@ const getLiveLocations = async (req, res) => {
           take: 2
         });
 
-        const latestLog = recentLogs[0] || null;
-        const prevLog = recentLogs[1] || null;
-
-        let status = 'OFFLINE';
-        let isMoving = false;
-        let lastPingMinutesAgo = null;
-
-        if (!isCurrentlyInWindow) {
-          // Outside 7 AM - 8 PM IST
-          status = 'OUT_OF_HOURS';
-        } else if (latestLog) {
-          const diffMinutes = Math.max(0, Math.round((now.getTime() - new Date(latestLog.createdAt).getTime()) / (1000 * 60)));
-          lastPingMinutesAgo = diffMinutes;
-
-          if (diffMinutes <= 20) {
-            // Determine if moving: speed > 0.8 m/s (~3 km/h) or moved >= 35m in last 15 min
-            if (latestLog.speed != null && latestLog.speed > 0.8) {
-              isMoving = true;
-            } else if (prevLog) {
-              const dLat = (latestLog.latitude - prevLog.latitude) * Math.PI / 180;
-              const dLng = (latestLog.longitude - prevLog.longitude) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(prevLog.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
-                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-              const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-              const distMeters = 6371000 * c;
-              const timeDiffMins = (new Date(latestLog.createdAt).getTime() - new Date(prevLog.createdAt).getTime()) / (1000 * 60);
-
-              if (distMeters >= 35 && timeDiffMins <= 15) {
-                isMoving = true;
-              }
-            }
-
-            status = isMoving ? 'MOVING' : 'STATIONARY';
-          } else if (diffMinutes <= 60) {
-            status = 'IDLE';
-          } else {
-            status = 'OFFLINE';
-          }
-        }
-
-        // Today's attendance record (for Site Sign-in detection)
+        // Today's attendance records (for Multi-Site Sign-in detection: Site 1, Site 2, Site 3...)
         const dayStart = new Date(startUTC);
         dayStart.setUTCHours(0, 0, 0, 0);
         const dayEnd = new Date(endUTC);
         dayEnd.setUTCHours(23, 59, 59, 999);
 
-        const attendanceRecord = await prisma.attendance.findFirst({
+        const attendanceRecords = await prisma.attendance.findMany({
           where: {
             userId: ae.id,
             date: {
@@ -184,6 +143,7 @@ const getLiveLocations = async (req, res) => {
               lte: dayEnd
             }
           },
+          orderBy: { date: 'asc' },
           select: {
             id: true,
             siteName: true,
@@ -195,6 +155,7 @@ const getLiveLocations = async (req, res) => {
             checkoutLongitude: true,
             checkoutLocationAddress: true,
             createdAt: true,
+            date: true,
             checkoutTime: true,
             status: true
           }
@@ -225,22 +186,91 @@ const getLiveLocations = async (req, res) => {
           orderBy: { createdAt: 'asc' }
         });
 
-        // Determine Site 1 Sign-In Point
-        let siteSignIn = null;
-        if (attendanceRecord && attendanceRecord.siteName) {
-          siteSignIn = {
-            siteNumber: 1,
-            siteName: attendanceRecord.siteName,
-            latitude: attendanceRecord.latitude || (firstLogToday ? firstLogToday.latitude : null),
-            longitude: attendanceRecord.longitude || (firstLogToday ? firstLogToday.longitude : null),
-            address: attendanceRecord.locationAddress || null,
-            signedInAt: attendanceRecord.createdAt,
-            checkoutSiteName: attendanceRecord.checkoutSiteName || null,
-            checkoutLatitude: attendanceRecord.checkoutLatitude || null,
-            checkoutLongitude: attendanceRecord.checkoutLongitude || null,
-            checkoutTime: attendanceRecord.checkoutTime || null,
-            status: attendanceRecord.checkoutTime ? 'CHECKED_OUT' : 'SIGNED_IN'
-          };
+        // Map sequential sites: Site 1, Site 2, Site 3...
+        const siteSignIns = attendanceRecords
+          .filter(rec => rec.siteName && rec.siteName.trim())
+          .map((rec, idx) => {
+            const siteNum = idx + 1;
+            const isCompleted = !!rec.checkoutTime;
+            return {
+              id: rec.id,
+              siteNumber: siteNum,
+              siteName: rec.siteName.trim(),
+              latitude: rec.latitude || (idx === 0 && firstLogToday ? firstLogToday.latitude : null),
+              longitude: rec.longitude || (idx === 0 && firstLogToday ? firstLogToday.longitude : null),
+              address: rec.locationAddress || null,
+              signedInAt: rec.date || rec.createdAt,
+              checkoutTime: rec.checkoutTime || null,
+              checkoutSiteName: rec.checkoutSiteName || null,
+              checkoutLatitude: rec.checkoutLatitude || null,
+              checkoutLongitude: rec.checkoutLongitude || null,
+              checkoutAddress: rec.checkoutLocationAddress || null,
+              isCompleted,
+              status: isCompleted ? 'COMPLETED' : 'ACTIVE'
+            };
+          });
+
+        const activeSiteSignIn = siteSignIns.find(s => s.status === 'ACTIVE') || null;
+        const lastCompletedSite = [...siteSignIns].reverse().find(s => s.isCompleted) || null;
+        const siteSignIn = siteSignIns[0] || null;
+
+        const latestLog = recentLogs[0] || null;
+        const prevLog = recentLogs[1] || null;
+
+        let status = 'OFFLINE';
+        let isMoving = false;
+        let lastPingMinutesAgo = null;
+
+        if (!isCurrentlyInWindow) {
+          // Outside 7 AM - 8 PM IST
+          status = 'OUT_OF_HOURS';
+        } else if (latestLog) {
+          const diffMinutes = Math.max(0, Math.round((now.getTime() - new Date(latestLog.createdAt).getTime()) / (1000 * 60)));
+          lastPingMinutesAgo = diffMinutes;
+
+          // 1. Direct GPS speed check (> 0.6 m/s, ~2.2 km/h)
+          if (latestLog.speed != null && latestLog.speed > 0.6) {
+            isMoving = true;
+          } 
+          // 2. Calculated speed & distance between last 2 pings
+          else if (prevLog) {
+            const dLat = (latestLog.latitude - prevLog.latitude) * Math.PI / 180;
+            const dLng = (latestLog.longitude - prevLog.longitude) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(prevLog.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            const distMeters = 6371000 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+            const timeDiffMins = Math.max(0.1, (new Date(latestLog.createdAt).getTime() - new Date(prevLog.createdAt).getTime()) / (1000 * 60));
+            const calculatedKmh = (distMeters / 1000) / (timeDiffMins / 60);
+
+            if ((distMeters >= 25 && timeDiffMins <= 15) || (calculatedKmh >= 2.5 && distMeters >= 15)) {
+              isMoving = true;
+            }
+          }
+
+          // 3. Site Transit check: If AE completed a site (e.g. Site 1) and is traveling toward Site 2 / next destination
+          if (!isMoving && lastCompletedSite && !activeSiteSignIn && diffMinutes <= 35) {
+            if (lastCompletedSite.latitude && lastCompletedSite.longitude) {
+              const dLat = (latestLog.latitude - lastCompletedSite.latitude) * Math.PI / 180;
+              const dLng = (latestLog.longitude - lastCompletedSite.longitude) * Math.PI / 180;
+              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                        Math.cos(lastCompletedSite.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
+                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
+              const distFromCompletedSite = 6371000 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+              if (distFromCompletedSite >= 40) {
+                isMoving = true;
+              }
+            }
+          }
+
+          // Status threshold: active online up to 30 mins; IDLE 30 - 75 mins; OFFLINE > 75 mins
+          if (diffMinutes <= 30) {
+            status = isMoving ? 'MOVING' : (activeSiteSignIn ? 'STATIONARY' : 'ONLINE');
+          } else if (diffMinutes <= 75) {
+            status = 'IDLE';
+          } else {
+            status = 'OFFLINE';
+          }
         }
 
         return {
@@ -248,6 +278,9 @@ const getLiveLocations = async (req, res) => {
           latestLocation: latestLog || null,
           previousLocation: prevLog || null,
           firstLocation: firstLogToday || null,
+          siteSignIns,
+          activeSiteSignIn,
+          lastCompletedSite,
           siteSignIn,
           scheduledAssignments,
           activeAssignment: scheduledAssignments[0] || null,
@@ -308,11 +341,12 @@ const getLocationHistory = async (req, res) => {
     const dayEnd = new Date(endUTC);
     dayEnd.setUTCHours(23, 59, 59, 999);
 
-    const attendanceRecord = await prisma.attendance.findFirst({
+    const attendanceRecords = await prisma.attendance.findMany({
       where: {
         userId,
         date: { gte: dayStart, lte: dayEnd }
       },
+      orderBy: { date: 'asc' },
       select: {
         id: true,
         siteName: true,
@@ -322,7 +356,9 @@ const getLocationHistory = async (req, res) => {
         locationAddress: true,
         checkoutLatitude: true,
         checkoutLongitude: true,
+        checkoutLocationAddress: true,
         createdAt: true,
+        date: true,
         checkoutTime: true
       }
     });
@@ -336,28 +372,41 @@ const getLocationHistory = async (req, res) => {
       orderBy: { scheduledTime: 'asc' }
     });
 
-    let siteSignIn = null;
-    if (attendanceRecord && attendanceRecord.siteName) {
-      siteSignIn = {
-        siteNumber: 1,
-        siteName: attendanceRecord.siteName,
-        latitude: attendanceRecord.latitude || (logs[0] ? logs[0].latitude : null),
-        longitude: attendanceRecord.longitude || (logs[0] ? logs[0].longitude : null),
-        address: attendanceRecord.locationAddress || null,
-        signedInAt: attendanceRecord.createdAt,
-        checkoutSiteName: attendanceRecord.checkoutSiteName || null,
-        checkoutLatitude: attendanceRecord.checkoutLatitude || null,
-        checkoutLongitude: attendanceRecord.checkoutLongitude || null,
-        checkoutTime: attendanceRecord.checkoutTime || null,
-        status: attendanceRecord.checkoutTime ? 'CHECKED_OUT' : 'SIGNED_IN'
-      };
-    }
+    const siteSignIns = attendanceRecords
+      .filter(rec => rec.siteName && rec.siteName.trim())
+      .map((rec, idx) => {
+        const siteNum = idx + 1;
+        const isCompleted = !!rec.checkoutTime;
+        return {
+          id: rec.id,
+          siteNumber: siteNum,
+          siteName: rec.siteName.trim(),
+          latitude: rec.latitude || (idx === 0 && logs[0] ? logs[0].latitude : null),
+          longitude: rec.longitude || (idx === 0 && logs[0] ? logs[0].longitude : null),
+          address: rec.locationAddress || null,
+          signedInAt: rec.date || rec.createdAt,
+          checkoutTime: rec.checkoutTime || null,
+          checkoutSiteName: rec.checkoutSiteName || null,
+          checkoutLatitude: rec.checkoutLatitude || null,
+          checkoutLongitude: rec.checkoutLongitude || null,
+          checkoutAddress: rec.checkoutLocationAddress || null,
+          isCompleted,
+          status: isCompleted ? 'COMPLETED' : 'ACTIVE'
+        };
+      });
+
+    const activeSiteSignIn = siteSignIns.find(s => s.status === 'ACTIVE') || null;
+    const lastCompletedSite = [...siteSignIns].reverse().find(s => s.isCompleted) || null;
+    const siteSignIn = siteSignIns[0] || null;
 
     res.json({
       user,
       date: dateStr,
       window: '07:00 AM – 08:00 PM IST',
       totalPoints: logs.length,
+      siteSignIns,
+      activeSiteSignIn,
+      lastCompletedSite,
       siteSignIn,
       scheduledAssignments,
       activeAssignment: scheduledAssignments[0] || null,

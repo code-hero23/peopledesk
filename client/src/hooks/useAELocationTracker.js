@@ -181,14 +181,59 @@ export const useAELocationTracker = () => {
             pingLocation(null, 'periodic');
         }, 60000);
 
+        // 12-15 minute background keep-alive worker to prevent falling into IDLE
+        let keepAliveWorker = null;
+        try {
+            const workerCode = `
+                let timer = null;
+                self.onmessage = function(e) {
+                    if (e.data === 'start') {
+                        if (timer) clearInterval(timer);
+                        timer = setInterval(function() {
+                            self.postMessage('check_keepalive');
+                        }, 60000); // Check every minute
+                    } else if (e.data === 'stop') {
+                        if (timer) clearInterval(timer);
+                    }
+                };
+            `;
+            const blob = new Blob([workerCode], { type: 'application/javascript' });
+            const workerUrl = URL.createObjectURL(blob);
+            keepAliveWorker = new Worker(workerUrl);
+            keepAliveWorker.onmessage = () => {
+                const elapsed = Date.now() - lastPingRef.current;
+                // If 12 minutes have elapsed without a ping, forcefully trigger keepalive ping
+                if (elapsed >= 12 * 60 * 1000) {
+                    console.log('[AELocationTracker] Idle protection: 12 mins elapsed, triggering keep-alive ping');
+                    pingLocation(null, 'keepalive_idle_protection');
+                }
+            };
+            keepAliveWorker.postMessage('start');
+        } catch (workerErr) {
+            console.warn('[AELocationTracker] Web Worker not available, relying on standard timer:', workerErr);
+        }
+
         // Immediate high-accuracy ping when device screen wakes up or app gains focus
         const handleWakeup = () => {
+            const elapsed = Date.now() - lastPingRef.current;
             if (document.visibilityState === 'visible') {
-                pingLocation(null, 'screen_wake');
+                if (elapsed >= 30000) {
+                    pingLocation(null, 'screen_wake');
+                }
             }
         };
         document.addEventListener('visibilitychange', handleWakeup);
         window.addEventListener('focus', handleWakeup);
+
+        // User activity heartbeat: if user taps or interacts and > 8 mins elapsed, ping
+        const handleUserActivity = () => {
+            const elapsed = Date.now() - lastPingRef.current;
+            if (elapsed >= 8 * 60 * 1000) {
+                pingLocation(null, 'user_activity_heartbeat');
+            }
+        };
+        window.addEventListener('pointerdown', handleUserActivity, { passive: true });
+        window.addEventListener('keydown', handleUserActivity, { passive: true });
 
         // Optional watchPosition for moving updates
         let watchId = null;
@@ -215,8 +260,14 @@ export const useAELocationTracker = () => {
 
         return () => {
             clearInterval(intervalId);
+            if (keepAliveWorker) {
+                keepAliveWorker.postMessage('stop');
+                keepAliveWorker.terminate();
+            }
             document.removeEventListener('visibilitychange', handleWakeup);
             window.removeEventListener('focus', handleWakeup);
+            window.removeEventListener('pointerdown', handleUserActivity);
+            window.removeEventListener('keydown', handleUserActivity);
             if (watchId !== null && navigator.geolocation) {
                 try {
                     navigator.geolocation.clearWatch(watchId);
