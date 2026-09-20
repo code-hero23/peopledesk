@@ -90,8 +90,8 @@ export const useAELocationTracker = () => {
                     lng
                 );
 
-                // If stationary (speed < 0.5 m/s or null) and movement is within 15 meters, preserve anchor
-                if ((speed == null || speed < 0.5) && dist < 15 && accuracy != null && accuracy >= lastValidCoordsRef.current.accuracy) {
+                // If stationary (speed < 0.4 m/s or null) and movement is within 6 meters, preserve anchor
+                if ((speed == null || speed < 0.4) && dist < 6 && accuracy != null && accuracy >= lastValidCoordsRef.current.accuracy) {
                     lat = lastValidCoordsRef.current.lat;
                     lng = lastValidCoordsRef.current.lng;
                 }
@@ -235,25 +235,45 @@ export const useAELocationTracker = () => {
         window.addEventListener('pointerdown', handleUserActivity, { passive: true });
         window.addEventListener('keydown', handleUserActivity, { passive: true });
 
-        // Optional watchPosition for moving updates
+        // High-frequency GPS streaming for moving vehicles (captures live road turns & speed)
         let watchId = null;
         if (navigator.geolocation) {
             try {
                 watchId = navigator.geolocation.watchPosition(
                     (pos) => {
-                        // Ping if moved or if last ping was more than 45s ago
-                        const elapsed = Date.now() - lastPingRef.current;
-                        if (elapsed >= 45000) {
+                        const coords = pos.coords;
+                        const now = Date.now();
+                        const elapsed = now - lastPingRef.current;
+                        const speed = coords.speed; // instantaneous speed in m/s
+                        const isMovingSpeed = speed != null && speed > 0.6; // > 2.2 km/h
+
+                        let distMoved = 0;
+                        if (lastValidCoordsRef.current) {
+                            distMoved = getDistanceMeters(
+                                lastValidCoordsRef.current.lat,
+                                lastValidCoordsRef.current.lng,
+                                coords.latitude,
+                                coords.longitude
+                            );
+                        }
+
+                        // When moving (> 2.2 km/h or moved >= 6 meters):
+                        // stream GPS coordinates every 3.5 seconds to capture actual road movement!
+                        // When stationary: ping every 35 seconds.
+                        const isMoving = isMovingSpeed || distMoved >= 6;
+                        const minInterval = isMoving ? 3500 : 35000;
+
+                        if (elapsed >= minInterval && (isMoving || elapsed >= 45000)) {
                             pingLocation({
-                                latitude: pos.coords.latitude,
-                                longitude: pos.coords.longitude,
-                                accuracy: pos.coords.accuracy,
-                                speed: pos.coords.speed
-                            }, 'movement');
+                                latitude: coords.latitude,
+                                longitude: coords.longitude,
+                                accuracy: coords.accuracy,
+                                speed: coords.speed
+                            }, isMoving ? 'live_movement' : 'periodic');
                         }
                     },
-                    () => {},
-                    { enableHighAccuracy: true, maximumAge: 15000 }
+                    (err) => console.warn('[AELocationTracker] watchPosition error:', err.message),
+                    { enableHighAccuracy: true, maximumAge: 1000, timeout: 8000 }
                 );
             } catch (e) {}
         }

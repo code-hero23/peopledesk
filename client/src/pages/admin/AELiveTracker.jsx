@@ -356,7 +356,6 @@ const AELiveTracker = () => {
   const markersRef = useRef({});
   const siteMarkersRef = useRef({});
   const markerAnimationsRef = useRef({});
-  const liveTrailsRef = useRef({});
   const polylineRef = useRef(null);
   const casingPolylineRef = useRef(null);
   const historyMarkersRef = useRef([]);
@@ -400,7 +399,6 @@ const AELiveTracker = () => {
 
     return () => {
       Object.values(markerAnimationsRef.current).forEach(id => cancelAnimationFrame(id));
-      Object.values(liveTrailsRef.current).forEach(t => t.remove());
       if (leafletMap.current) {
         leafletMap.current.remove();
         leafletMap.current = null;
@@ -504,28 +502,46 @@ const AELiveTracker = () => {
       });
       
       // Support both legacy array format and object format with trackingWindow info
-      if (Array.isArray(res.data)) {
-        setLiveData(res.data);
-      } else if (res.data && res.data.liveData) {
-        setLiveData(res.data.liveData || []);
-        if (res.data.trackingWindow) {
-          setTrackingInfo(res.data.trackingWindow);
-        }
+      const newItems = Array.isArray(res.data) 
+        ? res.data 
+        : (res.data?.liveData || []);
+
+      setLiveData(newItems);
+      if (res.data?.trackingWindow) {
+        setTrackingInfo(res.data.trackingWindow);
       }
+
+      // Synchronize selectedAE with fresh live data so HUD, battery and speed remain live
+      setSelectedAE(prev => {
+        if (!prev) return null;
+        const fresh = newItems.find(i => i.user.id === prev.user.id);
+        return fresh || prev;
+      });
     } catch (err) {
       console.error('Failed to fetch AE live locations:', err);
-      toast.error('Could not refresh AE location tracker data.');
+      if (isManual) {
+        toast.error('Could not refresh AE location tracker data.');
+      }
     } finally {
       setLoading(false);
-      setRefreshing(false);
+      if (isManual) setRefreshing(false);
     }
   };
 
+  // Dynamic Fast-Polling: 3.5s when any AE is moving or an AE is selected; 10s when stationary
+  const anyMoving = liveData.some(i => i.isMoving || i.status === 'MOVING');
+  const pollInterval = (anyMoving || selectedAE) ? 3500 : 10000;
+
   useEffect(() => {
     fetchLiveData();
-    const interval = setInterval(() => fetchLiveData(), 15000); // Auto refresh every 15s for live movement
-    return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      fetchLiveData();
+    }, pollInterval);
+    return () => clearInterval(timer);
+  }, [pollInterval, selectedAE?.user?.id]);
 
   // Calculate bearing angle between two coordinates (0-360 degrees)
   const calculateBearing = (lat1, lon1, lat2, lon2) => {
@@ -541,7 +557,7 @@ const AELiveTracker = () => {
   const getBikeSVG = (color = '#2563eb', bearing = 0) => `
     <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
       <!-- Glowing Headlight Beam projecting forward -->
-      <div style="
+      <div class="headlight-beam" style="
         position: absolute;
         top: -24px;
         left: 50%;
@@ -550,7 +566,7 @@ const AELiveTracker = () => {
         height: 0;
         border-left: 14px solid transparent;
         border-right: 14px solid transparent;
-        border-top: 26px solid rgba(254, 240, 138, 0.5);
+        border-top: 26px solid rgba(254, 240, 138, 0.55);
         filter: blur(2px);
         pointer-events: none;
       "></div>
@@ -577,7 +593,7 @@ const AELiveTracker = () => {
   const getCabSVG = (color = '#eab308', bearing = 0) => `
     <div style="position: relative; width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;">
       <!-- Dual Headlight Beams projecting forward -->
-      <div style="
+      <div class="headlight-beam" style="
         position: absolute;
         top: -26px;
         left: 14px;
@@ -589,7 +605,7 @@ const AELiveTracker = () => {
         filter: blur(2px);
         pointer-events: none;
       "></div>
-      <div style="
+      <div class="headlight-beam" style="
         position: absolute;
         top: -26px;
         right: 14px;
@@ -623,27 +639,83 @@ const AELiveTracker = () => {
     </div>
   `;
 
-  // Smooth Marker Gliding function across street coordinates
-  const slideMarkerTo = (marker, startPos, endPos, duration = 2500) => {
+  // Continuous Vehicle Movement & Dead-Reckoning Engine (Uber / Rapido / Google Maps style)
+  // Glides marker smoothly from current position to target GPS position.
+  // When in MOVING state, continues dead-reckoning forward along street vector so vehicle never freezes still.
+  const animateVehicleMotion = (aeId, marker, startPos, targetPos, isMoving, speedMps = 0, initialBearing = 0) => {
     if (!marker) return;
+
+    if (markerAnimationsRef.current[aeId]) {
+      cancelAnimationFrame(markerAnimationsRef.current[aeId]);
+      delete markerAnimationsRef.current[aeId];
+    }
+
+    const distMeters = getDistanceMeters(startPos[0], startPos[1], targetPos[0], targetPos[1]);
+
+    if (!isMoving || distMeters < 1.5) {
+      marker.setLatLng(targetPos);
+      return;
+    }
+
+    // Vector bearing along movement path
+    const moveBearing = calculateBearing(startPos[0], startPos[1], targetPos[0], targetPos[1]);
+    const activeBearing = (!isNaN(moveBearing) && moveBearing !== 0) ? moveBearing : initialBearing;
+
+    // Glide duration matched to polling interval (~3200ms)
+    const targetDuration = Math.min(4200, Math.max(1600, (distMeters / Math.max(speedMps || 6, 2)) * 1000));
     const startTime = performance.now();
-    const animId = requestAnimationFrame(function step(currentTime) {
-      const elapsed = currentTime - startTime;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease in-out quad for smooth vehicle acceleration & deceleration
-      const ease = progress < 0.5 
-        ? 2 * progress * progress 
-        : 1 - Math.pow(-2 * progress + 2, 2) / 2;
 
-      const currentLat = startPos[0] + (endPos[0] - startPos[0]) * ease;
-      const currentLng = startPos[1] + (endPos[1] - startPos[1]) * ease;
-      marker.setLatLng([currentLat, currentLng]);
+    const velLat = (targetPos[0] - startPos[0]) / targetDuration;
+    const velLng = (targetPos[1] - startPos[1]) / targetDuration;
 
-      if (progress < 1) {
-        requestAnimationFrame(step);
+    function step(now) {
+      const elapsed = now - startTime;
+      let curLat, curLng;
+
+      if (elapsed <= targetDuration) {
+        // Phase 1: Smooth interpolation from startPos to targetPos
+        const progress = elapsed / targetDuration;
+        const ease = progress < 0.5
+          ? 2 * progress * progress
+          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+
+        curLat = startPos[0] + (targetPos[0] - startPos[0]) * ease;
+        curLng = startPos[1] + (targetPos[1] - startPos[1]) * ease;
+      } else {
+        // Phase 2: Still moving, continue dead-reckoning forward along street vector
+        // until next GPS poll arrives (max 4.5 seconds to avoid overshooting)
+        const extraMs = Math.min(elapsed - targetDuration, 4500);
+        curLat = targetPos[0] + velLat * extraMs;
+        curLng = targetPos[1] + velLng * extraMs;
+
+        if (extraMs >= 4500) {
+          marker.setLatLng([curLat, curLng]);
+          return;
+        }
       }
-    });
-    return animId;
+
+      marker.setLatLng([curLat, curLng]);
+
+      // Dynamically update bearing rotation on the vehicle element
+      const markerEl = marker.getElement();
+      if (markerEl) {
+        const rotator = markerEl.querySelector('.vehicle-rotator');
+        if (rotator) {
+          rotator.style.transform = `rotate(${Math.round(activeBearing)}deg)`;
+        }
+      }
+
+      // If camera follow mode is active and this is the selected AE, gently follow
+      if (isFollowMode && selectedAE?.user?.id === aeId && leafletMap.current) {
+        if (Math.floor(elapsed / 450) !== Math.floor((elapsed - 16) / 450)) {
+          leafletMap.current.panTo([curLat, curLng], { animate: true, duration: 0.4 });
+        }
+      }
+
+      markerAnimationsRef.current[aeId] = requestAnimationFrame(step);
+    }
+
+    markerAnimationsRef.current[aeId] = requestAnimationFrame(step);
   };
 
   // Update map markers when liveData changes with smooth gliding, bike/cab icons & sequential Site pins
@@ -794,9 +866,18 @@ const AELiveTracker = () => {
       const isMoving = item.isMoving || status === 'MOVING';
       const isStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
 
-      // Calculate bearing angle if moving and previous location exists
+      // Calculate bearing angle: prefer vector from current marker position to new GPS fix
       let bearing = 0;
-      if (prevLoc && prevLoc.latitude && prevLoc.longitude) {
+      const existing = markersRef.current[ae.id];
+      if (existing) {
+        const cur = existing.getLatLng();
+        const d = getDistanceMeters(cur.lat, cur.lng, loc.latitude, loc.longitude);
+        if (d >= 2) {
+          bearing = calculateBearing(cur.lat, cur.lng, loc.latitude, loc.longitude);
+        } else if (prevLoc && prevLoc.latitude && prevLoc.longitude) {
+          bearing = calculateBearing(prevLoc.latitude, prevLoc.longitude, loc.latitude, loc.longitude);
+        }
+      } else if (prevLoc && prevLoc.latitude && prevLoc.longitude) {
         bearing = calculateBearing(prevLoc.latitude, prevLoc.longitude, loc.latitude, loc.longitude);
       }
 
@@ -835,10 +916,12 @@ const AELiveTracker = () => {
               "></div>
             ` : ''}
 
-            <!-- Center Vehicle / Avatar Circle -->
+            <!-- Center Vehicle / Avatar Circle with active Engine Vibration -->
             ${isMoving ? `
-              <div style="transform: rotate(${Math.round(bearing)}deg); transition: transform 0.25s ease-out; display: flex; align-items: center; justify-content: center; z-index: 2;">
-                ${vehicleSVG}
+              <div class="vehicle-rotator" style="transform: rotate(${Math.round(bearing)}deg); transition: transform 0.25s ease-out; display: flex; align-items: center; justify-content: center; z-index: 2;">
+                <div class="vehicle-engine-vibe" style="display: flex; align-items: center; justify-content: center;">
+                  ${vehicleSVG}
+                </div>
               </div>
             ` : `
               <div style="
@@ -944,12 +1027,19 @@ const AELiveTracker = () => {
 
         const currentPos = existingMarker.getLatLng();
         const dist = Math.hypot(currentPos.lat - loc.latitude, currentPos.lng - loc.longitude);
-        if (dist > 0.00002) {
-          // Smoothly glide marker to new position over 2.5 seconds
-          if (markerAnimationsRef.current[ae.id]) {
-            cancelAnimationFrame(markerAnimationsRef.current[ae.id]);
-          }
-          markerAnimationsRef.current[ae.id] = slideMarkerTo(existingMarker, [currentPos.lat, currentPos.lng], latLng, 2500);
+        if (dist > 0.00001) {
+          // Smoothly animate vehicle motion down the road with dead-reckoning
+          animateVehicleMotion(
+            ae.id,
+            existingMarker,
+            [currentPos.lat, currentPos.lng],
+            latLng,
+            isMoving,
+            loc.speed || 0,
+            bearing
+          );
+        } else if (!isMoving) {
+          existingMarker.setLatLng(latLng);
         }
       } else {
         const newMarker = window.L.marker(latLng, { 
@@ -960,41 +1050,31 @@ const AELiveTracker = () => {
         markersRef.current[ae.id] = newMarker;
       }
 
-      // Draw live motion trail polyline between previous and current location if moving
-      if (isMoving && prevLoc && prevLoc.latitude && prevLoc.longitude) {
-        const trailCoords = [[prevLoc.latitude, prevLoc.longitude], [loc.latitude, loc.longitude]];
-        const trailDist = getDistanceMeters(prevLoc.latitude, prevLoc.longitude, loc.latitude, loc.longitude);
-        if (trailDist >= 15) {
-          if (liveTrailsRef.current[ae.id]) {
-            liveTrailsRef.current[ae.id].setLatLngs(trailCoords);
-          } else {
-            liveTrailsRef.current[ae.id] = window.L.polyline(trailCoords, {
-              color: '#3b82f6',
-              weight: 4,
-              opacity: 0.85,
-              dashArray: '8, 10',
-              className: 'live-motion-trail'
-            }).addTo(leafletMap.current);
+      // If this is the selected AE, dynamically extend the solid road route polyline under the vehicle wheels
+      if (selectedAE && selectedAE.user.id === ae.id && polylineRef.current && isMoving) {
+        const currentPath = polylineRef.current.getLatLngs();
+        if (currentPath && currentPath.length > 0) {
+          const lastPoint = currentPath[currentPath.length - 1];
+          const distFromLast = getDistanceMeters(lastPoint.lat, lastPoint.lng, loc.latitude, loc.longitude);
+          if (distFromLast >= 8) {
+            polylineRef.current.addLatLng(latLng);
+            if (casingPolylineRef.current) {
+              casingPolylineRef.current.addLatLng(latLng);
+            }
           }
-        } else if (liveTrailsRef.current[ae.id]) {
-          liveTrailsRef.current[ae.id].remove();
-          delete liveTrailsRef.current[ae.id];
         }
-      } else if (liveTrailsRef.current[ae.id]) {
-        liveTrailsRef.current[ae.id].remove();
-        delete liveTrailsRef.current[ae.id];
       }
     });
 
     // Remove obsolete markers for employees not in current itemsToRender
     Object.keys(markersRef.current).forEach((empId) => {
       if (!currentEmployeeIds.has(Number(empId))) {
+        if (markerAnimationsRef.current[empId]) {
+          cancelAnimationFrame(markerAnimationsRef.current[empId]);
+          delete markerAnimationsRef.current[empId];
+        }
         markersRef.current[empId].remove();
         delete markersRef.current[empId];
-        if (liveTrailsRef.current[empId]) {
-          liveTrailsRef.current[empId].remove();
-          delete liveTrailsRef.current[empId];
-        }
       }
     });
 
@@ -1515,19 +1595,22 @@ const AELiveTracker = () => {
           70% { transform: scale(1.65); opacity: 0; }
           100% { transform: scale(1.65); opacity: 0; }
         }
-        @keyframes liveVehicleBob {
-          0% { transform: translateY(0px); filter: drop-shadow(0 4px 14px rgba(37,99,235,0.6)); }
-          50% { transform: translateY(-3px) scale(1.04); filter: drop-shadow(0 8px 24px rgba(37,99,235,0.9)); }
-          100% { transform: translateY(0px); filter: drop-shadow(0 4px 14px rgba(37,99,235,0.6)); }
+        @keyframes vehicleDriveVibe {
+          0% { transform: translateY(0px) scale(1); }
+          25% { transform: translateY(-0.8px) scale(1.01); }
+          50% { transform: translateY(0.4px) scale(0.99); }
+          75% { transform: translateY(-0.6px) scale(1.01); }
+          100% { transform: translateY(0px) scale(1); }
         }
-        @keyframes trailDashMove {
-          to {
-            stroke-dashoffset: -30;
-          }
+        .vehicle-engine-vibe {
+          animation: vehicleDriveVibe 0.22s infinite linear;
         }
-        .live-motion-trail {
-          stroke-dasharray: 8, 10;
-          animation: trailDashMove 1.2s linear infinite;
+        @keyframes headlightFlicker {
+          0%, 100% { opacity: 0.65; transform: translateX(-50%) scale(1); }
+          50% { opacity: 0.95; transform: translateX(-50%) scale(1.08); filter: blur(1.5px); }
+        }
+        .headlight-beam {
+          animation: headlightFlicker 0.6s infinite ease-in-out;
         }
       `}</style>
       
