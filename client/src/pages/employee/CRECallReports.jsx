@@ -358,7 +358,7 @@ const CRECallReports = () => {
         return d.toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     };
 
-    const normalizeSimValue = (value) => String(value || '').trim().toLowerCase();
+    const normalizeSimValue = (value) => String(value || '').trim().toLowerCase().replace(/^(sim|slot)\s*/i, '');
     const resolveCallSimSlot = (call) => {
         const slot = normalizeSimValue(call?.simSlot);
         if (slot && slot !== '0' && slot !== 'unknown' && slot !== 'null' && slot !== 'undefined') {
@@ -381,7 +381,13 @@ const CRECallReports = () => {
         if (resolvedSlot === targetSlot) return true;
 
         const simId = normalizeSimValue(call?.simId);
-        if (simId && simMap[simId] === targetSlot) return true;
+        if (simId && (simId === targetSlot || simMap[simId] === targetSlot)) return true;
+
+        const label = normalizeSimValue(call?.simLabel);
+        if (label && (label.includes(`sim ${targetSlot}`) || label.includes(`slot ${targetSlot}`))) return true;
+
+        // If the call doesn't have an explicit conflicting slot, allow it
+        if (!resolvedSlot || resolvedSlot === '0' || resolvedSlot === 'unknown' || resolvedSlot === 'undefined') return true;
 
         return false;
     };
@@ -414,9 +420,19 @@ const CRECallReports = () => {
             }));
         })
         .filter(call => {
-            if (!call.workLogDate) return false;
-            // Use the server-assigned date string to ensure consistency with Admin/Stats
-            const callDateStr = new Date(call.workLogDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            const rawTs = call.date ?? call.timestamp ?? call.time;
+            let callDateStr = null;
+            if (rawTs) {
+                const num = Number(rawTs);
+                const ts = (!isNaN(num) && num > 0) ? (num < 10000000000 ? num * 1000 : num) : new Date(rawTs).getTime();
+                if (!isNaN(ts) && ts > 0) {
+                    callDateStr = new Date(ts).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+                }
+            }
+            if (!callDateStr && call.workLogDate) {
+                callDateStr = new Date(call.workLogDate).toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
+            }
+            
             const isMatch = callDateStr === selectedDate;
             
             // Helpful for debugging if anything appears missing
@@ -426,7 +442,16 @@ const CRECallReports = () => {
             
             return isMatch;
         })
-        .sort((a, b) => new Date(b.date) - new Date(a.date));
+        .sort((a, b) => {
+            const getTs = (c) => {
+                const raw = c.date ?? c.timestamp ?? c.time;
+                const num = Number(raw);
+                if (!isNaN(num) && num > 0) return num < 10000000000 ? num * 1000 : num;
+                const d = new Date(raw).getTime();
+                return isNaN(d) ? 0 : d;
+            };
+            return getTs(b) - getTs(a);
+        });
 
     // Intelligence
     if (searchTerm === 'DEBUG' && callLogs?.length > 0) {

@@ -749,42 +749,6 @@ const syncCallLogs = async (req, res) => {
     }
 };
 
-// @desc    Get my individual call logs (CRE)
-// @route   GET /api/worklogs/my-calls
-// @access  Private (CRE)
-const getMyCallLogs = async (req, res) => {
-    try {
-        const userId = req.user.id;
-        const { startDate, endDate } = req.query;
-
-        let start, end;
-        if (startDate && endDate) {
-            // Force local time parsing instead of UTC
-            start = new Date(startDate + 'T00:00:00');
-            end = new Date(endDate + 'T23:59:59.999');
-        } else {
-            start = getCycleStartDateIST();
-            end = getCycleEndDateIST();
-        }
-
-        const logs = await prisma.callLog.findMany({
-            where: {
-                userId,
-                date: {
-                    gte: start,
-                    lte: end
-                }
-            },
-            orderBy: { date: 'desc' }
-        });
-
-        res.json(logs);
-    } catch (error) {
-        console.error(error);
-        res.status(500).json({ message: 'Server Error', error: error.message });
-    }
-};
-
 const getCallTimestamp = (c) => {
     if (!c) return null;
     const raw = c.date ?? c.timestamp ?? c.time;
@@ -802,6 +766,82 @@ const getCallTimestamp = (c) => {
         if (!isNaN(parsed)) return parsed;
     }
     return null;
+};
+
+// @desc    Get my individual call logs (CRE)
+// @route   GET /api/worklogs/my-calls
+// @access  Private (CRE)
+const getMyCallLogs = async (req, res) => {
+    try {
+        const userId = req.user.id;
+        const { startDate, endDate, simFilter } = req.query;
+
+        // Expanded query bounds (+/- 24 hours) to guarantee records are never clipped by UTC vs IST DB storage
+        let queryStart, queryEnd;
+        if (startDate && endDate) {
+            queryStart = new Date(getStartOfDayIST(startDate).getTime() - (24 * 60 * 60 * 1000));
+            queryEnd = new Date(getEndOfDayIST(endDate).getTime() + (24 * 60 * 60 * 1000));
+        } else {
+            const defaultStart = getCycleStartDateIST();
+            const defaultEnd = getCycleEndDateIST();
+            queryStart = new Date(defaultStart.getTime() - (24 * 60 * 60 * 1000));
+            queryEnd = new Date(defaultEnd.getTime() + (24 * 60 * 60 * 1000));
+        }
+
+        const logs = await prisma.callLog.findMany({
+            where: {
+                userId,
+                date: {
+                    gte: queryStart,
+                    lte: queryEnd
+                }
+            },
+            orderBy: { date: 'desc' }
+        });
+
+        // Filter inner calls by specific date and SIM in IST (UTC+5:30) with timezone boundary grace
+        const processedLogs = logs.map(log => {
+            let filteredCalls = Array.isArray(log.calls) ? [...log.calls] : [];
+
+            if (startDate && endDate) {
+                const s = getStartOfDayIST(startDate).getTime();
+                const e = getEndOfDayIST(endDate).getTime();
+                const logDateTs = log.date ? new Date(log.date).getTime() : null;
+                const isParentLogInRange = logDateTs !== null && logDateTs >= s && logDateTs <= e;
+
+                filteredCalls = filteredCalls.filter(c => {
+                    const ts = getCallTimestamp(c);
+                    if (ts === null) return isParentLogInRange;
+                    if (ts >= s && ts <= e) return true;
+                    // Grace window if call belongs to today's parent log
+                    if (isParentLogInRange && ts >= (s - 6 * 3600 * 1000) && ts <= (e + 6 * 3600 * 1000)) {
+                        return true;
+                    }
+                    return false;
+                });
+            }
+
+            if (simFilter && String(simFilter).toUpperCase() !== 'ALL' && String(simFilter) !== '0') {
+                const slot = String(simFilter).toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                filteredCalls = filteredCalls.filter(c => {
+                    const cSlot = String(c.simSlot || c.simId || "").toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                    const cLabel = String(c.simLabel || "").toLowerCase().replace(/^(sim|slot)\s*/i, '');
+                    return cSlot === slot || cLabel === slot || cLabel.includes(`sim ${slot}`) || cLabel.includes(`slot ${slot}`);
+                });
+            }
+
+            return {
+                ...log,
+                calls: filteredCalls,
+                totalCalls: filteredCalls.length
+            };
+        });
+
+        res.json(processedLogs);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
 };
 
 // @desc    Get all call stats for Admin
