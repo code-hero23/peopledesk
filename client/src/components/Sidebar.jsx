@@ -245,7 +245,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                                 <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                                 <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
-                                <NavItem to="/dashboard/my-location-history" icon={Navigation} label="My Travel History" />
                                 <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                                 <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
                                 <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI Scoreboard" />

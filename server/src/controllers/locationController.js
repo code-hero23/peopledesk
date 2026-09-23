@@ -6,24 +6,6 @@ const { getTrackingWindowIST } = require('../utils/dateHelpers');
 const recordLocation = async (req, res) => {
   try {
     const userId = Number(req.user.id);
-    const userRole = (req.user.role || '').toUpperCase();
-    const userDesignation = (req.user.designation || '').toUpperCase();
-
-    // Strictly exempt and hide managers & admins from tracking
-    if (
-      ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(userRole) ||
-      userDesignation.includes('MANAGER') ||
-      userDesignation.includes('ADMIN') ||
-      userDesignation.includes('HEAD') ||
-      userDesignation === 'BH'
-    ) {
-      return res.status(200).json({
-        message: 'Location tracking is disabled for managerial accounts.',
-        trackingActive: false,
-        ignored: true
-      });
-    }
-
     const { latitude, longitude, accuracy, batteryLevel, speed, address } = req.body;
 
     const lat = parseFloat(latitude);
@@ -87,19 +69,12 @@ const getLiveLocations = async (req, res) => {
     const now = new Date();
     const { startUTC, endUTC, isCurrentlyInWindow, currentIST } = getTrackingWindowIST(now);
 
-    // Find all active field executives (strictly excluding managers, admins, AE managers)
+    // Find all active users who are AEs, have assigned sites, or have location logs
     let aeUsers = await prisma.user.findMany({
       where: {
         status: 'ACTIVE',
-        role: { notIn: ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'] },
-        NOT: [
-          { designation: { contains: 'MANAGER', mode: 'insensitive' } },
-          { designation: { contains: 'ADMIN', mode: 'insensitive' } },
-          { designation: { contains: 'HEAD', mode: 'insensitive' } },
-          { designation: { equals: 'BH', mode: 'insensitive' } }
-        ],
         OR: [
-          { role: 'AE' },
+          { role: 'AE_MANAGER' },
           { designation: { contains: 'AE', mode: 'insensitive' } },
           { designation: { contains: 'Area', mode: 'insensitive' } },
           { designation: { contains: 'Architect', mode: 'insensitive' } },
@@ -124,12 +99,7 @@ const getLiveLocations = async (req, res) => {
       aeUsers = await prisma.user.findMany({
         where: {
           status: 'ACTIVE',
-          role: 'EMPLOYEE',
-          NOT: [
-            { designation: { contains: 'MANAGER', mode: 'insensitive' } },
-            { designation: { contains: 'ADMIN', mode: 'insensitive' } },
-            { designation: { contains: 'HEAD', mode: 'insensitive' } }
-          ]
+          role: { in: ['EMPLOYEE', 'AE_MANAGER'] }
         },
         select: {
           id: true,

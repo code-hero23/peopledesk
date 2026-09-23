@@ -1560,20 +1560,6 @@ const AELiveTracker = () => {
   // Filter and Sort AEs: Active first, Idle second, Offline last
   const filteredData = liveData
     .filter(item => {
-      // Exclude manager / admin accounts or self from being displayed as tracked executives
-      const itemRole = (item.user?.role || '').toUpperCase();
-      const itemDesig = (item.user?.designation || '').toUpperCase();
-      if (
-        ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(itemRole) ||
-        itemDesig.includes('MANAGER') ||
-        itemDesig.includes('ADMIN') ||
-        itemDesig.includes('HEAD') ||
-        itemDesig === 'BH' ||
-        (user?.id && item.user?.id === user.id && ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(role))
-      ) {
-        return false;
-      }
-
       const matchesSearch = item.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             (item.user.phone && item.user.phone.includes(searchQuery)) ||
                             (item.user.designation && item.user.designation.toLowerCase().includes(searchQuery.toLowerCase()));
