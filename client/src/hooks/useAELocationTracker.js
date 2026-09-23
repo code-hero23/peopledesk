@@ -10,8 +10,19 @@ export const isAEUser = (user) => {
     if (!user) return false;
     const r = (user.role || '').toUpperCase();
     const d = (user.designation || '').toUpperCase();
+
+    // Strictly exempt Managers & Admins from tracking (only regular field executives)
+    if (
+        ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(r) ||
+        d.includes('MANAGER') ||
+        d.includes('ADMIN') ||
+        d.includes('HEAD') ||
+        d === 'BH'
+    ) {
+        return false;
+    }
+
     return (
-        r === 'AE_MANAGER' ||
         r === 'AE' ||
         d.includes('AE') ||
         d.includes('AREA EXECUTIVE') ||

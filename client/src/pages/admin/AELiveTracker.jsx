@@ -40,7 +40,10 @@ import {
   ShieldCheck,
   ChevronUp,
   ChevronDown,
-  Users
+  Users,
+  Maximize2,
+  Minimize2,
+  Minus
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import ApkDownloadModal from '../../components/common/ApkDownloadModal';
@@ -81,6 +84,26 @@ const AELiveTracker = () => {
   const [vehicleMode, setVehicleMode] = useState('bike'); // 'bike' (Rapido) or 'cab' (Uber)
   const [isFollowMode, setIsFollowMode] = useState(false);
   const [isHudExpanded, setIsHudExpanded] = useState(true);
+
+  // Map View State: 'normal' (split view), 'maximized' (fullscreen), 'minimized' (collapsed)
+  const [mapViewState, setMapViewState] = useState('normal');
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mapViewState === 'maximized') {
+        setMapViewState('normal');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mapViewState]);
+
+  useEffect(() => {
+    if (leafletMap.current) {
+      setTimeout(() => leafletMap.current?.invalidateSize(), 100);
+      setTimeout(() => leafletMap.current?.invalidateSize(), 300);
+    }
+  }, [mapViewState]);
 
   // Selected AE Site Sign-Ins (Sequential Sites: Site 1, Site 2, Site 3...)
   const [selectedAESiteSignIns, setSelectedAESiteSignIns] = useState([]);
@@ -1537,6 +1560,20 @@ const AELiveTracker = () => {
   // Filter and Sort AEs: Active first, Idle second, Offline last
   const filteredData = liveData
     .filter(item => {
+      // Exclude manager / admin accounts or self from being displayed as tracked executives
+      const itemRole = (item.user?.role || '').toUpperCase();
+      const itemDesig = (item.user?.designation || '').toUpperCase();
+      if (
+        ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER', 'ACCOUNTS_MANAGER'].includes(itemRole) ||
+        itemDesig.includes('MANAGER') ||
+        itemDesig.includes('ADMIN') ||
+        itemDesig.includes('HEAD') ||
+        itemDesig === 'BH' ||
+        (user?.id && item.user?.id === user.id && ['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR', 'AE_MANAGER'].includes(role))
+      ) {
+        return false;
+      }
+
       const matchesSearch = item.user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             (item.user.phone && item.user.phone.includes(searchQuery)) ||
                             (item.user.designation && item.user.designation.toLowerCase().includes(searchQuery.toLowerCase()));
@@ -1785,244 +1822,312 @@ const AELiveTracker = () => {
       </div>
 
       {/* Main Tracker Workspace (Grid on Desktop, Tabbed on Mobile) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 min-h-[600px] lg:h-[calc(100vh-220px)]">
+      <div className={`grid ${mapViewState === 'minimized' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-12'} gap-5 min-h-[600px] lg:h-[calc(100vh-220px)]`}>
         
-        {/* Left Column: AE Directory & Filters (Hidden on mobile if map tab active) */}
-        <div className={`lg:col-span-4 bg-slate-900/90 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col shadow-2xl backdrop-blur-xl ${
-          mobileTab === 'list' ? 'flex' : 'hidden lg:flex'
-        }`}>
-          {/* Search & Filter Header */}
-          <div className="space-y-3 pb-3.5 border-b border-slate-800">
-            <div className="relative">
-              <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Search by AE name, phone, designation..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-8 py-2.5 bg-slate-800/70 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white p-0.5"
-                >
-                  <X size={14} />
-                </button>
-              )}
-            </div>
-
-            {/* Status Filter Chips */}
-            <div className="flex flex-wrap gap-1 bg-slate-800/40 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
-              {['ALL', 'MOVING', 'STATIONARY', 'IDLE', 'OFFLINE', 'OUT_OF_HOURS'].map((st) => (
-                <button
-                  key={st}
-                  onClick={() => setStatusFilter(st)}
-                  className={`flex-1 min-w-[45px] py-1.5 px-1.5 rounded-lg transition-all text-center ${
-                    statusFilter === st
-                      ? 'bg-blue-600 text-white shadow-md font-extrabold'
-                      : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
-                  }`}
-                >
-                  {st === 'MOVING' ? '🚗 MOVING' : st === 'STATIONARY' ? '📍 SITE' : st === 'OUT_OF_HOURS' ? 'OFF-HRS' : st}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* AE Cards Scrollable List */}
-          <div className="flex-1 overflow-y-auto space-y-2.5 pt-3.5 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
-            {/* Show All Executives Card (Overall View) */}
-            <button
-              onClick={handleShowAll}
-              className={`w-full p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${
-                !selectedAE
-                  ? 'bg-blue-600/20 border-blue-500 shadow-lg shadow-blue-600/10 ring-1 ring-blue-500/40 text-white'
-                  : 'bg-slate-800/40 border-slate-800/80 text-slate-300 hover:bg-slate-800/80 hover:text-white'
-              }`}
-            >
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${!selectedAE ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'bg-slate-800 text-slate-400'}`}>
-                  <Users size={16} />
+        {/* Left Column: AE Directory & Filters (Hidden on mobile if map tab active or when map is maximized) */}
+        {mapViewState !== 'maximized' && (
+          <div className={`${
+            mapViewState === 'minimized' ? 'lg:col-span-12' : 'lg:col-span-4'
+          } bg-slate-900/90 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-4 sm:p-5 flex flex-col shadow-2xl backdrop-blur-xl transition-all duration-300 ${
+            mobileTab === 'list' ? 'flex' : (mapViewState === 'minimized' ? 'flex' : 'hidden lg:flex')
+          }`}>
+            {/* Minimized Map Banner Notification with Restore Action */}
+            {mapViewState === 'minimized' && (
+              <div className="mb-3.5 bg-gradient-to-r from-blue-900/40 via-slate-900/90 to-blue-900/40 border border-blue-500/40 p-3 sm:p-4 rounded-2xl flex items-center justify-between shadow-xl animate-fadeIn">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <MapPin size={18} className="animate-bounce" />
+                  </div>
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white">Live Tracking Map Minimized</h4>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Directory is currently expanded to full width. Click restore to view the map.</p>
+                  </div>
                 </div>
-                <div className="min-w-0">
-                  <h4 className="text-xs font-black tracking-wide truncate">All Executives & Sites</h4>
-                  <p className="text-[10px] text-slate-400 truncate">Show overall fleet & all pins</p>
-                </div>
-              </div>
-              <span className={`px-2 py-0.5 text-[9px] font-black rounded-md border shrink-0 ${
-                !selectedAE ? 'bg-blue-500/30 text-blue-300 border-blue-400/40' : 'bg-slate-800 text-slate-400 border-slate-700'
-              }`}>
-                {liveData.length} ALL
-              </span>
-            </button>
-
-            {loading ? (
-              <div className="p-12 text-center text-slate-400 text-xs font-medium animate-pulse flex flex-col items-center gap-2">
-                <RefreshCw size={20} className="animate-spin text-blue-400" />
-                <span>Loading active AE GPS feeds...</span>
-              </div>
-            ) : filteredData.length === 0 ? (
-              <div className="p-12 text-center text-slate-400 text-xs font-medium space-y-2">
-                <p>No Area Executives match your filter criteria.</p>
-                <button 
-                  onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}
-                  className="px-3 py-1 bg-slate-800 text-blue-400 rounded-lg text-[11px] font-bold"
+                <button
+                  onClick={() => {
+                    setMapViewState('normal');
+                    setMobileTab('map');
+                  }}
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all active:scale-95 shrink-0"
                 >
-                  Reset Filters
+                  <Maximize2 size={14} />
+                  <span>Restore Map</span>
                 </button>
               </div>
-            ) : (
-              filteredData.map((item) => {
-                const { user: ae, latestLocation: loc, status } = item;
-                const isSelected = selectedAE?.user?.id === ae.id;
+            )}
 
-                const isItemMoving = item.isMoving || status === 'MOVING';
-                const isItemStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isItemMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
+            {/* Search & Filter Header */}
+            <div className="space-y-3 pb-3.5 border-b border-slate-800">
+              <div className="relative">
+                <Search size={15} className="absolute left-3.5 top-3 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by AE name, phone, designation..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-8 py-2.5 bg-slate-800/70 border border-slate-700/80 rounded-xl text-xs text-white placeholder-slate-400 focus:outline-none focus:border-blue-500 transition-all"
+                />
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-2.5 top-2.5 text-slate-400 hover:text-white p-0.5"
+                  >
+                    <X size={14} />
+                  </button>
+                )}
+              </div>
 
-                const statusBg = 
-                  isItemMoving ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' :
-                  isItemStationary ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' :
-                  status === 'IDLE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' :
-                  status === 'OUT_OF_HOURS' ? 'bg-purple-500/10 text-purple-400 border-purple-500/25' :
-                  'bg-slate-800 text-slate-400 border-slate-700/60';
-
-                const statusDotColor = 
-                  isItemMoving ? 'bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse' :
-                  isItemStationary ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' :
-                  status === 'IDLE' ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' :
-                  status === 'OUT_OF_HOURS' ? 'bg-purple-400' :
-                  'bg-slate-500';
-
-                const statusLabel = 
-                  isItemMoving ? 'MOVING' :
-                  isItemStationary ? 'AT SITE' :
-                  status === 'OUT_OF_HOURS' ? 'OFF-HOURS' : status;
-
-                return (
-                  <div
-                    key={ae.id}
-                    onClick={() => handleSelectAE(item)}
-                    className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
-                      isSelected
-                        ? 'bg-blue-600/15 border-blue-500 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'
-                        : 'bg-slate-800/35 border-slate-800/80 hover:bg-slate-800/70 hover:border-slate-700/80'
+              {/* Status Filter Chips */}
+              <div className="flex flex-wrap gap-1 bg-slate-800/40 p-1 rounded-xl border border-slate-800 text-[10px] font-bold">
+                {['ALL', 'MOVING', 'STATIONARY', 'IDLE', 'OFFLINE', 'OUT_OF_HOURS'].map((st) => (
+                  <button
+                    key={st}
+                    onClick={() => setStatusFilter(st)}
+                    className={`flex-1 min-w-[45px] py-1.5 px-1.5 rounded-lg transition-all text-center ${
+                      statusFilter === st
+                        ? 'bg-blue-600 text-white shadow-md font-extrabold'
+                        : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
                     }`}
                   >
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColor}`} />
-                        <h4 className="text-sm font-bold text-white truncate">{ae.name}</h4>
-                      </div>
-                      
-                      <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md border shrink-0 ${statusBg}`}>
-                        {statusLabel}
-                      </span>
-                    </div>
+                    {st === 'MOVING' ? '🚗 MOVING' : st === 'STATIONARY' ? '📍 SITE' : st === 'OUT_OF_HOURS' ? 'OFF-HRS' : st}
+                  </button>
+                ))}
+              </div>
+            </div>
 
-                    <div className="text-xs text-slate-400 space-y-1.5">
-                      <div className="flex items-center justify-between text-[11px]">
-                        <span className="truncate text-slate-400">{ae.designation || 'Area Executive'}</span>
-                        {ae.phone && (
-                          <a 
-                            href={`tel:${ae.phone}`} 
-                            onClick={(e) => e.stopPropagation()}
-                            className="flex items-center gap-1 text-slate-400 hover:text-blue-400 font-semibold"
-                          >
-                            <Phone size={11} className="text-blue-400" />
-                            <span>{ae.phone}</span>
-                          </a>
+            {/* AE Cards Scrollable List */}
+            <div className="flex-1 overflow-y-auto space-y-2.5 pt-3.5 pr-1 scrollbar-thin scrollbar-thumb-slate-800 scrollbar-track-transparent">
+              {/* Show All Executives Card (Overall View) */}
+              <button
+                onClick={handleShowAll}
+                className={`w-full p-3 rounded-2xl border transition-all flex items-center justify-between gap-3 text-left ${
+                  !selectedAE
+                    ? 'bg-blue-600/20 border-blue-500 shadow-lg shadow-blue-600/10 ring-1 ring-blue-500/40 text-white'
+                    : 'bg-slate-800/40 border-slate-800/80 text-slate-300 hover:bg-slate-800/80 hover:text-white'
+                }`}
+              >
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 ${!selectedAE ? 'bg-blue-600 text-white shadow-md shadow-blue-600/30' : 'bg-slate-800 text-slate-400'}`}>
+                    <Users size={16} />
+                  </div>
+                  <div className="min-w-0">
+                    <h4 className="text-xs font-black tracking-wide truncate">All Executives & Sites</h4>
+                    <p className="text-[10px] text-slate-400 truncate">Show overall fleet & all pins</p>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 text-[9px] font-black rounded-md border shrink-0 ${
+                  !selectedAE ? 'bg-blue-500/30 text-blue-300 border-blue-400/40' : 'bg-slate-800 text-slate-400 border-slate-700'
+                }`}>
+                  {liveData.length} ALL
+                </span>
+              </button>
+
+              {loading ? (
+                <div className="p-12 text-center text-slate-400 text-xs font-medium animate-pulse flex flex-col items-center gap-2">
+                  <RefreshCw size={20} className="animate-spin text-blue-400" />
+                  <span>Loading active AE GPS feeds...</span>
+                </div>
+              ) : filteredData.length === 0 ? (
+                <div className="p-12 text-center text-slate-400 text-xs font-medium space-y-2">
+                  <p>No Area Executives match your filter criteria.</p>
+                  <button 
+                    onClick={() => { setSearchQuery(''); setStatusFilter('ALL'); }}
+                    className="px-3 py-1 bg-slate-800 text-blue-400 rounded-lg text-[11px] font-bold"
+                  >
+                    Reset Filters
+                  </button>
+                </div>
+              ) : (
+                filteredData.map((item) => {
+                  const { user: ae, latestLocation: loc, status } = item;
+                  const isSelected = selectedAE?.user?.id === ae.id;
+
+                  const isItemMoving = item.isMoving || status === 'MOVING';
+                  const isItemStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isItemMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
+
+                  const statusBg = 
+                    isItemMoving ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' :
+                    isItemStationary ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' :
+                    status === 'IDLE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' :
+                    status === 'OUT_OF_HOURS' ? 'bg-purple-500/10 text-purple-400 border-purple-500/25' :
+                    'bg-slate-800 text-slate-400 border-slate-700/60';
+
+                  const statusDotColor = 
+                    isItemMoving ? 'bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse' :
+                    isItemStationary ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' :
+                    status === 'IDLE' ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' :
+                    status === 'OUT_OF_HOURS' ? 'bg-purple-400' :
+                    'bg-slate-500';
+
+                  const statusLabel = 
+                    isItemMoving ? 'MOVING' :
+                    isItemStationary ? 'AT SITE' :
+                    status === 'OUT_OF_HOURS' ? 'OFF-HOURS' : status;
+
+                  return (
+                    <div
+                      key={ae.id}
+                      onClick={() => handleSelectAE(item)}
+                      className={`p-3.5 rounded-2xl border transition-all cursor-pointer space-y-2.5 ${
+                        isSelected
+                          ? 'bg-blue-600/15 border-blue-500 shadow-xl shadow-blue-500/10 ring-1 ring-blue-500/40'
+                          : 'bg-slate-800/35 border-slate-800/80 hover:bg-slate-800/70 hover:border-slate-700/80'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div className={`w-2.5 h-2.5 rounded-full shrink-0 ${statusDotColor}`} />
+                          <h4 className="text-sm font-bold text-white truncate">{ae.name}</h4>
+                        </div>
+                        
+                        <span className={`px-2 py-0.5 text-[9px] font-black uppercase rounded-md border shrink-0 ${statusBg}`}>
+                          {statusLabel}
+                        </span>
+                      </div>
+
+                      <div className="text-xs text-slate-400 space-y-1.5">
+                        <div className="flex items-center justify-between text-[11px]">
+                          <span className="truncate text-slate-400">{ae.designation || 'Area Executive'}</span>
+                          {ae.phone && (
+                            <a 
+                              href={`tel:${ae.phone}`} 
+                              onClick={(e) => e.stopPropagation()}
+                              className="flex items-center gap-1 text-slate-400 hover:text-blue-400 font-semibold"
+                            >
+                              <Phone size={11} className="text-blue-400" />
+                              <span>{ae.phone}</span>
+                            </a>
+                          )}
+                        </div>
+
+                        {loc && loc.createdAt ? (
+                          <div className="flex items-center justify-between pt-1.5 text-[11px] border-t border-slate-800/90 text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <Clock size={11} className="text-slate-400" />
+                              <span>{new Date(loc.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</span>
+                            </span>
+
+                            <div className="flex items-center gap-2.5">
+                              {loc.batteryLevel != null && (
+                                <span className="flex items-center gap-1 font-bold text-slate-300">
+                                  <Battery size={13} className={loc.batteryLevel < 20 ? 'text-rose-400' : loc.batteryLevel < 50 ? 'text-amber-400' : 'text-emerald-400'} />
+                                  {loc.batteryLevel}%
+                                </span>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="pt-1 text-[10px] text-slate-400 italic border-t border-slate-800/90">
+                            No GPS pings recorded in 7 AM – 8 PM window today
+                          </div>
                         )}
                       </div>
-
-                      {loc && loc.createdAt ? (
-                        <div className="flex items-center justify-between pt-1.5 text-[11px] border-t border-slate-800/90 text-slate-400">
-                          <span className="flex items-center gap-1">
-                            <Clock size={11} className="text-slate-400" />
-                            <span>{new Date(loc.createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })} IST</span>
-                          </span>
-
-                          <div className="flex items-center gap-2.5">
-                            {loc.batteryLevel != null && (
-                              <span className="flex items-center gap-1 font-bold text-slate-300">
-                                <Battery size={13} className={loc.batteryLevel < 20 ? 'text-rose-400' : loc.batteryLevel < 50 ? 'text-amber-400' : 'text-emerald-400'} />
-                                {loc.batteryLevel}%
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      ) : (
-                        <div className="pt-1 text-[10px] text-slate-400 italic border-t border-slate-800/90">
-                          No GPS pings recorded in 7 AM – 8 PM window today
-                        </div>
-                      )}
                     </div>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-
-        {/* Right Column: Leaflet Interactive Map Container (Hidden on mobile if list tab active) */}
-        <div className={`lg:col-span-8 bg-slate-900/95 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-2 sm:p-3 flex flex-col shadow-2xl relative overflow-hidden min-h-[520px] h-[550px] sm:h-[650px] lg:h-full ${
-          mobileTab === 'map' ? 'flex' : 'hidden lg:flex'
-        }`}>
-          
-          {/* Floating Top Control Bar: Layer Switcher & Vehicle Mode Toggle */}
-          <div className="absolute top-4 right-4 z-20 flex items-center gap-2">
-            {/* Global Vehicle Mode Switcher (Bike vs Cab) */}
-            <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
-              <button
-                onClick={() => setVehicleMode('bike')}
-                className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                  vehicleMode === 'bike' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-300 hover:text-white'
-                }`}
-                title="Rapido-style Bike / Two-Wheeler Tracking"
-              >
-                <Bike size={13} />
-                <span className="hidden sm:inline">Bike</span>
-              </button>
-              <button
-                onClick={() => setVehicleMode('cab')}
-                className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                  vehicleMode === 'cab' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-300 hover:text-white'
-                }`}
-                title="Uber-style Cab / Car Tracking"
-              >
-                <Car size={13} />
-                <span className="hidden sm:inline">Cab</span>
-              </button>
-            </div>
-
-            {/* Map Layer Switcher */}
-            <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
-              <button
-                onClick={() => changeMapType('google_roadmap')}
-                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                  mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                🗺️ Map
-              </button>
-              <button
-                onClick={() => changeMapType('google_satellite')}
-                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                  mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                🛰️ Sat
-              </button>
-              <button
-                onClick={() => changeMapType('openstreetmap')}
-                className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
-                  mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
-                }`}
-              >
-                🌐 OSM
-              </button>
+                  );
+                })
+              )}
             </div>
           </div>
+        )}
+
+        {/* Right Column: Leaflet Interactive Map Container (Hidden on mobile if list tab active, hidden if minimized) */}
+        {mapViewState !== 'minimized' && (
+          <div className={`${
+            mapViewState === 'maximized'
+              ? 'fixed inset-0 z-[80] p-3 sm:p-5 bg-slate-950/95 flex flex-col shadow-2xl overflow-hidden w-screen h-screen backdrop-blur-xl'
+              : 'lg:col-span-8 bg-slate-900/95 border border-slate-800/90 rounded-2xl sm:rounded-3xl p-2 sm:p-3 flex flex-col shadow-2xl relative overflow-hidden min-h-[520px] h-[550px] sm:h-[650px] lg:h-full'
+          } ${mobileTab === 'map' ? 'flex' : (mapViewState === 'maximized' ? 'flex' : 'hidden lg:flex')}`}>
+            
+            {/* Floating Top Control Bar: Layer Switcher, Vehicle Mode Toggle & Minimize/Maximize Icon Controls */}
+            <div className="absolute top-4 right-4 z-20 flex flex-wrap items-center justify-end gap-2">
+              {/* Global Vehicle Mode Switcher (Bike vs Cab) */}
+              <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
+                <button
+                  onClick={() => setVehicleMode('bike')}
+                  className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                    vehicleMode === 'bike' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-300 hover:text-white'
+                  }`}
+                  title="Rapido-style Bike / Two-Wheeler Tracking"
+                >
+                  <Bike size={13} />
+                  <span className="hidden sm:inline">Bike</span>
+                </button>
+                <button
+                  onClick={() => setVehicleMode('cab')}
+                  className={`flex items-center gap-1 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                    vehicleMode === 'cab' ? 'bg-amber-500 text-slate-950 font-black shadow' : 'text-slate-300 hover:text-white'
+                  }`}
+                  title="Uber-style Cab / Car Tracking"
+                >
+                  <Car size={13} />
+                  <span className="hidden sm:inline">Cab</span>
+                </button>
+              </div>
+
+              {/* Map Layer Switcher */}
+              <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md">
+                <button
+                  onClick={() => changeMapType('google_roadmap')}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                    mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  🗺️ Map
+                </button>
+                <button
+                  onClick={() => changeMapType('google_satellite')}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                    mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  🛰️ Sat
+                </button>
+                <button
+                  onClick={() => changeMapType('openstreetmap')}
+                  className={`px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all ${
+                    mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'
+                  }`}
+                >
+                  🌐 OSM
+                </button>
+              </div>
+
+              {/* Map Size Controls: Minimize & Maximize Icons on Right */}
+              <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md gap-0.5">
+                {/* Minimize Map Button */}
+                <button
+                  onClick={() => setMapViewState(prev => prev === 'minimized' ? 'normal' : 'minimized')}
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
+                  title="Minimize Map (Expand AE Directory)"
+                >
+                  <Minus size={14} className="text-amber-400" />
+                  <span className="hidden md:inline">Minimize</span>
+                </button>
+
+                {/* Maximize / Restore Map Button */}
+                <button
+                  onClick={() => setMapViewState(prev => prev === 'maximized' ? 'normal' : 'maximized')}
+                  className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 ${
+                    mapViewState === 'maximized'
+                      ? 'bg-blue-600 text-white shadow font-black'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={mapViewState === 'maximized' ? 'Exit Fullscreen (Esc)' : 'Maximize Map to Fullscreen'}
+                >
+                  {mapViewState === 'maximized' ? (
+                    <>
+                      <Minimize2 size={14} className="text-white" />
+                      <span className="hidden md:inline">Exit Full</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 size={14} className="text-blue-400" />
+                      <span className="hidden md:inline">Maximize</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
 
           {/* Floating Route Tracing & Isolation Panel for Selected AE */}
           {selectedAE && (
@@ -2419,6 +2524,7 @@ const AELiveTracker = () => {
             className="w-full flex-1 min-h-[480px] h-full rounded-xl sm:rounded-2xl z-10 border border-slate-800/90 overflow-hidden bg-slate-950 shadow-inner" 
           />
         </div>
+      )}
       </div>
 
       {/* Modal: APK Activation Code */}
