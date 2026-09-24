@@ -2431,15 +2431,13 @@ const AELiveTracker = () => {
                             🔴 DESTINATION / TARGET SITE
                           </span>
                           <span className="text-[10px] font-mono text-slate-400">
-                            {selectedAEAssignment?.scheduledTime || 'Scheduled Today'}
+                            {selectedAEAssignment?.scheduledTime || (selectedAEAssignment ? 'Scheduled Today' : 'Yet to be assigned')}
                           </span>
                         </div>
-                        <p className="text-white font-bold text-[11px] truncate">
+                        <p className={`font-bold text-[11px] truncate ${selectedAEAssignment ? 'text-white' : 'text-slate-300'}`}>
                           {selectedAEAssignment
                             ? `Site: ${selectedAEAssignment.siteName}`
-                            : selectedAESiteSignIn?.checkoutSiteName
-                              ? `Next Site: ${selectedAESiteSignIn.checkoutSiteName}`
-                              : 'Target Site Inspection'}
+                            : 'Next target site yet to be assigned'}
                         </p>
                         {selectedAEAssignment?.clientName && (
                           <p className="text-[10px] text-slate-400 truncate">
