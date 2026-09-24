@@ -245,7 +245,6 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/dashboard/worklogs" icon={ClipboardList} label="My Reports" />
                                 <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                                 <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
-                                <NavItem to="/dashboard/my-location-history" icon={Navigation} label="My Travel History" />
                                 <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                                 <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
                                 <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI Scoreboard" />
@@ -261,11 +260,10 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
-                            {((['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'HR'].includes(user?.role)) ||
-                                (user?.designation || '').toUpperCase() === 'AE MANAGER' ||
-                                (user?.designation || '').toUpperCase() === 'AR MANAGER' ||
-                                (user?.designation || '').toUpperCase().includes('AE MANAGER') ||
-                                (user?.designation || '').toUpperCase().includes('AR MANAGER')) && (
+                            {['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role) &&
+                                !['AE MANAGER', 'AR MANAGER'].includes((user?.designation || '').toUpperCase()) &&
+                                !(user?.designation || '').toUpperCase().includes('AE MANAGER') &&
+                                !(user?.designation || '').toUpperCase().includes('AR MANAGER') && (
                                 <NavItem to="/admin/live-tracker" icon={Navigation} label="AE Live Tracker" badge="Live" indent />
                             )}
                             {(['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(user?.role) || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (

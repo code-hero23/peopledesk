@@ -11,7 +11,10 @@ import {
   RefreshCw, 
   Smartphone,
   CheckCircle2,
-  Copy
+  Copy,
+  Maximize2,
+  Minimize2,
+  Minus
 } from 'lucide-react';
 import { toast } from 'react-toastify';
 
@@ -38,6 +41,26 @@ const MyLocationHistory = () => {
   const [historyLogs, setHistoryLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   
+  // Map View State: 'normal' | 'maximized' | 'minimized'
+  const [mapViewState, setMapViewState] = useState('normal');
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && mapViewState === 'maximized') {
+        setMapViewState('normal');
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [mapViewState]);
+
+  useEffect(() => {
+    if (leafletMap.current) {
+      setTimeout(() => leafletMap.current?.invalidateSize(), 100);
+      setTimeout(() => leafletMap.current?.invalidateSize(), 300);
+    }
+  }, [mapViewState]);
+
   // APK Activation Modal state
   const [activationCode, setActivationCode] = useState(null);
   const [isGeneratingCode, setIsGeneratingCode] = useState(false);
@@ -326,74 +349,145 @@ const MyLocationHistory = () => {
       </div>
 
       {/* Main Container: Interactive Route Map + Timeline */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-[650px]">
-        {/* Timeline List (4 cols) */}
-        <div className="lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-3xl p-5 flex flex-col h-full shadow-2xl backdrop-blur-xl">
-          <h3 className="text-sm font-bold text-white mb-3">Timeline Logs ({selectedDate})</h3>
-
-          <div className="flex-1 overflow-y-auto space-y-3 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
-            {loading ? (
-              <div className="p-8 text-center text-slate-400 text-xs font-medium">Loading history logs...</div>
-            ) : historyLogs.length === 0 ? (
-              <div className="p-8 text-center text-slate-400 text-xs font-medium">No location pings recorded for this date.</div>
-            ) : (
-              historyLogs.map((log, idx) => (
-                <div
-                  key={log.id || idx}
-                  className="p-3.5 rounded-2xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800/80 transition-all space-y-2"
-                >
-                  <div className="flex items-center justify-between">
-                    <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-mono font-bold text-[10px]">
-                      #{idx + 1}
-                    </span>
-                    <span className="text-xs text-slate-300 font-semibold flex items-center gap-1">
-                      <Clock size={12} className="text-slate-400" />
-                      {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
+      <div className={`grid ${mapViewState === 'minimized' ? 'grid-cols-1' : 'grid-cols-1 lg:grid-cols-12'} gap-6 min-h-[650px]`}>
+        {/* Timeline List (4 cols or 12 cols when map is minimized) */}
+        {mapViewState !== 'maximized' && (
+          <div className={`${
+            mapViewState === 'minimized' ? 'lg:col-span-12' : 'lg:col-span-4'
+          } bg-slate-900/90 border border-slate-800 rounded-3xl p-5 flex flex-col h-full shadow-2xl backdrop-blur-xl transition-all duration-300`}>
+            {/* Minimized Map Banner Notification with Restore Action */}
+            {mapViewState === 'minimized' && (
+              <div className="mb-3.5 bg-gradient-to-r from-blue-900/40 via-slate-900/90 to-blue-900/40 border border-blue-500/40 p-3 sm:p-4 rounded-2xl flex items-center justify-between shadow-xl animate-fadeIn">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 sm:p-2.5 rounded-xl bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                    <MapPin size={18} className="animate-bounce" />
                   </div>
-
-                  <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800">
-                    <span className="font-mono text-[11px]">
-                      {log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}
-                    </span>
-                    {log.batteryLevel != null && (
-                      <span className="flex items-center gap-1 text-emerald-400 font-semibold text-[11px]">
-                        <Battery size={12} /> {log.batteryLevel}%
-                      </span>
-                    )}
+                  <div>
+                    <h4 className="text-xs sm:text-sm font-black text-white">Travel History Map Minimized</h4>
+                    <p className="text-[10px] sm:text-xs text-slate-400">Timeline logs are currently expanded to full width.</p>
                   </div>
                 </div>
-              ))
+                <button
+                  onClick={() => setMapViewState('normal')}
+                  className="px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-lg shadow-blue-600/30 transition-all active:scale-95 shrink-0"
+                >
+                  <Maximize2 size={14} />
+                  <span>Restore Map</span>
+                </button>
+              </div>
             )}
-          </div>
-        </div>
 
-        {/* Map View (8 cols) */}
-        <div className="lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex flex-col h-full shadow-2xl relative overflow-hidden">
-          {/* Map Type Switcher Floating Overlay */}
-          <div className="absolute top-6 right-6 z-20 flex items-center bg-slate-900/90 border border-slate-700/80 rounded-xl p-1 shadow-xl backdrop-blur-md">
-            <button
-              onClick={() => changeMapType('google_roadmap')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
-            >
-              🗺️ Google Map
-            </button>
-            <button
-              onClick={() => changeMapType('google_satellite')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
-            >
-              🛰️ Satellite
-            </button>
-            <button
-              onClick={() => changeMapType('openstreetmap')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
-            >
-              🌐 OpenStreet
-            </button>
-          </div>
+            <h3 className="text-sm font-bold text-white mb-3">Timeline Logs ({selectedDate})</h3>
 
-          <div ref={mapRef} className="w-full h-full rounded-2xl z-10 border border-slate-800" />
-        </div>
+            <div className="flex-1 overflow-y-auto space-y-3 pr-1 scrollbar-thin scrollbar-thumb-slate-800">
+              {loading ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-medium">Loading history logs...</div>
+              ) : historyLogs.length === 0 ? (
+                <div className="p-8 text-center text-slate-400 text-xs font-medium">No location pings recorded for this date.</div>
+              ) : (
+                historyLogs.map((log, idx) => (
+                  <div
+                    key={log.id || idx}
+                    className="p-3.5 rounded-2xl border border-slate-800 bg-slate-800/40 hover:bg-slate-800/80 transition-all space-y-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="px-2 py-0.5 rounded-md bg-blue-500/20 text-blue-400 font-mono font-bold text-[10px]">
+                        #{idx + 1}
+                      </span>
+                      <span className="text-xs text-slate-300 font-semibold flex items-center gap-1">
+                        <Clock size={12} className="text-slate-400" />
+                        {new Date(log.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-800">
+                      <span className="font-mono text-[11px]">
+                        {log.latitude.toFixed(4)}, {log.longitude.toFixed(4)}
+                      </span>
+                      {log.batteryLevel != null && (
+                        <span className="flex items-center gap-1 text-emerald-400 font-semibold text-[11px]">
+                          <Battery size={12} /> {log.batteryLevel}%
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Map View (8 cols or Fullscreen when maximized, Hidden when minimized) */}
+        {mapViewState !== 'minimized' && (
+          <div className={`${
+            mapViewState === 'maximized'
+              ? 'fixed inset-0 z-[80] p-3 sm:p-5 bg-slate-950/95 flex flex-col shadow-2xl overflow-hidden w-screen h-screen backdrop-blur-xl'
+              : 'lg:col-span-8 bg-slate-900/90 border border-slate-800 rounded-3xl p-4 flex flex-col h-full shadow-2xl relative overflow-hidden min-h-[500px]'
+          }`}>
+            {/* Map Controls Floating Overlay on Top Right */}
+            <div className="absolute top-6 right-6 z-20 flex flex-wrap items-center justify-end gap-2">
+              {/* Map Type Switcher */}
+              <div className="flex items-center bg-slate-900/90 border border-slate-700/80 rounded-xl p-1 shadow-xl backdrop-blur-md">
+                <button
+                  onClick={() => changeMapType('google_roadmap')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_roadmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+                >
+                  🗺️ Google Map
+                </button>
+                <button
+                  onClick={() => changeMapType('google_satellite')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'google_satellite' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+                >
+                  🛰️ Satellite
+                </button>
+                <button
+                  onClick={() => changeMapType('openstreetmap')}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${mapType === 'openstreetmap' ? 'bg-blue-600 text-white shadow' : 'text-slate-300 hover:text-white'}`}
+                >
+                  🌐 OpenStreet
+                </button>
+              </div>
+
+              {/* Map View Size Controls: Minimize & Maximize Icons on Right */}
+              <div className="flex items-center bg-slate-900/95 border border-slate-700/80 rounded-xl p-1 shadow-2xl backdrop-blur-md gap-0.5">
+                {/* Minimize Map Button */}
+                <button
+                  onClick={() => setMapViewState(prev => prev === 'minimized' ? 'normal' : 'minimized')}
+                  className="p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold text-slate-300 hover:text-white hover:bg-slate-800 transition-all flex items-center gap-1"
+                  title="Minimize Map (Expand Timeline)"
+                >
+                  <Minus size={14} className="text-amber-400" />
+                  <span className="hidden md:inline">Minimize</span>
+                </button>
+
+                {/* Maximize / Restore Map Button */}
+                <button
+                  onClick={() => setMapViewState(prev => prev === 'maximized' ? 'normal' : 'maximized')}
+                  className={`p-1.5 sm:px-2.5 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-bold transition-all flex items-center gap-1 ${
+                    mapViewState === 'maximized'
+                      ? 'bg-blue-600 text-white shadow font-black'
+                      : 'text-slate-300 hover:text-white hover:bg-slate-800'
+                  }`}
+                  title={mapViewState === 'maximized' ? 'Exit Fullscreen (Esc)' : 'Maximize Map to Fullscreen'}
+                >
+                  {mapViewState === 'maximized' ? (
+                    <>
+                      <Minimize2 size={14} className="text-white" />
+                      <span className="hidden md:inline">Exit Full</span>
+                    </>
+                  ) : (
+                    <>
+                      <Maximize2 size={14} className="text-blue-400" />
+                      <span className="hidden md:inline">Maximize</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div ref={mapRef} className="w-full flex-1 h-full rounded-2xl z-10 border border-slate-800" />
+          </div>
+        )}
       </div>
 
       {/* APK Activation Code Modal */}

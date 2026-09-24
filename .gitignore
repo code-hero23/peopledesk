@@ -3,4 +3,5 @@ node_modules
 *.log
 .env.example
 *.apk
-
+/client/node_modules
+/server/node_modules
