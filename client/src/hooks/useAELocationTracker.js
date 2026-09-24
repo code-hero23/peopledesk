@@ -2,6 +2,7 @@ import { useEffect, useRef, useCallback } from 'react';
 import { useSelector } from 'react-redux';
 import axios from 'axios';
 import { Capacitor } from '@capacitor/core';
+import { toast } from 'react-toastify';
 import { getCallLogPlugin } from '../utils/capacitorPlugins';
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL || '/api';
@@ -34,9 +35,16 @@ function getDistanceMeters(lat1, lon1, lat2, lon2) {
 
 export const useAELocationTracker = () => {
     const { user } = useSelector((state) => state.auth);
+    const { attendance } = useSelector((state) => state.employee);
     const lastPingRef = useRef(0);
     const lastValidCoordsRef = useRef(null);
     const isPingingRef = useRef(false);
+    const lastDepartureNotificationRef = useRef(0);
+    const attendanceRef = useRef(attendance);
+
+    useEffect(() => {
+        attendanceRef.current = attendance;
+    }, [attendance]);
 
     const getBatteryLevel = async () => {
         try {
@@ -81,7 +89,7 @@ export const useAELocationTracker = () => {
             let lat = rawLat;
             let lng = rawLng;
 
-            // Stabilize stationary jitter when idle/sitting indoors
+            // Stabilize stationary jitter when idle/sitting indoors (Office or Client site)
             if (lastValidCoordsRef.current) {
                 const dist = getDistanceMeters(
                     lastValidCoordsRef.current.lat,
@@ -90,8 +98,8 @@ export const useAELocationTracker = () => {
                     lng
                 );
 
-                // If stationary (speed < 0.4 m/s or null) and movement is within 6 meters, preserve anchor
-                if ((speed == null || speed < 0.4) && dist < 6 && accuracy != null && accuracy >= lastValidCoordsRef.current.accuracy) {
+                // If stationary (speed < 1.1 m/s or null) and movement is within 25 meters, preserve anchor coordinate
+                if ((speed == null || speed < 1.1) && dist < 25) {
                     lat = lastValidCoordsRef.current.lat;
                     lng = lastValidCoordsRef.current.lng;
                 }
@@ -245,7 +253,32 @@ export const useAELocationTracker = () => {
                         const now = Date.now();
                         const elapsed = now - lastPingRef.current;
                         const speed = coords.speed; // instantaneous speed in m/s
-                        const isMovingSpeed = speed != null && speed > 0.6; // > 2.2 km/h
+
+                        // 1. Site Departure Reminder: Check if AE has left their active signed-in site (> 250m)
+                        const currentAttendance = attendanceRef.current;
+                        if (currentAttendance && currentAttendance.siteName && !currentAttendance.checkoutTime && currentAttendance.latitude && currentAttendance.longitude) {
+                            const distFromSite = getDistanceMeters(
+                                currentAttendance.latitude,
+                                currentAttendance.longitude,
+                                coords.latitude,
+                                coords.longitude
+                            );
+
+                            if (distFromSite > 250) {
+                                const lastAlert = lastDepartureNotificationRef.current;
+                                if (now - lastAlert > 10 * 60 * 1000) { // Alert at most once every 10 minutes
+                                    lastDepartureNotificationRef.current = now;
+                                    toast.warn(
+                                        `📍 You seem to have left "${currentAttendance.siteName}" (${(distFromSite / 1000).toFixed(1)} km away). Don't forget to site sign-out!`,
+                                        { autoClose: 10000 }
+                                    );
+                                }
+                            }
+                        }
+
+                        // 2. Motion Detection: Real road transit requires speed >= 1.25 m/s (~4.5 km/h)
+                        // or displacement >= 35 meters with good GPS accuracy (<= 40m)
+                        const isMovingSpeed = speed != null && speed >= 1.25;
 
                         let distMoved = 0;
                         if (lastValidCoordsRef.current) {
@@ -257,10 +290,12 @@ export const useAELocationTracker = () => {
                             );
                         }
 
-                        // When moving (> 2.2 km/h or moved >= 6 meters):
+                        const isRealRelocation = distMoved >= 35 && (coords.accuracy == null || coords.accuracy <= 40);
+                        const isMoving = isMovingSpeed || isRealRelocation;
+
+                        // When moving (> 4.5 km/h or moved >= 35 meters):
                         // stream GPS coordinates every 3.5 seconds to capture actual road movement!
                         // When stationary: ping every 35 seconds.
-                        const isMoving = isMovingSpeed || distMoved >= 6;
                         const minInterval = isMoving ? 3500 : 35000;
 
                         if (elapsed >= minInterval && (isMoving || elapsed >= 45000)) {

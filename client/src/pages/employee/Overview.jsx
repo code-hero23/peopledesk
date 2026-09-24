@@ -1734,6 +1734,29 @@ const Overview = () => {
                                                 placeholder="e.g. Shifted to HO / Left site for client meeting / Finished work (Required)"
                                                 className={`mt-2 w-full px-3.5 py-2 rounded-xl border ${!checkoutMismatchReason.trim() ? 'border-rose-400 ring-2 ring-rose-500/20' : 'border-emerald-400 ring-2 ring-emerald-500/20'} bg-white text-xs font-bold text-slate-900 outline-none transition-all placeholder:text-slate-400`}
                                             />
+                                            {/* Quick Preset Reason Chips */}
+                                            <div className="mt-2 flex flex-wrap gap-1.5">
+                                                {[
+                                                    "Forgot to logout, moved to next site",
+                                                    "Completed work & moved to next site",
+                                                    "Left site and returned to office",
+                                                    "Client meeting outside site",
+                                                    "Emergency site relocation"
+                                                ].map((preset) => (
+                                                    <button
+                                                        key={preset}
+                                                        type="button"
+                                                        onClick={() => setCheckoutMismatchReason(preset)}
+                                                        className={`px-2.5 py-1 text-[10px] font-bold rounded-lg border transition-all ${
+                                                            checkoutMismatchReason === preset
+                                                                ? 'bg-rose-600 text-white border-rose-600 shadow-sm'
+                                                                : 'bg-white text-slate-700 border-slate-300 hover:bg-rose-50 hover:border-rose-300'
+                                                        }`}
+                                                    >
+                                                        {preset}
+                                                    </button>
+                                                ))}
+                                            </div>
                                         </div>
                                     </div>
                                 </div>

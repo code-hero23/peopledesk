@@ -966,8 +966,8 @@ const AELiveTracker = () => {
               transform: translateX(-50%);
               white-space: nowrap;
               background: #0f172a;
-              color: ${isMoving ? '#60a5fa' : markerColor};
-              border: 1px solid ${isMoving ? '#3b82f6' : markerColor + '60'};
+              color: ${item.hasLeftSiteWithoutCheckout ? '#fda4af' : isMoving ? '#60a5fa' : markerColor};
+              border: 1px solid ${item.hasLeftSiteWithoutCheckout ? '#f43f5e' : isMoving ? '#3b82f6' : markerColor + '60'};
               font-size: 9.5px;
               font-weight: 800;
               padding: 1.5px 6px;
@@ -978,11 +978,14 @@ const AELiveTracker = () => {
               gap: 4px;
               z-index: 3;
             ">
-              ${isMoving ? `
+              ${item.hasLeftSiteWithoutCheckout ? `
+                <span style="width: 5px; height: 5px; border-radius: 50%; background: #f43f5e; animation: pulse 0.8s infinite; display: inline-block;"></span>
+                <span>⚠️ LEFT SITE (${(item.distFromActiveSite / 1000).toFixed(1)}km)</span>
+              ` : isMoving ? `
                 <span style="width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; animation: pulse 1s infinite; display: inline-block;"></span>
                 ${vehicleMode === 'cab' ? '🚗' : '🛵'} ${loc.speed && loc.speed > 0.5 ? `MOVING • ${(loc.speed * 3.6).toFixed(0)} km/h` : 'MOVING'}
               ` : (
-                isStationary ? '📍 AT SITE' : status === 'IDLE' ? '⏳ IDLE' : status === 'OUT_OF_HOURS' ? 'OFF-HRS' : 'OFFLINE'
+                isStationary ? (item.currentSiteName ? `📍 AT: ${item.currentSiteName}` : '📍 AT SITE') : status === 'IDLE' ? '⏳ IDLE' : status === 'OUT_OF_HOURS' ? 'OFF-HRS' : 'OFFLINE'
               )}
             </div>
           </div>
@@ -1000,7 +1003,7 @@ const AELiveTracker = () => {
           <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px;">
             <h4 style="margin: 0; font-weight: 800; font-size: 14px; color: #0f172a;">${ae.name}</h4>
             <span style="font-size: 9px; font-weight: 800; padding: 2px 6px; border-radius: 6px; text-transform: uppercase; background: ${markerColor}15; color: ${markerColor}; border: 1px solid ${markerColor}40;">
-              ${isMoving ? (vehicleMode === 'cab' ? '🚗 CAB EN ROUTE' : '🛵 BIKE EN ROUTE') : isStationary ? '📍 AT SITE' : status}
+              ${item.hasLeftSiteWithoutCheckout ? '⚠️ LEFT SITE (NO CHECKOUT)' : isMoving ? (vehicleMode === 'cab' ? '🚗 CAB EN ROUTE' : '🛵 BIKE EN ROUTE') : isStationary ? '📍 AT SITE' : status}
             </span>
           </div>
           <p style="margin: 0 0 6px 0; font-size: 11px; color: #64748b;">${ae.designation || 'Area Executive'}</p>
@@ -1008,7 +1011,7 @@ const AELiveTracker = () => {
             <div><strong>📞 Phone:</strong> ${ae.phone || 'N/A'}</div>
             <div><strong>🔋 Battery:</strong> ${loc.batteryLevel != null ? loc.batteryLevel + '%' : 'N/A'}</div>
             <div><strong>🕒 Last Ping:</strong> ${lastActiveTime} IST</div>
-            <div><strong>🚦 Status:</strong> ${isMoving ? 'In Transit / Moving' : isStationary ? 'Stationary (At Site/Visit)' : status}</div>
+            <div><strong>🚦 Status:</strong> ${item.hasLeftSiteWithoutCheckout ? `Departed "${item.currentSiteName}" without logout (${(item.distFromActiveSite / 1000).toFixed(1)} km away)` : isMoving ? 'In Transit / Moving' : isStationary ? `Stationary (${item.currentSiteName ? `At Site: ${item.currentSiteName}` : 'At Site'})` : status}</div>
             ${loc.speed ? `<div><strong>⚡ Speed:</strong> ${(loc.speed * 3.6).toFixed(1)} km/h</div>` : ''}
             ${item.siteSignIns && item.siteSignIns.length > 0 ? (
               `<div style="margin-top: 4px; padding-top: 4px; border-top: 1px dashed #cbd5e1;">` +
@@ -1877,10 +1880,12 @@ const AELiveTracker = () => {
                 const { user: ae, latestLocation: loc, status } = item;
                 const isSelected = selectedAE?.user?.id === ae.id;
 
+                const hasLeftSiteWithoutCheckout = item.hasLeftSiteWithoutCheckout;
                 const isItemMoving = item.isMoving || status === 'MOVING';
                 const isItemStationary = status === 'STATIONARY' || status === 'ONLINE' || (!isItemMoving && status !== 'IDLE' && status !== 'OFFLINE' && status !== 'OUT_OF_HOURS');
 
                 const statusBg = 
+                  hasLeftSiteWithoutCheckout ? 'bg-rose-500/20 text-rose-300 border-rose-500/40 shadow-sm' :
                   isItemMoving ? 'bg-blue-500/15 text-blue-400 border-blue-500/30' :
                   isItemStationary ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/25' :
                   status === 'IDLE' ? 'bg-amber-500/10 text-amber-400 border-amber-500/25' :
@@ -1888,6 +1893,7 @@ const AELiveTracker = () => {
                   'bg-slate-800 text-slate-400 border-slate-700/60';
 
                 const statusDotColor = 
+                  hasLeftSiteWithoutCheckout ? 'bg-rose-400 shadow-[0_0_8px_#f43f5e] animate-ping' :
                   isItemMoving ? 'bg-blue-400 shadow-[0_0_8px_#3b82f6] animate-pulse' :
                   isItemStationary ? 'bg-emerald-400 shadow-[0_0_8px_#10b981]' :
                   status === 'IDLE' ? 'bg-amber-400 shadow-[0_0_8px_#f59e0b]' :
@@ -1895,8 +1901,9 @@ const AELiveTracker = () => {
                   'bg-slate-500';
 
                 const statusLabel = 
-                  isItemMoving ? 'MOVING' :
-                  isItemStationary ? 'AT SITE' :
+                  hasLeftSiteWithoutCheckout ? '⚠️ LEFT SITE' :
+                  isItemMoving ? (item.speedKmh ? `MOVING • ${item.speedKmh} km/h` : 'MOVING') :
+                  isItemStationary ? (item.currentSiteName ? `AT: ${item.currentSiteName}` : 'AT SITE') :
                   status === 'OUT_OF_HOURS' ? 'OFF-HOURS' : status;
 
                 return (
@@ -1934,6 +1941,20 @@ const AELiveTracker = () => {
                           </a>
                         )}
                       </div>
+
+                      {/* Site status info pill */}
+                      {hasLeftSiteWithoutCheckout && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-rose-950/60 border border-rose-800/60 text-[10px] text-rose-300 font-bold">
+                          <AlertTriangle size={12} className="text-rose-400 shrink-0" />
+                          <span className="truncate">Left "{item.currentSiteName}" without logout ({(item.distFromActiveSite / 1000).toFixed(1)} km)</span>
+                        </div>
+                      )}
+                      {!hasLeftSiteWithoutCheckout && item.activeSiteSignIn && (
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded-lg bg-emerald-950/40 border border-emerald-800/40 text-[10px] text-emerald-300 font-semibold">
+                          <MapPin size={12} className="text-emerald-400 shrink-0" />
+                          <span className="truncate">Active Site: {item.currentSiteName}</span>
+                        </div>
+                      )}
 
                       {loc && loc.createdAt ? (
                         <div className="flex items-center justify-between pt-1.5 text-[11px] border-t border-slate-800/90 text-slate-400">

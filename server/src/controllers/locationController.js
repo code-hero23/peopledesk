@@ -220,6 +220,10 @@ const getLiveLocations = async (req, res) => {
         let status = 'OFFLINE';
         let isMoving = false;
         let lastPingMinutesAgo = null;
+        let distFromActiveSite = null;
+        let hasLeftSiteWithoutCheckout = false;
+        let currentSiteName = activeSiteSignIn ? activeSiteSignIn.siteName : null;
+        let speedKmh = null;
 
         if (!isCurrentlyInWindow) {
           // Outside 7 AM - 8 PM IST
@@ -228,11 +232,37 @@ const getLiveLocations = async (req, res) => {
           const diffMinutes = Math.max(0, Math.round((now.getTime() - new Date(latestLog.createdAt).getTime()) / (1000 * 60)));
           lastPingMinutesAgo = diffMinutes;
 
-          // 1. Direct GPS speed check (> 0.6 m/s, ~2.2 km/h)
-          if (latestLog.speed != null && latestLog.speed > 0.6) {
+          if (latestLog.speed != null && latestLog.speed > 0) {
+            speedKmh = parseFloat((latestLog.speed * 3.6).toFixed(1));
+          }
+
+          // 1. Calculate distance from active site check-in location (Office or Client site)
+          if (activeSiteSignIn && activeSiteSignIn.latitude != null && activeSiteSignIn.longitude != null) {
+            const dLat = (latestLog.latitude - activeSiteSignIn.latitude) * Math.PI / 180;
+            const dLng = (latestLog.longitude - activeSiteSignIn.longitude) * Math.PI / 180;
+            const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+                      Math.cos(activeSiteSignIn.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
+                      Math.sin(dLng / 2) * Math.sin(dLng / 2);
+            distFromActiveSite = Math.round(6371000 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))));
+
+            // If AE moved > 250m away from site coordinates while still signed in, flag departure
+            if (distFromActiveSite > 250) {
+              hasLeftSiteWithoutCheckout = true;
+            }
+          }
+
+          // 2. Check if AE is inside the active site perimeter (<= 120m)
+          // Inside site perimeter (Office or Site): normal indoor walking / desk sitting is STATIONARY, never MOVING.
+          const isInsideActiveSite = distFromActiveSite != null && distFromActiveSite <= 120;
+
+          if (isInsideActiveSite) {
+            isMoving = false;
+          } 
+          // 3. Direct GPS hardware speed check (must be at least 1.25 m/s, ~4.5 km/h for real motion)
+          else if (latestLog.speed != null && latestLog.speed >= 1.25) {
             isMoving = true;
           } 
-          // 2. Calculated speed & distance between last 2 pings
+          // 4. Calculated speed & distance between last 2 pings (must be genuine road displacement >= 40m & >= 5.0 km/h)
           else if (prevLog) {
             const dLat = (latestLog.latitude - prevLog.latitude) * Math.PI / 180;
             const dLng = (latestLog.longitude - prevLog.longitude) * Math.PI / 180;
@@ -243,29 +273,25 @@ const getLiveLocations = async (req, res) => {
             const timeDiffMins = Math.max(0.1, (new Date(latestLog.createdAt).getTime() - new Date(prevLog.createdAt).getTime()) / (1000 * 60));
             const calculatedKmh = (distMeters / 1000) / (timeDiffMins / 60);
 
-            if ((distMeters >= 25 && timeDiffMins <= 15) || (calculatedKmh >= 2.5 && distMeters >= 15)) {
+            if (speedKmh == null && calculatedKmh > 0) {
+              speedKmh = parseFloat(calculatedKmh.toFixed(1));
+            }
+
+            // Real movement requires at least 40m displacement AND at least 5.0 km/h speed
+            if (distMeters >= 40 && calculatedKmh >= 5.0 && (latestLog.accuracy == null || latestLog.accuracy <= 45)) {
               isMoving = true;
             }
           }
 
-          // 3. Site Transit check: If AE completed a site (e.g. Site 1) and is traveling toward Site 2 / next destination
-          if (!isMoving && lastCompletedSite && !activeSiteSignIn && diffMinutes <= 35) {
-            if (lastCompletedSite.latitude && lastCompletedSite.longitude) {
-              const dLat = (latestLog.latitude - lastCompletedSite.latitude) * Math.PI / 180;
-              const dLng = (latestLog.longitude - lastCompletedSite.longitude) * Math.PI / 180;
-              const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-                        Math.cos(lastCompletedSite.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
-                        Math.sin(dLng / 2) * Math.sin(dLng / 2);
-              const distFromCompletedSite = 6371000 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-              if (distFromCompletedSite >= 40) {
-                isMoving = true;
-              }
-            }
-          }
-
-          // Status threshold: active online up to 30 mins; IDLE 30 - 75 mins; OFFLINE > 75 mins
+          // 5. Final Status mapping
           if (diffMinutes <= 30) {
-            status = isMoving ? 'MOVING' : (activeSiteSignIn ? 'STATIONARY' : 'ONLINE');
+            if (isMoving) {
+              status = 'MOVING';
+            } else if (activeSiteSignIn) {
+              status = 'STATIONARY';
+            } else {
+              status = 'ONLINE';
+            }
           } else if (diffMinutes <= 75) {
             status = 'IDLE';
           } else {
@@ -286,7 +312,11 @@ const getLiveLocations = async (req, res) => {
           activeAssignment: scheduledAssignments[0] || null,
           status,
           isMoving,
-          lastPingMinutesAgo
+          lastPingMinutesAgo,
+          distFromActiveSite,
+          hasLeftSiteWithoutCheckout,
+          currentSiteName,
+          speedKmh
         };
       })
     );
