@@ -379,6 +379,8 @@ const AELiveTracker = () => {
   const markersRef = useRef({});
   const siteMarkersRef = useRef({});
   const markerAnimationsRef = useRef({});
+  const markerTrackingRef = useRef({});
+  const markerIconKeyRef = useRef({});
   const polylineRef = useRef(null);
   const casingPolylineRef = useRef(null);
   const historyMarkersRef = useRef([]);
@@ -422,6 +424,9 @@ const AELiveTracker = () => {
 
     return () => {
       Object.values(markerAnimationsRef.current).forEach(id => cancelAnimationFrame(id));
+      markerAnimationsRef.current = {};
+      markerTrackingRef.current = {};
+      markerIconKeyRef.current = {};
       if (leafletMap.current) {
         leafletMap.current.remove();
         leafletMap.current = null;
@@ -662,12 +667,22 @@ const AELiveTracker = () => {
     </div>
   `;
 
-  // Continuous Vehicle Movement & Dead-Reckoning Engine (Uber / Rapido / Google Maps style)
-  // Glides marker smoothly from current position to target GPS position.
-  // When in MOVING state, continues dead-reckoning forward along street vector so vehicle never freezes still.
-  const animateVehicleMotion = (aeId, marker, startPos, targetPos, isMoving, speedMps = 0, initialBearing = 0) => {
+  // Smooth Live Vehicle Glide Animation (Uber / Rapido style)
+  // Glides marker smoothly from previousPosition to targetPosition using requestAnimationFrame.
+  // Updates bearing smoothly and cancels previous frame cleanly if a new update arrives early.
+  const animateVehicleMotion = (
+    aeId,
+    marker,
+    startPos,
+    targetPos,
+    isMoving,
+    speedMps = 0,
+    initialBearing = 0,
+    intervalMs = 3500
+  ) => {
     if (!marker) return;
 
+    // 1. Cancel previous animation for this AE cleanly
     if (markerAnimationsRef.current[aeId]) {
       cancelAnimationFrame(markerAnimationsRef.current[aeId]);
       delete markerAnimationsRef.current[aeId];
@@ -675,67 +690,99 @@ const AELiveTracker = () => {
 
     const distMeters = getDistanceMeters(startPos[0], startPos[1], targetPos[0], targetPos[1]);
 
-    if (!isMoving || distMeters < 1.5) {
+    // 2. Deadband / Hysteresis check: ignore micro-jitter (< 3.0 meters)
+    if (distMeters < 3.0) {
       marker.setLatLng(targetPos);
+      if (markerTrackingRef.current[aeId]) {
+        markerTrackingRef.current[aeId].currentVisualPos = targetPos;
+        markerTrackingRef.current[aeId].isAnimating = false;
+      }
       return;
     }
 
-    // Vector bearing along movement path
+    // 3. Vector bearing along movement path with angle smoothing (shortest turn)
     const moveBearing = calculateBearing(startPos[0], startPos[1], targetPos[0], targetPos[1]);
-    const activeBearing = (!isNaN(moveBearing) && moveBearing !== 0) ? moveBearing : initialBearing;
+    let targetBearing = (!isNaN(moveBearing) && moveBearing !== 0) ? moveBearing : initialBearing;
+    
+    // Smooth angle delta (avoid 359 -> 1 spinning 358 degrees)
+    let currentBearing = markerTrackingRef.current[aeId]?.bearing ?? targetBearing;
+    let diff = (targetBearing - currentBearing) % 360;
+    if (diff > 180) diff -= 360;
+    if (diff < -180) diff += 360;
+    const finalBearing = currentBearing + diff;
+    if (markerTrackingRef.current[aeId]) {
+      markerTrackingRef.current[aeId].bearing = finalBearing;
+    }
 
-    // Glide duration matched to polling interval (~3200ms)
-    const targetDuration = Math.min(4200, Math.max(1600, (distMeters / Math.max(speedMps || 6, 2)) * 1000));
+    // 4. Calculate animation duration matching the update cadence
+    let duration = Math.min(4500, Math.max(1200, intervalMs * 0.9));
+    if (speedMps && speedMps > 1.0) {
+      const travelTimeMs = (distMeters / speedMps) * 1000;
+      duration = Math.min(4500, Math.max(1200, travelTimeMs));
+    }
+
     const startTime = performance.now();
 
-    const velLat = (targetPos[0] - startPos[0]) / targetDuration;
-    const velLng = (targetPos[1] - startPos[1]) / targetDuration;
+    // Required Debug Log: Marker animation start
+    console.log(
+`MARKER:
+previous: [${startPos[0].toFixed(6)}, ${startPos[1].toFixed(6)}]
+target: [${targetPos[0].toFixed(6)}, ${targetPos[1].toFixed(6)}]
+animation started: ${new Date().toISOString()}`
+    );
+
+    if (markerTrackingRef.current[aeId]) {
+      markerTrackingRef.current[aeId].isAnimating = true;
+    }
 
     function step(now) {
       const elapsed = now - startTime;
-      let curLat, curLng;
+      const progress = Math.min(1, elapsed / duration);
 
-      if (elapsed <= targetDuration) {
-        // Phase 1: Smooth interpolation from startPos to targetPos
-        const progress = elapsed / targetDuration;
-        const ease = progress < 0.5
-          ? 2 * progress * progress
-          : 1 - Math.pow(-2 * progress + 2, 2) / 2;
+      // Smooth cubic ease-out for natural glide into target
+      const ease = 1 - Math.pow(1 - progress, 3);
 
-        curLat = startPos[0] + (targetPos[0] - startPos[0]) * ease;
-        curLng = startPos[1] + (targetPos[1] - startPos[1]) * ease;
-      } else {
-        // Phase 2: Still moving, continue dead-reckoning forward along street vector
-        // until next GPS poll arrives (max 4.5 seconds to avoid overshooting)
-        const extraMs = Math.min(elapsed - targetDuration, 4500);
-        curLat = targetPos[0] + velLat * extraMs;
-        curLng = targetPos[1] + velLng * extraMs;
-
-        if (extraMs >= 4500) {
-          marker.setLatLng([curLat, curLng]);
-          return;
-        }
-      }
+      const curLat = startPos[0] + (targetPos[0] - startPos[0]) * ease;
+      const curLng = startPos[1] + (targetPos[1] - startPos[1]) * ease;
 
       marker.setLatLng([curLat, curLng]);
+      if (markerTrackingRef.current[aeId]) {
+        markerTrackingRef.current[aeId].currentVisualPos = [curLat, curLng];
+      }
 
-      // Dynamically update bearing rotation on the vehicle element
+      // Smoothly update rotator transform on DOM directly
       const markerEl = marker.getElement();
       if (markerEl) {
         const rotator = markerEl.querySelector('.vehicle-rotator');
         if (rotator) {
-          rotator.style.transform = `rotate(${Math.round(activeBearing)}deg)`;
+          rotator.style.transform = `rotate(${Math.round(finalBearing)}deg)`;
         }
       }
 
-      // If camera follow mode is active and this is the selected AE, gently follow
+      // If camera follow mode is active and this is the selected AE, follow smoothly
       if (isFollowMode && selectedAE?.user?.id === aeId && leafletMap.current) {
-        if (Math.floor(elapsed / 450) !== Math.floor((elapsed - 16) / 450)) {
-          leafletMap.current.panTo([curLat, curLng], { animate: true, duration: 0.4 });
-        }
+        leafletMap.current.panTo([curLat, curLng], { animate: false });
       }
 
-      markerAnimationsRef.current[aeId] = requestAnimationFrame(step);
+      if (progress < 1) {
+        markerAnimationsRef.current[aeId] = requestAnimationFrame(step);
+      } else {
+        // Animation completed cleanly at the target coordinate
+        marker.setLatLng(targetPos);
+        if (markerTrackingRef.current[aeId]) {
+          markerTrackingRef.current[aeId].currentVisualPos = targetPos;
+          markerTrackingRef.current[aeId].isAnimating = false;
+        }
+        delete markerAnimationsRef.current[aeId];
+
+        // Required Debug Log: Marker animation completed
+        console.log(
+`MARKER:
+previous: [${startPos[0].toFixed(6)}, ${startPos[1].toFixed(6)}]
+target: [${targetPos[0].toFixed(6)}, ${targetPos[1].toFixed(6)}]
+animation completed: ${new Date().toISOString()}`
+        );
+      }
     }
 
     markerAnimationsRef.current[aeId] = requestAnimationFrame(step);
@@ -939,10 +986,10 @@ const AELiveTracker = () => {
               "></div>
             ` : ''}
 
-            <!-- Center Vehicle / Avatar Circle with active Engine Vibration -->
+            <!-- Center Vehicle / Avatar Circle without artificial vibration -->
             ${isMoving ? `
               <div class="vehicle-rotator" style="transform: rotate(${Math.round(bearing)}deg); transition: transform 0.25s ease-out; display: flex; align-items: center; justify-content: center; z-index: 2;">
-                <div class="vehicle-engine-vibe" style="display: flex; align-items: center; justify-content: center;">
+                <div style="display: flex; align-items: center; justify-content: center;">
                   ${vehicleSVG}
                 </div>
               </div>
@@ -1047,25 +1094,102 @@ const AELiveTracker = () => {
 
       // Check if marker already exists for this AE
       const existingMarker = markersRef.current[ae.id];
+      const iconKey = `${ae.id}_${vehicleMode}_${isMoving ? 'moving' : 'still'}_${status}_${markerColor}_${item.hasLeftSiteWithoutCheckout}`;
+
       if (existingMarker) {
-        existingMarker.setIcon(customIcon);
+        const tracking = markerTrackingRef.current[ae.id] || {
+          actualGps: latLng,
+          previousPosition: [existingMarker.getLatLng().lat, existingMarker.getLatLng().lng],
+          targetPosition: latLng,
+          currentVisualPos: [existingMarker.getLatLng().lat, existingMarker.getLatLng().lng],
+          lastLogTimestamp: loc.createdAt || null,
+          lastUpdateTimestamp: Date.now(),
+          bearing: bearing || 0,
+          isAnimating: false
+        };
+        markerTrackingRef.current[ae.id] = tracking;
+
+        // Check GPS Accuracy: Ignore obviously inaccurate GPS updates (> 120m)
+        const hasCoarseAccuracy = loc.accuracy != null && loc.accuracy > 120;
+        if (hasCoarseAccuracy) {
+          console.warn(`[AELiveTracker] Ignoring coarse GPS update (±${loc.accuracy}m) for ${ae.name}`);
+        }
+
+        // Distance from current target position to detect if genuine movement occurred
+        const distFromTarget = getDistanceMeters(
+          tracking.targetPosition[0],
+          tracking.targetPosition[1],
+          loc.latitude,
+          loc.longitude
+        );
+
+        // Distance from current visual position on screen
+        const curVisual = tracking.currentVisualPos || [existingMarker.getLatLng().lat, existingMarker.getLatLng().lng];
+        const distFromVisual = getDistanceMeters(
+          curVisual[0],
+          curVisual[1],
+          loc.latitude,
+          loc.longitude
+        );
+
+        // Only update icon DOM when state changes (avoids destroying/recreating DOM on every poll)
+        if (markerIconKeyRef.current[ae.id] !== iconKey) {
+          existingMarker.setIcon(customIcon);
+          markerIconKeyRef.current[ae.id] = iconKey;
+        }
         existingMarker.setPopupContent(popupContent);
 
-        const currentPos = existingMarker.getLatLng();
-        const dist = Math.hypot(currentPos.lat - loc.latitude, currentPos.lng - loc.longitude);
-        if (dist > 0.00001) {
-          // Smoothly animate vehicle motion down the road with dead-reckoning
-          animateVehicleMotion(
-            ae.id,
-            existingMarker,
-            [currentPos.lat, currentPos.lng],
-            latLng,
-            isMoving,
-            loc.speed || 0,
-            bearing
+        // If valid accuracy and significant position change (>= 3.0 meters)
+        if (!hasCoarseAccuracy && distFromTarget >= 3.0) {
+          // Required Debug Log: GPS coordinates
+          console.log(
+`GPS:
+lat: ${loc.latitude}
+lng: ${loc.longitude}
+accuracy: ${loc.accuracy ?? 'N/A'}
+timestamp: ${loc.createdAt || new Date().toISOString()}`
           );
-        } else if (!isMoving) {
-          existingMarker.setLatLng(latLng);
+
+          // If abnormal teleportation jump (> 20 km)
+          if (distFromTarget > 20000) {
+            if (markerAnimationsRef.current[ae.id]) {
+              cancelAnimationFrame(markerAnimationsRef.current[ae.id]);
+              delete markerAnimationsRef.current[ae.id];
+            }
+            existingMarker.setLatLng(latLng);
+            tracking.previousPosition = latLng;
+            tracking.targetPosition = latLng;
+            tracking.currentVisualPos = latLng;
+            tracking.actualGps = latLng;
+            tracking.lastUpdateTimestamp = Date.now();
+          } else {
+            const now = Date.now();
+            const intervalMs = Math.max(1000, Math.min(10000, now - (tracking.lastUpdateTimestamp || now)));
+            tracking.lastUpdateTimestamp = now;
+
+            const startPos = [...curVisual];
+            const targetPos = latLng;
+
+            tracking.previousPosition = startPos;
+            tracking.targetPosition = targetPos;
+            tracking.actualGps = targetPos;
+            tracking.lastLogTimestamp = loc.createdAt || null;
+
+            animateVehicleMotion(
+              ae.id,
+              existingMarker,
+              startPos,
+              targetPos,
+              isMoving,
+              loc.speed || 0,
+              bearing,
+              intervalMs
+            );
+          }
+        } else if (!tracking.isAnimating && distFromVisual > 0.5 && !isMoving) {
+          // When stationary and not animating, keep marker settled at target
+          existingMarker.setLatLng(tracking.targetPosition);
+          tracking.currentVisualPos = tracking.targetPosition;
         }
       } else {
         const newMarker = window.L.marker(latLng, { 
@@ -1074,6 +1198,27 @@ const AELiveTracker = () => {
         }).addTo(leafletMap.current);
         newMarker.bindPopup(popupContent);
         markersRef.current[ae.id] = newMarker;
+        markerIconKeyRef.current[ae.id] = iconKey;
+
+        markerTrackingRef.current[ae.id] = {
+          actualGps: latLng,
+          previousPosition: latLng,
+          targetPosition: latLng,
+          currentVisualPos: latLng,
+          lastLogTimestamp: loc.createdAt || null,
+          lastUpdateTimestamp: Date.now(),
+          bearing: bearing || 0,
+          isAnimating: false
+        };
+
+        // Required Debug Log: Initial GPS position
+        console.log(
+`GPS:
+lat: ${loc.latitude}
+lng: ${loc.longitude}
+accuracy: ${loc.accuracy ?? 'N/A'}
+timestamp: ${loc.createdAt || new Date().toISOString()}`
+        );
       }
 
       // If this is the selected AE, dynamically extend the solid road route polyline under the vehicle wheels
@@ -1099,6 +1244,8 @@ const AELiveTracker = () => {
           cancelAnimationFrame(markerAnimationsRef.current[empId]);
           delete markerAnimationsRef.current[empId];
         }
+        delete markerTrackingRef.current[empId];
+        delete markerIconKeyRef.current[empId];
         markersRef.current[empId].remove();
         delete markersRef.current[empId];
       }
@@ -1620,16 +1767,6 @@ const AELiveTracker = () => {
           0% { transform: scale(0.92); opacity: 0.85; }
           70% { transform: scale(1.65); opacity: 0; }
           100% { transform: scale(1.65); opacity: 0; }
-        }
-        @keyframes vehicleDriveVibe {
-          0% { transform: translateY(0px) scale(1); }
-          25% { transform: translateY(-0.8px) scale(1.01); }
-          50% { transform: translateY(0.4px) scale(0.99); }
-          75% { transform: translateY(-0.6px) scale(1.01); }
-          100% { transform: translateY(0px) scale(1); }
-        }
-        .vehicle-engine-vibe {
-          animation: vehicleDriveVibe 0.22s infinite linear;
         }
         @keyframes headlightFlicker {
           0%, 100% { opacity: 0.65; transform: translateX(-50%) scale(1); }

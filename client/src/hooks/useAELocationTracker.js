@@ -89,8 +89,9 @@ export const useAELocationTracker = () => {
             let lat = rawLat;
             let lng = rawLng;
 
-            // Stabilize stationary jitter when idle/sitting indoors (Office or Client site)
-            if (lastValidCoordsRef.current) {
+            // Stabilize stationary jitter when idle/sitting indoors
+            // Only anchor micro-jitter (< 4m) during periodic stationary pings, NEVER on live movement
+            if (lastValidCoordsRef.current && triggerReason !== 'live_movement') {
                 const dist = getDistanceMeters(
                     lastValidCoordsRef.current.lat,
                     lastValidCoordsRef.current.lng,
@@ -98,8 +99,7 @@ export const useAELocationTracker = () => {
                     lng
                 );
 
-                // If stationary (speed < 1.1 m/s or null) and movement is within 25 meters, preserve anchor coordinate
-                if ((speed == null || speed < 1.1) && dist < 25) {
+                if ((speed == null || speed < 0.4) && dist < 4) {
                     lat = lastValidCoordsRef.current.lat;
                     lng = lastValidCoordsRef.current.lng;
                 }
@@ -276,11 +276,10 @@ export const useAELocationTracker = () => {
                             }
                         }
 
-                        // 2. Motion Detection: Real road transit requires speed >= 1.25 m/s (~4.5 km/h)
-                        // or displacement >= 35 meters with good GPS accuracy (<= 40m)
-                        const isMovingSpeed = speed != null && speed >= 1.25;
-
+                        // 2. Motion Detection: Real road transit requires speed >= 0.9 m/s (~3.2 km/h)
+                        // or displacement >= 8 meters with good GPS accuracy (<= 50m)
                         let distMoved = 0;
+                        let derivedSpeed = null;
                         if (lastValidCoordsRef.current) {
                             distMoved = getDistanceMeters(
                                 lastValidCoordsRef.current.lat,
@@ -288,22 +287,27 @@ export const useAELocationTracker = () => {
                                 coords.latitude,
                                 coords.longitude
                             );
+                            const timeDeltaSec = (now - (lastValidCoordsRef.current.time || (now - elapsed))) / 1000;
+                            if (timeDeltaSec > 0.5) {
+                                derivedSpeed = distMoved / timeDeltaSec;
+                            }
                         }
 
-                        const isRealRelocation = distMoved >= 35 && (coords.accuracy == null || coords.accuracy <= 40);
+                        const effectiveSpeed = (speed != null && speed > 0) ? speed : derivedSpeed;
+                        const isMovingSpeed = effectiveSpeed != null && effectiveSpeed >= 0.9;
+                        const isRealRelocation = distMoved >= 8 && (coords.accuracy == null || coords.accuracy <= 50);
                         const isMoving = isMovingSpeed || isRealRelocation;
 
-                        // When moving (> 4.5 km/h or moved >= 35 meters):
-                        // stream GPS coordinates every 3.5 seconds to capture actual road movement!
-                        // When stationary: ping every 35 seconds.
-                        const minInterval = isMoving ? 3500 : 35000;
+                        // When moving: stream GPS coordinates every 3.5 seconds to capture actual road movement!
+                        // When stationary: ping every 30 seconds.
+                        const minInterval = isMoving ? 3500 : 30000;
 
-                        if (elapsed >= minInterval && (isMoving || elapsed >= 45000)) {
+                        if (elapsed >= minInterval && (isMoving || elapsed >= 35000)) {
                             pingLocation({
                                 latitude: coords.latitude,
                                 longitude: coords.longitude,
                                 accuracy: coords.accuracy,
-                                speed: coords.speed
+                                speed: effectiveSpeed
                             }, isMoving ? 'live_movement' : 'periodic');
                         }
                     },

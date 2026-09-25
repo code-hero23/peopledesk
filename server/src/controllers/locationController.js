@@ -258,27 +258,27 @@ const getLiveLocations = async (req, res) => {
           if (isInsideActiveSite) {
             isMoving = false;
           } 
-          // 3. Direct GPS hardware speed check (must be at least 1.25 m/s, ~4.5 km/h for real motion)
-          else if (latestLog.speed != null && latestLog.speed >= 1.25) {
+          // 3. Direct GPS hardware / derived speed check (must be fresh within 2 mins, speed >= 1.0 m/s ~3.6 km/h)
+          else if (diffMinutes <= 2 && latestLog.speed != null && latestLog.speed >= 1.0) {
             isMoving = true;
           } 
-          // 4. Calculated speed & distance between last 2 pings (must be genuine road displacement >= 40m & >= 5.0 km/h)
-          else if (prevLog) {
+          // 4. Calculated speed & displacement between last 2 pings (fresh within 2 mins)
+          else if (diffMinutes <= 2 && prevLog) {
             const dLat = (latestLog.latitude - prevLog.latitude) * Math.PI / 180;
             const dLng = (latestLog.longitude - prevLog.longitude) * Math.PI / 180;
             const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
                       Math.cos(prevLog.latitude * Math.PI / 180) * Math.cos(latestLog.latitude * Math.PI / 180) *
                       Math.sin(dLng / 2) * Math.sin(dLng / 2);
             const distMeters = 6371000 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-            const timeDiffMins = Math.max(0.1, (new Date(latestLog.createdAt).getTime() - new Date(prevLog.createdAt).getTime()) / (1000 * 60));
+            const timeDiffMins = Math.max(0.05, (new Date(latestLog.createdAt).getTime() - new Date(prevLog.createdAt).getTime()) / (1000 * 60));
             const calculatedKmh = (distMeters / 1000) / (timeDiffMins / 60);
 
             if (speedKmh == null && calculatedKmh > 0) {
               speedKmh = parseFloat(calculatedKmh.toFixed(1));
             }
 
-            // Real movement requires at least 40m displacement AND at least 5.0 km/h speed
-            if (distMeters >= 40 && calculatedKmh >= 5.0 && (latestLog.accuracy == null || latestLog.accuracy <= 45)) {
+            // Real movement requires fresh ping (<= 2 min), displacement >= 8m AND calculated speed >= 3.0 km/h
+            if (distMeters >= 8 && calculatedKmh >= 3.0 && (latestLog.accuracy == null || latestLog.accuracy <= 50)) {
               isMoving = true;
             }
           }
