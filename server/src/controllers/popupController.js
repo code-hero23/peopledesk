@@ -17,9 +17,15 @@ exports.getPopupConfig = async (req, res) => {
 exports.updatePopupConfig = async (req, res) => {
     const { quote, author, isActive, imageUrl, type } = req.body;
     try {
-        // We only keep one main config for now, but we can have history.
-        // For simplicity, we find the first one or create a new one.
-        let config = await prisma.popupConfig.findFirst();
+        // Normalize imageUrl: ensure it uses /api/uploads/ for Nginx compatibility
+        const cleanImageUrl = typeof imageUrl === 'string' && imageUrl.startsWith('/uploads/')
+            ? `/api${imageUrl}`
+            : imageUrl;
+
+        // We only keep one main config for now, find the latest one or create a new one.
+        let config = await prisma.popupConfig.findFirst({
+            orderBy: { updatedAt: 'desc' }
+        });
 
         if (config) {
             config = await prisma.popupConfig.update({
@@ -28,7 +34,7 @@ exports.updatePopupConfig = async (req, res) => {
                     quote: quote !== undefined ? quote : config.quote,
                     author: author !== undefined ? author : config.author,
                     isActive: isActive !== undefined ? isActive : config.isActive,
-                    imageUrl: imageUrl !== undefined ? imageUrl : config.imageUrl,
+                    imageUrl: cleanImageUrl !== undefined ? cleanImageUrl : config.imageUrl,
                     type: type !== undefined ? type : config.type
                 }
             });
@@ -38,7 +44,7 @@ exports.updatePopupConfig = async (req, res) => {
                     quote: quote || "Inspiration of the day",
                     author: author || "Visionary",
                     isActive: isActive !== undefined ? isActive : true,
-                    imageUrl: imageUrl || "",
+                    imageUrl: cleanImageUrl || "",
                     type: type || "INSPIRATIONAL"
                 }
             });

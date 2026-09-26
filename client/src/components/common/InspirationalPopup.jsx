@@ -4,13 +4,56 @@ import { Quote, X } from 'lucide-react';
 import axios from 'axios';
 import { useLocation } from 'react-router-dom';
 
+const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+
+const resolveImageUrl = (url) => {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('blob:')) {
+        return url;
+    }
+
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+        try {
+            const parsed = new URL(url);
+            if (parsed.pathname.startsWith('/uploads/')) {
+                parsed.pathname = `/api${parsed.pathname}`;
+                return parsed.toString();
+            }
+            if ((parsed.hostname === 'localhost' || parsed.hostname === '127.0.0.1') &&
+                typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+                const pathname = parsed.pathname;
+                if (pathname.includes('/uploads/')) {
+                    const filename = pathname.split('/uploads/').pop();
+                    return `/api/uploads/${filename}`;
+                }
+            }
+            return url;
+        } catch {
+            return url;
+        }
+    }
+
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+
+    if (cleanUrl.startsWith('/api/uploads/')) {
+        return cleanUrl;
+    }
+
+    if (cleanUrl.startsWith('/uploads/')) {
+        return `/api${cleanUrl}`;
+    }
+
+    if (cleanUrl.startsWith('/api/')) {
+        return cleanUrl;
+    }
+
+    return `/api/uploads${cleanUrl}`;
+};
+
 const InspirationalPopup = () => {
     const [config, setConfig] = useState(null);
     const [isVisible, setIsVisible] = useState(false);
     const location = useLocation();
-
-    const API_URL = import.meta.env.VITE_API_BASE_URL || '/api';
-    const SERVER_URL = API_URL.replace(/\/api$/, '');
 
     useEffect(() => {
         // Don't show on login page or admin management page
@@ -24,7 +67,7 @@ const InspirationalPopup = () => {
 
     const fetchConfig = async () => {
         try {
-            const user = JSON.parse(localStorage.getItem('user'));
+            const user = JSON.parse(localStorage.getItem('user') || '{}');
             const token = user?.token;
             if (!token) return;
 
@@ -173,8 +216,8 @@ const InspirationalPopup = () => {
                             {config.imageUrl && (
                                 <div className="hidden sm:block w-[180px] relative flex-shrink-0 mt-auto self-end">
                                     <motion.img
-                                        src={config.imageUrl.startsWith('http') ? config.imageUrl : `${SERVER_URL}${config.imageUrl}`}
-                                        alt={config.author}
+                                        src={resolveImageUrl(config.imageUrl)}
+                                        alt={config.author || 'Author'}
                                         className="w-full h-[240px] object-cover object-top mask-image-gradient"
                                         style={{
                                             maskImage: 'linear-gradient(to top, black 80%, transparent 100%)',
@@ -183,6 +226,7 @@ const InspirationalPopup = () => {
                                         initial={{ y: 20, opacity: 0 }}
                                         animate={{ y: 0, opacity: 1 }}
                                         transition={{ duration: 0.8 }}
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
                                     />
                                     {/* Glow behind image specifically for birthday */}
                                     {isBirthday && (
@@ -191,10 +235,17 @@ const InspirationalPopup = () => {
                                 </div>
                             )}
 
-                            {/* Mobile Image (Now on right for mobile too due to order) */}
-                            <div className={`sm:hidden w-16 h-16 rounded-2xl overflow-hidden border-2 ${isBirthday ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-blue-500/30'} m-5 flex-shrink-0 self-start`}>
-                                <img src={config.imageUrl.startsWith('http') ? config.imageUrl : `${SERVER_URL}${config.imageUrl}`} className="w-full h-full object-cover" />
-                            </div>
+                            {/* Mobile Image (rendered only when image is present) */}
+                            {config.imageUrl && (
+                                <div className={`sm:hidden w-16 h-16 rounded-2xl overflow-hidden border-2 ${isBirthday ? 'border-purple-400 shadow-[0_0_20px_rgba(168,85,247,0.5)]' : 'border-blue-500/30'} m-5 flex-shrink-0 self-start`}>
+                                    <img
+                                        src={resolveImageUrl(config.imageUrl)}
+                                        alt={config.author || 'Author'}
+                                        className="w-full h-full object-cover"
+                                        onError={(e) => { e.currentTarget.style.display = 'none'; }}
+                                    />
+                                </div>
+                            )}
 
                             {/* Close Button - Always visible for better UX, especially on mobile */}
                             <button
