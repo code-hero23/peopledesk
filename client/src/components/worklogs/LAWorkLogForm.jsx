@@ -1,28 +1,85 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo, useRef } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { createWorkLog, closeWorkLog, getTodayLogStatus, addProjectReport } from '../../features/employee/employeeSlice';
-import { getProjects } from '../../features/projects/projectSlice';
+import { getProjects, createProject } from '../../features/projects/projectSlice';
 import SuccessModal from '../SuccessModal';
 import ConfirmationModal from '../ConfirmationModal';
 import {
     FileText, Box, PenTool, Layout, DollarSign,
     MessageCircle, Users, CheckSquare, Plus, Clock, X,
-    ImageIcon, Briefcase, Calendar, ChevronRight, MapPin, Monitor, AlertTriangle
+    ImageIcon, Briefcase, Calendar, ChevronRight, MapPin, Monitor,
+    AlertTriangle, Search, ChevronDown, Check, Sparkles, Filter,
+    Layers, HelpCircle, ArrowRight, Play, CheckCircle2, Trash2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'react-toastify';
-import { createProject } from '../../features/projects/projectSlice';
+
+const PROCESS_SUGGESTIONS = [
+    '3D Modeling',
+    '2D Production Drawing',
+    'Revised 2D Design',
+    '3D Rendering & Lighting',
+    'Revised 3D Renders',
+    'Infurnia Modeling',
+    'Estimation & BOQ',
+    'Online Client Discussion',
+    'Showroom Client Meeting',
+    'Site Measurement & Verification'
+];
+
+const METRIC_FIELDS = [
+    { key: 'initial2D', label: 'Initial 2D', icon: PenTool, category: '2D Drafting' },
+    { key: 'production2D', label: 'Production 2D', icon: Layout, category: '2D Drafting' },
+    { key: 'revised2D', label: 'Revised 2D', icon: FileText, category: '2D Drafting' },
+    { key: 'fresh3D', label: 'Fresh 3D', icon: Box, category: '3D Visualization' },
+    { key: 'revised3D', label: 'Revised 3D', icon: Box, category: '3D Visualization' },
+    { key: 'infurnia', label: 'Infurnia', icon: Monitor, category: '3D Visualization' },
+    { key: 'estimation', label: 'Estimation', icon: DollarSign, category: 'Commercials' },
+    { key: 'woe', label: 'W.O.E', icon: Briefcase, category: 'Commercials' },
+    { key: 'onlineDiscussion', label: 'Online Discussion', icon: MessageCircle, category: 'Meetings & Site' },
+    { key: 'showroomDiscussion', label: 'Showroom Meeting', icon: Users, category: 'Meetings & Site' },
+    { key: 'siteVisit', label: 'Site Visit', icon: MapPin, category: 'Meetings & Site' },
+    { key: 'signFromEngineer', label: 'Sign From Engineer', icon: FileText, category: 'Meetings & Site' },
+];
+
+const INITIAL_METRICS = {
+    initial2D: { count: '', details: '' },
+    production2D: { count: '', details: '' },
+    revised2D: { count: '', details: '' },
+    fresh3D: { count: '', details: '' },
+    revised3D: { count: '', details: '' },
+    estimation: { count: '', details: '' },
+    woe: { count: '', details: '' },
+    onlineDiscussion: { count: '', details: '' },
+    showroomDiscussion: { count: '', details: '' },
+    signFromEngineer: { count: '', details: '' },
+    siteVisit: { count: '', details: '' },
+    infurnia: { count: '', details: '' }
+};
 
 const LAWorkLogForm = ({ onSuccess }) => {
     const dispatch = useDispatch();
     const { isLoading, todayLog } = useSelector((state) => state.employee);
     const { projects } = useSelector((state) => state.projects);
+
     const [showSuccess, setShowSuccess] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [modalMessage, setModalMessage] = useState('');
     const [reportType, setReportType] = useState('daily'); // 'daily', 'project'
+    
+    // Project Search & Combobox states
+    const [projectSearchQuery, setProjectSearchQuery] = useState('');
+    const [isProjectDropdownOpen, setIsProjectDropdownOpen] = useState(false);
+    const projectDropdownRef = useRef(null);
+
+    // Project entries search & filter state
+    const [entriesSearchQuery, setEntriesSearchQuery] = useState('');
+
+    // Inline Create Project Modal
     const [isCreatingProject, setIsCreatingProject] = useState(false);
     const [newProject, setNewProject] = useState({ name: '', location: '' });
+
+    // Confirmation Modal Config
     const [confirmationConfig, setConfirmationConfig] = useState({
         isOpen: false,
         title: '',
@@ -32,48 +89,21 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const isTodayClosed = todayLog?.logStatus === 'CLOSED';
     const isTodayOpen = todayLog?.logStatus === 'OPEN';
-    const projectReportsList = todayLog?.la_project_reports
-        ? (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports) : todayLog.la_project_reports)
-        : [];
+    
+    const projectReportsList = useMemo(() => {
+        if (!todayLog?.la_project_reports) return [];
+        return typeof todayLog.la_project_reports === 'string'
+            ? JSON.parse(todayLog.la_project_reports)
+            : todayLog.la_project_reports;
+    }, [todayLog]);
+
     const hasProjectReports = Array.isArray(projectReportsList) && projectReportsList.length > 0;
 
-    useEffect(() => {
-        dispatch(getTodayLogStatus());
-        dispatch(getProjects());
-    }, [dispatch]);
+    const [openingData, setOpeningData] = useState({ ...INITIAL_METRICS });
+    const [closingData, setClosingData] = useState({ ...INITIAL_METRICS, notes: '' });
+    const [dailyNotes, setDailyNotes] = useState('');
 
-    // Initial State structure for Opening/Closing
-    const initialMetrics = {
-        initial2D: { count: '', details: '' },
-        production2D: { count: '', details: '' },
-        revised2D: { count: '', details: '' },
-        fresh3D: { count: '', details: '' },
-        revised3D: { count: '', details: '' },
-        estimation: { count: '', details: '' },
-        woe: { count: '', details: '' },
-        onlineDiscussion: { count: '', details: '' },
-        showroomDiscussion: { count: '', details: '' },
-        signFromEngineer: { count: '', details: '' },
-        siteVisit: { count: '', details: '' },
-        infurnia: { count: '', details: '' }
-    };
-
-    const [openingData, setOpeningData] = useState({ ...initialMetrics });
-    const [closingData, setClosingData] = useState({ ...initialMetrics, notes: '' });
-    const [dailyNotes, setDailyNotes] = useState(''); // Separate state for easier management
-
-    // Persistence: Preload data from todayLog (Opening Metrics) into Closing Form
-    useEffect(() => {
-        if (isTodayOpen && todayLog?.la_opening_metrics) {
-            setClosingData(prev => ({
-                ...prev,
-                ...todayLog.la_opening_metrics,
-                notes: prev.notes // Keep notes separate if needed
-            }));
-        }
-    }, [isTodayOpen, todayLog]);
-
-    // Project Report State
+    // Detailed Project Report State
     const [projectReport, setProjectReport] = useState({
         date: new Date().toLocaleDateString('en-CA'),
         projectId: '',
@@ -86,14 +116,87 @@ const LAWorkLogForm = ({ onSuccess }) => {
         completedImages: '',
         pendingImages: '',
         remarks: '',
-        // New Detailed Fields
         onlineMeetings: [],
         showroomMeetings: [],
         measurements: [],
         requirements: [],
         colours: []
     });
+
     const [projectStartTime, setProjectStartTime] = useState(null);
+    const [openAccordion, setOpenAccordion] = useState(null); // 'meetings', 'measurements', 'requirements'
+
+    useEffect(() => {
+        dispatch(getTodayLogStatus());
+        dispatch(getProjects());
+    }, [dispatch]);
+
+    // Close project dropdown on outside click
+    useEffect(() => {
+        const handleClickOutside = (e) => {
+            if (projectDropdownRef.current && !projectDropdownRef.current.contains(e.target)) {
+                setIsProjectDropdownOpen(false);
+            }
+        };
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    // Persistence: Preload data from todayLog (Opening Metrics) into Closing Form
+    useEffect(() => {
+        if (isTodayOpen && todayLog?.la_opening_metrics) {
+            setClosingData(prev => ({
+                ...prev,
+                ...todayLog.la_opening_metrics,
+                notes: prev.notes
+            }));
+        }
+    }, [isTodayOpen, todayLog]);
+
+    // Filter projects for searchable dropdown
+    const filteredProjects = useMemo(() => {
+        if (!projects || !Array.isArray(projects)) return [];
+        if (!projectSearchQuery.trim()) return projects;
+        const q = projectSearchQuery.toLowerCase();
+        return projects.filter(p =>
+            (p.name && p.name.toLowerCase().includes(q)) ||
+            (p.location && p.location.toLowerCase().includes(q)) ||
+            (p.id && String(p.id).includes(q))
+        );
+    }, [projects, projectSearchQuery]);
+
+    // Filter today's project report entries
+    const filteredEntries = useMemo(() => {
+        if (!projectReportsList || !Array.isArray(projectReportsList)) return [];
+        if (!entriesSearchQuery.trim()) return projectReportsList;
+        const q = entriesSearchQuery.toLowerCase();
+        return projectReportsList.filter(entry =>
+            (entry.clientName && entry.clientName.toLowerCase().includes(q)) ||
+            (entry.site && entry.site.toLowerCase().includes(q)) ||
+            (entry.process && entry.process.toLowerCase().includes(q)) ||
+            (entry.remarks && entry.remarks.toLowerCase().includes(q))
+        );
+    }, [projectReportsList, entriesSearchQuery]);
+
+    // Calculate summary statistics
+    const stats = useMemo(() => {
+        let totalCompleted = 0;
+        let totalReference = 0;
+        let totalHours = 0;
+
+        projectReportsList.forEach(r => {
+            if (r.completedImages) totalCompleted += parseInt(r.completedImages) || 0;
+            if (r.imageCount) totalReference += parseInt(r.imageCount) || 0;
+            if (r.totalHours) totalHours += parseFloat(r.totalHours) || 0;
+        });
+
+        return {
+            totalEntries: projectReportsList.length,
+            totalCompleted,
+            totalReference,
+            totalHours: totalHours.toFixed(1)
+        };
+    }, [projectReportsList]);
 
     // Helper for adding rows to dynamic tables
     const addRow = (field, structure) => {
@@ -115,10 +218,9 @@ const LAWorkLogForm = ({ onSuccess }) => {
     const updateRow = (field, index, key, value) => {
         setProjectReport(prev => {
             const updatedList = [...prev[field]];
-            if (typeof updatedList[index] === 'object') {
+            if (typeof updatedList[index] === 'object' && key !== null) {
                 updatedList[index] = { ...updatedList[index], [key]: value };
             } else {
-                // simple array of strings/values
                 updatedList[index] = value;
             }
             return { ...prev, [field]: updatedList };
@@ -145,21 +247,22 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
         setConfirmationConfig({
             isOpen: true,
-            title: 'Submit Opening Report',
-            message: 'Are you sure you want to start your day with these metrics?',
+            title: 'Start Day & Submit Opening Plan',
+            message: 'Are you ready to start your working day with these initial metrics and targets?',
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
                 const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                const payload = { 
-                    logStatus: 'OPEN', 
+                const payload = {
+                    logStatus: 'OPEN',
                     la_opening_metrics: sanitizeMetrics(openingData),
                     startTime: currentTime
                 };
                 dispatch(createWorkLog(payload)).then((res) => {
                     if (!res.error) {
-                        setModalMessage("Opening Report Submitted! Day started.");
+                        setModalMessage("Opening Plan Submitted! Session started.");
                         setShowSuccess(true);
+                        setReportType('project'); // Auto move to project logging
                     }
                     setIsSubmitting(false);
                 });
@@ -180,8 +283,8 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
         setConfirmationConfig({
             isOpen: true,
-            title: 'Submit Closing Report',
-            message: 'Are you sure you want to end your day and submit these closing metrics?',
+            title: 'End Day & Submit Closing Report',
+            message: 'Are you sure you want to end your day and submit final closing metrics for today?',
             onConfirm: () => {
                 if (isSubmitting) return;
                 setIsSubmitting(true);
@@ -193,7 +296,7 @@ const LAWorkLogForm = ({ onSuccess }) => {
                 };
                 dispatch(closeWorkLog(payload)).then((res) => {
                     if (!res.error) {
-                        setModalMessage("Closing Report Submitted! Day ended.");
+                        setModalMessage("Closing Report Submitted! Great work today.");
                         setShowSuccess(true);
                     }
                     setIsSubmitting(false);
@@ -203,58 +306,15 @@ const LAWorkLogForm = ({ onSuccess }) => {
         });
     };
 
-    const handleProjectReportSubmit = (e) => {
-        e.preventDefault();
-        if (isSubmitting) return;
-
-        setConfirmationConfig({
-            isOpen: true,
-            title: 'Add Project Wise Report',
-            message: 'Confirm adding this report to your daily log?',
-            onConfirm: () => {
-                if (isSubmitting) return;
-                setIsSubmitting(true);
-                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-                const payload = {
-                    projectReport: {
-                        ...projectReport,
-                        startTime: projectStartTime || currentTime,
-                        endTime: currentTime,
-                        totalHours: 0 // We'll let the backend or details handle this if needed, but manual input is removed
-                    }
-                };
-
-                dispatch(addProjectReport(payload)).then((res) => {
-                    if (!res.error) {
-                        setModalMessage("Project Report Added!");
-                        setShowSuccess(true);
-                        // Reset form
-                        setProjectReport({
-                            date: new Date().toLocaleDateString('en-CA'),
-                            projectId: '', clientName: '', site: '', process: '',
-                            imageCount: '', startTime: '', endTime: '',
-                            completedImages: '', pendingImages: '', remarks: '',
-                            onlineMeetings: [], showroomMeetings: [], measurements: [], requirements: [], colours: []
-                        });
-                        setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
-                    }
-                    setIsSubmitting(false);
-                });
-                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
-            }
-        });
-    };
-
-    const handleProjectSelect = (e) => {
-        const pId = e.target.value;
-        const selected = projects.find(p => p.id === parseInt(pId));
-        if (selected) {
-            setProjectReport(prev => ({
-                ...prev, projectId: pId, clientName: selected.name, site: selected.location || ''
-            }));
-        } else {
-            setProjectReport(prev => ({ ...prev, projectId: pId }));
-        }
+    const handleSelectProject = (project) => {
+        setProjectReport(prev => ({
+            ...prev,
+            projectId: project.id,
+            clientName: project.name,
+            site: project.location || ''
+        }));
+        setIsProjectDropdownOpen(false);
+        setProjectSearchQuery('');
 
         if (!projectStartTime) {
             setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
@@ -263,12 +323,17 @@ const LAWorkLogForm = ({ onSuccess }) => {
 
     const handleCreateProject = async (e) => {
         e.preventDefault();
-        if (!newProject.name) return toast.error("Project name is required");
+        if (!newProject.name.trim()) return toast.error("Project name is required");
         setIsSubmitting(true);
         try {
             const result = await dispatch(createProject(newProject)).unwrap();
             toast.success("Project created successfully!");
-            setProjectReport(prev => ({ ...prev, projectId: result.id, clientName: result.name, site: result.location }));
+            setProjectReport(prev => ({
+                ...prev,
+                projectId: result.id,
+                clientName: result.name,
+                site: result.location || ''
+            }));
             setIsCreatingProject(false);
             setNewProject({ name: '', location: '' });
             if (!projectStartTime) {
@@ -281,501 +346,806 @@ const LAWorkLogForm = ({ onSuccess }) => {
         }
     };
 
-    if (isLoading) return <div className="p-8 text-center text-slate-500 animate-pulse">Loading workspace...</div>;
+    const handleProjectReportSubmit = (e) => {
+        e.preventDefault();
+        if (isSubmitting) return;
+
+        if (!projectReport.clientName && !projectReport.projectId) {
+            return toast.error("Please select or specify a Project / Client name.");
+        }
+
+        setConfirmationConfig({
+            isOpen: true,
+            title: 'Save Project Report Entry',
+            message: `Add log entry for "${projectReport.clientName || 'Project'}" to your daily record?`,
+            onConfirm: () => {
+                if (isSubmitting) return;
+                setIsSubmitting(true);
+                const currentTime = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+                const startTimeToUse = projectStartTime || projectReport.startTime || currentTime;
+
+                const payload = {
+                    projectReport: {
+                        ...projectReport,
+                        startTime: startTimeToUse,
+                        endTime: currentTime
+                    }
+                };
+
+                dispatch(addProjectReport(payload)).then((res) => {
+                    if (!res.error) {
+                        setModalMessage("Project Report Entry Saved!");
+                        setShowSuccess(true);
+                        // Reset form
+                        setProjectReport({
+                            date: new Date().toLocaleDateString('en-CA'),
+                            projectId: '', clientName: '', site: '', process: '',
+                            imageCount: '', startTime: '', endTime: '',
+                            completedImages: '', pendingImages: '', remarks: '',
+                            onlineMeetings: [], showroomMeetings: [], measurements: [], requirements: [], colours: []
+                        });
+                        setProjectStartTime(new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }));
+                        setOpenAccordion(null);
+                    }
+                    setIsSubmitting(false);
+                });
+                setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+            }
+        });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center p-12 bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800">
+                <div className="w-10 h-10 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mb-4"></div>
+                <p className="text-sm font-bold text-slate-500">Loading LA Workspace...</p>
+            </div>
+        );
+    }
 
     return (
-
-        <div className="space-y-8">
-            {/* Top Card Switcher */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* 1. Daily Report Selector */}
-                <button
-                    onClick={() => setReportType('daily')}
-                    className={`relative p-6 rounded-[2rem] text-left transition-all duration-300 group overflow-hidden ${reportType === 'daily'
-                        ? 'bg-gradient-to-br from-slate-900 to-slate-800 text-white shadow-2xl shadow-slate-900/30 scale-[1.02] ring-4 ring-slate-900/10 dark:from-slate-800 dark:to-slate-900 dark:ring-slate-800/50'
-                        : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:shadow-xl hover:scale-[1.01]'
-                        }`}
-                >
-                    <div className="relative z-10 flex items-start justify-between">
-                        <div>
-                            <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'daily' ? 'bg-white/20 text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400 dark:text-slate-500 group-hover:bg-slate-200 dark:group-hover:bg-slate-700 group-hover:text-slate-600 dark:group-hover:text-slate-300'}`}>
-                                <Calendar size={28} strokeWidth={2.5} />
-                            </div>
-                            <h3 className={`text-xl font-black mb-1 ${reportType === 'daily' ? 'text-white' : 'text-slate-800 dark:text-white'}`}>Daily Reports</h3>
-                            <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'daily' ? 'text-slate-400 dark:text-slate-500' : 'text-slate-400'}`}>Opening & Closing</p>
+        <div className="space-y-8 max-w-7xl mx-auto">
+            {/* Top Workspace Banner & Workflow Switcher */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 dark:from-slate-900 dark:via-slate-800 dark:to-slate-900 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden">
+                <div className="absolute top-0 right-0 w-96 h-96 bg-blue-500/10 rounded-full blur-3xl pointer-events-none -mr-20 -mt-20"></div>
+                <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-6">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <span className="bg-blue-500/20 text-blue-300 border border-blue-400/30 text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full flex items-center gap-1.5">
+                                <Sparkles size={12} /> Architect Workspace
+                            </span>
+                            <span className={`text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
+                                isTodayClosed ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' :
+                                isTodayOpen ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse' :
+                                'bg-slate-700 text-slate-300'
+                            }`}>
+                                {isTodayClosed ? '● Day Completed' : isTodayOpen ? '● Day Active' : '○ Not Started'}
+                            </span>
                         </div>
-                        {reportType === 'daily' && (
-                            <div className="bg-white/20 p-2 rounded-full">
-                                <ChevronRight size={20} className="text-white" />
-                            </div>
-                        )}
-                        {reportType !== 'daily' && (
-                            <div className="p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
-                                <ChevronRight size={20} className="text-slate-300" />
+                        <h1 className="text-2xl sm:text-3xl font-black tracking-tight">Daily Work Logs & Project Reporting</h1>
+                        <p className="text-slate-300 text-xs sm:text-sm mt-1 max-w-xl">
+                            Record structured 2D/3D metrics, log project-specific execution hours, and submit end-of-day reports seamlessly.
+                        </p>
+                    </div>
+
+                    {/* Quick Stats Pill */}
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/15 min-w-[110px]">
+                            <p className="text-[10px] font-black text-blue-200 uppercase tracking-wider">Date</p>
+                            <p className="text-sm font-black">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short' })}</p>
+                        </div>
+                        <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/15 min-w-[110px]">
+                            <p className="text-[10px] font-black text-blue-200 uppercase tracking-wider">Projects Logged</p>
+                            <p className="text-sm font-black text-emerald-300">{stats.totalEntries} Entries</p>
+                        </div>
+                        {todayLog?.startTime && (
+                            <div className="bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl border border-white/15 min-w-[110px]">
+                                <p className="text-[10px] font-black text-blue-200 uppercase tracking-wider">Start Time</p>
+                                <p className="text-sm font-black text-amber-300">{todayLog.startTime}</p>
                             </div>
                         )}
                     </div>
-                    {/* Decor */}
-                    <div className={`absolute -right-8 -bottom-8 w-32 h-32 rounded-full blur-2xl transition-opacity duration-500 ${reportType === 'daily' ? 'bg-indigo-500/20 opacity-100' : 'opacity-0'}`}></div>
-                </button>
+                </div>
 
-                {/* 2. Project Report Selector */}
-                <button
-                    onClick={() => setReportType('project')}
-                    className={`relative p-6 rounded-[2rem] text-left transition-all duration-300 group overflow-hidden ${reportType === 'project'
-                        ? 'bg-gradient-to-br from-violet-600 to-indigo-600 text-white shadow-2xl shadow-indigo-500/30 scale-[1.02] ring-4 ring-indigo-500/10 dark:shadow-indigo-900/40'
-                        : 'bg-white dark:bg-slate-900 text-slate-500 dark:text-slate-400 border border-slate-100 dark:border-slate-800 hover:border-violet-200 dark:hover:border-violet-900/50 hover:shadow-xl hover:scale-[1.01]'
+                {/* Tab Navigation */}
+                <div className="mt-8 flex flex-wrap gap-3 border-t border-white/10 pt-6">
+                    <button
+                        onClick={() => setReportType('daily')}
+                        className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                            reportType === 'daily'
+                                ? 'bg-white text-slate-900 shadow-lg scale-105'
+                                : 'bg-white/10 text-white hover:bg-white/20'
                         }`}
-                >
-                    <div className="relative z-10 flex items-start justify-between">
-                        <div>
-                            <div className={`p-3 rounded-2xl w-fit mb-4 transition-colors ${reportType === 'project' ? 'bg-white/20 text-white' : 'bg-violet-50 dark:bg-violet-900/20 text-violet-500 dark:text-violet-400 group-hover:bg-violet-100 dark:group-hover:bg-violet-900/40 group-hover:text-violet-600 dark:group-hover:text-violet-300'}`}>
-                                <Briefcase size={28} strokeWidth={2.5} />
-                            </div>
-                            <h3 className={`text-xl font-black mb-1 ${reportType === 'project' ? 'text-white' : 'text-slate-800 dark:text-white'}`}>Project Wise</h3>
-                            <p className={`text-xs font-bold uppercase tracking-widest ${reportType === 'project' ? 'text-indigo-200 dark:text-indigo-400' : 'text-slate-400'}`}>Detailed Task Logs</p>
-                        </div>
-                        {reportType === 'project' && (
-                            <div className="bg-white/20 p-2 rounded-full">
-                                <ChevronRight size={20} className="text-white" />
-                            </div>
-                        )}
-                        {reportType !== 'project' && (
-                            <div className="p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity -translate-x-2 group-hover:translate-x-0">
-                                <ChevronRight size={20} className="text-violet-300" />
-                            </div>
-                        )}
-                    </div>
-                    {/* Decor */}
-                    <div className={`absolute -right-8 -bottom-8 w-32 h-32 rounded-full blur-2xl transition-opacity duration-500 ${reportType === 'project' ? 'bg-white/30 opacity-100' : 'opacity-0'}`}></div>
-                </button>
+                    >
+                        <Calendar size={16} /> Daily Report ({isTodayOpen ? 'Closing' : isTodayClosed ? 'Completed' : 'Opening'})
+                    </button>
+
+                    <button
+                        onClick={() => setReportType('project')}
+                        className={`px-5 py-2.5 rounded-2xl text-xs font-black uppercase tracking-wider transition-all flex items-center gap-2 ${
+                            reportType === 'project'
+                                ? 'bg-blue-500 text-white shadow-lg scale-105 shadow-blue-500/30'
+                                : 'bg-white/10 text-white hover:bg-white/20'
+                        }`}
+                    >
+                        <Briefcase size={16} /> Project Wise Logs
+                        <span className="bg-white/20 px-2 py-0.5 rounded-full text-[10px] font-mono">{stats.totalEntries}</span>
+                    </button>
+                </div>
             </div>
 
-            {/* Content Display */}
+            {/* Main Content Area */}
             <AnimatePresence mode="wait">
                 {reportType === 'daily' ? (
                     <motion.div
                         key="daily"
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
+                        exit={{ opacity: 0, y: -12 }}
                         className="space-y-6"
                     >
-                        {/* Daily Report Content */}
                         {isTodayClosed ? (
-                            <div className="bg-emerald-50 dark:bg-emerald-900/20 p-8 rounded-[2rem] text-center border border-emerald-100 dark:border-emerald-900/30 transition-colors">
-                                <CheckSquare size={48} className="mx-auto text-emerald-500 dark:text-emerald-400 mb-4" />
-                                <h3 className="text-2xl font-black text-emerald-800 dark:text-emerald-200 mb-2">Day Completed!</h3>
-                                <p className="text-emerald-600 dark:text-emerald-400 font-medium">All daily reports have been submitted successfully.</p>
-                                <div className="mt-6 flex justify-center">
+                            <div className="bg-emerald-50 dark:bg-emerald-950/30 p-8 sm:p-12 rounded-3xl text-center border border-emerald-200 dark:border-emerald-800 shadow-xl space-y-4">
+                                <div className="w-16 h-16 bg-emerald-100 dark:bg-emerald-900/50 rounded-full flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-300 shadow-inner">
+                                    <CheckCircle2 size={36} />
+                                </div>
+                                <h3 className="text-2xl sm:text-3xl font-black text-emerald-900 dark:text-emerald-100">Day Successfully Completed!</h3>
+                                <p className="text-sm font-medium text-emerald-700 dark:text-emerald-300 max-w-lg mx-auto">
+                                    Your opening metrics, project reports, and closing submission for today have been officially recorded.
+                                </p>
+                                <div className="pt-4 flex justify-center gap-4">
                                     <button
                                         type="button"
                                         onClick={() => setReportType('project')}
-                                        className="px-6 py-3 bg-slate-900 dark:bg-slate-800 hover:bg-black text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg transition-all inline-flex items-center gap-2 active:scale-95"
+                                        className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg transition-all flex items-center gap-2 active:scale-95"
                                     >
-                                        <Plus size={16} /> Add / Manage Project Reports
+                                        <Briefcase size={16} /> View Today's Project Entries ({stats.totalEntries})
                                     </button>
                                 </div>
                             </div>
                         ) : isTodayOpen ? (
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-emerald-100 dark:border-slate-800 shadow-xl shadow-emerald-100/20 dark:shadow-none relative overflow-hidden transition-colors">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-50 rounded-bl-full -mr-10 -mt-10"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-emerald-50 dark:border-slate-800 transition-colors">
-                                        <div className="p-3 bg-emerald-100 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-xl transition-colors">
+                            <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-3 bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 rounded-2xl">
                                             <CheckSquare size={24} />
                                         </div>
                                         <div>
-                                            <h3 className="text-lg font-black text-slate-800 dark:text-white transition-colors">Closing Report</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase transition-colors">End of day submission</p>
+                                            <h3 className="text-xl font-black text-slate-800 dark:text-white">Closing Report</h3>
+                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">End of Day Submission & Final Counts</p>
                                         </div>
                                     </div>
-                                    <MetricsForm 
-                                        data={closingData} 
-                                        setData={setClosingData} 
-                                        onSubmit={handleClosingSubmit} 
-                                        type="closing" 
-                                        isSubmitting={isSubmitting} 
-                                        isLoading={isLoading} 
-                                        hasProjectReports={hasProjectReports}
-                                        onGoToProject={() => setReportType('project')}
-                                    />
-                                    <div className="mt-6 bg-blue-50/50 dark:bg-blue-900/10 p-6 rounded-[1.5rem] border border-blue-100 dark:border-blue-900/30 space-y-3 transition-colors">
-                                        <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 mb-2">
-                                            <MessageCircle size={18} />
-                                            <h4 className="text-sm font-black uppercase tracking-widest">Daily Notes (for Admin & HR)</h4>
-                                        </div>
-                                        <textarea
-                                            value={dailyNotes}
-                                            onChange={(e) => setDailyNotes(e.target.value)}
-                                            className="w-full bg-white dark:bg-slate-800 p-4 rounded-xl font-medium text-slate-700 dark:text-slate-200 text-sm outline-none border border-blue-200 dark:border-slate-700 focus:ring-2 ring-blue-100 dark:ring-blue-900/40 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600 min-h-[100px]"
-                                            placeholder="Share daily summary, insights, or site updates for Admin and HR..."
-                                        ></textarea>
-                                    </div>
+                                    
+                                    {!hasProjectReports && (
+                                        <span className="bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
+                                            <AlertTriangle size={16} /> Project Wise Report Required
+                                        </span>
+                                    )}
                                 </div>
+
+                                <MetricsGridForm
+                                    data={closingData}
+                                    setData={setClosingData}
+                                    onSubmit={handleClosingSubmit}
+                                    type="closing"
+                                    isSubmitting={isSubmitting}
+                                    isLoading={isLoading}
+                                    hasProjectReports={hasProjectReports}
+                                    onGoToProject={() => setReportType('project')}
+                                    dailyNotes={dailyNotes}
+                                    setDailyNotes={setDailyNotes}
+                                />
                             </div>
                         ) : (
-                            <div className="bg-white dark:bg-slate-900 p-6 rounded-[2rem] border border-slate-100 dark:border-slate-800 shadow-xl shadow-slate-200/20 dark:shadow-none relative overflow-hidden transition-colors">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-slate-50 rounded-bl-full -mr-10 -mt-10"></div>
-                                <div className="relative z-10">
-                                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-slate-50 dark:border-slate-800 transition-colors">
-                                        <div className="p-3 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 rounded-xl transition-colors">
-                                            <Layout size={24} />
-                                        </div>
-                                        <div>
-                                            <h3 className="text-xl font-black text-slate-800 dark:text-white transition-colors">Opening Report</h3>
-                                            <p className="text-xs text-slate-500 dark:text-slate-500 font-bold uppercase tracking-wider transition-colors">Plan your day ahead</p>
-                                        </div>
+                            <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+                                <div className="flex items-center gap-3 pb-6 border-b border-slate-100 dark:border-slate-800">
+                                    <div className="p-3 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 rounded-2xl">
+                                        <Layout size={24} />
                                     </div>
-
-                                    {/* --- NEW START DAY CARD --- */}
-                                    <div className="bg-gradient-to-br from-blue-600 to-indigo-700 rounded-3xl p-8 text-white shadow-xl shadow-blue-200 relative overflow-hidden mb-8">
-                                        <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16 blur-2xl"></div>
-                                        <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/20 rounded-full -ml-12 -mb-12 blur-xl"></div>
-                                        
-                                        <div className="relative z-10">
-                                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
-                                                <div>
-                                                    <div className="inline-flex items-center gap-2 bg-white/20 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest mb-4">
-                                                        <Clock size={12} /> Live Session
-                                                    </div>
-                                                    <h2 className="text-3xl font-black mb-1">Start Your Day</h2>
-                                                    <p className="text-blue-100 font-bold text-sm">Review your tasks and begin tracking</p>
-                                                </div>
-                                                
-                                                <div className="flex items-center gap-4">
-                                                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
-                                                        <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Current Date</p>
-                                                        <p className="text-lg font-black">{new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</p>
-                                                    </div>
-                                                    <div className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/20 min-w-[120px]">
-                                                        <p className="text-[10px] font-black text-blue-200 uppercase mb-1">Session Time</p>
-                                                        <p className="text-lg font-black">{new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}</p>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
+                                    <div>
+                                        <h3 className="text-xl font-black text-slate-800 dark:text-white">Opening Report & Day Planning</h3>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Set your planned targets for today</p>
                                     </div>
-                                    <MetricsForm data={openingData} setData={setOpeningData} onSubmit={handleOpeningSubmit} type="opening" isSubmitting={isSubmitting} isLoading={isLoading} />
                                 </div>
+
+                                <MetricsGridForm
+                                    data={openingData}
+                                    setData={setOpeningData}
+                                    onSubmit={handleOpeningSubmit}
+                                    type="opening"
+                                    isSubmitting={isSubmitting}
+                                    isLoading={isLoading}
+                                />
                             </div>
                         )}
                     </motion.div>
                 ) : (
                     <motion.div
                         key="project"
-                        initial={{ opacity: 0, y: 10 }}
+                        initial={{ opacity: 0, y: 12 }}
                         animate={{ opacity: 1, y: 0 }}
-                        exit={{ opacity: 0, y: -10 }}
-                        className="space-y-6"
+                        exit={{ opacity: 0, y: -12 }}
+                        className="space-y-8"
                     >
-                        {/* Project Report Content */}
-                        {!isTodayOpen && !isTodayClosed ? (
-                            <div className="p-6 bg-amber-50 dark:bg-amber-900/20 text-amber-800 dark:text-amber-200 rounded-2xl border border-amber-100 dark:border-amber-900/30 flex items-center gap-4 transition-colors">
-                                <Layout size={24} />
-                                <span className="font-bold">Please submit the daily OPENING report before adding project wise reports.</span>
+                        {/* Warning if Day is not opened */}
+                        {!isTodayOpen && !isTodayClosed && (
+                            <div className="p-5 bg-amber-50 dark:bg-amber-950/30 text-amber-800 dark:text-amber-200 rounded-2xl border border-amber-200 dark:border-amber-800 flex items-center justify-between gap-4">
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle size={24} className="text-amber-500 flex-shrink-0" />
+                                    <div>
+                                        <p className="text-sm font-black">Opening Report Not Submitted</p>
+                                        <p className="text-xs text-amber-700 dark:text-amber-300">
+                                            Please submit the daily Opening report first to set your planned metrics, or log directly.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={() => setReportType('daily')}
+                                    className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-black uppercase whitespace-nowrap shadow-md transition-all active:scale-95"
+                                >
+                                    Start Day Now
+                                </button>
                             </div>
-                        ) : (
-                            <div className={`p-6 rounded-[2.5rem] relative overflow-hidden transition-all duration-300 border border-blue-100 dark:border-slate-800 shadow-xl shadow-blue-200/20 dark:shadow-none bg-white dark:bg-slate-900`}>
-                                <div className="flex items-center gap-4 mb-8">
-                                    <div className="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-2xl text-blue-600 dark:text-blue-400 transition-colors">
-                                        <Briefcase size={28} strokeWidth={2.5} />
+                        )}
+
+                        {/* Project Report Form Card */}
+                        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b border-slate-100 dark:border-slate-800">
+                                <div className="flex items-center gap-3">
+                                    <div className="p-3 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-2xl">
+                                        <Briefcase size={24} />
                                     </div>
                                     <div>
-                                        <h2 className="text-2xl font-black text-slate-800 dark:text-white tracking-tight">Project Wise Reports</h2>
-                                        <p className="text-blue-400 dark:text-blue-500 font-bold text-xs uppercase tracking-widest transition-colors">Detailed Task Logging (Add anytime)</p>
+                                        <h2 className="text-xl font-black text-slate-800 dark:text-white">Add Project-Wise Work Entry</h2>
+                                        <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Log specific drawings, processes, and client interactions</p>
                                     </div>
                                 </div>
 
-                                <div className="space-y-8">
-                                        {/* Form Card */}
-                                        <div className="bg-white dark:bg-slate-900 p-8 rounded-3xl border border-slate-100 dark:border-slate-800 shadow-lg shadow-slate-200/50 dark:shadow-none relative overflow-hidden transition-colors">
-                                            <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-blue-50 dark:from-blue-900/10 to-transparent rounded-full -mr-20 -mt-20 pointer-events-none opacity-50"></div>
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                                        <Clock size={14} /> Session Start: <strong className="text-slate-700 dark:text-slate-200">{projectStartTime || 'Now'}</strong>
+                                    </span>
+                                </div>
+                            </div>
 
-                                            <form onSubmit={handleProjectReportSubmit} className="space-y-6 relative z-10">
-                                                <div className="grid grid-cols-1 gap-6">
-                                                    <div className="bg-slate-50/80 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-700 focus-within:ring-4 ring-blue-500/10 transition-all hover:bg-white dark:hover:bg-slate-800">
-                                                        <div className="flex justify-between items-center mb-2">
-                                                            <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase">Project Selection</label>
-                                                            <button
-                                                                type="button"
-                                                                onClick={() => setIsCreatingProject(!isCreatingProject)}
-                                                                className="text-[10px] font-black text-blue-600 uppercase flex items-center gap-1 hover:text-blue-700 transition-colors"
-                                                            >
-                                                                {isCreatingProject ? <X size={12} /> : <Plus size={12} />}
-                                                                {isCreatingProject ? 'Cancel' : 'Create New'}
+                            <form onSubmit={handleProjectReportSubmit} className="space-y-6">
+                                {/* 1. Searchable Project Selector */}
+                                <div className="grid grid-cols-1 gap-4" ref={projectDropdownRef}>
+                                    <div className="relative">
+                                        <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between">
+                                            <span>Select Project / Client <span className="text-rose-500">*</span></span>
+                                            <button
+                                                type="button"
+                                                onClick={() => setIsCreatingProject(!isCreatingProject)}
+                                                className="text-xs font-bold text-blue-600 hover:text-blue-700 flex items-center gap-1"
+                                            >
+                                                {isCreatingProject ? <X size={14} /> : <Plus size={14} />}
+                                                {isCreatingProject ? 'Cancel' : 'New Project'}
+                                            </button>
+                                        </label>
+
+                                        {isCreatingProject ? (
+                                            <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-blue-200 dark:border-slate-700 space-y-3">
+                                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Project / Client Name *"
+                                                        value={newProject.name}
+                                                        onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
+                                                        className="w-full bg-white dark:bg-slate-900 px-4 py-3 rounded-xl font-bold text-slate-800 dark:text-white outline-none border border-slate-200 dark:border-slate-700 text-sm focus:border-blue-500"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Site Location (e.g. Whitefield)"
+                                                        value={newProject.location}
+                                                        onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
+                                                        className="w-full bg-white dark:bg-slate-900 px-4 py-3 rounded-xl font-bold text-slate-800 dark:text-white outline-none border border-slate-200 dark:border-slate-700 text-sm focus:border-blue-500"
+                                                    />
+                                                </div>
+                                                <button
+                                                    type="button"
+                                                    onClick={handleCreateProject}
+                                                    disabled={isSubmitting}
+                                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider shadow-md transition-all"
+                                                >
+                                                    {isSubmitting ? 'Creating...' : 'Save & Select Project'}
+                                                </button>
+                                            </div>
+                                        ) : (
+                                            <div className="relative">
+                                                <div
+                                                    onClick={() => setIsProjectDropdownOpen(!isProjectDropdownOpen)}
+                                                    className="w-full bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 flex items-center justify-between cursor-pointer hover:border-blue-400 dark:hover:border-blue-500 transition-all"
+                                                >
+                                                    <div className="flex items-center gap-3 min-w-0">
+                                                        <div className="p-2 bg-blue-100 dark:bg-blue-900/30 text-blue-600 rounded-xl">
+                                                            <Briefcase size={18} />
+                                                        </div>
+                                                        <div className="truncate">
+                                                            {projectReport.clientName ? (
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="font-black text-slate-800 dark:text-white text-base truncate">{projectReport.clientName}</span>
+                                                                    {projectReport.site && (
+                                                                        <span className="text-xs bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 px-2 py-0.5 rounded-md font-bold">
+                                                                            📍 {projectReport.site}
+                                                                        </span>
+                                                                    )}
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-slate-400 font-bold text-sm">Search and choose project...</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    <ChevronDown size={20} className={`text-slate-400 transition-transform ${isProjectDropdownOpen ? 'rotate-180' : ''}`} />
+                                                </div>
+
+                                                {/* Searchable Combobox Dropdown */}
+                                                <AnimatePresence>
+                                                    {isProjectDropdownOpen && (
+                                                        <motion.div
+                                                            initial={{ opacity: 0, y: 5 }}
+                                                            animate={{ opacity: 1, y: 0 }}
+                                                            exit={{ opacity: 0, y: 5 }}
+                                                            className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl z-50 overflow-hidden max-h-80 flex flex-col"
+                                                        >
+                                                            {/* Search Input */}
+                                                            <div className="p-3 border-b border-slate-100 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/80 flex items-center gap-2">
+                                                                <Search size={16} className="text-slate-400" />
+                                                                <input
+                                                                    type="text"
+                                                                    placeholder="Type project name or location..."
+                                                                    value={projectSearchQuery}
+                                                                    onChange={(e) => setProjectSearchQuery(e.target.value)}
+                                                                    autoFocus
+                                                                    className="w-full bg-transparent text-sm font-bold text-slate-800 dark:text-white outline-none placeholder:text-slate-400"
+                                                                />
+                                                                {projectSearchQuery && (
+                                                                    <button type="button" onClick={() => setProjectSearchQuery('')} className="text-slate-400 hover:text-slate-600">
+                                                                        <X size={14} />
+                                                                    </button>
+                                                                )}
+                                                            </div>
+
+                                                            {/* Project List */}
+                                                            <div className="overflow-y-auto p-2 divide-y divide-slate-100 dark:divide-slate-700/50">
+                                                                {filteredProjects.length === 0 ? (
+                                                                    <div className="p-6 text-center text-slate-400 text-xs">
+                                                                        <p className="font-bold">No projects found matching "{projectSearchQuery}"</p>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => {
+                                                                                setNewProject({ name: projectSearchQuery, location: '' });
+                                                                                setIsCreatingProject(true);
+                                                                                setIsProjectDropdownOpen(false);
+                                                                            }}
+                                                                            className="mt-3 text-xs font-black text-blue-600 hover:underline"
+                                                                        >
+                                                                            + Create "{projectSearchQuery}" as new project
+                                                                        </button>
+                                                                    </div>
+                                                                ) : (
+                                                                    filteredProjects.map((p) => {
+                                                                        const isSelected = projectReport.projectId === p.id;
+                                                                        return (
+                                                                            <div
+                                                                                key={p.id}
+                                                                                onClick={() => handleSelectProject(p)}
+                                                                                className={`p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all ${
+                                                                                    isSelected
+                                                                                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-300'
+                                                                                        : 'hover:bg-slate-50 dark:hover:bg-slate-700/50 text-slate-700 dark:text-slate-200'
+                                                                                }`}
+                                                                            >
+                                                                                <div>
+                                                                                    <p className="font-black text-sm">{p.name}</p>
+                                                                                    {p.location && (
+                                                                                        <p className="text-[11px] font-bold text-slate-400 flex items-center gap-1 mt-0.5">
+                                                                                            <MapPin size={10} /> {p.location}
+                                                                                        </p>
+                                                                                    )}
+                                                                                </div>
+                                                                                {isSelected && <Check size={18} className="text-blue-600 dark:text-blue-400" />}
+                                                                            </div>
+                                                                        );
+                                                                    })
+                                                                )}
+                                                            </div>
+                                                        </motion.div>
+                                                    )}
+                                                </AnimatePresence>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* 2. Process & Task Selection with Quick Chips */}
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        Process / Task Description <span className="text-rose-500">*</span>
+                                    </label>
+                                    <input
+                                        type="text"
+                                        placeholder="e.g. 3D Living Room Modeling & Texture Mapping"
+                                        value={projectReport.process}
+                                        onChange={(e) => setProjectReport({ ...projectReport, process: e.target.value })}
+                                        className="w-full bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500 text-sm transition-all"
+                                    />
+                                    {/* Quick chips */}
+                                    <div className="flex flex-wrap gap-1.5 pt-1">
+                                        {PROCESS_SUGGESTIONS.map((proc) => (
+                                            <button
+                                                key={proc}
+                                                type="button"
+                                                onClick={() => setProjectReport(prev => ({ ...prev, process: proc }))}
+                                                className={`text-[10px] font-bold px-2.5 py-1 rounded-lg border transition-all ${
+                                                    projectReport.process === proc
+                                                        ? 'bg-blue-600 text-white border-blue-600 shadow-sm'
+                                                        : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-blue-400'
+                                                }`}
+                                            >
+                                                {proc}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* 3. Image Deliverables & Tracking Counts */}
+                                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                    <div className="bg-slate-50 dark:bg-slate-800/60 p-4 rounded-2xl border border-slate-200 dark:border-slate-700">
+                                        <label className="block text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                            <ImageIcon size={12} /> Reference Images (#)
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={projectReport.imageCount}
+                                            onChange={(e) => setProjectReport({ ...projectReport, imageCount: e.target.value })}
+                                            className="w-full bg-transparent font-black text-xl text-slate-800 dark:text-white outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="bg-emerald-50/60 dark:bg-emerald-950/20 p-4 rounded-2xl border border-emerald-200 dark:border-emerald-800/40">
+                                        <label className="block text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                            <CheckCircle2 size={12} /> Completed Images
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={projectReport.completedImages}
+                                            onChange={(e) => setProjectReport({ ...projectReport, completedImages: e.target.value })}
+                                            className="w-full bg-transparent font-black text-xl text-emerald-700 dark:text-emerald-300 outline-none"
+                                        />
+                                    </div>
+
+                                    <div className="bg-amber-50/60 dark:bg-amber-950/20 p-4 rounded-2xl border border-amber-200 dark:border-amber-800/40">
+                                        <label className="block text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider mb-1 flex items-center gap-1">
+                                            <Clock size={12} /> Pending Images
+                                        </label>
+                                        <input
+                                            type="number"
+                                            placeholder="0"
+                                            value={projectReport.pendingImages}
+                                            onChange={(e) => setProjectReport({ ...projectReport, pendingImages: e.target.value })}
+                                            className="w-full bg-transparent font-black text-xl text-amber-700 dark:text-amber-300 outline-none"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* 4. Remarks */}
+                                <div className="space-y-2">
+                                    <label className="block text-xs font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                                        Remarks & Key Observations (Optional)
+                                    </label>
+                                    <textarea
+                                        rows={2}
+                                        placeholder="Add notes, client feedback, or revision details..."
+                                        value={projectReport.remarks}
+                                        onChange={(e) => setProjectReport({ ...projectReport, remarks: e.target.value })}
+                                        className="w-full bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 rounded-2xl p-4 font-medium text-slate-700 dark:text-slate-200 outline-none focus:border-blue-500 text-sm transition-all"
+                                    ></textarea>
+                                </div>
+
+                                {/* 5. Collapsible Section for Additional Details (Meetings, Measurements, Specs) */}
+                                <div className="space-y-3 pt-2">
+                                    <div className="flex items-center justify-between">
+                                        <p className="text-xs font-black text-slate-400 uppercase tracking-wider">Additional Detailed Modules (Optional)</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenAccordion(openAccordion === 'meetings' ? null : 'meetings')}
+                                            className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                                                openAccordion === 'meetings'
+                                                    ? 'bg-blue-50 dark:bg-blue-900/30 border-blue-300 dark:border-blue-700'
+                                                    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <MessageCircle size={16} className="text-blue-500" />
+                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Meetings</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
+                                                {projectReport.onlineMeetings.length + projectReport.showroomMeetings.length}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenAccordion(openAccordion === 'measurements' ? null : 'measurements')}
+                                            className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                                                openAccordion === 'measurements'
+                                                    ? 'bg-purple-50 dark:bg-purple-900/30 border-purple-300 dark:border-purple-700'
+                                                    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <PenTool size={16} className="text-purple-500" />
+                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Measurements</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
+                                                {projectReport.measurements.length}
+                                            </span>
+                                        </button>
+
+                                        <button
+                                            type="button"
+                                            onClick={() => setOpenAccordion(openAccordion === 'specs' ? null : 'specs')}
+                                            className={`p-3 rounded-2xl border text-left flex items-center justify-between transition-all ${
+                                                openAccordion === 'specs'
+                                                    ? 'bg-pink-50 dark:bg-pink-900/30 border-pink-300 dark:border-pink-700'
+                                                    : 'bg-slate-50 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700'
+                                            }`}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                                <Layers size={16} className="text-pink-500" />
+                                                <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Specs & Colours</span>
+                                            </div>
+                                            <span className="text-[10px] font-bold bg-white dark:bg-slate-700 px-2 py-0.5 rounded-full text-slate-600 dark:text-slate-300">
+                                                {projectReport.requirements.length + projectReport.colours.length}
+                                            </span>
+                                        </button>
+                                    </div>
+
+                                    {/* Accordion 1: Meetings */}
+                                    {openAccordion === 'meetings' && (
+                                        <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4 animate-in fade-in">
+                                            {/* Online Meeting */}
+                                            <div className="space-y-3">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase flex items-center gap-2">
+                                                        <MessageCircle size={14} className="text-blue-500" /> Online Meeting Log
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addRow('onlineMeetings', { date: new Date().toLocaleDateString('en-CA'), startTime: '', endTime: '', discussion: '' })}
+                                                        className="text-xs font-bold bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 px-3 py-1 rounded-xl hover:bg-blue-200"
+                                                    >
+                                                        + Add Online Meeting
+                                                    </button>
+                                                </div>
+                                                {projectReport.onlineMeetings.map((row, idx) => (
+                                                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                                                        <input type="date" value={row.date} onChange={e => updateRow('onlineMeetings', idx, 'date', e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+                                                        <input type="time" placeholder="Start" value={row.startTime} onChange={e => updateRow('onlineMeetings', idx, 'startTime', e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+                                                        <input type="text" placeholder="Discussed details..." value={row.discussion} onChange={e => updateRow('onlineMeetings', idx, 'discussion', e.target.value)} className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 outline-none sm:col-span-1" />
+                                                        <div className="flex justify-end items-center">
+                                                            <button type="button" onClick={() => removeRow('onlineMeetings', idx)} className="text-rose-500 hover:text-rose-700 p-1">
+                                                                <Trash2 size={16} />
                                                             </button>
                                                         </div>
-
-                                                        {isCreatingProject ? (
-                                                            <div className="space-y-3 mt-2 animate-in fade-in slide-in-from-top-2">
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Project / Client Name"
-                                                                    value={newProject.name}
-                                                                    onChange={(e) => setNewProject({ ...newProject, name: e.target.value })}
-                                                                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none border border-slate-200 dark:border-slate-800 text-sm"
-                                                                />
-                                                                <input
-                                                                    type="text"
-                                                                    placeholder="Location (optional)"
-                                                                    value={newProject.location}
-                                                                    onChange={(e) => setNewProject({ ...newProject, location: e.target.value })}
-                                                                    className="w-full bg-white dark:bg-slate-900 p-3 rounded-xl font-bold text-slate-700 dark:text-white outline-none border border-slate-200 dark:border-slate-800 text-sm"
-                                                                />
-                                                                <button
-                                                                    type="button"
-                                                                    onClick={handleCreateProject}
-                                                                    disabled={isSubmitting}
-                                                                    className="w-full bg-blue-600 text-white font-black py-3 rounded-xl text-xs uppercase tracking-widest hover:bg-blue-700 transition-all shadow-lg shadow-blue-200/50"
-                                                                >
-                                                                    {isSubmitting ? 'Creating...' : 'Add Project & Select'}
-                                                                </button>
-                                                            </div>
-                                                        ) : (
-                                                            <select name="projectId" value={projectReport.projectId} onChange={handleProjectSelect} className="w-full bg-transparent font-bold text-slate-700 dark:text-white outline-none text-lg">
-                                                                <option value="" className="dark:bg-slate-900 text-slate-400">-- Select Project --</option>
-                                                                {projects?.map(p => (
-                                                                    <option key={p.id} value={p.id} className="dark:bg-slate-900">{p.name}</option>
-                                                                ))}
-                                                            </select>
-                                                        )}
                                                     </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                                    <div className="bg-slate-50/80 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors">
-                                                        <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Process / Task</label>
-                                                        <input type="text" value={projectReport.process} onChange={(e) => setProjectReport({ ...projectReport, process: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 dark:text-slate-200 outline-none" placeholder="e.g. 3D Modeling" />
-                                                    </div>
-                                                    <div className="bg-slate-50/80 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors">
-                                                        <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Image Reference (#)</label>
-                                                        <input type="number" value={projectReport.imageCount} onChange={(e) => setProjectReport({ ...projectReport, imageCount: e.target.value })} className="w-full bg-transparent font-bold text-slate-700 dark:text-slate-200 outline-none" placeholder="0" />
-                                                    </div>
-                                                </div>
-
-                                                <div className="grid grid-cols-2 gap-6">
-                                                <div className="bg-slate-50/80 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 transition-colors">
-                                                    <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> Start Time</label>
-                                                    <div className="text-sm font-bold text-slate-700 dark:text-slate-300 italic">
-                                                        {projectStartTime || 'Selecting...'}
-                                                    </div>
-                                                </div>
-                                                <div className="bg-slate-50/80 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 transition-colors">
-                                                    <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2 flex items-center gap-1"><Clock size={12} /> Log Time</label>
-                                                    <div className="text-sm font-bold text-slate-700 dark:text-slate-300 italic">
-                                                        {new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })}
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 gap-6">
-                                                <div className="p-4 rounded-2xl border border-green-200 dark:border-green-900/30 bg-green-50/50 dark:bg-green-900/10 hover:bg-green-50 dark:hover:bg-green-900/20 transition-colors">
-                                                    <label className="block text-[9px] font-black text-green-600 dark:text-green-400 uppercase mb-1">Completed</label>
-                                                    <input type="number" value={projectReport.completedImages} onChange={(e) => setProjectReport({ ...projectReport, completedImages: e.target.value })} className="w-full bg-transparent font-black text-green-800 dark:text-green-300 text-2xl outline-none" placeholder="0" />
-                                                </div>
-                                                <div className="p-4 rounded-2xl border border-orange-200 dark:border-orange-900/30 bg-orange-50/50 dark:bg-orange-900/10 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors">
-                                                    <label className="block text-[9px] font-black text-orange-600 dark:text-orange-400 uppercase mb-1">Pending</label>
-                                                    <input type="number" value={projectReport.pendingImages} onChange={(e) => setProjectReport({ ...projectReport, pendingImages: e.target.value })} className="w-full bg-transparent font-black text-orange-800 dark:text-orange-300 text-2xl outline-none" placeholder="0" />
-                                                </div>
-                                            </div>
-
-                                            <div className="bg-slate-50/80 dark:bg-slate-800/50 p-4 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors transition-colors">
-                                                <label className="block text-[9px] font-black text-slate-400 dark:text-slate-500 uppercase mb-2">Remarks</label>
-                                                <textarea value={projectReport.remarks} onChange={(e) => setProjectReport({ ...projectReport, remarks: e.target.value })} className="w-full bg-transparent font-medium text-slate-600 dark:text-slate-400 outline-none text-sm resize-none" rows="2" placeholder="Any issues or notes..."></textarea>
-                                            </div>
-
-                                            {/* Detailed Sections Divider */}
-                                            <div className="relative py-4">
-                                                <div className="absolute inset-0 flex items-center">
-                                                    <div className="w-full border-t border-slate-200 dark:border-slate-800 transition-colors"></div>
-                                                </div>
-                                                <div className="relative flex justify-center">
-                                                    <span className="bg-white dark:bg-slate-900 px-4 text-sm text-slate-400 dark:text-slate-500 font-bold uppercase tracking-widest transition-colors">Additional Details (Optional)</span>
-                                                </div>
-                                            </div>
-
-                                                {/* 1. Online Meeting */}
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <label className="text-sm font-black text-slate-700 uppercase flex items-center gap-2"><MessageCircle size={16} className="text-blue-500" /> Online Meeting</label>
-                                                        <button type="button" onClick={() => addRow('onlineMeetings', { date: '', startTime: '', endTime: '', discussion: '' })} className="text-xs bg-blue-50 text-blue-600 px-3 py-1.5 rounded-lg font-bold hover:bg-blue-100 transition-colors">+ Add Row</button>
-                                                    </div>
-                                                    {projectReport.onlineMeetings.length > 0 && (
-                                                        <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                                                            <table className="w-full text-left text-sm">
-                                                                <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase">
-                                                                    <tr>
-                                                                        <th className="px-4 py-3 w-16">#</th>
-                                                                        <th className="px-4 py-3 w-32">Date</th>
-                                                                        <th className="px-4 py-3 w-28">Start Time</th>
-                                                                        <th className="px-4 py-3 w-28">End Time</th>
-                                                                        <th className="px-4 py-3">Discussed On</th>
-                                                                        <th className="px-4 py-3 w-10"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-slate-100">
-                                                                    {projectReport.onlineMeetings.map((row, idx) => (
-                                                                        <tr key={idx} className="bg-white hover:bg-slate-50/50">
-                                                                            <td className="px-4 py-2 font-mono text-slate-500">{idx + 1}</td>
-                                                                            <td className="px-4 py-2"><input type="date" value={row.date} onChange={e => updateRow('onlineMeetings', idx, 'date', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="time" value={row.startTime} onChange={e => updateRow('onlineMeetings', idx, 'startTime', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="time" value={row.endTime} onChange={e => updateRow('onlineMeetings', idx, 'endTime', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="text" value={row.discussion} onChange={e => updateRow('onlineMeetings', idx, 'discussion', e.target.value)} className="w-full bg-transparent outline-none font-medium text-slate-600" placeholder="Discussion points..." /></td>
-                                                                            <td className="px-4 py-2 text-center"><button type="button" onClick={() => removeRow('onlineMeetings', idx)} className="text-red-400 hover:text-red-500"><Plus size={16} className="rotate-45" /></button></td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* 2. Measurements */}
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <label className="text-sm font-black text-slate-700 uppercase flex items-center gap-2"><PenTool size={16} className="text-purple-500" /> Measurements</label>
-                                                        <button type="button" onClick={() => addRow('measurements', { aeName: '', date: '', discussion: '' })} className="text-xs bg-purple-50 text-purple-600 px-3 py-1.5 rounded-lg font-bold hover:bg-purple-100 transition-colors">+ Add Row</button>
-                                                    </div>
-                                                    {projectReport.measurements.length > 0 && (
-                                                        <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                                                            <table className="w-full text-left text-sm">
-                                                                <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase">
-                                                                    <tr>
-                                                                        <th className="px-4 py-3">AE Name</th>
-                                                                        <th className="px-4 py-3 w-40">Date</th>
-                                                                        <th className="px-4 py-3">Discussed On</th>
-                                                                        <th className="px-4 py-3 w-10"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-slate-100">
-                                                                    {projectReport.measurements.map((row, idx) => (
-                                                                        <tr key={idx} className="bg-white hover:bg-slate-50/50">
-                                                                            <td className="px-4 py-2"><input type="text" value={row.aeName} onChange={e => updateRow('measurements', idx, 'aeName', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700" placeholder="AE Name" /></td>
-                                                                            <td className="px-4 py-2"><input type="date" value={row.date} onChange={e => updateRow('measurements', idx, 'date', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="text" value={row.discussion} onChange={e => updateRow('measurements', idx, 'discussion', e.target.value)} className="w-full bg-transparent outline-none font-medium text-slate-600" placeholder="Details..." /></td>
-                                                                            <td className="px-4 py-2 text-center"><button type="button" onClick={() => removeRow('measurements', idx)} className="text-red-400 hover:text-red-500"><Plus size={16} className="rotate-45" /></button></td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* 3. Showroom Meeting */}
-                                                <div className="space-y-4">
-                                                    <div className="flex items-center justify-between">
-                                                        <label className="text-sm font-black text-slate-700 uppercase flex items-center gap-2"><Users size={16} className="text-orange-500" /> Showroom Meeting</label>
-                                                        <button type="button" onClick={() => addRow('showroomMeetings', { date: '', startTime: '', endTime: '', discussion: '' })} className="text-xs bg-orange-50 text-orange-600 px-3 py-1.5 rounded-lg font-bold hover:bg-orange-100 transition-colors">+ Add Row</button>
-                                                    </div>
-                                                    {projectReport.showroomMeetings.length > 0 && (
-                                                        <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                                                            <table className="w-full text-left text-sm">
-                                                                <thead className="bg-slate-50 text-slate-400 font-bold text-[10px] uppercase">
-                                                                    <tr>
-                                                                        <th className="px-4 py-3 w-16">#</th>
-                                                                        <th className="px-4 py-3 w-32">Date</th>
-                                                                        <th className="px-4 py-3 w-28">Start Time</th>
-                                                                        <th className="px-4 py-3 w-28">End Time</th>
-                                                                        <th className="px-4 py-3">Discussed On</th>
-                                                                        <th className="px-4 py-3 w-10"></th>
-                                                                    </tr>
-                                                                </thead>
-                                                                <tbody className="divide-y divide-slate-100">
-                                                                    {projectReport.showroomMeetings.map((row, idx) => (
-                                                                        <tr key={idx} className="bg-white hover:bg-slate-50/50">
-                                                                            <td className="px-4 py-2 font-mono text-slate-500">{idx + 1}</td>
-                                                                            <td className="px-4 py-2"><input type="date" value={row.date} onChange={e => updateRow('showroomMeetings', idx, 'date', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="time" value={row.startTime} onChange={e => updateRow('showroomMeetings', idx, 'startTime', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="time" value={row.endTime} onChange={e => updateRow('showroomMeetings', idx, 'endTime', e.target.value)} className="w-full bg-transparent outline-none font-bold text-slate-700 text-xs" /></td>
-                                                                            <td className="px-4 py-2"><input type="text" value={row.discussion} onChange={e => updateRow('showroomMeetings', idx, 'discussion', e.target.value)} className="w-full bg-transparent outline-none font-medium text-slate-600" placeholder="Discussion points..." /></td>
-                                                                            <td className="px-4 py-2 text-center"><button type="button" onClick={() => removeRow('showroomMeetings', idx)} className="text-red-400 hover:text-red-500"><Plus size={16} className="rotate-45" /></button></td>
-                                                                        </tr>
-                                                                    ))}
-                                                                </tbody>
-                                                            </table>
-                                                        </div>
-                                                    )}
-                                                </div>
-
-                                                {/* 4. Requirements & Colours Grid */}
-                                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                                                    {/* Requirements - Treated as simple list */}
-                                                    <div className="space-y-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <label className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase flex items-center gap-2 transition-colors"><FileText size={16} className="text-pink-500" /> Requirements</label>
-                                                            <button type="button" onClick={() => addRow('requirements', '')} className="text-xs bg-pink-50 dark:bg-pink-900/20 text-pink-600 dark:text-pink-400 px-3 py-1.5 rounded-lg font-bold hover:bg-pink-100 dark:hover:bg-pink-900/40 transition-colors">+ Add Item</button>
-                                                        </div>
-                                                        {projectReport.requirements.length > 0 && (
-                                                            <div className="space-y-2">
-                                                                {projectReport.requirements.map((req, idx) => (
-                                                                    <div key={idx} className="flex gap-2">
-                                                                        <input type="text" value={req} onChange={e => updateRow('requirements', idx, null, e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl px-4 py-2 font-medium text-slate-600 dark:text-slate-300 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-pink-200 dark:focus:border-pink-900/50 border transition-all" placeholder="Requirement detail..." />
-                                                                        <button type="button" onClick={() => removeRow('requirements', idx)} className="text-slate-300 hover:text-red-400"><Plus size={18} className="rotate-45" /></button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-
-                                                    {/* Colours - Treated as simple list for now, or key-value if needed later */}
-                                                    <div className="space-y-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <label className="text-sm font-black text-slate-700 dark:text-slate-200 uppercase flex items-center gap-2 transition-colors"><Layout size={16} className="text-teal-500" /> Colours</label>
-                                                            <button type="button" onClick={() => addRow('colours', '')} className="text-xs bg-teal-50 dark:bg-teal-900/20 text-teal-600 dark:text-teal-400 px-3 py-1.5 rounded-lg font-bold hover:bg-teal-100 dark:hover:bg-teal-900/40 transition-colors">+ Add Colour</button>
-                                                        </div>
-                                                        {projectReport.colours.length > 0 && (
-                                                            <div className="space-y-2">
-                                                                {projectReport.colours.map((col, idx) => (
-                                                                    <div key={idx} className="flex gap-2">
-                                                                        <input type="text" value={col} onChange={e => updateRow('colours', idx, null, e.target.value)} className="flex-1 bg-slate-50 dark:bg-slate-800 border-slate-100 dark:border-slate-800 rounded-xl px-4 py-2 font-medium text-slate-600 dark:text-slate-300 text-sm outline-none focus:bg-white dark:focus:bg-slate-700 focus:border-teal-200 dark:focus:border-teal-900/50 border transition-all" placeholder="Colour specification..." />
-                                                                        <button type="button" onClick={() => removeRow('colours', idx)} className="text-slate-300 hover:text-red-400"><Plus size={18} className="rotate-45" /></button>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                </div>
-
-                                                <button type="submit" disabled={isSubmitting || isLoading} className="w-full bg-slate-900 dark:bg-primary-dark hover:bg-black dark:hover:bg-primary text-white font-bold py-5 rounded-2xl shadow-xl hover:shadow-2xl hover:scale-[1.01] transition-all flex justify-center items-center gap-3 active:scale-[0.98]">
-                                                {isSubmitting || isLoading ? 'Adding...' : <><Plus className="bg-white/20 rounded-full p-1" size={24} /> <span className="text-lg">Add Report Entry</span></>}
-                                            </button>
-                                            </form>
-                                        </div>
-
-                                        {/* List */}
-                                        <div className="space-y-4">
-                                        <h4 className="font-black text-slate-400 dark:text-slate-500 text-xs uppercase px-4 flex items-center justify-between transition-colors">
-                                            <span>Today's Entries</span>
-                                            <span className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded-lg text-slate-500 dark:text-slate-400 transition-colors">{todayLog?.la_project_reports ? (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports).length : todayLog.la_project_reports.length) : 0}</span>
-                                        </h4>
-                                            {todayLog && todayLog.la_project_reports &&
-                                                (typeof todayLog.la_project_reports === 'string' ? JSON.parse(todayLog.la_project_reports) : todayLog.la_project_reports).map((r, idx) => (
-                                                    <motion.div
-                                                        initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
-                                                        key={idx} className="bg-white dark:bg-slate-900 p-5 border border-slate-100 dark:border-slate-800 rounded-3xl shadow-sm hover:shadow-md dark:hover:border-slate-700 transition-all flex justify-between items-center group cursor-default transition-all"
-                                                    >
-                                                        <div>
-                                                            <p className="font-black text-slate-800 dark:text-white text-base mb-1 transition-colors">{r.clientName || 'Unknown Project'}</p>
-                                                            <div className="flex items-center gap-3">
-                                                                <span className="text-[10px] font-bold uppercase text-white bg-violet-500 px-2 py-0.5 rounded-md transition-colors">{r.process}</span>
-                                                                <span className="text-[10px] text-slate-400 dark:text-slate-500 font-bold flex items-center gap-1 bg-slate-50 dark:bg-slate-800 px-2 py-0.5 rounded-md transition-colors"><Clock size={10} /> {r.startTime} - {r.endTime}</span>
-                                                            </div>
-                                                        </div>
-                                                        <div className="text-right">
-                                                            <div className="flex items-center gap-1 bg-slate-900 dark:bg-slate-800 text-white px-4 py-2 rounded-xl font-bold font-mono transition-colors">
-                                                                <span className="text-emerald-400 transition-colors">{r.completedImages}</span>
-                                                                <span className="text-slate-500 transition-colors">/</span>
-                                                                <span className="text-slate-400 transition-colors">{r.imageCount}</span>
-                                                            </div>
-                                                        </div>
-                                                    </motion.div>
                                                 ))}
+                                            </div>
+
+                                            {/* Showroom Meeting */}
+                                            <div className="space-y-3 pt-3 border-t border-slate-200 dark:border-slate-700">
+                                                <div className="flex justify-between items-center">
+                                                    <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase flex items-center gap-2">
+                                                        <Users size={14} className="text-amber-500" /> Showroom Meeting Log
+                                                    </span>
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => addRow('showroomMeetings', { date: new Date().toLocaleDateString('en-CA'), startTime: '', endTime: '', discussion: '' })}
+                                                        className="text-xs font-bold bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-xl hover:bg-amber-200"
+                                                    >
+                                                        + Add Showroom Meeting
+                                                    </button>
+                                                </div>
+                                                {projectReport.showroomMeetings.map((row, idx) => (
+                                                    <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                                                        <input type="date" value={row.date} onChange={e => updateRow('showroomMeetings', idx, 'date', e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+                                                        <input type="time" placeholder="Start" value={row.startTime} onChange={e => updateRow('showroomMeetings', idx, 'startTime', e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+                                                        <input type="text" placeholder="Discussed points..." value={row.discussion} onChange={e => updateRow('showroomMeetings', idx, 'discussion', e.target.value)} className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 outline-none" />
+                                                        <div className="flex justify-end items-center">
+                                                            <button type="button" onClick={() => removeRow('showroomMeetings', idx)} className="text-rose-500 hover:text-rose-700 p-1">
+                                                                <Trash2 size={16} />
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+
+                                    {/* Accordion 2: Measurements */}
+                                    {openAccordion === 'measurements' && (
+                                        <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-3 animate-in fade-in">
+                                            <div className="flex justify-between items-center">
+                                                <span className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase flex items-center gap-2">
+                                                    <PenTool size={14} className="text-purple-500" /> Site Measurements with AE
+                                                </span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => addRow('measurements', { aeName: '', date: new Date().toLocaleDateString('en-CA'), discussion: '' })}
+                                                    className="text-xs font-bold bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300 px-3 py-1 rounded-xl hover:bg-purple-200"
+                                                >
+                                                    + Add AE Measurement
+                                                </button>
+                                            </div>
+                                            {projectReport.measurements.map((row, idx) => (
+                                                <div key={idx} className="grid grid-cols-1 sm:grid-cols-4 gap-2 bg-white dark:bg-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                                                    <input type="text" placeholder="AE Name" value={row.aeName} onChange={e => updateRow('measurements', idx, 'aeName', e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+                                                    <input type="date" value={row.date} onChange={e => updateRow('measurements', idx, 'date', e.target.value)} className="bg-transparent text-xs font-bold text-slate-800 dark:text-slate-200 outline-none" />
+                                                    <input type="text" placeholder="Measurement details..." value={row.discussion} onChange={e => updateRow('measurements', idx, 'discussion', e.target.value)} className="bg-transparent text-xs font-medium text-slate-700 dark:text-slate-300 outline-none" />
+                                                    <div className="flex justify-end items-center">
+                                                        <button type="button" onClick={() => removeRow('measurements', idx)} className="text-rose-500 hover:text-rose-700 p-1">
+                                                            <Trash2 size={16} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Accordion 3: Specs & Colours */}
+                                    {openAccordion === 'specs' && (
+                                        <div className="p-5 bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-slate-200 dark:border-slate-700 space-y-4 animate-in fade-in">
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                {/* Requirements */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Requirements</span>
+                                                        <button type="button" onClick={() => addRow('requirements', '')} className="text-[11px] font-bold text-pink-600 hover:underline">+ Add</button>
+                                                    </div>
+                                                    {projectReport.requirements.map((req, idx) => (
+                                                        <div key={idx} className="flex gap-2">
+                                                            <input type="text" placeholder="e.g. Master Bedroom Wardrobe" value={req} onChange={e => updateRow('requirements', idx, null, e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-white outline-none" />
+                                                            <button type="button" onClick={() => removeRow('requirements', idx)} className="text-rose-400 hover:text-rose-600"><X size={16} /></button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+
+                                                {/* Colours */}
+                                                <div className="space-y-2">
+                                                    <div className="flex justify-between items-center">
+                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-200">Colour Codes</span>
+                                                        <button type="button" onClick={() => addRow('colours', '')} className="text-[11px] font-bold text-teal-600 hover:underline">+ Add</button>
+                                                    </div>
+                                                    {projectReport.colours.map((col, idx) => (
+                                                        <div key={idx} className="flex gap-2">
+                                                            <input type="text" placeholder="e.g. SF 102 High Gloss White" value={col} onChange={e => updateRow('colours', idx, null, e.target.value)} className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-1.5 text-xs font-medium text-slate-800 dark:text-white outline-none" />
+                                                            <button type="button" onClick={() => removeRow('colours', idx)} className="text-rose-400 hover:text-rose-600"><X size={16} /></button>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Submit Button */}
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting || isLoading}
+                                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 rounded-2xl shadow-xl shadow-blue-500/20 hover:scale-[1.01] transition-all flex justify-center items-center gap-2 active:scale-95"
+                                >
+                                    {isSubmitting ? 'Saving Entry...' : (
+                                        <>
+                                            <Plus size={20} />
+                                            <span>Add Project Report Entry</span>
+                                        </>
+                                    )}
+                                </button>
+                            </form>
+                        </div>
+
+                        {/* Project Wise Entries Search & List */}
+                        <div className="bg-white dark:bg-slate-900 p-6 sm:p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-xl space-y-6">
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
+                                <div>
+                                    <h3 className="text-xl font-black text-slate-800 dark:text-white flex items-center gap-2">
+                                        <span>Today's Project Entries</span>
+                                        <span className="text-xs bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300 font-bold px-2.5 py-0.5 rounded-full font-mono">
+                                            {projectReportsList.length}
+                                        </span>
+                                    </h3>
+                                    <p className="text-xs font-bold text-slate-400 uppercase tracking-wider">Filtered list of tasks recorded for today</p>
+                                </div>
+
+                                {/* Search Bar for Project Reports */}
+                                <div className="relative min-w-[260px]">
+                                    <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <input
+                                        type="text"
+                                        placeholder="Search project, process, site..."
+                                        value={entriesSearchQuery}
+                                        onChange={(e) => setEntriesSearchQuery(e.target.value)}
+                                        className="w-full bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl pl-9 pr-8 py-2 text-xs font-bold text-slate-800 dark:text-white outline-none focus:border-blue-500"
+                                    />
+                                    {entriesSearchQuery && (
+                                        <button
+                                            type="button"
+                                            onClick={() => setEntriesSearchQuery('')}
+                                            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                                        >
+                                            <X size={14} />
+                                        </button>
+                                    )}
+                                </div>
                             </div>
-                        )}
+
+                            {/* Entries List */}
+                            <div className="space-y-3">
+                                {projectReportsList.length === 0 ? (
+                                    <div className="p-12 text-center text-slate-400 bg-slate-50/50 dark:bg-slate-800/30 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 space-y-2">
+                                        <Briefcase size={36} className="mx-auto text-slate-300" />
+                                        <p className="font-bold text-sm">No project reports logged yet for today.</p>
+                                        <p className="text-xs text-slate-400">Select a project above and click "Add Project Report Entry".</p>
+                                    </div>
+                                ) : filteredEntries.length === 0 ? (
+                                    <div className="p-8 text-center text-slate-400">
+                                        <p className="font-bold text-sm">No project entries matching "{entriesSearchQuery}"</p>
+                                    </div>
+                                ) : (
+                                    filteredEntries.map((entry, idx) => (
+                                        <div
+                                            key={idx}
+                                            className="bg-slate-50/80 dark:bg-slate-800/50 p-5 rounded-2xl border border-slate-200 dark:border-slate-700/60 hover:border-blue-200 dark:hover:border-slate-600 transition-all flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                                        >
+                                            <div className="space-y-1.5">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-black text-slate-800 dark:text-white text-base">
+                                                        {entry.clientName || 'Unnamed Project'}
+                                                    </span>
+                                                    {entry.site && (
+                                                        <span className="text-[10px] bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 font-bold px-2 py-0.5 rounded-md">
+                                                            📍 {entry.site}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                <div className="flex flex-wrap items-center gap-2 text-xs">
+                                                    <span className="bg-blue-600 text-white font-bold px-2 py-0.5 rounded-md text-[10px] uppercase">
+                                                        {entry.process || 'Task'}
+                                                    </span>
+                                                    <span className="text-slate-500 font-bold flex items-center gap-1 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-2 py-0.5 rounded-md text-[10px]">
+                                                        <Clock size={11} /> {entry.startTime || '--:--'} - {entry.endTime || '--:--'}
+                                                    </span>
+                                                    {entry.remarks && (
+                                                        <span className="text-slate-500 dark:text-slate-400 italic text-xs">
+                                                            "{entry.remarks}"
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Deliverables summary */}
+                                            <div className="flex items-center gap-3 self-end sm:self-center">
+                                                <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 px-4 py-2 rounded-xl text-right">
+                                                    <p className="text-[9px] font-black text-slate-400 uppercase">Completed / Ref</p>
+                                                    <p className="text-sm font-black font-mono">
+                                                        <span className="text-emerald-600 dark:text-emerald-400">{entry.completedImages || 0}</span>
+                                                        <span className="text-slate-400"> / </span>
+                                                        <span className="text-slate-700 dark:text-slate-300">{entry.imageCount || 0}</span>
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </div>
                     </motion.div>
                 )}
             </AnimatePresence>
@@ -793,31 +1163,25 @@ const LAWorkLogForm = ({ onSuccess }) => {
     );
 };
 
-// Sub-component for the Metrics Grid
-const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading, hasProjectReports = true, onGoToProject }) => {
+// Sub-component: Clean Card-Based Metrics Form
+const MetricsGridForm = ({
+    data,
+    setData,
+    onSubmit,
+    type,
+    isSubmitting,
+    isLoading,
+    hasProjectReports = true,
+    onGoToProject,
+    dailyNotes,
+    setDailyNotes
+}) => {
     const update = (key, field, val) => {
         setData(prev => ({ ...prev, [key]: { ...prev[key], [field]: val } }));
     };
 
     const isOpening = type === 'opening';
     const isClosingBlocked = !isOpening && !hasProjectReports;
-    const btnColor = isOpening ? 'bg-blue-600' : (isClosingBlocked ? 'bg-slate-400 dark:bg-slate-700 cursor-not-allowed' : 'bg-emerald-600');
-
-    // Config with Icons
-    const fields = [
-        { key: 'initial2D', label: 'Initial 2D', icon: PenTool },
-        { key: 'production2D', label: 'Production 2D', icon: Layout },
-        { key: 'revised2D', label: 'Revised 2D', icon: FileText },
-        { key: 'fresh3D', label: 'Fresh 3D', icon: Box },
-        { key: 'revised3D', label: 'Revised 3D', icon: Box },
-        { key: 'estimation', label: 'Estimation', icon: DollarSign },
-        { key: 'woe', label: 'W.O.E', icon: Briefcase },
-        { key: 'onlineDiscussion', label: 'Online Disc.', icon: MessageCircle },
-        { key: 'showroomDiscussion', label: 'Showroom Disc.', icon: Users },
-        { key: 'signFromEngineer', label: 'Sign Engineers', icon: FileText },
-        { key: 'siteVisit', label: 'Site Visit', icon: MapPin },
-        { key: 'infurnia', label: 'Infurnia', icon: Monitor },
-    ];
 
     return (
         <form onSubmit={onSubmit} className="space-y-6">
@@ -827,7 +1191,9 @@ const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading, h
                         <AlertTriangle className="flex-shrink-0 text-amber-500" size={22} />
                         <div>
                             <p className="text-xs font-black uppercase tracking-wider">Project Wise Report Required</p>
-                            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">You must add at least one Project Wise report before submitting your Closing Report.</p>
+                            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
+                                You must add at least one Project Wise report entry before submitting your Closing Report.
+                            </p>
                         </div>
                     </div>
                     {onGoToProject && (
@@ -842,76 +1208,112 @@ const MetricsForm = ({ data, setData, onSubmit, type, isSubmitting, isLoading, h
                 </div>
             )}
 
-            <div className="border border-slate-100 dark:border-slate-800 rounded-[1.5rem] overflow-hidden bg-white dark:bg-slate-900 shadow-sm transition-colors">
-                <table className="w-full text-left">
-                    <thead className="bg-slate-50 dark:bg-slate-800 border-b border-slate-100 dark:border-slate-700 transition-colors">
-                        <tr>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest w-1/3">Metric Category</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest w-24 text-center">Count</th>
-                            <th className="px-6 py-4 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-widest">Details / Notes</th>
-                        </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-50 dark:divide-slate-800 transition-colors">
-                        {fields.map((f) => {
-                            const Icon = f.icon;
-                            return (
-                                <tr key={f.key} className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors">
-                                    <td className="px-6 py-4">
-                                        <div className="flex items-center gap-3">
-                                            <div className="p-2 bg-slate-100 dark:bg-slate-800 rounded-lg text-slate-400 dark:text-slate-500 group-hover:text-blue-500 group-hover:bg-blue-50 dark:group-hover:bg-blue-900/20 transition-colors">
-                                                <Icon size={16} />
+            {/* Structured Metric Categories */}
+            <div className="space-y-6">
+                {['2D Drafting', '3D Visualization', 'Commercials', 'Meetings & Site'].map((category) => {
+                    const fieldsInCat = METRIC_FIELDS.filter(f => f.category === category);
+                    return (
+                        <div key={category} className="space-y-3">
+                            <h4 className="text-xs font-black uppercase tracking-widest text-slate-400 dark:text-slate-500 pl-1">
+                                {category}
+                            </h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                                {fieldsInCat.map((f) => {
+                                    const Icon = f.icon;
+                                    const countVal = data[f.key]?.count ?? '';
+                                    const detailsVal = data[f.key]?.details ?? '';
+
+                                    return (
+                                        <div
+                                            key={f.key}
+                                            className="bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 hover:border-blue-400 dark:hover:border-slate-700 transition-all space-y-2.5"
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="p-2 bg-white dark:bg-slate-700/60 rounded-xl text-blue-600 dark:text-blue-400 shadow-sm">
+                                                        <Icon size={16} />
+                                                    </div>
+                                                    <span className="text-xs font-black text-slate-800 dark:text-slate-200">
+                                                        {f.label}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            <span className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wide group-hover:text-slate-800 dark:group-hover:text-white">{f.label}</span>
+
+                                            <div className="flex items-center gap-2">
+                                                <div className="w-24 flex-shrink-0">
+                                                    <input
+                                                        type="number"
+                                                        placeholder="Count: 0"
+                                                        value={countVal}
+                                                        onChange={(e) => update(f.key, 'count', e.target.value)}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-center font-black text-sm text-slate-800 dark:text-white outline-none focus:border-blue-500"
+                                                    />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Notes / Project..."
+                                                        value={detailsVal}
+                                                        onChange={(e) => {
+                                                            const detailsVal = e.target.value;
+                                                            setData(prev => {
+                                                                const curCount = prev[f.key]?.count;
+                                                                const newCount = (detailsVal.trim() && (!curCount || curCount === '0' || curCount === 0)) ? 1 : curCount;
+                                                                return {
+                                                                    ...prev,
+                                                                    [f.key]: {
+                                                                        ...prev[f.key],
+                                                                        details: detailsVal,
+                                                                        count: newCount
+                                                                    }
+                                                                };
+                                                            });
+                                                        }}
+                                                        className="w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-xs font-medium text-slate-700 dark:text-slate-300 outline-none focus:border-blue-500 placeholder:text-slate-400"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <input
-                                            type="number"
-                                            placeholder="0"
-                                            value={data[f.key].count}
-                                            onChange={(e) => update(f.key, 'count', e.target.value)}
-                                            className="w-full bg-slate-50 dark:bg-slate-800 p-2 text-center font-bold text-slate-800 dark:text-slate-200 rounded-lg text-sm outline-none border border-slate-100 dark:border-slate-700 focus:border-blue-400 dark:focus:border-blue-600 focus:bg-white dark:focus:bg-slate-700 transition-all"
-                                        />
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <input
-                                            type="text"
-                                            placeholder="Add details..."
-                                            value={data[f.key].details}
-                                            onChange={(e) => {
-                                                const detailsVal = e.target.value;
-                                                setData(prev => {
-                                                    const curCount = prev[f.key]?.count;
-                                                    const newCount = (detailsVal.trim() && (!curCount || curCount === '0' || curCount === 0)) ? 1 : curCount;
-                                                    return {
-                                                        ...prev,
-                                                        [f.key]: {
-                                                            ...prev[f.key],
-                                                            details: detailsVal,
-                                                            count: newCount
-                                                        }
-                                                    };
-                                                });
-                                            }}
-                                            className="w-full bg-transparent p-2 font-medium text-slate-600 dark:text-slate-400 text-sm outline-none border-b border-transparent focus:border-blue-200 dark:focus:border-blue-700 transition-all placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                                        />
-                                    </td>
-                                </tr>
-                            );
-                        })}
-                    </tbody>
-                </table>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                    );
+                })}
             </div>
 
-            <button 
-                type="submit" 
-                disabled={isSubmitting || isLoading || isClosingBlocked} 
-                className={`w-full ${btnColor} hover:opacity-90 text-white font-bold py-4 rounded-xl shadow-lg transition-transform ${isClosingBlocked ? '' : 'active:scale-95'} flex justify-center items-center gap-2`}
+            {/* Daily Notes (For Closing Report) */}
+            {!isOpening && setDailyNotes && (
+                <div className="bg-blue-50/50 dark:bg-blue-950/20 p-5 rounded-2xl border border-blue-200/80 dark:border-blue-900/40 space-y-2">
+                    <label className="text-xs font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                        <MessageCircle size={16} /> Daily Notes & Highlights (for Admin & HR)
+                    </label>
+                    <textarea
+                        value={dailyNotes}
+                        onChange={(e) => setDailyNotes(e.target.value)}
+                        rows={3}
+                        placeholder="Summarize daily achievements, challenges, or client approvals for management..."
+                        className="w-full bg-white dark:bg-slate-900 p-3.5 rounded-xl text-sm font-medium text-slate-700 dark:text-slate-200 outline-none border border-blue-200 dark:border-slate-700 focus:border-blue-500 placeholder:text-slate-400"
+                    ></textarea>
+                </div>
+            )}
+
+            {/* Submit Button */}
+            <button
+                type="submit"
+                disabled={isSubmitting || isLoading || isClosingBlocked}
+                className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-xl transition-all flex items-center justify-center gap-2 ${
+                    isClosingBlocked
+                        ? 'bg-slate-400 text-white cursor-not-allowed'
+                        : isOpening
+                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 active:scale-95'
+                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20 active:scale-95'
+                }`}
             >
                 {isSubmitting || isLoading ? 'Submitting...' : (
                     <>
-                        <CheckSquare size={20} /> 
-                        {isOpening ? 'Submit Opening Report' : (isClosingBlocked ? 'Add Project Wise Report First to Submit Closing' : 'Submit Closing Report')}
+                        <CheckSquare size={20} />
+                        {isOpening ? 'Submit Opening Report' : (isClosingBlocked ? 'Add Project Wise Report First' : 'Submit Final Closing Report')}
                     </>
                 )}
             </button>

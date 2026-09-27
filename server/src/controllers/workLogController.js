@@ -2,6 +2,37 @@ const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST } = require('../utils/dateHelpers');
 
+// Helper to parse time strings like "09:30", "18:45", "09:30 AM" to minutes from midnight
+const parseTimeToMinutes = (timeStr) => {
+    if (!timeStr || typeof timeStr !== 'string') return null;
+    const cleanStr = timeStr.trim();
+    // Check if format is "HH:MM" or "HH:MM:SS" (24-hour)
+    const match24 = cleanStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?$/);
+    if (match24) {
+        return parseInt(match24[1], 10) * 60 + parseInt(match24[2], 10);
+    }
+    // Check if format is 12-hour "hh:mm AM/PM"
+    const match12 = cleanStr.match(/^(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)$/i);
+    if (match12) {
+        let h = parseInt(match12[1], 10);
+        const m = parseInt(match12[2], 10);
+        const isPM = match12[4].toUpperCase() === 'PM';
+        if (h === 12) h = isPM ? 12 : 0;
+        else if (isPM) h += 12;
+        return h * 60 + m;
+    }
+    return null;
+};
+
+const calculateHoursFromTimes = (startTime, endTime) => {
+    const startMins = parseTimeToMinutes(startTime);
+    const endMins = parseTimeToMinutes(endTime);
+    if (startMins !== null && endMins !== null && endMins >= startMins) {
+        return parseFloat(((endMins - startMins) / 60).toFixed(2));
+    }
+    return null;
+};
+
 // @desc    Submit a daily work log
 // @route   POST /api/worklogs
 // @access  Private (Employee)
@@ -269,10 +300,23 @@ const closeWorkLog = async (req, res) => {
             }
         }
 
+        const finalEndTime = req.body.endTime || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+        let calculatedHours = undefined;
+        if (existingLog.startTime && finalEndTime) {
+            const diffHours = calculateHoursFromTimes(existingLog.startTime, finalEndTime);
+            if (diffHours !== null) {
+                calculatedHours = diffHours;
+            }
+        }
+        if (calculatedHours === undefined && req.body.hours) {
+            calculatedHours = parseFloat(req.body.hours);
+        }
+
         const updatedLog = await prisma.workLog.update({
             where: { id: existingLog.id },
             data: {
                 logStatus: 'CLOSED',
+                hours: calculatedHours !== undefined ? calculatedHours : existingLog.hours,
                 cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : (cre_closing_metrics ? cre_closing_metrics : undefined),
                 cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : cre_closing_metrics,
                 fa_closing_metrics: typeof fa_closing_metrics === 'string' ? JSON.parse(fa_closing_metrics) : fa_closing_metrics,
@@ -293,7 +337,7 @@ const closeWorkLog = async (req, res) => {
                 remarks: remarks || undefined,
                 cre_synced_calls: typeof req.body.cre_synced_calls === 'string' ? JSON.parse(req.body.cre_synced_calls) : req.body.cre_synced_calls,
                 notes: notes || undefined,
-                endTime: req.body.endTime || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+                endTime: finalEndTime
             }
         });
 
@@ -383,6 +427,14 @@ const addProjectReport = async (req, res) => {
         if (req.files && req.files.length > 0) {
             const photoPaths = req.files.map(file => `/uploads/${file.filename}`);
             report.ae_photos = [...(report.ae_photos || []), ...photoPaths];
+        }
+
+        // Calculate duration if startTime and endTime exist
+        if (report.startTime && report.endTime && (!report.totalHours || report.totalHours === 0)) {
+            const diff = calculateHoursFromTimes(report.startTime, report.endTime);
+            if (diff !== null) {
+                report.totalHours = diff;
+            }
         }
 
         const designation = (req.user.designation || '').toUpperCase();
