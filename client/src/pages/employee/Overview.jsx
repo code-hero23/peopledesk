@@ -1238,23 +1238,23 @@ const Overview = () => {
                                         </div>
                                     </div>
 
-                                    <div className="flex flex-wrap items-center gap-4">
+                                    <div className="flex flex-row items-center gap-3 sm:gap-4 flex-nowrap overflow-x-auto no-scrollbar py-1">
                                         {!isSessionFinished && (
                                             <motion.button
                                                 whileHover={{ scale: 1.03 }}
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => handleMarkAttendance(isSiteLogin)}
-                                                className={`px-10 py-5 ${isCheckedIn ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/25' : (isSiteLogin ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25')} text-white rounded-[2rem] font-black text-xl tracking-tight flex items-center gap-3 shadow-xl transition-all`}
+                                                className={`px-6 py-4 sm:px-8 sm:py-4.5 ${isCheckedIn ? 'bg-rose-500 hover:bg-rose-600 shadow-rose-500/25' : (isSiteLogin ? 'bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/25' : 'bg-indigo-600 hover:bg-indigo-700 shadow-indigo-600/25')} text-white rounded-[2rem] font-black text-lg sm:text-xl tracking-tight flex items-center gap-2.5 sm:gap-3 shadow-xl transition-all whitespace-nowrap shrink-0`}
                                             >
-                                                {isCheckedIn ? <LogOut size={26} /> : (isSiteLogin ? <MapPinned size={26} /> : <Monitor size={26} />)}
-                                                {isCheckedIn ? 'Finish Session' : (isSiteLogin ? 'Site Sign-In' : 'Office Sign-In')}
+                                                {isCheckedIn ? <LogOut size={24} /> : (isSiteLogin ? <MapPinned size={24} /> : <Monitor size={24} />)}
+                                                <span>{isCheckedIn ? 'Finish Session' : (isSiteLogin ? 'Site Sign-In' : 'Office Sign-In')}</span>
                                             </motion.button>
                                         )}
 
                                         {isSessionFinished && (
-                                            <div className="flex items-center gap-3 px-8 py-5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-[2rem] font-bold text-lg border border-slate-200 dark:border-slate-700 transition-colors">
-                                                <CheckCircle2 size={26} className="text-emerald-500" />
-                                                Attendance Blocked for Today
+                                            <div className="flex items-center gap-3 px-6 py-4 sm:px-8 sm:py-4.5 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 rounded-[2rem] font-bold text-base sm:text-lg border border-slate-200 dark:border-slate-700 transition-colors whitespace-nowrap shrink-0">
+                                                <CheckCircle2 size={24} className="text-emerald-500" />
+                                                <span>Attendance Blocked for Today</span>
                                             </div>
                                         )}
 
@@ -1278,20 +1278,20 @@ const Overview = () => {
                                                         setActiveModal('break');
                                                     }
                                                 }}
-                                                className={`px-10 py-5 ${
+                                                className={`px-6 py-4 sm:px-8 sm:py-4.5 ${
                                                     activeBreak 
                                                         ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-xl shadow-amber-500/30 border-2 border-amber-300/40 animate-pulse' 
                                                         : 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/30'
-                                                } rounded-[2rem] font-black text-xl tracking-tight flex items-center gap-3 transition-all`}
+                                                } rounded-[2rem] font-black text-lg sm:text-xl tracking-tight flex items-center gap-2.5 sm:gap-3 transition-all whitespace-nowrap shrink-0`}
                                             >
                                                 {activeBreak ? (
-                                                    <span className="flex items-center gap-3">
+                                                    <span className="flex items-center gap-2.5 sm:gap-3">
                                                         <span className="w-3 h-3 rounded-full bg-white animate-ping" />
                                                         End {activeBreak.breakType} Break
                                                     </span>
                                                 ) : (
                                                     <>
-                                                        <Coffee size={26} className="text-amber-100" />
+                                                        <Coffee size={24} className="text-amber-100" />
                                                         <span>Take a Break</span>
                                                     </>
                                                 )}
