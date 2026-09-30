@@ -295,14 +295,37 @@ const AttendanceVerification = () => {
 
                                         {/* Status */}
                                         <td className="px-6 py-4 align-top text-center">
-                                            <span 
-                                                className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
-                                                style={{
-                                                    backgroundColor: item.status === 'PRESENT' ? '#059669' : '#dc2626'
-                                                }}
-                                            >
-                                                {item.status}
-                                            </span>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <span 
+                                                    className="inline-flex px-3 py-1 text-[10px] font-black uppercase rounded-full tracking-wider shadow-md text-white ring-2 ring-white/20"
+                                                    style={{
+                                                        backgroundColor: item.status === 'PRESENT' ? '#059669' : '#dc2626'
+                                                    }}
+                                                >
+                                                    {item.status}
+                                                </span>
+                                                {item.status === 'ABSENT' && (item.morningPermission || item.permission) && (
+                                                    <div 
+                                                        className="mt-1 flex flex-col items-center max-w-[130px]"
+                                                        title={
+                                                            (item.morningPermission || item.permission).reason 
+                                                                ? `Permission Reason: ${(item.morningPermission || item.permission).reason}` 
+                                                                : 'Morning Permission'
+                                                        }
+                                                    >
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs whitespace-nowrap">
+                                                            <Clock size={10} className="shrink-0 text-amber-500" />
+                                                            {(item.morningPermission || item.permission?.isMorning) ? 'Morning Permission' : 'Permission'}
+                                                        </span>
+                                                        {(item.morningPermission || item.permission).startTime && (
+                                                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 font-mono whitespace-nowrap">
+                                                                {(item.morningPermission || item.permission).startTime}
+                                                                {(item.morningPermission || item.permission).endTime ? ` - ${(item.morningPermission || item.permission).endTime}` : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
                                         </td>
 
                                         {/* Sessions Evidence */}

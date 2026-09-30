@@ -79,7 +79,8 @@ const Attendance = () => {
         const term = searchTerm.toLowerCase();
         const matchesSearch = (
             record.user.name.toLowerCase().includes(term) ||
-            record.user.email.toLowerCase().includes(term)
+            record.user.email.toLowerCase().includes(term) ||
+            ((record.morningPermission || record.permission) && 'permission'.includes(term))
         );
         
         const matchesStatus = statusFilter ? record.status === statusFilter : true;
@@ -586,6 +587,29 @@ const Attendance = () => {
                                                     <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-800 text-white">
                                                         {getStatusStyles(activeStatuses.find(s => s.userId === record.user.id).breakType).label}
                                                     </span>
+                                                )}
+
+                                                {/* Morning Permission under ABSENT */}
+                                                {record.status === 'ABSENT' && (record.morningPermission || record.permission) && (
+                                                    <div 
+                                                        className="mt-1 flex flex-col items-center max-w-[130px]"
+                                                        title={
+                                                            (record.morningPermission || record.permission).reason 
+                                                                ? `Permission Reason: ${(record.morningPermission || record.permission).reason}` 
+                                                                : 'Morning Permission'
+                                                        }
+                                                    >
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 shadow-2xs whitespace-nowrap">
+                                                            <Clock size={10} className="shrink-0 text-amber-500" />
+                                                            {(record.morningPermission || record.permission?.isMorning) ? 'Morning Permission' : 'Permission'}
+                                                        </span>
+                                                        {(record.morningPermission || record.permission).startTime && (
+                                                            <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 font-mono whitespace-nowrap">
+                                                                {(record.morningPermission || record.permission).startTime}
+                                                                {(record.morningPermission || record.permission).endTime ? ` - ${(record.morningPermission || record.permission).endTime}` : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                 )}
                                             </div>
                                         </td>

@@ -891,6 +891,45 @@ const getDailyAttendance = async (req, res) => {
             }
         });
 
+        // Get permissions for the date (allow a 12h buffer to account for server/client timezone variances)
+        const bufferStart = new Date(startOfDay.getTime() - 12 * 60 * 60 * 1000);
+        const bufferEnd = new Date(endOfDay.getTime() + 12 * 60 * 60 * 1000);
+
+        const permissionRequests = await prisma.permissionRequest.findMany({
+            where: {
+                date: {
+                    gte: bufferStart,
+                    lte: bufferEnd
+                },
+                status: { not: 'REJECTED' }
+            }
+        });
+
+        // Helper to check if a time is in the morning (starts before 12 PM / contains AM)
+        const isMorningTime = (timeStr) => {
+            if (!timeStr) return false;
+            const str = String(timeStr).trim().toLowerCase();
+            if (str.includes('am')) return true;
+            const match = str.match(/^(\d{1,2}):(\d{2})/);
+            if (match) {
+                let hour = parseInt(match[1], 10);
+                if (str.includes('pm') && hour !== 12) hour += 12;
+                if (str.includes('am') && hour === 12) hour = 0;
+                return hour < 12;
+            }
+            return false;
+        };
+
+        const targetDateStr = queryDate.toISOString().split('T')[0];
+        const isSameDay = (permDate) => {
+            if (!permDate) return false;
+            const p = new Date(permDate);
+            const pUtcStr = p.toISOString().split('T')[0];
+            const pLocalStr = `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}-${String(p.getDate()).padStart(2, '0')}`;
+            const qLocalStr = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth() + 1).padStart(2, '0')}-${String(startOfDay.getDate()).padStart(2, '0')}`;
+            return pUtcStr === targetDateStr || pLocalStr === qLocalStr || pUtcStr === qLocalStr;
+        };
+
         // 3. Merge data
         const dailyReport = users.map(user => {
             // Find ALL records for this user (AEs might have multiple)
@@ -972,6 +1011,11 @@ const getDailyAttendance = async (req, res) => {
             const isOnLeave = leaveRequests.some(l => l.userId === user.id);
             const status = isPresent ? 'PRESENT' : (isOnLeave ? 'LEAVE' : 'ABSENT');
 
+            // Permissions for user
+            const userPermissions = permissionRequests.filter(p => p.userId === user.id && isSameDay(p.date));
+            const morningPermission = userPermissions.find(p => isMorningTime(p.startTime)) || null;
+            const activePermission = morningPermission || (userPermissions.length > 0 ? userPermissions[0] : null);
+
             // Only show times if PRESENT
             const finalTimeIn = status === 'PRESENT' ? timeIn : null;
             const finalTimeOut = status === 'PRESENT' ? timeOut : null;
@@ -990,7 +1034,24 @@ const getDailyAttendance = async (req, res) => {
                     tea: Math.round(totalTeaBreakMinutes),
                     lunch: Math.round(totalLunchBreakMinutes),
                     meetings: Math.round(totalMeetingMinutes)
-                }
+                },
+                permission: activePermission ? {
+                    id: activePermission.id,
+                    startTime: activePermission.startTime,
+                    endTime: activePermission.endTime,
+                    reason: activePermission.reason,
+                    status: activePermission.status,
+                    isMorning: isMorningTime(activePermission.startTime)
+                } : null,
+                morningPermission: morningPermission ? {
+                    id: morningPermission.id,
+                    startTime: morningPermission.startTime,
+                    endTime: morningPermission.endTime,
+                    reason: morningPermission.reason,
+                    status: morningPermission.status,
+                    isMorning: true
+                } : null,
+                hasMorningPermission: Boolean(morningPermission)
             };
         });
 

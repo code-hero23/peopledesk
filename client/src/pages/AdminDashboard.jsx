@@ -403,8 +403,15 @@ const AdminDashboard = () => {
                                                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-slate-200 to-slate-300 dark:from-slate-700 dark:to-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-400 text-xs font-black flex-shrink-0">
                                                     {att.user.name.charAt(0).toUpperCase()}
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-bold text-slate-800 dark:text-white truncate leading-none">{att.user.name}</p>
+                                                <div className="min-w-0 flex-1">
+                                                    <div className="flex items-center justify-between gap-1">
+                                                        <p className="text-xs font-bold text-slate-800 dark:text-white truncate leading-none">{att.user.name}</p>
+                                                        {(att.morningPermission || att.permission) && (
+                                                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0" title={(att.morningPermission || att.permission).startTime ? `${(att.morningPermission || att.permission).startTime} - ${(att.morningPermission || att.permission).endTime}` : 'Morning Permission'}>
+                                                                {(att.morningPermission || att.permission?.isMorning) ? 'Morning Perm' : 'Perm'}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">{att.user.designation || 'Employee'}</p>
                                                 </div>
                                             </div>
