@@ -79,7 +79,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     const progress = calculateProgress();
 
     return (
-        <div className="relative w-80 h-44 xl:w-96 xl:h-52 rounded-[2.5rem] overflow-hidden shadow-2xl group transition-all duration-700 hover:scale-[1.02]">
+        <div className="relative w-full max-w-[340px] h-40 xl:w-80 xl:h-44 rounded-[2.2rem] xl:rounded-[2.5rem] overflow-hidden shadow-xl shrink-0 group transition-all duration-500 hover:scale-[1.01]">
             <div className="absolute inset-0 bg-[#00607a] transition-colors duration-1000">
                 <div className="absolute inset-0 opacity-80">
                     <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-[#004e63] transform -skew-x-12 transition-all duration-1000" />
@@ -158,39 +158,39 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                         </div>
                     </motion.div>
                 ) : (
-                    <motion.div key="clock-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-20 h-full p-8 flex flex-col justify-between text-white">
+                    <motion.div key="clock-content" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="relative z-20 h-full p-5 xl:p-6 flex flex-col justify-between text-white">
                         <div className="flex justify-between items-start">
                             <div>
-                                <motion.h1 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-6xl xl:text-7xl font-black tracking-tighter drop-shadow-2xl select-none">
+                                <motion.h1 initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} className="text-4xl sm:text-5xl xl:text-6xl font-black tracking-tighter drop-shadow-2xl select-none">
                                     {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
                                 </motion.h1>
-                                <p className="text-sm xl:text-base font-bold text-white/80 mt-1 drop-shadow-md">{currentTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}</p>
+                                <p className="text-xs xl:text-sm font-bold text-white/80 mt-0.5 drop-shadow-md">{currentTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</p>
                             </div>
                             <div className="flex flex-col items-end">
                                 {isCheckedIn ? (
-                                    <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 p-2 rounded-2xl flex items-center gap-2 group/status">
+                                    <div className="bg-emerald-500/30 backdrop-blur-md border border-emerald-400/30 px-2.5 py-1 rounded-xl flex items-center gap-1.5 group/status">
                                         <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest">Active</span>
+                                        <span className="text-[9px] font-black uppercase tracking-widest">Active</span>
                                     </div>
                                 ) : (
-                                    <div className="bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl flex items-center gap-2">
-                                        <Clock size={16} className="text-white/60" />
-                                        <span className="text-[10px] font-black uppercase tracking-widest text-white/60">Idle</span>
+                                    <div className="bg-white/10 backdrop-blur-md border border-white/20 px-2.5 py-1 rounded-xl flex items-center gap-1.5">
+                                        <Clock size={14} className="text-white/60" />
+                                        <span className="text-[9px] font-black uppercase tracking-widest text-white/60">Idle</span>
                                     </div>
                                 )}
                             </div>
                         </div>
                         <div className="flex justify-between items-end">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 bg-white/10 backdrop-blur-md rounded-xl border border-white/10"><MapPinned size={18} className="text-white/80" /></div>
+                            <div className="flex items-center gap-2">
+                                <div className="p-1.5 bg-white/10 backdrop-blur-md rounded-lg border border-white/10"><MapPinned size={15} className="text-white/80" /></div>
                                 <div className="text-left">
-                                    <p className="text-[8px] font-black uppercase tracking-[0.2em] text-white/50 leading-none mb-1">Location</p>
+                                    <p className="text-[7px] font-black uppercase tracking-[0.18em] text-white/50 leading-none mb-0.5">Location</p>
                                     <p className="text-xs font-bold">{attendance?.deviceInfo?.includes('SITE_LOGIN') ? 'Site Visit' : 'Main Office'}</p>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-2 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                                <TrendingUp size={14} className="text-emerald-400" />
-                                <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}% Done` : '--'}</span>
+                            <div className="flex items-center gap-1.5 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+                                <TrendingUp size={13} className="text-emerald-400" />
+                                <span className="text-xs font-black tracking-tight">{isCheckedIn ? `${Math.round(progress)}%` : '--'}</span>
                             </div>
                         </div>
                     </motion.div>
@@ -1165,12 +1165,12 @@ const Overview = () => {
                     </div>
                 </div>
 
-                <div className="grid lg:grid-cols-12 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                     {/* Left Column */}
-                    <div className="lg:col-span-8 space-y-8">
-                        <div className="bg-white dark:bg-slate-900 rounded-[3rem] p-8 lg:p-12 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden group transition-colors">
+                    <div className="lg:col-span-7 xl:col-span-8 space-y-6 lg:space-y-8 min-w-0">
+                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] xl:rounded-[3rem] p-6 sm:p-8 lg:p-8 xl:p-10 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden group transition-colors">
                             <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
-                            <div className="relative flex flex-col md:flex-row md:items-center justify-between gap-12">
+                            <div className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-6 lg:gap-8">
                                 <div className="space-y-8">
                                     <div className="space-y-4">
                                         {getDeviceType() === 'desktop' && (
@@ -1299,7 +1299,7 @@ const Overview = () => {
                                         )}
                                     </div>
                                 </div>
-                                <div className="hidden md:block flex-shrink-0">
+                                <div className="hidden sm:flex xl:block justify-center xl:justify-end flex-shrink-0">
                                     <SmartDisplayClock attendance={attendance} isCheckedIn={isCheckedIn} activeBreak={activeBreak} />
                                 </div>
                             </div>
@@ -1346,7 +1346,7 @@ const Overview = () => {
                     </div>
 
                     {/* Right Column */}
-                    <div className="lg:col-span-4 space-y-8">
+                    <div className="lg:col-span-5 xl:col-span-4 space-y-6 lg:space-y-8 min-w-0">
                         <div className="bg-slate-900 dark:bg-slate-900/40 backdrop-blur-md p-8 rounded-[3rem] text-white shadow-2xl relative overflow-hidden transition-colors border border-white/5">
                             <h3 className="text-xl font-bold mb-8 flex items-center gap-3"><Sparkles className="text-indigo-400 dark:text-primary" size={24} /> Quick Actions</h3>
                             <div className="space-y-4">
