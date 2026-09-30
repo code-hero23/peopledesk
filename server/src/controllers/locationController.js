@@ -15,12 +15,12 @@ const recordLocation = async (req, res) => {
       return res.status(400).json({ message: 'Invalid latitude or longitude' });
     }
 
-    // Restrict live location pings to 7:00 AM - 8:00 PM Indian Standard Time (IST)
+    // Restrict live location pings to 9:00 AM - 8:00 PM Indian Standard Time (IST)
     // Server is in UTC (delayed 5h 30m)
     const { isCurrentlyInWindow } = getTrackingWindowIST(new Date());
     if (!isCurrentlyInWindow) {
       return res.status(200).json({
-        message: 'Live location tracking is only active between 7:00 AM and 8:00 PM IST',
+        message: 'Live location tracking is only active between 9:00 AM and 8:00 PM IST',
         trackingActive: false,
         ignored: true
       });
@@ -116,7 +116,7 @@ const getLiveLocations = async (req, res) => {
 
     const liveData = await Promise.all(
       aeUsers.map(async (ae) => {
-        // Query locations recorded within today's 7:00 AM - 8:00 PM IST window (take top 2 for motion detection)
+        // Query locations recorded within today's 9:00 AM - 8:00 PM IST window (take top 2 for motion detection)
         const recentLogs = await prisma.aELocationLog.findMany({
           where: { 
             userId: ae.id,
@@ -324,10 +324,10 @@ const getLiveLocations = async (req, res) => {
     res.json({
       trackingWindow: {
         isCurrentlyInWindow,
-        startIST: '07:00 AM',
+        startIST: '09:00 AM',
         endIST: '08:00 PM',
         currentIST,
-        windowLabel: '7:00 AM – 8:00 PM IST'
+        windowLabel: '9:00 AM – 8:00 PM IST'
       },
       liveData
     });
@@ -337,13 +337,13 @@ const getLiveLocations = async (req, res) => {
   }
 };
 
-// Fetch daily location history / breadcrumbs for a specific AE within 7 AM - 8 PM IST
+// Fetch daily location history / breadcrumbs for a specific AE within 9 AM - 8 PM IST
 const getLocationHistory = async (req, res) => {
   try {
     const userId = Number(req.params.userId);
     const dateStr = req.query.date || new Date().toISOString().split('T')[0];
 
-    // Constrain query strictly to 7:00 AM - 8:00 PM IST converted to UTC
+    // Constrain query strictly to 9:00 AM - 8:00 PM IST converted to UTC
     const { startUTC, endUTC } = getTrackingWindowIST(dateStr);
 
     const user = await prisma.user.findUnique({
@@ -432,7 +432,7 @@ const getLocationHistory = async (req, res) => {
     res.json({
       user,
       date: dateStr,
-      window: '07:00 AM – 08:00 PM IST',
+      window: '09:00 AM – 08:00 PM IST',
       totalPoints: logs.length,
       siteSignIns,
       activeSiteSignIn,

@@ -67,9 +67,9 @@ const AELiveTracker = () => {
   const [liveData, setLiveData] = useState([]);
   const [trackingInfo, setTrackingInfo] = useState({
     isCurrentlyInWindow: true,
-    startIST: '07:00 AM',
+    startIST: '09:00 AM',
     endIST: '08:00 PM',
-    windowLabel: '7:00 AM – 8:00 PM IST'
+    windowLabel: '9:00 AM – 8:00 PM IST'
   });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -175,7 +175,7 @@ const AELiveTracker = () => {
             { headers: { Authorization: `Bearer ${user.token}` } }
           );
           if (res.data?.trackingActive === false) {
-            toast.warning('Ping received, but tracking is paused outside 7:00 AM – 8:00 PM IST.');
+            toast.warning('Ping received, but tracking is paused outside 9:00 AM – 8:00 PM IST.');
           } else {
             toast.success('Your live GPS location was transmitted successfully!');
           }
@@ -1671,7 +1671,7 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
       } else {
         clearMapRoute();
         setDetectedStopsList([]);
-        toast.warning(`No location logs found between 7:00 AM and 8:00 PM IST on ${targetDate}`);
+        toast.warning(`No location logs found between 9:00 AM and 8:00 PM IST on ${targetDate}`);
       }
     } catch (err) {
       console.error('Failed to load location history:', err);
@@ -1807,7 +1807,7 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
                 )}
               </div>
               <p className="text-xs font-medium text-slate-400 mt-1">
-                Real-time field monitoring active strictly within 7:00 AM – 8:00 PM IST (Offset sync applied)
+                Real-time field monitoring active strictly within 9:00 AM – 8:00 PM IST (Offset sync applied)
               </p>
             </div>
           </div>
@@ -2511,7 +2511,7 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
                             <span className="text-[10px] font-mono text-slate-400">
                               {historyLogs[0]?.createdAt
                                 ? new Date(historyLogs[0].createdAt).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata', hour: '2-digit', minute: '2-digit', hour12: true })
-                                : '07:00 AM'}
+                                : '09:00 AM'}
                             </span>
                           </div>
                           <p className="text-white font-bold text-[11px] truncate">
@@ -2699,7 +2699,7 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
             </div>
 
             <p className="text-[11px] text-amber-400/90 bg-amber-500/10 p-3 rounded-xl border border-amber-500/20">
-              ⏱️ Valid for 10 minutes. Device will sync Call Logs and live GPS pings between 7:00 AM and 8:00 PM IST.
+              ⏱️ Valid for 10 minutes. Device will sync Call Logs and live GPS pings between 9:00 AM and 8:00 PM IST.
             </p>
 
             <div className="pt-2 border-t border-slate-800 space-y-2 text-left">

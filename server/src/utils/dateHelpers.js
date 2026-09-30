@@ -179,12 +179,12 @@ const normalizeBiometricDate = (dateInput, targetYear) => {
 };
 
 /**
- * Calculates the active tracking window (7:00 AM to 8:00 PM IST)
+ * Calculates the active tracking window (9:00 AM to 8:00 PM IST)
 
  * converted to exact UTC Date boundaries for the database.
  * 
  * Server is in UTC (5h 30m behind IST).
- * 7:00 AM IST = 01:30 AM UTC
+ * 9:00 AM IST = 03:30 AM UTC
  * 8:00 PM IST = 14:30 (2:30 PM) UTC
  */
 const getTrackingWindowIST = (dateInput = new Date()) => {
@@ -206,8 +206,8 @@ const getTrackingWindowIST = (dateInput = new Date()) => {
     const month = istTime.getUTCMonth();
     const date = istTime.getUTCDate();
 
-    // 7:00 AM IST (01:30 UTC)
-    const startIST = new Date(Date.UTC(year, month, date, 7, 0, 0, 0));
+    // 9:00 AM IST (03:30 UTC)
+    const startIST = new Date(Date.UTC(year, month, date, 9, 0, 0, 0));
     const startUTC = new Date(startIST.getTime() - istOffset);
 
     // 8:00 PM IST = 20:00 (14:30 UTC)
