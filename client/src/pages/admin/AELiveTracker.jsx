@@ -1788,14 +1788,14 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
               <div className="flex flex-wrap items-center gap-2">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight text-white">AE Live Tracker</h1>
                 
-                {/* 7 AM - 8 PM IST Tracking Window Badge */}
+                {/* 9 AM - 8 PM IST Tracking Window Badge */}
                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider border ${
                   trackingInfo.isCurrentlyInWindow
                     ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30'
                     : 'bg-purple-500/15 text-purple-400 border-purple-500/30'
                 }`}>
                   <span className={`w-1.5 h-1.5 rounded-full ${trackingInfo.isCurrentlyInWindow ? 'bg-emerald-400 animate-ping' : 'bg-purple-400'}`} />
-                  {trackingInfo.isCurrentlyInWindow ? 'Live Window: 7 AM – 8 PM IST' : 'Tracking Paused: Resumes 7 AM IST'}
+                  {trackingInfo.isCurrentlyInWindow ? 'Live Window: 9 AM – 8 PM IST' : 'Tracking Paused: Resumes 9 AM IST'}
                 </span>
 
                 {/* Live Clock Pill */}
@@ -1912,7 +1912,7 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
         <div className="col-span-2 sm:col-span-1 bg-slate-900/80 border border-purple-500/20 p-4 rounded-2xl flex items-center justify-between shadow-lg">
           <div>
             <p className="text-[10px] font-black uppercase tracking-wider text-purple-400">Window</p>
-            <h3 className="text-xs sm:text-sm font-black text-purple-300 mt-1">7 AM – 8 PM</h3>
+            <h3 className="text-xs sm:text-sm font-black text-purple-300 mt-1">9 AM – 8 PM</h3>
             <span className="text-[9px] text-slate-400">IST Daily</span>
           </div>
           <div className="p-2.5 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20">
@@ -2162,7 +2162,7 @@ timestamp: ${loc.createdAt || new Date().toISOString()}`
                           </div>
                         ) : (
                           <div className="pt-1 text-[10px] text-slate-400 italic border-t border-slate-800/90">
-                            No GPS pings recorded in 7 AM – 8 PM window today
+                            No GPS pings recorded in 9 AM – 8 PM window today
                           </div>
                         )}
                       </div>

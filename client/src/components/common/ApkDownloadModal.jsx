@@ -132,7 +132,7 @@ const ApkDownloadModal = ({ isOpen, onClose }) => {
                                     AE Manager APK
                                 </h3>
                                 <p className="text-[11px] text-slate-400 mt-1 leading-relaxed">
-                                    Exclusive field app for Area Executives with 7 AM – 8 PM IST live GPS travel logging and site visit updates.
+                                    Exclusive field app for Area Executives with 9 AM – 8 PM IST live GPS travel logging and site visit updates.
                                 </p>
                             </div>
 
