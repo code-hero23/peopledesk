@@ -279,7 +279,7 @@ public class CallLogPlugin extends Plugin {
                         }
                     }
 
-                    // TelecomManager PhoneAccount mapping for Samsung & Android 8.0+
+                    // TelecomManager PhoneAccount mapping for Samsung & Android 6.0+
                     if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
                         try {
                             android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getContext().getSystemService(android.content.Context.TELECOM_SERVICE);
@@ -288,15 +288,57 @@ public class CallLogPlugin extends Plugin {
                                 if (handles != null) {
                                     for (android.telecom.PhoneAccountHandle handle : handles) {
                                         String handleId = handle.getId();
-                                        if (handleId == null) continue;
-                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                        if (handleId == null || handleId.isEmpty()) continue;
+
+                                        SubscriptionInfo handleSi = null;
+                                        if (activeList != null) {
+                                            for (SubscriptionInfo si : activeList) {
+                                                if (si == null) continue;
+                                                String subIdStr = String.valueOf(si.getSubscriptionId());
+                                                String iccId = "";
+                                                try {
+                                                    iccId = si.getIccId() != null ? si.getIccId() : "";
+                                                } catch (Exception ignored) {}
+
+                                                if (handleId.equals(subIdStr) || (!iccId.isEmpty() && (handleId.equals(iccId) || handleId.startsWith(iccId) || iccId.startsWith(handleId)))) {
+                                                    handleSi = si;
+                                                    break;
+                                                }
+                                            }
+                                        }
+
+                                        if (handleSi == null) {
                                             try {
-                                                SubscriptionInfo handleSi = sm.getSubscriptionInfoForPhoneAccount(handle);
-                                                if (handleSi != null) {
-                                                    String handleSlot = String.valueOf(handleSi.getSimSlotIndex() + 1);
-                                                    String carrier = handleSi.getCarrierName() != null ? handleSi.getCarrierName().toString() : "";
-                                                    slotMap.put(handleId, handleSlot);
-                                                    if (!carrier.isEmpty()) labelMap.put(handleId, carrier);
+                                                int subId = Integer.parseInt(handleId);
+                                                handleSi = sm.getActiveSubscriptionInfo(subId);
+                                            } catch (Exception ignored) {}
+                                        }
+
+                                        if (handleSi == null) {
+                                            try {
+                                                if ("0".equals(handleId)) {
+                                                    handleSi = sm.getActiveSubscriptionInfoForSimSlotIndex(0);
+                                                } else if ("1".equals(handleId)) {
+                                                    handleSi = sm.getActiveSubscriptionInfoForSimSlotIndex(1);
+                                                }
+                                            } catch (Exception ignored) {}
+                                        }
+
+                                        if (handleSi != null) {
+                                            String handleSlot = String.valueOf(handleSi.getSimSlotIndex() + 1);
+                                            String carrier = handleSi.getCarrierName() != null ? handleSi.getCarrierName().toString() : "";
+                                            slotMap.put(handleId, handleSlot);
+                                            if (!carrier.isEmpty()) labelMap.put(handleId, carrier);
+                                        } else {
+                                            try {
+                                                android.telecom.PhoneAccount pa = tm.getPhoneAccount(handle);
+                                                if (pa != null && pa.getLabel() != null) {
+                                                    String paLabel = pa.getLabel().toString();
+                                                    String key = paLabel.trim().toLowerCase();
+                                                    if (labelToSlotMap.containsKey(key)) {
+                                                        slotMap.put(handleId, labelToSlotMap.get(key));
+                                                        labelMap.put(handleId, paLabel);
+                                                    }
                                                 }
                                             } catch (Exception ignored) {}
                                         }
