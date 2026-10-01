@@ -243,11 +243,13 @@ public class CallLogPlugin extends Plugin {
                 java.util.Map<String, Integer> labelFrequencyMap = new java.util.HashMap<>();
                 java.util.Map<String, String> numberToSlotMap = new java.util.HashMap<>();
                 int activeSubCount = 0;
+                java.util.List<SubscriptionInfo> activeList = null;
+                SubscriptionManager sm = null;
 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
-                    SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                    sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
-                        java.util.List<SubscriptionInfo> activeList = sm.getActiveSubscriptionInfoList();
+                        activeList = sm.getActiveSubscriptionInfoList();
                         if (activeList != null) {
                             activeSubCount = activeList.size();
                             for (SubscriptionInfo si : activeList) {

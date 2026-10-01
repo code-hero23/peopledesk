@@ -170,11 +170,13 @@ public class CallLogSyncWorker extends Worker {
                 Map<String, Integer> labelFrequencyMap = new HashMap<>();
                 Map<String, String> numberToSlotMap = new HashMap<>();
                 int activeSubCount = 0;
+                List<SubscriptionInfo> activeList = null;
+                SubscriptionManager sm = null;
 
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
-                    SubscriptionManager sm = (SubscriptionManager) context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                    sm = (SubscriptionManager) context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
-                        List<SubscriptionInfo> activeList = sm.getActiveSubscriptionInfoList();
+                        activeList = sm.getActiveSubscriptionInfoList();
                         if (activeList != null) {
                             activeSubCount = activeList.size();
                             for (SubscriptionInfo si : activeList) {
