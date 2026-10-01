@@ -882,18 +882,18 @@ const getDailyAttendance = async (req, res) => {
             }
         });
 
-        // Get approved leave requests for the date
-        const leaveRequests = await prisma.leaveRequest.findMany({
-            where: {
-                status: 'APPROVED',
-                startDate: { lte: endOfDay },
-                endDate: { gte: startOfDay }
-            }
-        });
-
-        // Get permissions for the date (allow a 12h buffer to account for server/client timezone variances)
+        // Get permissions and leaves for the date (allow a 12h buffer to account for server/client timezone variances)
         const bufferStart = new Date(startOfDay.getTime() - 12 * 60 * 60 * 1000);
         const bufferEnd = new Date(endOfDay.getTime() + 12 * 60 * 60 * 1000);
+
+        // Get leave requests for the date (include approved and pending leaves)
+        const leaveRequests = await prisma.leaveRequest.findMany({
+            where: {
+                startDate: { lte: bufferEnd },
+                endDate: { gte: bufferStart },
+                status: { not: 'REJECTED' }
+            }
+        });
 
         const permissionRequests = await prisma.permissionRequest.findMany({
             where: {
@@ -928,6 +928,21 @@ const getDailyAttendance = async (req, res) => {
             const pLocalStr = `${p.getFullYear()}-${String(p.getMonth() + 1).padStart(2, '0')}-${String(p.getDate()).padStart(2, '0')}`;
             const qLocalStr = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth() + 1).padStart(2, '0')}-${String(startOfDay.getDate()).padStart(2, '0')}`;
             return pUtcStr === targetDateStr || pLocalStr === qLocalStr || pUtcStr === qLocalStr;
+        };
+
+        const isLeaveOnDate = (leave) => {
+            if (!leave || !leave.startDate || !leave.endDate) return false;
+            const start = new Date(leave.startDate);
+            const end = new Date(leave.endDate);
+            const startStr = `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}-${String(start.getDate()).padStart(2, '0')}`;
+            const endStr = `${end.getFullYear()}-${String(end.getMonth() + 1).padStart(2, '0')}-${String(end.getDate()).padStart(2, '0')}`;
+            const qStr = `${startOfDay.getFullYear()}-${String(startOfDay.getMonth() + 1).padStart(2, '0')}-${String(startOfDay.getDate()).padStart(2, '0')}`;
+            
+            const startUtc = start.toISOString().split('T')[0];
+            const endUtc = end.toISOString().split('T')[0];
+            const qUtc = targetDateStr;
+
+            return (qStr >= startStr && qStr <= endStr) || (qUtc >= startUtc && qUtc <= endUtc) || isSameDay(leave.startDate) || isSameDay(leave.endDate);
         };
 
         // 3. Merge data
@@ -1006,9 +1021,14 @@ const getDailyAttendance = async (req, res) => {
             const effectiveMinutes = Math.max(0, totalGrossDurationMinutes - totalBreakDeductionMinutes);
             const totalHours = (effectiveMinutes / 60).toFixed(2);
 
+            // Leaves for user
+            const userLeaves = leaveRequests.filter(l => l.userId === user.id && isLeaveOnDate(l));
+            const approvedFullLeave = userLeaves.find(l => l.type !== 'HALF_DAY' && l.status === 'APPROVED');
+            const halfDayLeave = userLeaves.find(l => l.type === 'HALF_DAY');
+
             // Calculate overall status
             const isPresent = userRecords.some(r => r.status === 'PRESENT');
-            const isOnLeave = leaveRequests.some(l => l.userId === user.id);
+            const isOnLeave = Boolean(approvedFullLeave);
             const status = isPresent ? 'PRESENT' : (isOnLeave ? 'LEAVE' : 'ABSENT');
 
             // Permissions for user
@@ -1051,7 +1071,26 @@ const getDailyAttendance = async (req, res) => {
                     status: morningPermission.status,
                     isMorning: true
                 } : null,
-                hasMorningPermission: Boolean(morningPermission)
+                hasMorningPermission: Boolean(morningPermission),
+                morningHalfDay: halfDayLeave ? {
+                    id: halfDayLeave.id,
+                    reason: halfDayLeave.reason,
+                    status: halfDayLeave.status,
+                    type: halfDayLeave.type,
+                    startDate: halfDayLeave.startDate,
+                    endDate: halfDayLeave.endDate,
+                    isHalfDay: true
+                } : null,
+                halfDayLeave: halfDayLeave ? {
+                    id: halfDayLeave.id,
+                    reason: halfDayLeave.reason,
+                    status: halfDayLeave.status,
+                    type: halfDayLeave.type,
+                    startDate: halfDayLeave.startDate,
+                    endDate: halfDayLeave.endDate,
+                    isHalfDay: true
+                } : null,
+                hasMorningHalfDay: Boolean(halfDayLeave)
             };
         });
 

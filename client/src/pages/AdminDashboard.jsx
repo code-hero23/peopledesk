@@ -406,11 +406,18 @@ const AdminDashboard = () => {
                                                 <div className="min-w-0 flex-1">
                                                     <div className="flex items-center justify-between gap-1">
                                                         <p className="text-xs font-bold text-slate-800 dark:text-white truncate leading-none">{att.user.name}</p>
-                                                        {(att.morningPermission || att.permission) && (
-                                                            <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0" title={(att.morningPermission || att.permission).startTime ? `${(att.morningPermission || att.permission).startTime} - ${(att.morningPermission || att.permission).endTime}` : 'Morning Permission'}>
-                                                                {(att.morningPermission || att.permission?.isMorning) ? 'Morning Perm' : 'Perm'}
-                                                            </span>
-                                                        )}
+                                                        <div className="flex items-center gap-1">
+                                                            {(att.morningPermission || att.permission) && (
+                                                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800 shrink-0" title={(att.morningPermission || att.permission).startTime ? `${(att.morningPermission || att.permission).startTime} - ${(att.morningPermission || att.permission).endTime}` : 'Morning Permission'}>
+                                                                    {(att.morningPermission || att.permission?.isMorning) ? 'Morning Perm' : 'Perm'}
+                                                                </span>
+                                                            )}
+                                                            {(att.morningHalfDay || att.halfDayLeave) && (
+                                                                <span className="text-[8px] font-black uppercase px-1.5 py-0.5 rounded bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-400 border border-orange-200 dark:border-orange-800 shrink-0" title={(att.morningHalfDay || att.halfDayLeave).reason ? `Half Day Reason: ${(att.morningHalfDay || att.halfDayLeave).reason}` : 'Morning Half Day Leave'}>
+                                                                    Half Day
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <p className="text-[10px] text-slate-400 mt-0.5 font-semibold">{att.user.designation || 'Employee'}</p>
                                                 </div>

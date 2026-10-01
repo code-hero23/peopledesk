@@ -5,7 +5,7 @@ import {
     Search, Calendar, X, ExternalLink, Camera, CheckCircle2, XCircle, 
     UserCheck, Image as ImageIcon, Sparkles, RefreshCw, Download, ZoomIn, 
     ShieldCheck, Filter, Clock, Users, ArrowUpRight, MapPin, Building2,
-    AlertTriangle, Navigation
+    AlertTriangle, Navigation, Sun
 } from 'lucide-react';
 import { formatTime } from '../../utils/dateUtils';
 
@@ -69,8 +69,11 @@ const AttendanceVerification = () => {
 
     // Filter Logic
     const filteredReport = report.filter(item => {
-        const matchesSearch = item.user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            item.user.email.toLowerCase().includes(searchTerm.toLowerCase());
+        const term = searchTerm.toLowerCase();
+        const matchesSearch = item.user.name.toLowerCase().includes(term) ||
+            item.user.email.toLowerCase().includes(term) ||
+            ((item.morningPermission || item.permission) && 'permission'.includes(term)) ||
+            ((item.morningHalfDay || item.halfDayLeave) && ('half day'.includes(term) || 'leave'.includes(term) || 'morning'.includes(term)));
         
         if (!matchesSearch) return false;
 
@@ -321,6 +324,28 @@ const AttendanceVerification = () => {
                                                             <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 font-mono whitespace-nowrap">
                                                                 {(item.morningPermission || item.permission).startTime}
                                                                 {(item.morningPermission || item.permission).endTime ? ` - ${(item.morningPermission || item.permission).endTime}` : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Morning Half Day Leave under ABSENT or LEAVE */}
+                                                {(item.status === 'ABSENT' || item.status === 'LEAVE') && (item.morningHalfDay || item.halfDayLeave) && (
+                                                    <div 
+                                                        className="mt-1 flex flex-col items-center max-w-[130px]"
+                                                        title={
+                                                            (item.morningHalfDay || item.halfDayLeave).reason 
+                                                                ? `Half Day Reason: ${(item.morningHalfDay || item.halfDayLeave).reason}` 
+                                                                : 'Morning Half Day Leave'
+                                                        }
+                                                    >
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 shadow-2xs whitespace-nowrap">
+                                                            <Sun size={10} className="shrink-0 text-orange-500" />
+                                                            Morning Half Day
+                                                        </span>
+                                                        {(item.morningHalfDay || item.halfDayLeave).status === 'PENDING' && (
+                                                            <span className="text-[8px] font-bold text-amber-500 dark:text-amber-400 mt-0.5 uppercase tracking-wider">
+                                                                (Pending)
                                                             </span>
                                                         )}
                                                     </div>

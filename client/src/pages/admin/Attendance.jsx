@@ -5,7 +5,7 @@ import { getDailyAttendance, reset } from '../../features/admin/adminSlice';
 import { 
     Calendar, Smartphone, Monitor, Coffee, Users, Clock, Zap, Utensils, 
     Upload, Mail, Search, Sparkles, CheckCircle2, XCircle, FileSpreadsheet, 
-    Download, RefreshCw, UserCheck, UserX, Activity, CalendarClock, ShieldCheck
+    Download, RefreshCw, UserCheck, UserX, Activity, CalendarClock, ShieldCheck, Sun
 } from 'lucide-react';
 import MonthCycleSelector from '../../components/common/MonthCycleSelector';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -80,7 +80,8 @@ const Attendance = () => {
         const matchesSearch = (
             record.user.name.toLowerCase().includes(term) ||
             record.user.email.toLowerCase().includes(term) ||
-            ((record.morningPermission || record.permission) && 'permission'.includes(term))
+            ((record.morningPermission || record.permission) && 'permission'.includes(term)) ||
+            ((record.morningHalfDay || record.halfDayLeave) && ('half day'.includes(term) || 'leave'.includes(term) || 'morning'.includes(term)))
         );
         
         const matchesStatus = statusFilter ? record.status === statusFilter : true;
@@ -607,6 +608,28 @@ const Attendance = () => {
                                                             <span className="text-[9px] font-bold text-slate-500 dark:text-slate-400 mt-0.5 font-mono whitespace-nowrap">
                                                                 {(record.morningPermission || record.permission).startTime}
                                                                 {(record.morningPermission || record.permission).endTime ? ` - ${(record.morningPermission || record.permission).endTime}` : ''}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                {/* Morning Half Day Leave under ABSENT or LEAVE */}
+                                                {(record.status === 'ABSENT' || record.status === 'LEAVE') && (record.morningHalfDay || record.halfDayLeave) && (
+                                                    <div 
+                                                        className="mt-1 flex flex-col items-center max-w-[130px]"
+                                                        title={
+                                                            (record.morningHalfDay || record.halfDayLeave).reason 
+                                                                ? `Half Day Reason: ${(record.morningHalfDay || record.halfDayLeave).reason}` 
+                                                                : 'Morning Half Day Leave'
+                                                        }
+                                                    >
+                                                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-tight bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20 shadow-2xs whitespace-nowrap">
+                                                            <Sun size={10} className="shrink-0 text-orange-500" />
+                                                            Morning Half Day
+                                                        </span>
+                                                        {(record.morningHalfDay || record.halfDayLeave).status === 'PENDING' && (
+                                                            <span className="text-[8px] font-bold text-amber-500 dark:text-amber-400 mt-0.5 uppercase tracking-wider">
+                                                                (Pending)
                                                             </span>
                                                         )}
                                                     </div>
