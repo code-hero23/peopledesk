@@ -59,6 +59,7 @@ public class CallSyncAlarmReceiver extends BroadcastReceiver {
 
     public static void schedule(Context context) {
         AlarmManager alarms = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+        ForegroundSyncService.startService(context);
         if (alarms == null) return;
         setAlarm(context, alarms, ACTION_START, 7, 0, REQUEST_START);
         setAlarm(context, alarms, ACTION_FINAL, 20, 0, REQUEST_FINAL);

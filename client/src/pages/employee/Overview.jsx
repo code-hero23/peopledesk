@@ -534,9 +534,19 @@ const Overview = () => {
                 const logsResult = await CallLogPlugin.getCallLogs();
                 if (!logsResult?.logs || logsResult.logs.length === 0) return;
 
+                const target = String(officialSim).trim().toLowerCase();
+                const isAll = target === '0' || target === 'all' || target === 'both';
                 const filteredLogs = logsResult.logs.filter(log => {
-                    const logSlot = String(log.simSlot || log.simId || "");
-                    return !logSlot || logSlot === "null" || logSlot === officialSim;
+                    if (isAll) return true;
+                    const slot = String(log.simSlot || '').trim().toLowerCase();
+                    if (slot && slot !== '0' && slot !== 'unknown') {
+                        return slot === target;
+                    }
+                    const label = String(log.simLabel || '').trim().toLowerCase();
+                    if (label.includes(`sim ${target}`) || label.includes(`slot ${target}`)) {
+                        return true;
+                    }
+                    return false;
                 });
 
                 if (filteredLogs.length === 0) return;

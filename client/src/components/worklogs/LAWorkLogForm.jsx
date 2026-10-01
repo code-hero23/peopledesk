@@ -97,7 +97,6 @@ const LAWorkLogForm = ({ onSuccess }) => {
             : todayLog.la_project_reports;
     }, [todayLog]);
 
-    const hasProjectReports = Array.isArray(projectReportsList) && projectReportsList.length > 0;
 
     const [openingData, setOpeningData] = useState({ ...INITIAL_METRICS });
     const [closingData, setClosingData] = useState({ ...INITIAL_METRICS, notes: '' });
@@ -262,7 +261,6 @@ const LAWorkLogForm = ({ onSuccess }) => {
                     if (!res.error) {
                         setModalMessage("Opening Plan Submitted! Session started.");
                         setShowSuccess(true);
-                        setReportType('project'); // Auto move to project logging
                     }
                     setIsSubmitting(false);
                 });
@@ -274,12 +272,6 @@ const LAWorkLogForm = ({ onSuccess }) => {
     const handleClosingSubmit = (e) => {
         e.preventDefault();
         if (isSubmitting) return;
-
-        if (!hasProjectReports) {
-            toast.error("Please add at least one Project Wise report before submitting your closing report.");
-            setReportType('project');
-            return;
-        }
 
         setConfirmationConfig({
             isOpen: true,
@@ -516,11 +508,6 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                         </div>
                                     </div>
                                     
-                                    {!hasProjectReports && (
-                                        <span className="bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800/50 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2">
-                                            <AlertTriangle size={16} /> Project Wise Report Required
-                                        </span>
-                                    )}
                                 </div>
 
                                 <MetricsGridForm
@@ -530,8 +517,6 @@ const LAWorkLogForm = ({ onSuccess }) => {
                                     type="closing"
                                     isSubmitting={isSubmitting}
                                     isLoading={isLoading}
-                                    hasProjectReports={hasProjectReports}
-                                    onGoToProject={() => setReportType('project')}
                                     dailyNotes={dailyNotes}
                                     setDailyNotes={setDailyNotes}
                                 />
@@ -1171,8 +1156,6 @@ const MetricsGridForm = ({
     type,
     isSubmitting,
     isLoading,
-    hasProjectReports = true,
-    onGoToProject,
     dailyNotes,
     setDailyNotes
 }) => {
@@ -1181,32 +1164,9 @@ const MetricsGridForm = ({
     };
 
     const isOpening = type === 'opening';
-    const isClosingBlocked = !isOpening && !hasProjectReports;
 
     return (
         <form onSubmit={onSubmit} className="space-y-6">
-            {!isOpening && !hasProjectReports && (
-                <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-amber-700 dark:text-amber-400">
-                    <div className="flex items-center gap-3">
-                        <AlertTriangle className="flex-shrink-0 text-amber-500" size={22} />
-                        <div>
-                            <p className="text-xs font-black uppercase tracking-wider">Project Wise Report Required</p>
-                            <p className="text-xs font-medium text-slate-600 dark:text-slate-300">
-                                You must add at least one Project Wise report entry before submitting your Closing Report.
-                            </p>
-                        </div>
-                    </div>
-                    {onGoToProject && (
-                        <button
-                            type="button"
-                            onClick={onGoToProject}
-                            className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-white rounded-xl text-xs font-bold whitespace-nowrap transition-all shadow-md active:scale-95 flex items-center gap-1.5"
-                        >
-                            <Plus size={14} /> Add Project Report
-                        </button>
-                    )}
-                </div>
-            )}
 
             {/* Structured Metric Categories */}
             <div className="space-y-6">
@@ -1301,19 +1261,17 @@ const MetricsGridForm = ({
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={isSubmitting || isLoading || isClosingBlocked}
+                disabled={isSubmitting || isLoading}
                 className={`w-full py-4 rounded-2xl font-black text-sm uppercase tracking-wider shadow-xl transition-all flex items-center justify-center gap-2 ${
-                    isClosingBlocked
-                        ? 'bg-slate-400 text-white cursor-not-allowed'
-                        : isOpening
-                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 active:scale-95'
-                            : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20 active:scale-95'
+                    isOpening
+                        ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/20 active:scale-95'
+                        : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-500/20 active:scale-95'
                 }`}
             >
                 {isSubmitting || isLoading ? 'Submitting...' : (
                     <>
                         <CheckSquare size={20} />
-                        {isOpening ? 'Submit Opening Report' : (isClosingBlocked ? 'Add Project Wise Report First' : 'Submit Final Closing Report')}
+                        {isOpening ? 'Submit Opening Report' : 'Submit Final Closing Report'}
                     </>
                 )}
             </button>

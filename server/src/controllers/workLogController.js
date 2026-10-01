@@ -280,26 +280,6 @@ const closeWorkLog = async (req, res) => {
             return res.status(404).json({ message: 'No open work log found for today to close.' });
         }
 
-        // Enforce project-wise report check strictly for LA designation only
-        const designation = (req.user.designation || '').toUpperCase();
-        const role = (req.user.role || '').toUpperCase();
-        const isLA = role.includes('LA') || designation.includes('LA') || designation.includes('ARCHITECT');
-
-        if (isLA) {
-            let reports = [];
-            if (existingLog.la_project_reports) {
-                reports = typeof existingLog.la_project_reports === 'string'
-                    ? JSON.parse(existingLog.la_project_reports)
-                    : existingLog.la_project_reports;
-            }
-
-            if (!Array.isArray(reports) || reports.length === 0) {
-                return res.status(400).json({
-                    message: 'You must add at least one Project Wise report before submitting your closing report.'
-                });
-            }
-        }
-
         const finalEndTime = req.body.endTime || new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
         let calculatedHours = undefined;
         if (existingLog.startTime && finalEndTime) {
@@ -317,7 +297,6 @@ const closeWorkLog = async (req, res) => {
             data: {
                 logStatus: 'CLOSED',
                 hours: calculatedHours !== undefined ? calculatedHours : existingLog.hours,
-                cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : (cre_closing_metrics ? cre_closing_metrics : undefined),
                 cre_closing_metrics: typeof cre_closing_metrics === 'string' ? JSON.parse(cre_closing_metrics) : cre_closing_metrics,
                 fa_closing_metrics: typeof fa_closing_metrics === 'string' ? JSON.parse(fa_closing_metrics) : fa_closing_metrics,
                 la_closing_metrics: typeof la_closing_metrics === 'string' ? JSON.parse(la_closing_metrics) : la_closing_metrics,
@@ -584,6 +563,39 @@ const syncCallLogs = async (req, res) => {
         const isAllSims = !simFilter || simFilterUpper === '0' || simFilterUpper === 'ALL' || simFilterUpper === 'BOTH';
 
         const canonicalSimSlot = !isAllSims ? String(simFilter).trim().replace(/^(sim|slot)\s*/i, '') : null;
+
+        const matchesSelectedSim = (log, target) => {
+            if (!target || isAllSims) return true;
+            const normalizedTarget = normalizeText(target).replace(/^(sim|slot)\s*/i, '');
+            const logSlot = normalizeText(log.simSlot).replace(/^(sim|slot)\s*/i, '');
+            const logLabel = normalizeText(log.simLabel);
+            const otherSlot = normalizedTarget === '1' ? '2' : '1';
+
+            // 1. If explicit slot is provided and not 0/unknown, strictly compare
+            if (logSlot && logSlot !== '0' && logSlot !== 'unknown' && logSlot !== 'null') {
+                return logSlot === normalizedTarget;
+            }
+
+            // 2. If label clearly mentions a slot, check if it matches target or other SIM
+            if (logLabel) {
+                if (logLabel.includes(`sim ${normalizedTarget}`) || logLabel.includes(`slot ${normalizedTarget}`)) {
+                    return true;
+                }
+                if (logLabel.includes(`sim ${otherSlot}`) || logLabel.includes(`slot ${otherSlot}`)) {
+                    return false;
+                }
+            }
+
+            // 3. Check simId if single digit 1 or 2
+            const logId = normalizeText(log.simId);
+            if (logId === '1' || logId === '2') {
+                return logId === normalizedTarget;
+            }
+
+            // 4. Default: reject unknown slot when a specific SIM is required to prevent cross-SIM bleeding
+            return false;
+        };
+
         const normalizeAcceptedLog = (log) => {
             const normalized = { ...log };
             const existingSlot = String(normalized.simSlot || '').trim().toLowerCase().replace(/^(sim|slot)\s*/i, '');
@@ -593,26 +605,13 @@ const syncCallLogs = async (req, res) => {
             return normalized;
         };
 
-        const matchesSelectedSim = (log, target) => {
-            if (!target || isAllSims) return true;
-            const normalizedTarget = normalizeText(target).replace(/^(sim|slot)\s*/i, '');
-            const logSlot = normalizeText(log.simSlot).replace(/^(sim|slot)\s*/i, '');
-            const logId = normalizeText(log.simId);
-            const logLabel = normalizeText(log.simLabel);
-
-            if (logSlot === normalizedTarget || logId === normalizedTarget) return true;
-            if (logLabel && (logLabel.includes(`sim ${normalizedTarget}`) || logLabel.includes(`slot ${normalizedTarget}`))) return true;
-            // If the incoming log doesn't specify a distinct other slot (0/unknown/empty), accept it under this official SIM
-            if (!logSlot || logSlot === '0' || logSlot === 'unknown' || logSlot === 'undefined') return true;
-            return false;
-        };
-
-        // Normalize first so slot 0/unknown is properly attributed to the device's designated official SIM
-        let newLogs = rawLogs.map(normalizeAcceptedLog);
+        // Filter BEFORE normalizing so unselected SIM calls are never re-labeled into the official SIM!
+        let newLogs = rawLogs;
         if (!isAllSims) {
             newLogs = newLogs.filter(log => matchesSelectedSim(log, simFilter));
             console.log(`[Sync Guard] User ${userId}: Filtered ${rawLogs.length} down to ${newLogs.length} logs for SIM ${simFilter}`);
         }
+        newLogs = newLogs.map(normalizeAcceptedLog);
 
         // HEARTBEAT LOGIC: Only true if the device actually sent 0 raw logs (a heartbeat ping) or nothing left after processing
         const isHeartbeat = rawReceived === 0 || !newLogs || newLogs.length === 0;

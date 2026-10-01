@@ -242,11 +242,14 @@ public class CallLogPlugin extends Plugin {
                 java.util.Map<String, String> labelToSlotMap = new java.util.HashMap<>();
                 java.util.Map<String, Integer> labelFrequencyMap = new java.util.HashMap<>();
                 java.util.Map<String, String> numberToSlotMap = new java.util.HashMap<>();
+                int activeSubCount = 0;
+
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     SubscriptionManager sm = (SubscriptionManager) getContext().getSystemService(android.content.Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
                         java.util.List<SubscriptionInfo> activeList = sm.getActiveSubscriptionInfoList();
                         if (activeList != null) {
+                            activeSubCount = activeList.size();
                             for (SubscriptionInfo si : activeList) {
                                 String id = String.valueOf(si.getSubscriptionId());
                                 String iccId = null;
@@ -275,6 +278,33 @@ public class CallLogPlugin extends Plugin {
                             }
                         }
                     }
+
+                    // TelecomManager PhoneAccount mapping for Samsung & Android 8.0+
+                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
+                        try {
+                            android.telecom.TelecomManager tm = (android.telecom.TelecomManager) getContext().getSystemService(android.content.Context.TELECOM_SERVICE);
+                            if (tm != null && sm != null) {
+                                java.util.List<android.telecom.PhoneAccountHandle> handles = tm.getCallCapablePhoneAccounts();
+                                if (handles != null) {
+                                    for (android.telecom.PhoneAccountHandle handle : handles) {
+                                        String handleId = handle.getId();
+                                        if (handleId == null) continue;
+                                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
+                                            try {
+                                                SubscriptionInfo handleSi = sm.getSubscriptionInfoForPhoneAccount(handle);
+                                                if (handleSi != null) {
+                                                    String handleSlot = String.valueOf(handleSi.getSimSlotIndex() + 1);
+                                                    String carrier = handleSi.getCarrierName() != null ? handleSi.getCarrierName().toString() : "";
+                                                    slotMap.put(handleId, handleSlot);
+                                                    if (!carrier.isEmpty()) labelMap.put(handleId, carrier);
+                                                }
+                                            } catch (Exception ignored) {}
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (Exception ignored) {}
+                    }
                 }
 
                 while (cursor.moveToNext() && count < limit) {
@@ -289,33 +319,80 @@ public class CallLogPlugin extends Plugin {
                     String simSlot = "0";
                     String subscriptionId = getOptionalColumn(cursor, "subscription_id");
                     String legacySimId = getOptionalColumn(cursor, "simid");
+                    String simIdCol = getOptionalColumn(cursor, "sim_id");
+                    String slotIdCol = getOptionalColumn(cursor, "slot_id");
+                    String simSlotCol = getOptionalColumn(cursor, "sim_slot");
+                    String subIdCol = getOptionalColumn(cursor, "sub_id");
                     String accountAddress = getOptionalColumn(cursor, "phone_account_address");
                     String phoneAccountId = getOptionalColumn(cursor, "phone_account_id");
                     String normalizedAccountAddress = normalizePhoneNumber(accountAddress);
 
-                    // OVERRIDE with real-time info if available
-                    if (simId != null && labelMap.containsKey(simId)) {
-                        simLabel = labelMap.get(simId);
+                    // 1. Direct match with Telecom / SubscriptionManager maps
+                    if (phoneAccountId != null && slotMap.containsKey(phoneAccountId)) {
+                        simSlot = slotMap.get(phoneAccountId);
+                        if (labelMap.containsKey(phoneAccountId)) simLabel = labelMap.get(phoneAccountId);
+                    } else if (simId != null && slotMap.containsKey(simId)) {
                         simSlot = slotMap.get(simId);
+                        if (labelMap.containsKey(simId)) simLabel = labelMap.get(simId);
                     } else if (subscriptionId != null && slotMap.containsKey(subscriptionId)) {
-                        simLabel = labelMap.get(subscriptionId);
                         simSlot = slotMap.get(subscriptionId);
+                        if (labelMap.containsKey(subscriptionId)) simLabel = labelMap.get(subscriptionId);
+                    } else if (subIdCol != null && slotMap.containsKey(subIdCol)) {
+                        simSlot = slotMap.get(subIdCol);
+                        if (labelMap.containsKey(subIdCol)) simLabel = labelMap.get(subIdCol);
                     } else if (legacySimId != null && slotMap.containsKey(legacySimId)) {
-                        simLabel = labelMap.get(legacySimId);
                         simSlot = slotMap.get(legacySimId);
+                        if (labelMap.containsKey(legacySimId)) simLabel = labelMap.get(legacySimId);
+                    } else if (simIdCol != null && slotMap.containsKey(simIdCol)) {
+                        simSlot = slotMap.get(simIdCol);
+                        if (labelMap.containsKey(simIdCol)) simLabel = labelMap.get(simIdCol);
                     } else if (!normalizedAccountAddress.isEmpty() && numberToSlotMap.containsKey(normalizedAccountAddress)) {
                         simSlot = numberToSlotMap.get(normalizedAccountAddress);
                     } else if (simLabel != null && labelToSlotMap.containsKey(simLabel.trim().toLowerCase())) {
                         simSlot = labelToSlotMap.get(simLabel.trim().toLowerCase());
-                    } else if (simId != null && simId.matches("\\d{1,2}")) {
-                        int parsedSimId = Integer.parseInt(simId);
-                        if (parsedSimId >= 1 && parsedSimId <= 2) {
-                            // Some devices already expose the human-readable slot number directly.
-                            simSlot = String.valueOf(parsedSimId);
-                        } else if (parsedSimId >= 0 && parsedSimId <= 1) {
-                            // Other devices expose zero-based slots (0/1).
-                            simSlot = String.valueOf(parsedSimId + 1);
+                    }
+
+                    // 2. OEM-specific hardware slot column fallback (slot_id, sim_slot, sim_id, simid)
+                    if ("0".equals(simSlot) || simSlot.isEmpty()) {
+                        String candidateSlot = null;
+                        if (slotIdCol != null && !slotIdCol.trim().isEmpty()) candidateSlot = slotIdCol.trim();
+                        else if (simSlotCol != null && !simSlotCol.trim().isEmpty()) candidateSlot = simSlotCol.trim();
+                        else if (simIdCol != null && simIdCol.trim().matches("\\d{1,2}")) candidateSlot = simIdCol.trim();
+                        else if (legacySimId != null && legacySimId.trim().matches("\\d{1,2}")) candidateSlot = legacySimId.trim();
+
+                        if (candidateSlot != null) {
+                            try {
+                                int rawSlot = Integer.parseInt(candidateSlot);
+                                if (rawSlot == 0) {
+                                    simSlot = "1"; // 0-based slot 0 -> SIM 1
+                                } else if (rawSlot == 1) {
+                                    // If device has 2 subscriptions or slotMap has 0, 1 means SIM 2
+                                    simSlot = (activeSubCount > 1) ? "2" : "1";
+                                } else if (rawSlot == 2) {
+                                    simSlot = "2";
+                                }
+                            } catch (NumberFormatException ignored) {}
                         }
+                    }
+
+                    // 3. Fallback on simId numeric value when not matched in slotMap
+                    if (("0".equals(simSlot) || simSlot.isEmpty()) && simId != null && simId.matches("\\d{1,2}")) {
+                        try {
+                            int parsedSimId = Integer.parseInt(simId);
+                            if (parsedSimId == 0) {
+                                simSlot = "1"; // 0-based slot 0 -> SIM 1
+                            } else if (parsedSimId == 1) {
+                                // If 0 is a known slot, 1 is SIM 2. Otherwise 1-based slot 1 -> SIM 1.
+                                simSlot = (activeSubCount > 1 && slotMap.containsValue("1") && !slotMap.containsKey("1")) ? "2" : "1";
+                            } else if (parsedSimId == 2) {
+                                simSlot = "2";
+                            }
+                        } catch (NumberFormatException ignored) {}
+                    }
+
+                    // 4. Single-SIM device fallback: if only 1 SIM exists, all calls belong to SIM 1
+                    if (("0".equals(simSlot) || simSlot.isEmpty()) && activeSubCount == 1) {
+                        simSlot = "1";
                     }
 
                     simSlot = normalizeSimSlotValue(simSlot, simId);

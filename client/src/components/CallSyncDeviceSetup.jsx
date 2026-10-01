@@ -6,17 +6,27 @@ const API_BASE = import.meta.env.VITE_API_BASE_URL || 'https://peopledesk.orbixd
 
 const normalizeSimValue = (value) => String(value || '').trim().toLowerCase();
 
-const filterLogsForSim = (logs, officialSim) => {
+const filterLogsForSim = (logs, officialSim, activationTime = 0) => {
   const target = normalizeSimValue(officialSim);
-  if (!target || target === '0' || target === 'all' || target === 'both') return Array.isArray(logs) ? logs : [];
+  const isAll = !target || target === '0' || target === 'all' || target === 'both';
 
   return (Array.isArray(logs) ? logs : []).filter((log) => {
+    if (activationTime > 0 && log.date && log.date < activationTime) {
+      return false;
+    }
+    if (isAll) return true;
+
     const simSlot = normalizeSimValue(log.simSlot);
-    const simId = normalizeSimValue(log.simId);
-    return (
-      simSlot === target ||
-      simId === target
-    );
+    if (simSlot && simSlot !== '0' && simSlot !== 'unknown') {
+      return simSlot === target;
+    }
+
+    const simLabel = normalizeSimValue(log.simLabel);
+    if (simLabel && (simLabel.includes(`sim ${target}`) || simLabel.includes(`slot ${target}`))) {
+      return true;
+    }
+
+    return false;
   });
 };
 
@@ -121,9 +131,13 @@ export default function CallSyncDeviceSetup() {
       });
       const data = await response.json();
       if (!response.ok) throw new Error(data.message || 'Activation failed');
+      const nowTs = Date.now();
       await Preferences.set({ key: 'apiUrl', value: API_BASE });
       await Preferences.set({ key: 'call_sync_device_token', value: data.deviceToken });
       await Preferences.set({ key: 'cre_official_sim', value: data.officialSim || targetSim });
+      await Preferences.set({ key: 'call_sync_activation_time', value: String(nowTs) });
+      localStorage.setItem('cre_official_sim', data.officialSim || targetSim);
+      localStorage.setItem('call_sync_activation_time', String(nowTs));
       await plugin.requestExactAlarmPermission?.();
       await plugin.requestBatteryExemption?.();
       await plugin.requestLocationPermission?.();
@@ -133,7 +147,7 @@ export default function CallSyncDeviceSetup() {
       
       try {
         const logsResult = await plugin.getCallLogs();
-        const filteredLogs = filterLogsForSim(logsResult?.logs, data.officialSim || targetSim);
+        const filteredLogs = filterLogsForSim(logsResult?.logs, data.officialSim || targetSim, nowTs);
         if (filteredLogs.length > 0) {
           const targetUrl = API_BASE.replace(/\/$/, '') + '/call-sync/sync';
           await fetch(targetUrl, {
@@ -165,6 +179,8 @@ export default function CallSyncDeviceSetup() {
       const { value: deviceToken } = await Preferences.get({ key: 'call_sync_device_token' });
       const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
       const { value: apiUrl } = await Preferences.get({ key: 'apiUrl' });
+      const { value: actTimeStr } = await Preferences.get({ key: 'call_sync_activation_time' });
+      const activationTime = actTimeStr ? Number(actTimeStr) : 0;
 
       const logsResult = await plugin.getCallLogs();
       if (!logsResult?.logs || logsResult.logs.length === 0) {
@@ -173,7 +189,7 @@ export default function CallSyncDeviceSetup() {
       }
 
       const selectedSim = officialSim || (syncBothSims ? 'all' : sim);
-      const filteredLogs = filterLogsForSim(logsResult.logs, selectedSim);
+      const filteredLogs = filterLogsForSim(logsResult.logs, selectedSim, activationTime);
       if (filteredLogs.length === 0) {
         setStatus(`No call logs found for ${selectedSim === 'all' ? 'both SIMs' : `selected SIM ${selectedSim}`}.`);
         return;

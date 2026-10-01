@@ -28,7 +28,7 @@ const CRECallReports = () => {
     const [simFilter, setSimFilter] = useState('ALL');
     const [isUniqueOnly, setIsUniqueOnly] = useState(false);
     const getIstToday = () => {
-        return new Date().toLocaleDateString('en-CA');
+        return new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' });
     };
     const [selectedDate, setSelectedDate] = useState(getIstToday());
     const [isFetchingLocal, setIsFetchingLocal] = useState(false);
@@ -48,8 +48,13 @@ const CRECallReports = () => {
             const data = await response.json();
             if (response.ok && data.enrolled) {
                 setDeviceStatus(data.device);
-                if (!Capacitor.isNativePlatform() && data.device?.officialSim) {
-                    setOfficialSim(parseInt(data.device.officialSim, 10));
+                if (data.device?.officialSim) {
+                    const devSim = String(data.device.officialSim).trim();
+                    setOfficialSim(devSim);
+                    localStorage.setItem('cre_official_sim', devSim);
+                    if (Capacitor.isNativePlatform()) {
+                        Preferences.set({ key: 'cre_official_sim', value: devSim });
+                    }
                 }
             } else {
                 setDeviceStatus(null);
@@ -59,9 +64,9 @@ const CRECallReports = () => {
         }
     };
 
-    // Persisted SIM slot preference — default SIM 2
+    // Persisted SIM slot preference (string: "1", "2", "all", or "0")
     const [officialSim, setOfficialSim] = useState(() =>
-        parseInt(localStorage.getItem('cre_official_sim') || '0') // Changed default to 0 (None)
+        localStorage.getItem('cre_official_sim') || '0'
     );
     const [simLabels, setSimLabels] = useState({});
     const [simMap, setSimMap] = useState({}); // Maps subId to slot and vice versa
@@ -72,7 +77,7 @@ const CRECallReports = () => {
         const loadPrefs = async () => {
             if (Capacitor.isNativePlatform()) {
                 const { value: simPref } = await Preferences.get({ key: 'cre_official_sim' });
-                if (simPref) setOfficialSim(parseInt(simPref));
+                if (simPref) setOfficialSim(simPref);
 
                 const { value: labelsPref } = await Preferences.get({ key: 'sim_labels' });
                 if (labelsPref) setSimLabels(JSON.parse(labelsPref));
@@ -81,7 +86,7 @@ const CRECallReports = () => {
                 discoverSims();
             } else {
                 const val = localStorage.getItem('cre_official_sim');
-                if (val) setOfficialSim(parseInt(val));
+                if (val) setOfficialSim(val);
                 
                 const labels = localStorage.getItem('sim_labels');
                 if (labels) setSimLabels(JSON.parse(labels));
@@ -179,24 +184,24 @@ const CRECallReports = () => {
     }, [dispatch, selectedDate, deviceStatus?.lastSuccessAt]);
 
     const handleSimChange = (slot) => {
-        const parsed = parseInt(slot);
-        setPendingSim(parsed);
+        const simStr = String(slot).trim();
+        setPendingSim(simStr);
         setIsConfirmOpen(true);
     };
 
     const confirmSimChange = async () => {
         if (pendingSim === null) return;
         
-        const parsed = pendingSim;
-        setOfficialSim(parsed);
-        localStorage.setItem('cre_official_sim', String(parsed));
+        const simStr = String(pendingSim).trim();
+        setOfficialSim(simStr);
+        localStorage.setItem('cre_official_sim', simStr);
         if (Capacitor.isNativePlatform()) {
             await Preferences.set({
                 key: 'cre_official_sim',
-                value: String(parsed)
+                value: simStr
             });
         }
-        toast.success(`SIM ${parsed} set as Official Work SIM.`);
+        toast.success(`Official Work SIM set to ${simStr === 'all' || simStr === 'both' ? 'Both SIMs' : `SIM ${simStr}`}.`);
         setIsConfirmOpen(false);
 
         // Re-sync logs for the newly selected SIM if today
@@ -237,9 +242,26 @@ const CRECallReports = () => {
                     }
                 }
 
+                // Check activation time
+                let activationTime = 0;
+                if (Capacitor.isNativePlatform()) {
+                    const { value: actStr } = await Preferences.get({ key: 'call_sync_activation_time' });
+                    if (actStr) activationTime = Number(actStr);
+                } else {
+                    const actStr = localStorage.getItem('call_sync_activation_time');
+                    if (actStr) activationTime = Number(actStr);
+                }
+
                 // --- STRICT CLIENT-SIDE FILTERING ---
-                // Only send logs that match the specifically selected official SIM
+                const targetSlot = String(officialSim || 'all').trim().toLowerCase();
+                const isAll = !targetSlot || targetSlot === '0' || targetSlot === 'all' || targetSlot === 'both';
+
                 const filteredLogs = allLogs.filter(log => {
+                    if (activationTime > 0 && log.date && log.date < activationTime) {
+                        return false;
+                    }
+                    if (isAll) return true;
+
                     let resolvedSlot = "";
                     const slot = String(log.simSlot || "").trim();
                     if (slot && slot !== "0") {
@@ -251,7 +273,6 @@ const CRECallReports = () => {
                         }
                     }
                     
-                    const targetSlot = String(officialSim).trim();
                     return resolvedSlot === targetSlot;
                 });
 
@@ -476,8 +497,11 @@ const CRECallReports = () => {
             (call.name && call.name.toLowerCase().includes(searchTerm.toLowerCase()));
         const matchesType = filterType === 'ALL' || call.type === filterType;
         
-        // Auto-filter by Official SIM preference only (Removed the redundant bottom filter)
-        if (officialSim === 0) return matchesSearch && matchesType; // Show all if none selected yet for review
+        // Show all synced calls if officialSim is 'all', 'both', '0', or empty
+        const curSim = String(officialSim || 'all').trim().toLowerCase();
+        if (curSim === '0' || curSim === 'all' || curSim === 'both') {
+            return matchesSearch && matchesType;
+        }
         return matchesOfficialSim(call, officialSim) && matchesSearch && matchesType;
     });
 
@@ -597,15 +621,20 @@ const CRECallReports = () => {
                         )}
                         {/* SIM Slot Selector */}
                         <div className="flex items-center gap-1 bg-slate-100/50 p-1.5 rounded-2xl border border-slate-200">
-                            <span className="text-[9px] font-black text-slate-400 uppercase px-2">OFFICIAL SIM</span>
-                            {[1, 2].map((slot) => {
-                                const label = simLabels[slot] || `SIM ${slot}`;
+                            <span className="text-[9px] font-black text-slate-400 uppercase px-2">SIM FILTER</span>
+                            {[
+                                { slot: 'all', label: 'ALL SIMS' },
+                                { slot: '1', label: simLabels['1'] || 'SIM 1' },
+                                { slot: '2', label: simLabels['2'] || 'SIM 2' }
+                            ].map(({ slot, label }) => {
+                                const cur = String(officialSim || 'all').trim().toLowerCase();
+                                const isActive = cur === slot || (slot === 'all' && (cur === '0' || cur === 'all' || cur === 'both' || !cur));
 
                                 return (
                                     <button
                                         key={slot}
                                         onClick={() => handleSimChange(slot)}
-                                        className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${officialSim === slot
+                                        className={`px-3 py-2 rounded-xl text-[9px] font-black uppercase transition-all ${isActive
                                             ? 'bg-slate-900 text-white shadow'
                                             : 'text-slate-400 hover:bg-white hover:shadow-sm'
                                             }`}

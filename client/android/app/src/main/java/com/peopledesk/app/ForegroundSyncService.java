@@ -96,7 +96,7 @@ public class ForegroundSyncService extends Service {
         try {
             executor.execute(() -> {
                 try {
-                    CallLogSyncWorker.performSync(getApplicationContext(), false);
+                    CallLogSyncWorker.performSync(getApplicationContext(), true);
                 } catch (Exception e) {
                     Log.e(TAG, "Direct sync execution error", e);
                 }
@@ -124,7 +124,7 @@ public class ForegroundSyncService extends Service {
                 "PeopleDesk Field & Call Sync Service",
                 NotificationManager.IMPORTANCE_LOW
             );
-            channel.setDescription("Ensures continuous call log and live location tracking operates in the background (7 AM – 8 PM IST)");
+            channel.setDescription("Ensures continuous call log and live location tracking operates in the background");
             NotificationManager manager = getSystemService(NotificationManager.class);
             if (manager != null) {
                 manager.createNotificationChannel(channel);
@@ -134,8 +134,8 @@ public class ForegroundSyncService extends Service {
 
     private Notification createNotification() {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle("PeopleDesk Field Service Active")
-            .setContentText("Continuous call and live GPS tracking active (7:00 AM – 8:00 PM IST)")
+            .setContentTitle("PeopleDesk Sync Active")
+            .setContentText("Continuous official call sync & tracking active")
             .setSmallIcon(android.R.drawable.stat_notify_sync)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .setOngoing(true);

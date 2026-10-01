@@ -51,6 +51,7 @@ public class MainActivity extends BridgeActivity {
         if (isCallSyncActivated()) {
             scheduleBackgroundSync();
             CallSyncAlarmReceiver.schedule(this);
+            ForegroundSyncService.startService(this);
         } else if (isUserAuthenticated()) {
             scheduleAELocationSync();
         }
