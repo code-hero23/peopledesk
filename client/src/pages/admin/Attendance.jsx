@@ -557,12 +557,32 @@ const Attendance = () => {
                                                 <div className="flex flex-col">
                                                     <div className="flex items-center gap-2">
                                                         <span className="font-black text-slate-800 dark:text-slate-100 text-xs">{record.user.name}</span>
-                                                        {activeStatuses.some(s => s.userId === record.user.id) && (
-                                                            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 rounded border border-rose-200 dark:border-rose-800 text-[8px] font-black uppercase">
-                                                                <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
-                                                                ON BREAK
-                                                            </span>
-                                                        )}
+                                                        {(() => {
+                                                            const active = activeStatuses.find(s => s.userId === record.user.id);
+                                                            if (!active) return null;
+                                                            if (active.breakType === 'CLIENT_MEETING') {
+                                                                return (
+                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 rounded border border-blue-200 dark:border-blue-800 text-[8px] font-black uppercase">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-blue-500 animate-ping"></span>
+                                                                        CLIENT MEETING
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            if (active.breakType === 'BH_MEETING') {
+                                                                return (
+                                                                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 rounded border border-purple-200 dark:border-purple-800 text-[8px] font-black uppercase">
+                                                                        <span className="w-1.5 h-1.5 rounded-full bg-purple-500 animate-ping"></span>
+                                                                        BH MEETING
+                                                                    </span>
+                                                                );
+                                                            }
+                                                            return (
+                                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 rounded border border-amber-200 dark:border-amber-800 text-[8px] font-black uppercase">
+                                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                                                    ON BREAK
+                                                                </span>
+                                                            );
+                                                        })()}
                                                     </div>
                                                     <span className="text-[10px] text-slate-400 font-medium">{record.user.email}</span>
                                                 </div>
@@ -584,11 +604,16 @@ const Attendance = () => {
                                                 >
                                                     {record.status}
                                                 </span>
-                                                {activeStatuses.find(s => s.userId === record.user.id) && (
-                                                    <span className="text-[8px] font-black uppercase px-2 py-0.5 rounded-full bg-slate-800 text-white">
-                                                        {getStatusStyles(activeStatuses.find(s => s.userId === record.user.id).breakType).label}
-                                                    </span>
-                                                )}
+                                                {(() => {
+                                                    const active = activeStatuses.find(s => s.userId === record.user.id);
+                                                    if (!active) return null;
+                                                    const styles = getStatusStyles(active.breakType);
+                                                    return (
+                                                        <span className={`text-[8px] font-black uppercase px-2 py-0.5 rounded-full ${styles.bg} ${styles.text} border`}>
+                                                            {styles.label}
+                                                        </span>
+                                                    );
+                                                })()}
 
                                                 {/* Morning Permission under ABSENT */}
                                                 {record.status === 'ABSENT' && (record.morningPermission || record.permission) && (

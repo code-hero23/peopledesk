@@ -60,6 +60,157 @@ const isAeAttendanceUser = (user) => {
     return designation === 'AE' || designation === 'AE MANAGER' || user?.role === 'AE_MANAGER';
 };
 
+// Helper: Break styling and metadata
+const getBreakDetails = (breakType) => {
+    switch (breakType) {
+        case 'CLIENT_MEETING':
+            return {
+                type: 'CLIENT_MEETING',
+                title: 'Client Meeting',
+                category: 'meeting',
+                color: 'blue',
+                icon: Briefcase,
+                heading: 'In Client Meeting',
+                badgeText: 'Meeting Active',
+                badgeClass: 'bg-blue-600 text-white shadow-lg shadow-blue-500/30',
+                subText: 'Client discussion & project consultation in progress',
+                cardBg: 'bg-gradient-to-br from-blue-500/[0.09] via-white to-sky-500/[0.05] dark:from-blue-950/40 dark:via-slate-900 dark:to-indigo-950/30',
+                cardBorder: 'border-2 border-blue-500 dark:border-blue-400 shadow-2xl shadow-blue-500/20 ring-2 ring-blue-400/30',
+                auraColor: 'bg-blue-500/25 dark:bg-blue-500/35',
+                titleColor: 'text-blue-700 dark:text-blue-400',
+                metaBorder: 'border-blue-200/80 dark:border-blue-800/60',
+                btnClass: 'bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 hover:from-blue-700 hover:to-cyan-600 text-white shadow-xl shadow-blue-500/40 ring-4 ring-blue-300/60 dark:ring-blue-500/40 animate-pulse',
+                btnText: 'End Client Meeting',
+                bannerBorder: 'from-blue-600 via-indigo-600 to-cyan-500',
+                bannerShadow: 'shadow-blue-500/20',
+                bannerPing: 'bg-blue-400',
+                bannerDot: 'bg-blue-500',
+                bannerTitle: 'Client Meeting in Progress',
+                bannerSub: 'Currently in Client Meeting',
+                clockBg: 'from-[#0f172a] via-[#1e3a8a] to-[#0284c7]',
+                clockMascotBg: 'bg-gradient-to-br from-blue-950 via-slate-900 to-indigo-950',
+                clockTagBg: 'bg-blue-900/90 text-blue-200 border-blue-400/50',
+                clockTagText: 'IN CLIENT MEETING'
+            };
+        case 'BH_MEETING':
+            return {
+                type: 'BH_MEETING',
+                title: 'BH Meeting',
+                category: 'meeting',
+                color: 'purple',
+                icon: MessageSquare,
+                heading: 'In BH Meeting',
+                badgeText: 'Meeting Active',
+                badgeClass: 'bg-purple-600 text-white shadow-lg shadow-purple-500/30',
+                subText: 'Business Head discussion in progress',
+                cardBg: 'bg-gradient-to-br from-purple-500/[0.09] via-white to-violet-500/[0.05] dark:from-purple-950/40 dark:via-slate-900 dark:to-violet-950/30',
+                cardBorder: 'border-2 border-purple-500 dark:border-purple-400 shadow-2xl shadow-purple-500/20 ring-2 ring-purple-400/30',
+                auraColor: 'bg-purple-500/25 dark:bg-purple-500/35',
+                titleColor: 'text-purple-700 dark:text-purple-400',
+                metaBorder: 'border-purple-200/80 dark:border-purple-800/60',
+                btnClass: 'bg-gradient-to-r from-purple-600 via-violet-600 to-fuchsia-600 hover:from-purple-700 hover:to-fuchsia-700 text-white shadow-xl shadow-purple-500/40 ring-4 ring-purple-300/60 dark:ring-purple-500/40 animate-pulse',
+                btnText: 'End BH Meeting',
+                bannerBorder: 'from-purple-600 via-violet-600 to-fuchsia-600',
+                bannerShadow: 'shadow-purple-500/20',
+                bannerPing: 'bg-purple-400',
+                bannerDot: 'bg-purple-500',
+                bannerTitle: 'BH Meeting in Progress',
+                bannerSub: 'Currently in BH Meeting',
+                clockBg: 'from-[#2e1065] via-[#581c87] to-[#7e22ce]',
+                clockMascotBg: 'bg-gradient-to-br from-purple-950 via-slate-900 to-fuchsia-950',
+                clockTagBg: 'bg-purple-900/90 text-purple-200 border-purple-400/50',
+                clockTagText: 'IN BH MEETING'
+            };
+        case 'TEA':
+            return {
+                type: 'TEA',
+                title: 'Tea Break',
+                category: 'break',
+                color: 'amber',
+                icon: Coffee,
+                heading: 'On Tea Break',
+                badgeText: 'Break Paused',
+                badgeClass: 'bg-amber-500 text-white shadow-lg shadow-amber-500/30',
+                subText: 'Take a sip, relax & recharge your energy',
+                cardBg: 'bg-gradient-to-br from-amber-500/[0.09] via-white to-orange-500/[0.05] dark:from-amber-950/40 dark:via-slate-900 dark:to-orange-950/30',
+                cardBorder: 'border-2 border-amber-400 dark:border-amber-500 shadow-2xl shadow-amber-500/20 ring-2 ring-amber-400/30',
+                auraColor: 'bg-amber-500/25 dark:bg-amber-500/35',
+                titleColor: 'text-amber-700 dark:text-amber-400',
+                metaBorder: 'border-amber-200/80 dark:border-amber-800/60',
+                btnClass: 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/40 ring-4 ring-amber-300/60 dark:ring-amber-500/40 animate-pulse',
+                btnText: 'End Tea Break',
+                bannerBorder: 'from-amber-500 via-orange-500 to-amber-500',
+                bannerShadow: 'shadow-amber-500/20',
+                bannerPing: 'bg-amber-400',
+                bannerDot: 'bg-amber-500',
+                bannerTitle: 'Tea Break Active',
+                bannerSub: 'Currently on Tea Break',
+                clockBg: 'from-[#451a03] via-[#78350f] to-[#b45309]',
+                clockMascotBg: 'bg-gradient-to-br from-amber-950 via-slate-900 to-orange-950',
+                clockTagBg: 'bg-amber-900/90 text-amber-200 border-amber-400/50',
+                clockTagText: 'ON TEA BREAK'
+            };
+        case 'LUNCH':
+            return {
+                type: 'LUNCH',
+                title: 'Lunch Break',
+                category: 'break',
+                color: 'orange',
+                icon: Utensils,
+                heading: 'On Lunch Break',
+                badgeText: 'Break Paused',
+                badgeClass: 'bg-orange-500 text-white shadow-lg shadow-orange-500/30',
+                subText: 'Enjoy your meal & recharge for the afternoon',
+                cardBg: 'bg-gradient-to-br from-orange-500/[0.09] via-white to-amber-500/[0.05] dark:from-orange-950/40 dark:via-slate-900 dark:to-amber-950/30',
+                cardBorder: 'border-2 border-orange-400 dark:border-orange-500 shadow-2xl shadow-orange-500/20 ring-2 ring-orange-400/30',
+                auraColor: 'bg-orange-500/25 dark:bg-orange-500/35',
+                titleColor: 'text-orange-700 dark:text-orange-400',
+                metaBorder: 'border-orange-200/80 dark:border-orange-800/60',
+                btnClass: 'bg-gradient-to-r from-orange-500 via-amber-600 to-orange-600 hover:from-orange-600 hover:to-amber-700 text-white shadow-xl shadow-orange-500/40 ring-4 ring-orange-300/60 dark:ring-orange-500/40 animate-pulse',
+                btnText: 'End Lunch Break',
+                bannerBorder: 'from-orange-500 via-amber-500 to-orange-500',
+                bannerShadow: 'shadow-orange-500/20',
+                bannerPing: 'bg-orange-400',
+                bannerDot: 'bg-orange-500',
+                bannerTitle: 'Lunch Break Active',
+                bannerSub: 'Currently on Lunch Break',
+                clockBg: 'from-[#431407] via-[#9a3412] to-[#c2410c]',
+                clockMascotBg: 'bg-gradient-to-br from-orange-950 via-slate-900 to-amber-950',
+                clockTagBg: 'bg-orange-900/90 text-orange-200 border-orange-400/50',
+                clockTagText: 'ON LUNCH BREAK'
+            };
+        default:
+            return {
+                type: 'BREAK',
+                title: 'Break',
+                category: 'break',
+                color: 'amber',
+                icon: Coffee,
+                heading: 'Break Session Active',
+                badgeText: 'Break Paused',
+                badgeClass: 'bg-amber-500 text-white shadow-lg shadow-amber-500/30',
+                subText: 'Take a break & recharge',
+                cardBg: 'bg-gradient-to-br from-amber-500/[0.09] via-white to-orange-500/[0.05] dark:from-amber-950/40 dark:via-slate-900 dark:to-orange-950/30',
+                cardBorder: 'border-2 border-amber-400 dark:border-amber-500 shadow-2xl shadow-amber-500/20 ring-2 ring-amber-400/30',
+                auraColor: 'bg-amber-500/25 dark:bg-amber-500/35',
+                titleColor: 'text-amber-700 dark:text-amber-400',
+                metaBorder: 'border-amber-200/80 dark:border-amber-800/60',
+                btnClass: 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/40 ring-4 ring-amber-300/60 dark:ring-amber-500/40 animate-pulse',
+                btnText: 'End Break',
+                bannerBorder: 'from-amber-500 via-orange-500 to-amber-500',
+                bannerShadow: 'shadow-amber-500/20',
+                bannerPing: 'bg-amber-400',
+                bannerDot: 'bg-amber-500',
+                bannerTitle: 'Break Session Active',
+                bannerSub: 'Currently on break',
+                clockBg: 'from-[#451a03] via-[#78350f] to-[#b45309]',
+                clockMascotBg: 'bg-gradient-to-br from-amber-950 via-slate-900 to-orange-950',
+                clockTagBg: 'bg-amber-900/90 text-amber-200 border-amber-400/50',
+                clockTagText: 'ON BREAK'
+            };
+    }
+};
+
 // Sub-component: Clock
 const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     const [currentTime, setCurrentTime] = useState(new Date());
@@ -77,14 +228,19 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     };
 
     const progress = calculateProgress();
+    const breakDetails = activeBreak ? getBreakDetails(activeBreak.breakType) : null;
 
     return (
-        <div className="relative w-full max-w-[340px] h-40 xl:w-80 xl:h-44 rounded-[2.2rem] xl:rounded-[2.5rem] overflow-hidden shadow-xl shrink-0 group transition-all duration-500 hover:scale-[1.01]">
-            <div className="absolute inset-0 bg-[#00607a] transition-colors duration-1000">
+        <div className={`relative w-full max-w-[340px] h-40 xl:w-80 xl:h-44 rounded-[2.2rem] xl:rounded-[2.5rem] overflow-hidden shadow-xl shrink-0 group transition-all duration-500 hover:scale-[1.01] ${
+            activeBreak ? (breakDetails?.color === 'blue' ? 'shadow-blue-500/25 ring-2 ring-blue-400/30' : breakDetails?.color === 'purple' ? 'shadow-purple-500/25 ring-2 ring-purple-400/30' : 'shadow-amber-500/25 ring-2 ring-amber-400/30') : ''
+        }`}>
+            <div className={`absolute inset-0 bg-gradient-to-br ${
+                activeBreak ? (breakDetails?.clockBg || 'from-[#004e63] to-[#00607a]') : 'from-[#004e63] via-[#00607a] to-[#018ba1]'
+            } transition-colors duration-1000`}>
                 <div className="absolute inset-0 opacity-80">
-                    <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-[#004e63] transform -skew-x-12 transition-all duration-1000" />
-                    <div className="absolute top-0 left-1/4 w-1/2 h-full bg-[#00708f] transform -skew-x-12 transition-all duration-1000" />
-                    <div className="absolute top-0 left-3/4 w-1/2 h-full bg-[#018ba1] transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 -left-1/4 w-1/2 h-full bg-white/5 transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 left-1/4 w-1/2 h-full bg-white/10 transform -skew-x-12 transition-all duration-1000" />
+                    <div className="absolute top-0 left-3/4 w-1/2 h-full bg-white/5 transform -skew-x-12 transition-all duration-1000" />
                 </div>
                 {isCheckedIn && !activeBreak && (
                     <motion.div 
@@ -97,13 +253,18 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
             <AnimatePresence mode="wait">
                 {activeBreak ? (
                     <motion.div 
-                        key="break-animation" 
+                        key={`break-animation-${activeBreak.breakType}`} 
                         initial={{ opacity: 0, scale: 1.05 }} 
                         animate={{ opacity: 1, scale: 1 }} 
                         exit={{ opacity: 0, scale: 0.95 }} 
                         transition={{ duration: 0.5, ease: "anticipate" }} 
-                        className="absolute inset-0 z-30 overflow-hidden bg-white flex items-center justify-center p-2"
+                        className={`absolute inset-0 z-30 overflow-hidden ${breakDetails?.clockMascotBg || 'bg-slate-900'} flex items-center justify-center p-2`}
                     >
+                        {/* Live Digital Time Pill in Top Corner */}
+                        <div className="absolute top-2.5 right-3 z-30 text-[10px] font-mono font-black text-white/90 bg-black/40 px-2 py-0.5 rounded-lg backdrop-blur-md border border-white/10 shadow-sm">
+                            {currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+                        </div>
+
                         {/* Crisp Uncropped Mascot Animation */}
                         {(() => {
                             const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
@@ -118,13 +279,13 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                                                 ? '/bh-meeting-break.mp4'
                                                 : '/break.gif')
                                 : (activeBreak.breakType === 'LUNCH' 
-                                    ? '/lunch-break.gif' 
+                                    ? '/lunch-break.mp4' 
                                     : activeBreak.breakType === 'TEA' 
-                                        ? '/tea-break.gif' 
+                                        ? '/tea-break.mp4' 
                                         : activeBreak.breakType === 'CLIENT_MEETING'
-                                            ? '/client-meeting-break.gif'
+                                            ? '/client-meeting-break.mp4'
                                             : activeBreak.breakType === 'BH_MEETING'
-                                                ? '/bh-meeting-break.gif'
+                                                ? '/bh-meeting-break.mp4'
                                                 : '/break.gif');
 
                             const isVideo = breakSrc.endsWith('.mp4') || breakSrc.endsWith('.webm');
@@ -145,15 +306,15 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
                             return (
                                 <img 
                                     src={breakSrc} 
-                                    alt={`On ${activeBreak.breakType} Break`} 
+                                    alt={`On ${breakDetails?.title || 'Break'}`} 
                                     className="relative z-10 w-full h-full object-contain filter drop-shadow-md" 
                                 />
                             );
                         })()}
                         <div className="absolute inset-x-0 bottom-2 z-20 flex justify-center pointer-events-none">
-                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className="flex items-center gap-2 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-slate-200 shadow-md">
-                                <Coffee size={14} className="text-amber-500 animate-pulse" />
-                                <span className="text-[10px] font-black text-slate-700 dark:text-slate-200 uppercase tracking-widest">RELAXING: {activeBreak.breakType}</span>
+                            <motion.div initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.3 }} className={`flex items-center gap-2 backdrop-blur-md px-3.5 py-1.5 rounded-xl border shadow-lg ${breakDetails?.clockTagBg || 'bg-slate-900/90 text-white border-white/20'}`}>
+                                {breakDetails?.icon && <breakDetails.icon size={14} className="animate-pulse" />}
+                                <span className="text-[10px] font-black uppercase tracking-widest">{breakDetails?.clockTagText || 'ON BREAK'}</span>
                             </motion.div>
                         </div>
                     </motion.div>
@@ -671,6 +832,18 @@ const Overview = () => {
         attendance?.status === 'PRESENT' && !!attendance.checkoutTime && user?.designation !== 'AE' && user?.designation !== 'AE MANAGER',
         [attendance, user]);
 
+    const currentActiveBreak = useMemo(() => {
+        if (activeBreak) return activeBreak;
+        if (attendance?.breaks && Array.isArray(attendance.breaks)) {
+            return attendance.breaks.find(b => !b.endTime) || null;
+        }
+        return null;
+    }, [activeBreak, attendance]);
+
+    const breakDetails = useMemo(() => {
+        return currentActiveBreak ? getBreakDetails(currentActiveBreak.breakType) : null;
+    }, [currentActiveBreak]);
+
     const [sessionDuration, setSessionDuration] = useState('00:00:00');
     const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
 
@@ -1039,37 +1212,37 @@ const Overview = () => {
             <div className="max-w-[1600px] mx-auto p-4 lg:p-8 space-y-8">
                 {/* Active Break Notification */}
                 <AnimatePresence>
-                    {activeBreak && (
+                    {currentActiveBreak && breakDetails && (
                         <motion.div
                             initial={{ height: 0, opacity: 0, y: -20 }}
                             animate={{ height: 'auto', opacity: 1, y: 0 }}
                             exit={{ height: 0, opacity: 0, y: -20 }}
-                            className="bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 p-[2px] rounded-[2rem] shadow-lg shadow-amber-200/50 dark:shadow-amber-900/20 overflow-hidden"
+                            className={`bg-gradient-to-r ${breakDetails.bannerBorder} p-[2px] rounded-[2rem] shadow-lg ${breakDetails.bannerShadow} overflow-hidden mb-6`}
                         >
-                            <div className="bg-white/95 dark:bg-slate-900 backdrop-blur-md px-8 py-4 rounded-[1.9rem] flex items-center justify-between gap-4 transition-colors">
+                            <div className="bg-white/95 dark:bg-slate-900 backdrop-blur-md px-6 sm:px-8 py-4 rounded-[1.9rem] flex flex-col sm:flex-row sm:items-center justify-between gap-4 transition-colors">
                                 <div className="flex items-center gap-4">
-                                    <div className="relative">
-                                        <div className="w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-lg border border-amber-400/40 flex items-center justify-center">
+                                    <div className="relative shrink-0">
+                                        <div className={`w-14 h-14 bg-white dark:bg-slate-900 rounded-2xl overflow-hidden shadow-lg border-2 ${breakDetails.color === 'blue' ? 'border-blue-400' : breakDetails.color === 'purple' ? 'border-purple-400' : 'border-amber-400'} flex items-center justify-center`}>
                                             {(() => {
                                                 const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
                                                 const breakSrc = isNative
-                                                    ? (activeBreak.breakType === 'LUNCH' 
+                                                    ? (currentActiveBreak.breakType === 'LUNCH' 
                                                         ? '/lunch-break.mp4' 
-                                                        : activeBreak.breakType === 'TEA' 
+                                                        : currentActiveBreak.breakType === 'TEA' 
                                                             ? '/tea-break.mp4' 
-                                                            : activeBreak.breakType === 'CLIENT_MEETING'
+                                                            : currentActiveBreak.breakType === 'CLIENT_MEETING'
                                                                 ? '/client-meeting-break.mp4'
-                                                                : activeBreak.breakType === 'BH_MEETING'
+                                                                : currentActiveBreak.breakType === 'BH_MEETING'
                                                                     ? '/bh-meeting-break.mp4'
                                                                     : '/break.gif')
-                                                    : (activeBreak.breakType === 'LUNCH' 
-                                                        ? '/lunch-break.gif' 
-                                                        : activeBreak.breakType === 'TEA' 
-                                                            ? '/tea-break.gif' 
-                                                            : activeBreak.breakType === 'CLIENT_MEETING'
-                                                                ? '/client-meeting-break.gif'
-                                                                : activeBreak.breakType === 'BH_MEETING'
-                                                                    ? '/bh-meeting-break.gif'
+                                                    : (currentActiveBreak.breakType === 'LUNCH' 
+                                                        ? '/lunch-break.mp4' 
+                                                        : currentActiveBreak.breakType === 'TEA' 
+                                                            ? '/tea-break.mp4' 
+                                                            : currentActiveBreak.breakType === 'CLIENT_MEETING'
+                                                                ? '/client-meeting-break.mp4'
+                                                                : currentActiveBreak.breakType === 'BH_MEETING'
+                                                                    ? '/bh-meeting-break.mp4'
                                                                     : '/break.gif');
 
                                                 if (breakSrc.endsWith('.mp4') || breakSrc.endsWith('.webm')) {
@@ -1095,14 +1268,17 @@ const Overview = () => {
                                             })()}
                                         </div>
                                         <span className="absolute -top-1 -right-1 flex h-4 w-4">
-                                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
-                                            <span className="relative inline-flex rounded-full h-4 w-4 bg-amber-500"></span>
+                                            <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${breakDetails.bannerPing} opacity-75`}></span>
+                                            <span className={`relative inline-flex rounded-full h-4 w-4 ${breakDetails.bannerDot}`}></span>
                                         </span>
                                     </div>
                                     <div>
-                                        <h4 className="text-lg font-black text-slate-800 dark:text-slate-100 tracking-tight transition-colors">Break Session Active</h4>
+                                        <h4 className={`text-lg font-black ${breakDetails.titleColor} tracking-tight transition-colors flex items-center gap-2`}>
+                                            <breakDetails.icon size={20} />
+                                            <span>{breakDetails.bannerTitle}</span>
+                                        </h4>
                                         <p className="text-sm font-bold text-slate-500 dark:text-slate-300 uppercase tracking-widest flex items-center gap-2 transition-colors">
-                                            Currently on {activeBreak.breakType} break since {formatTime(activeBreak.startTime)}
+                                            {breakDetails.bannerSub} since {formatTime(currentActiveBreak.startTime)}
                                         </p>
                                     </div>
                                 </div>
@@ -1112,16 +1288,30 @@ const Overview = () => {
                                     onClick={() => {
                                         setConfirmationConfig({
                                             isOpen: true,
-                                            title: 'End Break',
-                                            message: `Are you sure you want to end your ${activeBreak.breakType} break and resume work?`,
+                                            title: `End ${breakDetails.title}`,
+                                            message: `Are you sure you want to end your ${breakDetails.title} and resume work?`,
                                             type: 'info',
                                             onConfirm: () => {
-                                                dispatch(resumeAttendance()).then(() => dispatch(getAttendanceStatus()));
+                                                dispatch(resumeAttendance())
+                                                    .unwrap()
+                                                    .then(() => {
+                                                        toast.success('Resumed work session successfully');
+                                                        dispatch(getAttendanceStatus());
+                                                    })
+                                                    .catch((err) => {
+                                                        toast.error(typeof err === 'string' ? err : (err?.message || 'Failed to resume work'));
+                                                    });
                                                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
                                             }
                                         });
                                     }}
-                                    className="px-8 py-3 bg-slate-900 dark:bg-primary text-white rounded-2xl font-black text-sm hover:shadow-xl transition-all flex items-center gap-2 group"
+                                    className={`px-8 py-3 ${
+                                        breakDetails.color === 'blue'
+                                            ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-500/25'
+                                            : breakDetails.color === 'purple'
+                                                ? 'bg-purple-600 hover:bg-purple-700 text-white shadow-purple-500/25'
+                                                : 'bg-amber-600 hover:bg-amber-700 text-white shadow-amber-500/25'
+                                    } rounded-2xl font-black text-sm shadow-lg hover:shadow-xl transition-all flex items-center gap-2 group shrink-0`}
                                 >
                                     Resume Work <ArrowRight size={18} className="group-hover:translate-x-1 transition-transform" />
                                 </motion.button>
@@ -1178,8 +1368,14 @@ const Overview = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8 items-start">
                     {/* Left Column */}
                     <div className="lg:col-span-7 xl:col-span-8 space-y-6 lg:space-y-8 min-w-0">
-                        <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] xl:rounded-[3rem] p-6 sm:p-8 lg:p-8 xl:p-10 shadow-sm border border-slate-100 dark:border-slate-800 relative overflow-hidden group transition-colors">
-                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-50/50 dark:bg-indigo-900/10 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl" />
+                        <div className={`rounded-[2.5rem] xl:rounded-[3rem] p-6 sm:p-8 lg:p-8 xl:p-10 shadow-sm relative overflow-hidden group transition-all duration-500 ${
+                            currentActiveBreak && breakDetails
+                                ? `${breakDetails.cardBg} ${breakDetails.cardBorder}`
+                                : 'bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800'
+                        }`}>
+                            <div className={`absolute top-0 right-0 w-64 h-64 ${
+                                currentActiveBreak && breakDetails ? breakDetails.auraColor : 'bg-indigo-50/50 dark:bg-indigo-900/10'
+                            } rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl transition-colors duration-500`} />
                             <div className="relative flex flex-col xl:flex-row xl:items-center justify-between gap-6 lg:gap-8">
                                 <div className="space-y-8">
                                     <div className="space-y-4">
@@ -1200,22 +1396,48 @@ const Overview = () => {
                                             </div>
                                         )}
                                         <div className="space-y-2">
-                                            <h2 className="text-3xl font-black text-slate-900 dark:text-white transition-colors">
-                                                {isCheckedIn ? 'Session Active' : (isSessionFinished ? 'Session Completed' : 'Ready to Start?')}
-                                            </h2>
+                                            {currentActiveBreak && breakDetails ? (
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <h2 className={`text-3xl font-black ${breakDetails.titleColor} transition-colors flex items-center gap-2.5`}>
+                                                        <breakDetails.icon size={28} className="animate-bounce" />
+                                                        <span>{breakDetails.heading}</span>
+                                                    </h2>
+                                                    <span className={`px-3.5 py-1 rounded-full text-xs font-black uppercase tracking-wider ${breakDetails.badgeClass} flex items-center gap-1.5 animate-pulse`}>
+                                                        <span className="w-2 h-2 rounded-full bg-white" />
+                                                        {breakDetails.badgeText}
+                                                    </span>
+                                                </div>
+                                            ) : (
+                                                <div className="flex flex-wrap items-center gap-3">
+                                                    <h2 className="text-3xl font-black text-slate-900 dark:text-white transition-colors">
+                                                        {isCheckedIn ? 'Session Active' : (isSessionFinished ? 'Session Completed' : 'Ready to Start?')}
+                                                    </h2>
+                                                    {isCheckedIn && (
+                                                        <span className="px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1.5">
+                                                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                                            Active Working
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
+
                                             <div className="flex flex-col gap-1">
-                                                <p className="text-slate-500 dark:text-slate-400 font-medium text-lg transition-colors">
-                                                    {isCheckedIn
-                                                        ? `Started at ${formatTime(attendance?.date)}`
-                                                        : (isSessionFinished
-                                                            ? `Completed session at ${formatTime(attendance?.checkoutTime)}`
-                                                            : 'Your daily progress begins here. Don\'t forget to sign in!')}
+                                                <p className={`${currentActiveBreak ? 'text-slate-600 dark:text-slate-300 font-semibold' : 'text-slate-500 dark:text-slate-400 font-medium'} text-lg transition-colors`}>
+                                                    {currentActiveBreak
+                                                        ? `${breakDetails?.subText} • Started at ${formatTime(currentActiveBreak.startTime)}`
+                                                        : (isCheckedIn
+                                                            ? `Started at ${formatTime(attendance?.date)}`
+                                                            : (isSessionFinished
+                                                                ? `Completed session at ${formatTime(attendance?.checkoutTime)}`
+                                                                : 'Your daily progress begins here. Don\'t forget to sign in!'))}
                                                 </p>
                                                 {(isCheckedIn || isSessionFinished) && (
-                                                    <div className="flex flex-wrap items-center gap-6 mt-2 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                                    <div className={`flex flex-wrap items-center gap-6 mt-2 pt-4 border-t ${
+                                                        currentActiveBreak ? breakDetails?.metaBorder : 'border-slate-100 dark:border-slate-800'
+                                                    }`}>
                                                         <div className="flex items-center gap-2">
                                                             <div className="p-1.5 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg">
-                                                                 <Clock size={14} />
+                                                                <Clock size={14} />
                                                             </div>
                                                             <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Duration:</span>
                                                             <span className="text-sm font-bold text-slate-700 dark:text-slate-300 tabular-nums">{sessionDuration}</span>
@@ -1242,6 +1464,23 @@ const Overview = () => {
                                                                 Change Seat
                                                             </button>
                                                         </div>
+                                                        {currentActiveBreak && breakDetails && (
+                                                            <div className="flex items-center gap-2">
+                                                                <div className={`p-1.5 ${
+                                                                    breakDetails.color === 'blue' 
+                                                                        ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300' 
+                                                                        : breakDetails.color === 'purple' 
+                                                                            ? 'bg-purple-100 dark:bg-purple-900/40 text-purple-600 dark:text-purple-300' 
+                                                                            : 'bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-300'
+                                                                } rounded-lg`}>
+                                                                    <breakDetails.icon size={14} />
+                                                                </div>
+                                                                <span className="text-xs font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Current Mode:</span>
+                                                                <span className={`text-sm font-black ${breakDetails.titleColor}`}>
+                                                                    {breakDetails.title}
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 )}
                                             </div>
@@ -1273,14 +1512,22 @@ const Overview = () => {
                                                 whileHover={{ scale: 1.03 }}
                                                 whileTap={{ scale: 0.97 }}
                                                 onClick={() => {
-                                                    if (activeBreak) {
+                                                    if (currentActiveBreak && breakDetails) {
                                                         setConfirmationConfig({
                                                             isOpen: true,
-                                                            title: 'End Break',
-                                                            message: `Are you sure you want to end your ${activeBreak.breakType} break and resume work?`,
+                                                            title: `End ${breakDetails.title}`,
+                                                            message: `Are you sure you want to end your ${breakDetails.title} and resume work?`,
                                                             type: 'info',
                                                             onConfirm: () => {
-                                                                dispatch(resumeAttendance()).then(() => dispatch(getAttendanceStatus()));
+                                                                dispatch(resumeAttendance())
+                                                                    .unwrap()
+                                                                    .then(() => {
+                                                                        toast.success('Resumed work session successfully');
+                                                                        dispatch(getAttendanceStatus());
+                                                                    })
+                                                                    .catch((err) => {
+                                                                        toast.error(typeof err === 'string' ? err : (err?.message || 'Failed to resume work'));
+                                                                    });
                                                                 setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
                                                             }
                                                         });
@@ -1289,19 +1536,20 @@ const Overview = () => {
                                                     }
                                                 }}
                                                 className={`px-6 py-4 sm:px-8 sm:py-4.5 ${
-                                                    activeBreak 
-                                                        ? 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 text-white shadow-xl shadow-amber-500/30 border-2 border-amber-300/40 animate-pulse' 
-                                                        : 'bg-gradient-to-r from-amber-500 via-amber-600 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/30'
+                                                    currentActiveBreak && breakDetails
+                                                        ? breakDetails.btnClass
+                                                        : 'bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/30 dark:hover:bg-amber-900/40 dark:text-amber-300 border-2 border-amber-300/80 dark:border-amber-700/60 shadow-md hover:shadow-lg hover:border-amber-400'
                                                 } rounded-[2rem] font-black text-lg sm:text-xl tracking-tight flex items-center gap-2.5 sm:gap-3 transition-all whitespace-nowrap shrink-0`}
                                             >
-                                                {activeBreak ? (
+                                                {currentActiveBreak && breakDetails ? (
                                                     <span className="flex items-center gap-2.5 sm:gap-3">
                                                         <span className="w-3 h-3 rounded-full bg-white animate-ping" />
-                                                        End {activeBreak.breakType} Break
+                                                        <breakDetails.icon size={24} />
+                                                        <span>{breakDetails.btnText}</span>
                                                     </span>
                                                 ) : (
                                                     <>
-                                                        <Coffee size={24} className="text-amber-100" />
+                                                        <Coffee size={24} className="text-amber-600 dark:text-amber-400" />
                                                         <span>Take a Break</span>
                                                     </>
                                                 )}
@@ -1310,7 +1558,7 @@ const Overview = () => {
                                     </div>
                                 </div>
                                 <div className="hidden sm:flex xl:block justify-center xl:justify-end flex-shrink-0">
-                                    <SmartDisplayClock attendance={attendance} isCheckedIn={isCheckedIn} activeBreak={activeBreak} />
+                                    <SmartDisplayClock attendance={attendance} isCheckedIn={isCheckedIn} activeBreak={currentActiveBreak} />
                                 </div>
                             </div>
                         </div>
@@ -1522,49 +1770,77 @@ const Overview = () => {
                             {(() => {
                                 const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
                                 return [
-                                    { id: 'TEA', icon: Coffee, title: 'Tea Break', color: 'indigo', image: isNative ? '/tea-break.mp4' : '/tea-break.gif' },
-                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break', color: 'rose', image: isNative ? '/lunch-break.mp4' : '/lunch-break.gif' },
-                                    { id: 'CLIENT_MEETING', icon: MapPin, title: 'Client Meeting', color: 'emerald', image: isNative ? '/client-meeting-break.mp4' : '/client-meeting-break.gif' },
-                                    { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'amber', image: isNative ? '/bh-meeting-break.mp4' : '/bh-meeting-break.gif' }
+                                    { id: 'TEA', icon: Coffee, title: 'Tea Break', color: 'amber', image: isNative ? '/tea-break.mp4' : '/tea-break.mp4', fallbackImg: '/tea-break.gif' },
+                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break', color: 'orange', image: isNative ? '/lunch-break.mp4' : '/lunch-break.mp4', fallbackImg: '/lunch-break.gif' },
+                                    { id: 'CLIENT_MEETING', icon: Briefcase, title: 'Client Meeting', color: 'blue', image: isNative ? '/client-meeting-break.mp4' : '/client-meeting-break.mp4', fallbackImg: '/client-meeting-break.gif' },
+                                    { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'purple', image: isNative ? '/bh-meeting-break.mp4' : '/bh-meeting-break.mp4', fallbackImg: '/bh-meeting-break.gif' }
                                 ];
-                            })().map((t) => (
-                                <button
-                                    key={t.id}
-                                    onClick={() => {
-                                        setConfirmationConfig({
-                                            isOpen: true,
-                                            title: `Start ${t.title}`,
-                                            message: `Are you sure you want to start a ${t.title} now?`,
-                                            type: 'info',
-                                            onConfirm: () => {
-                                                dispatch(pauseAttendance({ breakType: t.id })).then(() => {
-                                                    dispatch(getAttendanceStatus());
-                                                    setActiveModal(null);
-                                                });
-                                            }
-                                        });
-                                    }}
-                                    className="group relative flex flex-col items-center p-3.5 bg-slate-50 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 rounded-3xl transition-all duration-300 border border-slate-200/80 dark:border-slate-700/80 hover:border-amber-400/60 hover:shadow-xl hover:shadow-amber-500/10 overflow-hidden text-center"
-                                >
-                                    {t.image ? (
-                                        <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-950 mb-3 shadow-inner group-hover:scale-[1.03] transition-transform duration-300 flex items-center justify-center">
-                                            {t.image.endsWith('.mp4') ? (
-                                                <video src={t.image} autoPlay loop muted playsInline className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" />
-                                            ) : (
-                                                <>
-                                                    <img src={t.image} alt="" className="absolute inset-0 w-full h-full object-cover blur-md scale-125 opacity-40 group-hover:opacity-60 transition-opacity" />
-                                                    <img src={t.image} alt={t.title} className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" />
-                                                </>
-                                            )}
-                                        </div>
-                                    ) : (
-                                        <div className={`p-5 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform mb-3`}>
-                                            <t.icon size={36} />
-                                        </div>
-                                    )}
-                                    <span className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-100 group-hover:text-amber-500 dark:group-hover:text-amber-400 transition-colors">{t.title}</span>
-                                </button>
-                            ))}
+                            })().map((t) => {
+                                const isBlue = t.color === 'blue';
+                                const isPurple = t.color === 'purple';
+                                const isOrange = t.color === 'orange';
+                                return (
+                                    <button
+                                        key={t.id}
+                                        onClick={() => {
+                                            setConfirmationConfig({
+                                                isOpen: true,
+                                                title: `Start ${t.title}`,
+                                                message: `Are you sure you want to start a ${t.title} now?`,
+                                                type: 'info',
+                                                onConfirm: () => {
+                                                    dispatch(pauseAttendance({ breakType: t.id }))
+                                                        .unwrap()
+                                                        .then(() => {
+                                                            toast.success(`${t.title} started successfully`);
+                                                            dispatch(getAttendanceStatus());
+                                                            setActiveModal(null);
+                                                        })
+                                                        .catch((err) => {
+                                                            toast.error(typeof err === 'string' ? err : (err?.message || `Failed to start ${t.title}`));
+                                                        });
+                                                    setConfirmationConfig(prev => ({ ...prev, isOpen: false }));
+                                                }
+                                            });
+                                        }}
+                                        className={`group relative flex flex-col items-center p-3.5 bg-slate-50 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 rounded-3xl transition-all duration-300 border border-slate-200/80 dark:border-slate-700/80 ${
+                                            isBlue
+                                                ? 'hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/20'
+                                                : isPurple
+                                                    ? 'hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/20'
+                                                    : isOrange
+                                                        ? 'hover:border-orange-500 hover:shadow-xl hover:shadow-orange-500/20'
+                                                        : 'hover:border-amber-500 hover:shadow-xl hover:shadow-amber-500/20'
+                                        } overflow-hidden text-center`}
+                                    >
+                                        {t.image ? (
+                                            <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-950 mb-3 shadow-inner group-hover:scale-[1.03] transition-transform duration-300 flex items-center justify-center">
+                                                <video 
+                                                    src={t.image} 
+                                                    autoPlay 
+                                                    loop 
+                                                    muted 
+                                                    playsInline 
+                                                    className="relative z-10 w-full h-full object-contain p-1.5 filter drop-shadow-md" 
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className={`p-5 bg-${t.color}-50 dark:bg-${t.color}-900/30 text-${t.color}-600 dark:text-${t.color}-400 rounded-2xl group-hover:scale-110 transition-transform mb-3`}>
+                                                <t.icon size={36} />
+                                            </div>
+                                        )}
+                                        <span className={`font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-100 ${
+                                            isBlue
+                                                ? 'group-hover:text-blue-600 dark:group-hover:text-blue-400'
+                                                : isPurple
+                                                    ? 'group-hover:text-purple-600 dark:group-hover:text-purple-400'
+                                                    : isOrange
+                                                        ? 'group-hover:text-orange-600 dark:group-hover:text-orange-400'
+                                                        : 'group-hover:text-amber-600 dark:group-hover:text-amber-400'
+                                        } transition-colors`}>{t.title}</span>
+                                    </button>
+                                );
+                            })}
                         </div>
                     </Modal>
                 )}
