@@ -27,6 +27,7 @@ const Approvals = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const [categoryFilter, setCategoryFilter] = useState("requests"); // 'requests', 'direct'
   const [currentPage, setCurrentPage] = useState(1);
+  const [isExporting, setIsExporting] = useState(false);
   const itemsPerPage = 20;
 
   // Reset pagination when filters or views change
@@ -80,27 +81,76 @@ const Approvals = () => {
 
   const handleExport = async () => {
     try {
+      setIsExporting(true);
+      const params = {};
+      if (filterDate) {
+        params.date = filterDate;
+      } else if (cycleRange.startDate && cycleRange.endDate) {
+        params.startDate = cycleRange.startDate;
+        params.endDate = cycleRange.endDate;
+      }
+
+      if (typeFilter && typeFilter !== "all") {
+        params.type = typeFilter;
+      }
+
+      if (searchTerm) {
+        params.search = searchTerm;
+      }
+
       const config = {
         headers: { Authorization: `Bearer ${user.token}` },
         responseType: "blob",
+        params,
       };
       const baseUrl =
         import.meta.env.VITE_API_BASE_URL || "http://localhost:5000/api";
       const response = await axios.get(`${baseUrl}/export/requests`, config);
 
-      const url = window.URL.createObjectURL(new Blob([response.data]));
+      let filename = "";
+      const disposition = response.headers["content-disposition"];
+      if (disposition && disposition.indexOf("filename=") !== -1) {
+        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(disposition);
+        if (matches != null && matches[1]) {
+          filename = matches[1].replace(/['"]/g, "");
+        }
+      }
+
+      if (!filename) {
+        const typePrefix =
+          typeFilter === "leave"
+            ? "leaves_export"
+            : typeFilter === "permission"
+              ? "permissions_export"
+              : "requests_export";
+        const startStr = cycleRange.startDate
+          ? cycleRange.startDate.split("T")[0]
+          : "cycle_start";
+        const endStr = cycleRange.endDate
+          ? cycleRange.endDate.split("T")[0]
+          : "cycle_end";
+        filename = filterDate
+          ? `${typePrefix}_${filterDate}.xlsx`
+          : `${typePrefix}_${startStr}_to_${endStr}.xlsx`;
+      }
+
+      const url = window.URL.createObjectURL(
+        new Blob([response.data], {
+          type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        })
+      );
       const link = document.createElement("a");
       link.href = url;
-      link.setAttribute(
-        "download",
-        `requests_export_${new Date().toISOString().split("T")[0]}.csv`,
-      );
+      link.setAttribute("download", filename);
       document.body.appendChild(link);
       link.click();
       link.remove();
+      window.URL.revokeObjectURL(url);
     } catch (error) {
       console.error("Export failed:", error);
       alert("Failed to export requests.");
+    } finally {
+      setIsExporting(false);
     }
   };
 
@@ -628,9 +678,17 @@ const Approvals = () => {
         <div className="flex flex-wrap items-center gap-3">
           <button
             onClick={handleExport}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2 text-sm"
+            disabled={isExporting}
+            className="bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 text-white px-4 py-2 rounded-lg font-medium shadow-md transition-colors flex items-center gap-2 text-sm"
           >
-            <Download size={18} /> Export Requests
+            <Download size={18} className={isExporting ? "animate-bounce" : ""} />
+            {isExporting
+              ? "Exporting..."
+              : typeFilter === "leave"
+                ? "Export Leaves"
+                : typeFilter === "permission"
+                  ? "Export Permissions"
+                  : "Export Requests"}
           </button>
 
           {activeTab === "pending" && canApprove && actionablePageRequests.length > 0 && (

@@ -666,73 +666,319 @@ const exportAttendance = async (req, res) => {
     }
 };
 
-// @desc    Export Requests (Leaves, Permissions, Visits) as CSV
+// @desc    Export Requests (Leaves, Permissions, Visits) as Excel
 // @route   GET /api/export/requests
-// @access  Private (Admin/HR)
+// @access  Private (Admin/HR/BH/AE_MANAGER)
 const exportRequests = async (req, res) => {
     try {
-        const { status } = req.query; // Optional filter: ?status=PENDING
-        let where = {};
-        if (status) {
-            where.status = status;
+        const {
+            status,
+            type,
+            typeFilter,
+            filter,
+            startDate: qStartDate,
+            endDate: qEndDate,
+            date,
+            month,
+            year,
+            search
+        } = req.query;
+
+        // 1. Determine cycle date boundaries (defaults to 26th - 25th cycle in IST)
+        let start, end;
+        if (qStartDate && qEndDate) {
+            start = new Date(qStartDate);
+            end = new Date(qEndDate);
+        } else if (date) {
+            const d = new Date(date);
+            start = new Date(d);
+            start.setHours(0, 0, 0, 0);
+            end = new Date(d);
+            end.setHours(23, 59, 59, 999);
+        } else if (month && year) {
+            const m = parseInt(month);
+            const y = parseInt(year);
+            let prevM = m - 2;
+            let prevY = y;
+            if (prevM < 0) {
+                prevM += 12;
+                prevY -= 1;
+            }
+            start = getCycleStartDateIST(null, prevY, prevM);
+            end = getCycleEndDateIST(null, prevY, prevM);
+        } else {
+            // Default: current 26th to 25th cycle
+            start = getCycleStartDateIST(new Date());
+            end = getCycleEndDateIST(new Date());
         }
 
-        // Fetch all types
+        // 2. Role-based scoping (BH only sees assigned / team requests; AE_MANAGER sees AEs)
+        const userRole = req.user?.role;
+        const userId = req.user?.id;
+        let roleUserCondition = {};
+        if (userRole === 'BUSINESS_HEAD' && !req.user?.isGlobalAccess) {
+            roleUserCondition = {
+                OR: [
+                    { targetBhId: userId },
+                    { user: { reportingBhId: userId } }
+                ]
+            };
+        } else if (userRole === 'AE_MANAGER') {
+            roleUserCondition = {
+                user: { designation: 'AE' }
+            };
+        }
+
+        // 3. Search and Status filters
+        let searchCondition = {};
+        if (search) {
+            searchCondition = {
+                user: {
+                    OR: [
+                        { name: { contains: search, mode: 'insensitive' } },
+                        { email: { contains: search, mode: 'insensitive' } }
+                    ]
+                }
+            };
+        }
+
+        let statusCondition = {};
+        if (status) {
+            statusCondition = { status };
+        }
+
+        const leaveDateCondition = {
+            startDate: { lte: end },
+            endDate: { gte: start }
+        };
+
+        const generalDateCondition = {
+            date: { gte: start, lte: end }
+        };
+
+        const selectedType = (type || typeFilter || '').toLowerCase().trim();
+        const isVisitsFilter = filter === 'visits';
+
+        // 4. Determine which models to fetch
+        // Site/Showroom visits are strictly excluded unless filter === 'visits' (VisitRequests page)
+        const shouldFetchLeaves = !isVisitsFilter && (!selectedType || selectedType === 'all' || selectedType === 'leave' || selectedType === 'leaves');
+        const shouldFetchPermissions = !isVisitsFilter && (!selectedType || selectedType === 'all' || selectedType === 'permission' || selectedType === 'permissions');
+        const shouldFetchVisits = isVisitsFilter;
+
         const [leaves, permissions, siteVisits, showroomVisits] = await Promise.all([
-            prisma.leaveRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
-            prisma.permissionRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
-            prisma.siteVisitRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } }),
-            prisma.showroomVisitRequest.findMany({ where, include: { user: { select: { name: true, email: true } } }, orderBy: { createdAt: 'desc' } })
+            shouldFetchLeaves
+                ? prisma.leaveRequest.findMany({
+                    where: {
+                        AND: [
+                            leaveDateCondition,
+                            statusCondition,
+                            roleUserCondition,
+                            searchCondition
+                        ].filter(c => Object.keys(c).length > 0)
+                    },
+                    include: {
+                        user: { select: { name: true, email: true, designation: true } }
+                    },
+                    orderBy: { startDate: 'desc' }
+                })
+                : Promise.resolve([]),
+
+            shouldFetchPermissions
+                ? prisma.permissionRequest.findMany({
+                    where: {
+                        AND: [
+                            generalDateCondition,
+                            statusCondition,
+                            roleUserCondition,
+                            searchCondition
+                        ].filter(c => Object.keys(c).length > 0)
+                    },
+                    include: {
+                        user: { select: { name: true, email: true, designation: true } }
+                    },
+                    orderBy: { date: 'desc' }
+                })
+                : Promise.resolve([]),
+
+            shouldFetchVisits
+                ? prisma.siteVisitRequest.findMany({
+                    where: {
+                        AND: [
+                            generalDateCondition,
+                            statusCondition,
+                            roleUserCondition,
+                            searchCondition
+                        ].filter(c => Object.keys(c).length > 0)
+                    },
+                    include: {
+                        user: { select: { name: true, email: true, designation: true } }
+                    },
+                    orderBy: { date: 'desc' }
+                })
+                : Promise.resolve([]),
+
+            shouldFetchVisits
+                ? prisma.showroomVisitRequest.findMany({
+                    where: {
+                        AND: [
+                            generalDateCondition,
+                            statusCondition,
+                            roleUserCondition,
+                            searchCondition
+                        ].filter(c => Object.keys(c).length > 0)
+                    },
+                    include: {
+                        user: { select: { name: true, email: true, designation: true } }
+                    },
+                    orderBy: { date: 'desc' }
+                })
+                : Promise.resolve([])
         ]);
 
         const combined = [
-            ...leaves.map(r => ({ ...r, type: 'Leave' })),
-            ...permissions.map(r => ({ ...r, type: 'Permission' })),
-            ...siteVisits.map(r => ({ ...r, type: 'Site Visit' })),
-            ...showroomVisits.map(r => ({ ...r, type: 'Showroom Visit' }))
+            ...leaves.map(r => ({ ...r, requestKind: 'Leave' })),
+            ...permissions.map(r => ({ ...r, requestKind: 'Permission' })),
+            ...siteVisits.map(r => ({ ...r, requestKind: 'Site Visit' })),
+            ...showroomVisits.map(r => ({ ...r, requestKind: 'Showroom Visit' }))
         ];
 
-        // Sort by CreatedAt desc
-        combined.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        // Sort by effective date descending
+        combined.sort((a, b) => {
+            const dateA = new Date(a.startDate || a.date || a.createdAt);
+            const dateB = new Date(b.startDate || b.date || b.createdAt);
+            return dateB - dateA;
+        });
+
+        const formatISTDate = (d) => {
+            if (!d) return '';
+            const dt = new Date(d);
+            return !isNaN(dt.getTime())
+                ? dt.toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })
+                : '';
+        };
+
+        const formatISTDateTime = (d) => {
+            if (!d) return '';
+            const dt = new Date(d);
+            return !isNaN(dt.getTime())
+                ? dt.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata', hour12: true })
+                : '';
+        };
 
         const flattened = combined.map(req => {
             let duration = '';
-            if (req.type === 'Leave') {
-                duration = `${new Date(req.startDate).toLocaleDateString()} - ${new Date(req.endDate).toLocaleDateString()}`;
-            } else if (req.type === 'Permission') {
-                duration = `${new Date(req.date).toLocaleDateString()} (${req.startTime} - ${req.endTime})`;
-            } else if (req.type === 'Site Visit' || req.type === 'Showroom Visit') {
-                duration = `${new Date(req.date).toLocaleDateString()} (${req.startTime} - ${req.endTime})`;
+            let daysOrTime = '';
+            let subType = '';
+            let details = '';
+
+            if (req.requestKind === 'Leave') {
+                subType = req.type || 'FULL_DAY';
+                if (req.type === 'HALF_DAY') {
+                    duration = `${formatISTDate(req.startDate)} (Half Day)`;
+                    daysOrTime = '0.5 Day';
+                } else if (req.startDate && req.endDate) {
+                    const s = new Date(req.startDate);
+                    const e = new Date(req.endDate);
+                    const diffDays = Math.round(Math.abs(e - s) / (1000 * 60 * 60 * 24)) + 1;
+                    daysOrTime = `${diffDays} Day${diffDays > 1 ? 's' : ''}`;
+                    if (diffDays === 1) {
+                        duration = `${formatISTDate(req.startDate)}`;
+                    } else {
+                        duration = `${formatISTDate(req.startDate)} - ${formatISTDate(req.endDate)}`;
+                    }
+                } else {
+                    duration = formatISTDate(req.startDate);
+                    daysOrTime = '1 Day';
+                }
+            } else if (req.requestKind === 'Permission') {
+                subType = '2 Hours Permission';
+                duration = `${formatISTDate(req.date)} (${req.startTime || ''} - ${req.endTime || ''})`;
+                daysOrTime = '2 Hours';
+            } else if (req.requestKind === 'Site Visit') {
+                subType = 'Site Inspection';
+                duration = `${formatISTDate(req.date)} (${req.startTime || ''} - ${req.endTime || ''})`;
+                details = `${req.location || ''} (${req.projectName || ''})`;
+            } else if (req.requestKind === 'Showroom Visit') {
+                subType = 'Showroom Movement';
+                duration = `${formatISTDate(req.date)} (${req.startTime || ''} - ${req.endTime || ''})`;
+                details = `${req.sourceShowroom || ''} -> ${req.destinationShowroom || ''}`;
             }
 
-            let details = '';
-            if (req.type === 'Site Visit') details = `${req.location} (${req.projectName})`;
-            if (req.type === 'Showroom Visit') details = `${req.sourceShowroom} -> ${req.destinationShowroom}`;
+            const categoryLabel = (req.requestKind === 'Leave' || req.requestKind === 'Permission')
+                ? (req.isExceededLimit ? 'Approval Request (Exceeded)' : 'Direct Update (Auto-Approved)')
+                : 'Visit Request';
 
-            return {
-                Type: req.type,
-                Employee: req.user.name,
-                Email: req.user.email,
+            const row = {
+                'Type': req.requestKind,
+                'Sub Type': subType,
+                'Employee': req.user?.name || 'N/A',
+                'Email': req.user?.email || 'N/A',
+                'Designation': req.user?.designation || 'N/A',
+                'Category / Mode': categoryLabel,
                 'Date / Duration': duration,
-                Details: details,
-                Reason: req.reason,
-                'Overall Status': req.status,
-                'BH Status': req.bhStatus,
-                'HR Status': req.hrStatus,
-                RequestedAt: new Date(req.createdAt).toLocaleString()
+                'Days / Time': daysOrTime,
+                'Reason': req.reason || '',
+                'Overall Status': req.status || 'PENDING',
+                'BH Status': req.bhStatus || 'PENDING',
+                'HR Status': req.hrStatus || 'PENDING',
+                'Requested At': formatISTDateTime(req.createdAt)
             };
+
+            if (isVisitsFilter) {
+                row['Location / Details'] = details;
+            }
+
+            return row;
         });
 
+        if (flattened.length === 0) {
+            flattened.push({
+                'Type': '',
+                'Sub Type': '',
+                'Employee': 'No records found for this period',
+                'Email': '',
+                'Designation': '',
+                'Category / Mode': '',
+                'Date / Duration': '',
+                'Days / Time': '',
+                'Reason': '',
+                'Overall Status': '',
+                'BH Status': '',
+                'HR Status': '',
+                'Requested At': ''
+            });
+        }
+
         const ws = XLSX.utils.json_to_sheet(flattened);
+        ws['!cols'] = setAutoWidth(flattened);
+
         const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "Requests");
+        const sheetTitle = (selectedType === 'leave' || selectedType === 'leaves')
+            ? 'Leave Requests'
+            : (selectedType === 'permission' || selectedType === 'permissions')
+                ? 'Permission Requests'
+                : (isVisitsFilter ? 'Visit Requests' : 'Requests');
+        XLSX.utils.book_append_sheet(wb, ws, sheetTitle);
 
         const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+
+        const startLabel = formatISTDate(start).replace(/[\/\s,]+/g, '-');
+        const endLabel = formatISTDate(end).replace(/[\/\s,]+/g, '-');
+        let filename = `requests_export_${startLabel}_to_${endLabel}.xlsx`;
+        if (selectedType === 'leave' || selectedType === 'leaves') {
+            filename = `leaves_export_${startLabel}_to_${endLabel}.xlsx`;
+        } else if (selectedType === 'permission' || selectedType === 'permissions') {
+            filename = `permissions_export_${startLabel}_to_${endLabel}.xlsx`;
+        } else if (isVisitsFilter) {
+            filename = `visit_requests_${startLabel}_to_${endLabel}.xlsx`;
+        }
+
         res.header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.attachment('requests_export.xlsx');
+        res.header('Access-Control-Expose-Headers', 'Content-Disposition');
+        res.attachment(filename);
         res.send(buf);
     } catch (error) {
-        console.error(error);
+        console.error('Export Requests Error:', error);
         res.status(500).json({ message: 'Server Error' });
     }
 };
