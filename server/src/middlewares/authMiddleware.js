@@ -64,14 +64,20 @@ const protect = async (req, res, next) => {
 const authorize = (...rolesOrDesignations) => {
     return (req, res, next) => {
         // Flatten in case an array was passed
-        const requiredRoles = rolesOrDesignations.flat();
+        const requiredList = rolesOrDesignations.flat().map(r => String(r || '').trim().toUpperCase());
 
-        const hasRole = requiredRoles.includes(req.user.role);
-        const hasDesignation = requiredRoles.includes(req.user.designation);
+        const userRole = String(req.user?.role || '').trim().toUpperCase();
+        const userDesignation = String(req.user?.designation || '').trim().toUpperCase();
+        const userEmail = String(req.user?.email || '').trim().toLowerCase();
 
-        if (!hasRole && !hasDesignation) {
+        const hasRole = requiredList.includes(userRole);
+        const hasDesignation = requiredList.includes(userDesignation);
+        const isCOOEmail = (userEmail === 'bh@cookscape.com' || userEmail === 'designs.cookscape@gmail.com') && 
+                           (requiredList.includes('BUSINESS_HEAD') || requiredList.includes('COO') || requiredList.includes('CHIEF OPERATIONAL OFFICER'));
+
+        if (!hasRole && !hasDesignation && !isCOOEmail) {
             return res.status(403).json({
-                message: `User role ${req.user.role} and designation ${req.user.designation} are not authorized to access this route`,
+                message: `User role ${req.user?.role} and designation ${req.user?.designation} are not authorized to access this route`,
             });
         }
         next();

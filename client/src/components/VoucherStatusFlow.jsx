@@ -5,39 +5,47 @@ const VoucherStatusFlow = ({ voucher }) => {
 
     const { amStatus, cooStatus, status } = voucher;
 
+    const isAMRejected = amStatus === 'REJECTED';
+    const isCOORejected = cooStatus === 'REJECTED';
+    const isRejected = status === 'REJECTED' || isAMRejected || isCOORejected;
+    const rejectedStageIndex = isAMRejected ? 1 : (isCOORejected ? 2 : (status === 'REJECTED' ? 1 : -1));
+
     const stages = [
         { 
             id: 'SUBMITTED', 
             label: 'Raised', 
             isComplete: true, 
-            isCurrent: amStatus === 'PENDING' && status !== 'REJECTED' 
+            isCurrent: amStatus === 'PENDING' && !isRejected 
         },
         { 
             id: 'AM_APPROVAL', 
-            label: 'AM Review', 
+            label: isAMRejected ? 'Reject by AM' : (amStatus === 'APPROVED' ? 'Approved by AM' : 'AM Review'), 
             isComplete: amStatus === 'APPROVED', 
-            isCurrent: amStatus === 'PENDING' && status !== 'REJECTED' 
+            isCurrent: amStatus === 'PENDING' && !isRejected 
         },
         { 
             id: 'COO_APPROVAL', 
-            label: 'COO Verify', 
+            label: isCOORejected ? 'Reject by COO' : (cooStatus === 'APPROVED' ? 'Approved by COO' : 'COO Review'), 
             isComplete: cooStatus === 'APPROVED', 
-            isCurrent: amStatus === 'APPROVED' && cooStatus === 'PENDING' && status !== 'REJECTED' 
+            isCurrent: amStatus === 'APPROVED' && cooStatus === 'PENDING' && !isRejected 
         },
         { 
             id: 'PAID', 
-            label: ['PAID', 'COMPLETED'].includes(status) ? 'Paid' : (cooStatus === 'APPROVED' ? 'Unpaid' : 'Payment'), 
+            label: 'Paid', 
             isComplete: ['PAID', 'COMPLETED'].includes(status), 
-            isCurrent: cooStatus === 'APPROVED' && !['PAID', 'COMPLETED', 'REJECTED'].includes(status) 
+            isCurrent: cooStatus === 'APPROVED' && status === 'PAID' && !isRejected
+        },
+        { 
+            id: 'SETTLED', 
+            label: 'Settled', 
+            isComplete: status === 'COMPLETED', 
+            isCurrent: status === 'PAID' && !isRejected
         }
     ];
 
-    const isRejected = status === 'REJECTED' || amStatus === 'REJECTED' || cooStatus === 'REJECTED';
-    const rejectedStageIndex = amStatus === 'REJECTED' ? 1 : cooStatus === 'REJECTED' ? 2 : -1;
-
     return (
         <div className="w-full py-4 sm:py-6 overflow-x-auto">
-            <div className="min-w-[320px] px-2 sm:px-0">
+            <div className="min-w-[340px] px-2 sm:px-0">
                 <div className="flex items-center justify-between relative">
                     {/* Background Line */}
                     <div className="absolute top-4 sm:top-5 left-0 w-full h-0.5 bg-slate-100 -translate-y-1/2 z-0" />
@@ -72,10 +80,10 @@ const VoucherStatusFlow = ({ voucher }) => {
                                     )}
                                 </div>
                                 <span className={`
-                                    absolute -bottom-5 sm:-bottom-6 text-[8px] sm:text-[9px] font-black uppercase tracking-tight sm:tracking-widest whitespace-nowrap
+                                    absolute -bottom-5 sm:-bottom-6 text-[8px] sm:text-[9px] font-black uppercase tracking-tight sm:tracking-wider whitespace-nowrap
                                     ${isThisStageRejected ? 'text-rose-500 font-bold' : stage.isComplete ? 'text-emerald-600' : stage.isCurrent ? 'text-blue-600' : 'text-slate-400'}
                                 `}>
-                                    {isThisStageRejected ? 'Rejected' : stage.label}
+                                    {isThisStageRejected ? stage.label : stage.label}
                                 </span>
                             </div>
                         );
@@ -83,16 +91,22 @@ const VoucherStatusFlow = ({ voucher }) => {
                 </div>
             </div>
             
-            {cooStatus === 'APPROVED' && !['PAID', 'COMPLETED', 'REJECTED'].includes(status) && (
-                <div className="mt-8 sm:mt-10 p-3 bg-blue-50 border border-blue-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                    <AlertCircle size={16} className="text-blue-500 flex-shrink-0" />
-                    <p className="text-[10px] font-bold text-blue-700">Approved by COO. Returned to Accounts Manager for payment.</p>
+            {amStatus === 'APPROVED' && cooStatus === 'PENDING' && !isRejected && (
+                <div className="mt-8 sm:mt-10 p-3 bg-purple-50 border border-purple-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                    <AlertCircle size={16} className="text-purple-600 flex-shrink-0" />
+                    <p className="text-[10px] font-bold text-purple-700">Approved by AM. Sent to COO for review & payment approval.</p>
                 </div>
             )}
-            {['PAID', 'COMPLETED'].includes(status) && (
+            {status === 'PAID' && (
+                <div className="mt-8 sm:mt-10 p-3 bg-teal-50 border border-teal-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
+                    <Check size={16} className="text-teal-600 flex-shrink-0" />
+                    <p className="text-[10px] font-bold text-teal-700">Approved by both AM & COO. Status is PAID. Ready for cash disbursement & settlement.</p>
+                </div>
+            )}
+            {status === 'COMPLETED' && (
                 <div className="mt-8 sm:mt-10 p-3 bg-emerald-50 border border-emerald-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
-                    <Check size={16} className="text-emerald-500 flex-shrink-0" />
-                    <p className="text-[10px] font-bold text-emerald-700">Payment completed & confirmed by Accounts Manager.</p>
+                    <Check size={16} className="text-emerald-600 flex-shrink-0" />
+                    <p className="text-[10px] font-bold text-emerald-700">Voucher Settled. Amount disbursed and proof verified.</p>
                 </div>
             )}
         </div>

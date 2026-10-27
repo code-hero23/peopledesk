@@ -118,21 +118,20 @@ const getManageableVouchers = async (req, res) => {
         let where = {};
 
         const userDesignation = (designation || '').toUpperCase();
-        const isCOOUser = (role === 'BUSINESS_HEAD' && (userDesignation === 'COO' || userDesignation.includes('CHIEF OPERATIONAL OFFICER'))) || email === 'designs.cookscape@gmail.com';
+        const userEmail = (email || '').toLowerCase();
+        const isCOOUser = (role === 'BUSINESS_HEAD' && (userDesignation === 'COO' || userDesignation.includes('CHIEF OPERATIONAL OFFICER') || userDesignation === 'BH')) || 
+                          userDesignation === 'COO' || 
+                          userDesignation.includes('CHIEF OPERATIONAL OFFICER') || 
+                          userEmail === 'designs.cookscape@gmail.com' ||
+                          userEmail === 'bh@cookscape.com';
 
-        if (role === 'ACCOUNTS_MANAGER') {
-            // Accounts Manager needs to see items needing AM approval OR items approved by COO waiting for payment
-            where = { 
-                status: {
-                    in: ['PENDING', 'APPROVED']
-                }
-            };
-        } else if (isCOOUser) {
-            // COO only needs to see items specifically waiting for COO approval
-            where = { amStatus: 'APPROVED', cooStatus: 'PENDING', status: { in: ['PENDING', 'APPROVED'] } };
-        } else if (role === 'ADMIN') {
-            // Admin has view-only access to pending items
-            where = { status: { in: ['PENDING', 'APPROVED'] } };
+        if (role === 'ACCOUNTS_MANAGER' || role === 'ADMIN' || isCOOUser) {
+            // Accounts Manager, Admin, and COO see all vouchers across all lifecycle stages so dashboard counts match!
+            if (req.query.pendingOnly === 'true') {
+                where = { amStatus: 'APPROVED', cooStatus: 'PENDING', status: { in: ['PENDING', 'APPROVED'] } };
+            } else {
+                where = {};
+            }
         } else {
             return res.status(403).json({ message: 'Not authorized' });
         }
@@ -205,10 +204,20 @@ const approveVoucherCOO = async (req, res) => {
         const cooId = req.user.id;
         const { designation, role, email } = req.user;
 
-        const isCOOUser = (role === 'BUSINESS_HEAD' && (designation === 'COO' || designation === 'Chief Operational Officer')) || email === 'designs.cookscape@gmail.com';
+        const userDesignation = (designation || '').toUpperCase();
+        const userRole = (role || '').toUpperCase();
+        const userEmail = (email || '').toLowerCase();
+        const isCOOUser = userRole === 'BUSINESS_HEAD' || 
+                          userRole === 'COO' || 
+                          userDesignation === 'COO' || 
+                          userDesignation.includes('CHIEF OPERATIONAL OFFICER') || 
+                          userDesignation === 'BH' || 
+                          userEmail === 'designs.cookscape@gmail.com' ||
+                          userEmail === 'bh@cookscape.com' ||
+                          userRole === 'ADMIN';
 
         if (!isCOOUser) {
-            return res.status(403).json({ message: 'Not authorized as COO. Only designs.cookscape@gmail.com / COO can review and confirm. Administrators have view-only access.' });
+            return res.status(403).json({ message: 'Not authorized as COO. Only COO / Chief Operational Officer can review and confirm. Administrators have view-only access.' });
         }
 
         const voucher = await prisma.voucher.findUnique({
@@ -219,6 +228,8 @@ const approveVoucherCOO = async (req, res) => {
             return res.status(400).json({ message: 'Voucher not found or not yet approved by Accounts Manager' });
         }
 
+        const nextStatus = status === 'APPROVED' ? 'PAID' : 'REJECTED';
+
         const updatedVoucher = await prisma.voucher.update({
             where: { id: parseInt(id) },
             data: {
@@ -226,7 +237,7 @@ const approveVoucherCOO = async (req, res) => {
                 cooStatus: status === 'APPROVED' ? 'APPROVED' : 'REJECTED',
                 cooRemarks: remarks || null,
                 cooApprovedAt: new Date(),
-                status: status === 'APPROVED' ? 'APPROVED' : 'REJECTED'
+                status: nextStatus
             },
             include: {
                 user: {
@@ -235,6 +246,24 @@ const approveVoucherCOO = async (req, res) => {
             }
         });
 
+        // Deduct from Finance when both have approved and voucher is marked PAID
+        if (status === 'APPROVED') {
+            let finance = await prisma.finance.findFirst();
+            if (!finance) {
+                finance = await prisma.finance.create({
+                    data: { currentCash: 0, totalSpent: 0 }
+                });
+            }
+
+            await prisma.finance.update({
+                where: { id: finance.id },
+                data: {
+                    currentCash: finance.currentCash - updatedVoucher.amount,
+                    totalSpent: finance.totalSpent + updatedVoucher.amount
+                }
+            });
+        }
+
         res.json(updatedVoucher);
     } catch (error) {
         console.error(error);
@@ -242,9 +271,9 @@ const approveVoucherCOO = async (req, res) => {
     }
 };
 
-// @desc    Upload Proof (Prepaid completion)
+// @desc    Upload Proof (Prepaid/Paid completion)
 // @route   PUT /api/vouchers/:id/proof
-// @access  Private (Owner)
+// @access  Private (Owner / AM / Admin)
 const uploadProof = async (req, res) => {
     try {
         const { id } = req.params;
@@ -268,20 +297,18 @@ const uploadProof = async (req, res) => {
             return res.status(403).json({ message: 'Not authorized' });
         }
 
-        if (voucher.status !== 'WAITING') {
-            return res.status(400).json({ message: 'Voucher must be in WAITING state before uploading settlement proof' });
-        }
+        // When proof is uploaded for a PAID or WAITING voucher, transition to COMPLETED (Settled)
+        const newStatus = ['PAID', 'WAITING'].includes(voucher.status) ? 'COMPLETED' : voucher.status;
 
         const updatedVoucher = await prisma.voucher.update({
             where: { id: parseInt(id) },
             data: {
                 proofUrl,
-                status: 'COMPLETED'
+                status: newStatus
             }
         });
 
         // No finance deduction here because it already happened at COO approval (Advance issued)
-
         res.json(updatedVoucher);
     } catch (error) {
         console.error(error);
@@ -459,6 +486,60 @@ const disburseVoucher = async (req, res) => {
     }
 };
 
+// @desc    Settle Voucher (AM gives amount to employee and verifies/attaches proof)
+// @route   PUT /api/vouchers/:id/settle
+// @access  Private (ACCOUNTS_MANAGER, ADMIN)
+const settleVoucher = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (req.user.role !== 'ACCOUNTS_MANAGER' && req.user.role !== 'ADMIN') {
+            return res.status(403).json({ message: 'Only Accounts Manager can settle vouchers. Administrators have view-only access.' });
+        }
+
+        const voucher = await prisma.voucher.findUnique({
+            where: { id: parseInt(id) }
+        });
+
+        if (!voucher) {
+            return res.status(404).json({ message: 'Voucher not found' });
+        }
+
+        if (voucher.status === 'REJECTED' || voucher.amStatus === 'REJECTED' || voucher.cooStatus === 'REJECTED') {
+            return res.status(400).json({ message: 'Cannot settle a rejected voucher' });
+        }
+
+        let proofUrl = voucher.proofUrl;
+        if (req.file) {
+            proofUrl = `/api/uploads/${req.file.filename}`;
+        } else if (req.body.proofUrl) {
+            proofUrl = req.body.proofUrl;
+        }
+
+        const remarksNote = req.body.remarks ? ` | ${req.body.remarks}` : '';
+        const updatedVoucher = await prisma.voucher.update({
+            where: { id: parseInt(id) },
+            data: {
+                status: 'COMPLETED',
+                proofUrl: proofUrl || voucher.proofUrl,
+                adminRemarks: voucher.adminRemarks 
+                    ? `${voucher.adminRemarks} | Settled by ${req.user.name}${remarksNote}` 
+                    : `Settled by ${req.user.name}${remarksNote}`
+            },
+            include: {
+                user: {
+                    select: { name: true, designation: true, email: true }
+                }
+            }
+        });
+
+        res.json(updatedVoucher);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Server Error', error: error.message });
+    }
+};
+
 // @desc    Delete Voucher (ACCOUNTS_MANAGER only)
 // @route   DELETE /api/vouchers/:id
 // @access  Private (ACCOUNTS_MANAGER)
@@ -514,5 +595,6 @@ module.exports = {
     addAdminNote,
     payVoucher,
     disburseVoucher,
+    settleVoucher,
     deleteVoucher
 };

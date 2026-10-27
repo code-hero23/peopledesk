@@ -21,6 +21,7 @@ import {
     RefreshCw,
     DollarSign,
     Receipt,
+    WalletCards,
     Home,
     Phone,
     Sparkles,
@@ -247,6 +248,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
                                 <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                                 <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
+                                <NavItem to="/dashboard/expenses-b" icon={WalletCards} label="Expense Hub B" badge="New" />
                                 <NavItem to="/dashboard/kpi-scoreboard" icon={BarChart3} label="My KPI Scoreboard" />
                                 <NavItem to="/dashboard/helpdesk" icon={LifeBuoy} label="Helpdesk" />
                             </div>
@@ -256,8 +258,16 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/admin/worklogs" icon={ClipboardList} label="Work Reports" indent />
                             <NavItem to="/admin/attendance" icon={CalendarClock} label="Daily Attendance" indent />
                             <NavItem to="/admin/attendance-verification" icon={Camera} label="Photo Verification" indent />
-                            {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER'].includes(user?.role) || (user?.role === 'BUSINESS_HEAD' && ['COO', 'Chief Operational Officer'].includes(user?.designation))) && (
-                                <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
+                            {(['ADMIN', 'HR', 'ACCOUNTS_MANAGER', 'BUSINESS_HEAD'].includes(user?.role) || 
+                              ['COO', 'Chief Operational Officer'].includes(user?.designation) ||
+                              (user?.designation || '').toUpperCase().includes('COO') ||
+                              (user?.designation || '').toUpperCase().includes('CHIEF OPERATIONAL OFFICER') ||
+                              (user?.email || '').toLowerCase() === 'bh@cookscape.com' ||
+                              (user?.email || '').toLowerCase() === 'designs.cookscape@gmail.com') && (
+                                <>
+                                    <NavItem to="/admin/vouchers" icon={DollarSign} label="Expense Hub" indent />
+                                    <NavItem to="/admin/expenses-b" icon={WalletCards} label="Expense Hub B" badge="New" indent />
+                                </>
                             )}
                             <NavItem to="/admin/visit-requests" icon={MapPin} label="Visit Requests" indent />
                             {['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'HR'].includes(user?.role) &&
@@ -330,6 +340,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                                 <NavItem to="/dashboard/salary" icon={DollarSign} label="My Salary" />
                             )}
                             <NavItem to="/dashboard/expenses" icon={Receipt} label="Expense Hub" />
+                            <NavItem to="/dashboard/expenses-b" icon={WalletCards} label="Expense Hub B" badge="New" />
                             {user?.wfhViewEnabled && (
                                 <NavItem to="/dashboard/wfh" icon={Home} label="Apply WFH" />
                             )}

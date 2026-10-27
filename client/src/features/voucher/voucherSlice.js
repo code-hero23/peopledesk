@@ -151,6 +151,23 @@ export const disburseVoucher = createAsyncThunk(
     }
 );
 
+// Settle Voucher (AM gives amount to employee and confirms/attaches proof)
+export const settleVoucher = createAsyncThunk(
+    'voucher/settle',
+    async ({ id, formData, remarks }, thunkAPI) => {
+        try {
+            const token = thunkAPI.getState().auth.user.token;
+            const config = { headers: { Authorization: `Bearer ${token}` } };
+            const payload = formData || (remarks ? { remarks } : {});
+            const response = await axios.put(`${API_URL}/${id}/settle`, payload, config);
+            return response.data;
+        } catch (error) {
+            const message = error.response?.data?.message || error.message || error.toString();
+            return thunkAPI.rejectWithValue(message);
+        }
+    }
+);
+
 // Get Finance Summary
 export const getFinanceSummary = createAsyncThunk(
     'voucher/getFinanceSummary',
@@ -296,7 +313,15 @@ export const voucherSlice = createSlice({
             })
             .addCase(approveVoucherAM.fulfilled, (state, action) => {
                 state.isLoading = false;
-                state.manageableVouchers = state.manageableVouchers.filter(v => v.id !== action.payload.id);
+                const index = state.manageableVouchers.findIndex(v => v.id === action.payload.id);
+                if (index !== -1) {
+                    state.manageableVouchers[index] = {
+                        ...state.manageableVouchers[index],
+                        ...action.payload
+                    };
+                } else {
+                    state.manageableVouchers.unshift(action.payload);
+                }
             })
             .addCase(approveVoucherCOO.fulfilled, (state, action) => {
                 state.isLoading = false;
@@ -323,6 +348,22 @@ export const voucherSlice = createSlice({
                         ...state.spentHistory[historyIndex],
                         ...action.payload
                     };
+                }
+            })
+            .addCase(settleVoucher.fulfilled, (state, action) => {
+                state.isLoading = false;
+                state.isSuccess = true;
+                const mIndex = state.manageableVouchers.findIndex(v => v.id === action.payload.id);
+                if (mIndex !== -1) {
+                    state.manageableVouchers[mIndex] = action.payload;
+                }
+                const vIndex = state.vouchers.findIndex(v => v.id === action.payload.id);
+                if (vIndex !== -1) {
+                    state.vouchers[vIndex] = action.payload;
+                }
+                const hIndex = state.spentHistory.findIndex(v => v.id === action.payload.id);
+                if (hIndex !== -1) {
+                    state.spentHistory[hIndex] = action.payload;
                 }
             })
             .addCase(getFinanceSummary.fulfilled, (state, action) => {

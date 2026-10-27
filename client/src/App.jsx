@@ -22,6 +22,7 @@ import SalarySettings from './pages/admin/SalarySettings';
 import WFHRequestForm from './pages/employee/WFHRequestForm';
 import WFHManagement from './pages/admin/WFHManagement';
 import ExpenseHub from './pages/employee/ExpenseHub';
+import ExpenseHubB from './pages/employee/ExpenseHubB';
 import VoucherManagement from './pages/admin/VoucherManagement';
 import CRECallReports from './pages/employee/CRECallReports';
 import AdminCallReports from './pages/admin/AdminCallReports';
@@ -82,6 +83,7 @@ function App() {
                 <Route path="/dashboard/salary" element={<MySalary />} />
                 <Route path="/dashboard/wfh" element={<WFHRequestForm />} />
                 <Route path="/dashboard/expenses" element={<ExpenseHub />} />
+                <Route path="/dashboard/expenses-b" element={<ExpenseHubB />} />
                 <Route path="/dashboard/call-reports" element={<CRECallReports />} />
                 <Route path="/dashboard/visitors-record" element={<VisitorRecordBook />} />
                 <Route path="/dashboard/kpi-scoreboard" element={<MyKPIScoreboard />} />
@@ -97,6 +99,7 @@ function App() {
               </Route>
               <Route path="/admin/approvals" element={<Approvals />} />
               <Route path="/admin/vouchers" element={<VoucherManagement />} />
+              <Route path="/admin/expenses-b" element={<ExpenseHubB />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />
               <Route path="/admin/site-assignments" element={<SiteAssignments />} />
               <Route path="/admin/ae-manager" element={<Navigate to="/admin/site-assignments" replace />} />

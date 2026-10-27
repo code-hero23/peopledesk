@@ -30,6 +30,25 @@ async function main() {
     });
     console.log(`✅ Admin: ${admin.email}`);
 
+    // 1b. Admin (admin@gmail.com)
+    const adminGmail = await prisma.user.upsert({
+        where: { email: 'admin@gmail.com' },
+        update: {
+            password: adminPass,
+            role: 'ADMIN',
+            status: 'ACTIVE'
+        },
+        create: {
+            name: 'Admin',
+            email: 'admin@gmail.com',
+            password: adminPass,
+            role: 'ADMIN',
+            designation: 'ADMIN',
+            status: 'ACTIVE'
+        }
+    });
+    console.log(`✅ Admin (Gmail): ${adminGmail.email}`);
+
     // 2. Business Head (BH)
     const bhPass = await bcrypt.hash('bh@123', salt);
     const bh = await prisma.user.upsert({
