@@ -5,7 +5,9 @@
 set -e
 
 echo "📥 Updating code from GitHub..."
-git stash
+# Remove any local untracked root package-lock.json to avoid blocking git pull
+rm -f package-lock.json
+git stash -u || true
 git pull origin main
 
 echo "🛠️ Updating Server..."
