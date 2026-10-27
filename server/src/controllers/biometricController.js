@@ -200,14 +200,28 @@ const importBiometricData = async (req, res) => {
                     return { d: val.getDate(), m: val.getMonth(), y: val.getFullYear() };
                 }
                 const s = val.toString().trim();
-                // Try DD-MM-YYYY or DD/MM/YYYY
+                // Try DD-MM-YYYY or YYYY-MM-DD or DD/MM/YYYY
                 const parts = s.split(/[-/]/);
-                if (parts.length === 3 && !isNaN(parseInt(parts[0])) && !isNaN(parseInt(parts[1]))) {
-                    let d = parseInt(parts[0]);
-                    let m = parseInt(parts[1]) - 1;
-                    let y = parseInt(parts[2]);
-                    if (y < 100) y += 2000; // Handle 2-digit years like '26'
-                    return { d, m, y };
+                if (parts.length === 3) {
+                    let p0 = parseInt(parts[0], 10);
+                    let p1 = parseInt(parts[1], 10);
+                    let p2 = parseInt(parts[2], 10);
+                    if (!isNaN(p0) && !isNaN(p1) && !isNaN(p2)) {
+                        let d, m, y;
+                        if (p0 > 31) {
+                            // YYYY-MM-DD
+                            y = p0;
+                            m = p1 - 1;
+                            d = p2;
+                        } else {
+                            // DD-MM-YYYY
+                            d = p0;
+                            m = p1 - 1;
+                            y = p2;
+                        }
+                        if (y < 100) y += 2000; // Handle 2-digit years like '26'
+                        return { d, m, y };
+                    }
                 }
                 // Fallback to JS native parsing (e.g. "1-Mar-2026")
                 const dObj = new Date(s);
@@ -237,27 +251,65 @@ const importBiometricData = async (req, res) => {
                 refreshedUsers.add(user.id);
             }
 
-            const createLog = async (val, type) => {
-                if (!val || val === '--' || val === '00:00') return;
-                
+            // Universal time parser supporting: "10:35", "10.35", "10.2" (10:20), 10.35 (number), "10", 10
+            const parseTime = (val) => {
+                if (val === null || val === undefined) return null;
+                if (val === '--' || val === '00:00' || val === '0.00' || val === 0) return null;
+
                 let hour, min;
                 if (typeof val === 'number') {
-                    const serialTime = xlsx.SSF.parse_date_code(val);
-                    hour = serialTime.H;
-                    min = serialTime.M;
+                    if (val > 0 && val < 1.0) {
+                        // Excel serial time fraction (e.g. 0.4375 => 10:30)
+                        const serialTime = xlsx.SSF.parse_date_code(val);
+                        hour = serialTime.H;
+                        min = serialTime.M;
+                    } else {
+                        // Numeric decimal format (e.g. 10.35 => 10:35, 10.2 => 10:20, 17 => 17:00)
+                        hour = Math.floor(val);
+                        min = Math.round((val - hour) * 100);
+                    }
                 } else if (val instanceof Date) {
                     hour = val.getHours();
                     min = val.getMinutes();
                 } else {
-                    const timeParts = val.toString().trim().split(':');
-                    if (timeParts.length < 2) return;
-                    hour = parseInt(timeParts[0]);
-                    min = parseInt(timeParts[1]);
+                    const str = val.toString().trim();
+                    if (!str || str === '--' || str === '00:00' || str === '0.00' || str === '0') return null;
+
+                    if (str.includes(':')) {
+                        const parts = str.split(':');
+                        hour = parseInt(parts[0], 10);
+                        min = parseInt(parts[1] || '0', 10);
+                    } else if (str.includes('.')) {
+                        const parts = str.split('.');
+                        hour = parseInt(parts[0], 10);
+                        // "10.2" -> 20 mins, "10.05" -> 5 mins, "10.35" -> 35 mins
+                        const minRaw = (parts[1] || '0').padEnd(2, '0').slice(0, 2);
+                        min = parseInt(minRaw, 10);
+                    } else if (!isNaN(parseInt(str, 10))) {
+                        hour = parseInt(str, 10);
+                        min = 0;
+                    } else {
+                        return null;
+                    }
                 }
+
+                if (isNaN(hour) || isNaN(min) || hour < 0 || hour > 23 || min < 0 || min > 59) {
+                    return null;
+                }
+
+                return {
+                    hour,
+                    min,
+                    formatted: `${String(hour).padStart(2, '0')}:${String(min).padStart(2, '0')}`
+                };
+            };
+
+            const createLog = async (parsed, type) => {
+                if (!parsed) return;
+                const { hour, min } = parsed;
 
                 // IST Correction (-5:30)
                 const punchTime = new Date(Date.UTC(year, month, day, hour, min) - (5.5 * 60 * 60 * 1000));
-
                 if (isNaN(punchTime.getTime())) return;
 
                 await prisma.biometricLog.create({
@@ -272,21 +324,17 @@ const importBiometricData = async (req, res) => {
             };
 
             try {
-                // First Punch (IN)
-                await createLog(firstPunchVal, 'IN');
-                
-                // Last Punch (OUT) - Compare HH:mm string to avoid Date instance mismatch
-                const getHHMM = (v) => {
-                    if (typeof v === 'number') {
-                        const s = xlsx.SSF.parse_date_code(v);
-                        return `${s.H}:${s.M}`;
-                    }
-                    if (v instanceof Date) return `${v.getHours()}:${v.getMinutes()}`;
-                    return v.toString().trim();
-                };
+                const firstParsed = parseTime(firstPunchVal);
+                const lastParsed = parseTime(lastPunchVal);
 
-                if (lastPunchVal && getHHMM(lastPunchVal) !== getHHMM(firstPunchVal)) {
-                    await createLog(lastPunchVal, 'OUT');
+                // First Punch (IN)
+                if (firstParsed) {
+                    await createLog(firstParsed, 'IN');
+                }
+
+                // Last Punch (OUT) - compare formatted HH:mm to avoid duplicate punches
+                if (lastParsed && (!firstParsed || lastParsed.formatted !== firstParsed.formatted)) {
+                    await createLog(lastParsed, 'OUT');
                 }
             } catch (err) {
                 console.error(`Error saving biometric record at row ${index + 2}:`, err);
