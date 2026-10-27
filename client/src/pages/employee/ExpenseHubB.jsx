@@ -275,7 +275,7 @@ const ExpenseHubB = () => {
         if (voucher.cooStatus === 'REJECTED') return 'REJECTED BY COO';
         if (voucher.status === 'REJECTED') return 'REJECTED';
         if (voucher.status === 'COMPLETED') return 'SETTLED';
-        if (voucher.status === 'PAID') return 'PAID';
+        if (voucher.status === 'PAID') return 'APPROVED';
         if (voucher.amStatus === 'APPROVED' && voucher.cooStatus === 'PENDING') return 'APPROVED BY AM';
         if (voucher.amStatus === 'PENDING') return 'RAISED';
         return 'PENDING';
@@ -286,6 +286,7 @@ const ExpenseHubB = () => {
             case 'SETTLED':
             case 'COMPLETED':
                 return 'bg-emerald-100 text-emerald-800 border-emerald-300';
+            case 'APPROVED':
             case 'PAID':
                 return 'bg-teal-100 text-teal-800 border-teal-300';
             case 'APPROVED BY AM':
@@ -416,40 +417,18 @@ const ExpenseHubB = () => {
             {/* Header Area */}
             <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 pt-2">
                 <div className="space-y-2">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-indigo-50 text-indigo-700 rounded-full text-[11px] font-black uppercase tracking-wider border border-indigo-100">
-                        <Sparkles size={13} className="text-indigo-600" /> Expense Hub B
+                    <div className="inline-flex items-center gap-2 px-3 py-1 bg-blue-50 text-blue-600 rounded-full text-[10px] font-black uppercase tracking-widest border border-blue-100">
+                        <IndianRupee size={12} /> Financial Self-Service
                     </div>
                     <h1 className="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 tracking-tight">
-                        Expense Hub B
+                        Expense Hub
                     </h1>
                     <p className="text-slate-500 font-medium text-sm md:text-base">
-                        Voucher Lifecycle: Raised ➔ Approved by AM ➔ Paid (COO Approved) ➔ Settled.
+                        Manage your business expenditures with ease.
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    {/* Privileged Scope Switch */}
-                    {isPrivileged && (
-                        <div className="bg-slate-100 p-1 rounded-2xl flex items-center text-xs font-black">
-                            <button
-                                onClick={() => setViewScope('ALL')}
-                                className={`px-4 py-2.5 rounded-xl transition-all ${
-                                    viewScope === 'ALL' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                            >
-                                All Vouchers
-                            </button>
-                            <button
-                                onClick={() => setViewScope('MY')}
-                                className={`px-4 py-2.5 rounded-xl transition-all ${
-                                    viewScope === 'MY' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                                }`}
-                            >
-                                My Vouchers
-                            </button>
-                        </div>
-                    )}
-
                     {/* Raise Voucher Button */}
                     <button
                         onClick={() => {
@@ -464,7 +443,7 @@ const ExpenseHubB = () => {
                 </div>
             </div>
 
-            {/* 4 Small Cards with Interactive Toggle Button for Each */}
+            {/* 4 Small Cards without Toggle Button */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-5">
                 {/* 1. Raised Voucher Card */}
                 <div 
@@ -475,36 +454,16 @@ const ExpenseHubB = () => {
                             : 'bg-white border-slate-200/80 hover:border-blue-300 hover:shadow-md'
                     }`}
                 >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                                activeFilter === 'RAISED' ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-100 text-blue-700'
-                            }`}>
-                                <Receipt size={18} />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
-                                    Raised Voucher
-                                </h3>
-                            </div>
+                    <div className="flex items-center gap-2.5 mb-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                            activeFilter === 'RAISED' ? 'bg-blue-600 text-white shadow-md' : 'bg-blue-100 text-blue-700'
+                        }`}>
+                            <Receipt size={18} />
                         </div>
-
-                        {/* Interactive Toggle Switch */}
-                        <div className="flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); handleToggleCard('RAISED'); }}>
-                            <span className="text-[10px] font-bold text-slate-400">
-                                {activeFilter === 'RAISED' ? 'Active' : 'Filter'}
-                            </span>
-                            <div 
-                                className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                                    activeFilter === 'RAISED' ? 'bg-blue-600 justify-end' : 'bg-slate-200 justify-start'
-                                }`}
-                            >
-                                <motion.div 
-                                    layout 
-                                    className="w-4 h-4 bg-white rounded-full shadow-sm"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                />
-                            </div>
+                        <div>
+                            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
+                                Raised Voucher
+                            </h3>
                         </div>
                     </div>
 
@@ -537,36 +496,16 @@ const ExpenseHubB = () => {
                             : 'bg-white border-slate-200/80 hover:border-purple-300 hover:shadow-md'
                     }`}
                 >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                                activeFilter === 'PENDING' ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-100 text-purple-700'
-                            }`}>
-                                <Clock size={18} />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
-                                    Pending Voucher
-                                </h3>
-                            </div>
+                    <div className="flex items-center gap-2.5 mb-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                            activeFilter === 'PENDING' ? 'bg-purple-600 text-white shadow-md' : 'bg-purple-100 text-purple-700'
+                        }`}>
+                            <Clock size={18} />
                         </div>
-
-                        {/* Interactive Toggle Switch */}
-                        <div className="flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); handleToggleCard('PENDING'); }}>
-                            <span className="text-[10px] font-bold text-slate-400">
-                                {activeFilter === 'PENDING' ? 'Active' : 'Filter'}
-                            </span>
-                            <div 
-                                className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                                    activeFilter === 'PENDING' ? 'bg-purple-600 justify-end' : 'bg-slate-200 justify-start'
-                                }`}
-                            >
-                                <motion.div 
-                                    layout 
-                                    className="w-4 h-4 bg-white rounded-full shadow-sm"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                />
-                            </div>
+                        <div>
+                            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
+                                Pending Voucher
+                            </h3>
                         </div>
                     </div>
 
@@ -590,7 +529,7 @@ const ExpenseHubB = () => {
                     </div>
                 </div>
 
-                {/* 3. Paid Voucher Card (Approved by both AM & COO) */}
+                {/* 3. Approved Voucher Card (Approved by both AM & COO) */}
                 <div 
                     onClick={() => handleToggleCard('PAID')}
                     className={`cursor-pointer rounded-2xl p-5 border transition-all duration-300 relative overflow-hidden group select-none ${
@@ -599,46 +538,26 @@ const ExpenseHubB = () => {
                             : 'bg-white border-slate-200/80 hover:border-teal-300 hover:shadow-md'
                     }`}
                 >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                                activeFilter === 'PAID' ? 'bg-teal-600 text-white shadow-md' : 'bg-teal-100 text-teal-700'
-                            }`}>
-                                <CheckCircle2 size={18} />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
-                                    Paid Voucher
-                                </h3>
-                            </div>
+                    <div className="flex items-center gap-2.5 mb-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                            activeFilter === 'PAID' ? 'bg-teal-600 text-white shadow-md' : 'bg-teal-100 text-teal-700'
+                        }`}>
+                            <CheckCircle2 size={18} />
                         </div>
-
-                        {/* Interactive Toggle Switch */}
-                        <div className="flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); handleToggleCard('PAID'); }}>
-                            <span className="text-[10px] font-bold text-slate-400">
-                                {activeFilter === 'PAID' ? 'Active' : 'Filter'}
-                            </span>
-                            <div 
-                                className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                                    activeFilter === 'PAID' ? 'bg-teal-600 justify-end' : 'bg-slate-200 justify-start'
-                                }`}
-                            >
-                                <motion.div 
-                                    layout 
-                                    className="w-4 h-4 bg-white rounded-full shadow-sm"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                />
-                            </div>
+                        <div>
+                            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
+                                Approved Voucher
+                            </h3>
                         </div>
                     </div>
 
                     <div className="space-y-1 mt-2">
-                        <div className="flex items-baseline justify-between">
+                        <div className="flex items-baseline justify-between gap-2">
                             <span className="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight">
                                 {metrics.paid.count}
                             </span>
-                            <span className="text-xs font-bold text-slate-400 uppercase">
-                                Approved For All
+                            <span className="text-[10px] font-bold text-slate-400 uppercase text-right">
+                                Approved by both AM and COO
                             </span>
                         </div>
                         <div className="flex items-center gap-1 text-slate-700 font-black text-base sm:text-lg">
@@ -661,36 +580,16 @@ const ExpenseHubB = () => {
                             : 'bg-white border-slate-200/80 hover:border-emerald-300 hover:shadow-md'
                     }`}
                 >
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                        <div className="flex items-center gap-2.5">
-                            <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                                activeFilter === 'SETTLED' ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-100 text-emerald-700'
-                            }`}>
-                                <ShieldCheck size={18} />
-                            </div>
-                            <div>
-                                <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
-                                    Settled Voucher
-                                </h3>
-                            </div>
+                    <div className="flex items-center gap-2.5 mb-3">
+                        <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
+                            activeFilter === 'SETTLED' ? 'bg-emerald-600 text-white shadow-md' : 'bg-emerald-100 text-emerald-700'
+                        }`}>
+                            <ShieldCheck size={18} />
                         </div>
-
-                        {/* Interactive Toggle Switch */}
-                        <div className="flex items-center gap-1.5" onClick={(e) => { e.stopPropagation(); handleToggleCard('SETTLED'); }}>
-                            <span className="text-[10px] font-bold text-slate-400">
-                                {activeFilter === 'SETTLED' ? 'Active' : 'Filter'}
-                            </span>
-                            <div 
-                                className={`w-10 h-5 flex items-center rounded-full p-0.5 transition-colors cursor-pointer ${
-                                    activeFilter === 'SETTLED' ? 'bg-emerald-600 justify-end' : 'bg-slate-200 justify-start'
-                                }`}
-                            >
-                                <motion.div 
-                                    layout 
-                                    className="w-4 h-4 bg-white rounded-full shadow-sm"
-                                    transition={{ type: 'spring', stiffness: 500, damping: 30 }}
-                                />
-                            </div>
+                        <div>
+                            <h3 className="text-xs font-black text-slate-600 uppercase tracking-wider">
+                                Settled Voucher
+                            </h3>
                         </div>
                     </div>
 
@@ -723,7 +622,7 @@ const ExpenseHubB = () => {
                         {activeFilter === 'ALL' && 'All Vouchers'}
                         {activeFilter === 'RAISED' && 'Raised Vouchers'}
                         {activeFilter === 'PENDING' && 'Pending Vouchers (Waiting COO)'}
-                        {activeFilter === 'PAID' && 'Paid Vouchers'}
+                        {activeFilter === 'PAID' && 'Approved Vouchers (Approved by both AM & COO)'}
                         {activeFilter === 'SETTLED' && 'Settled Vouchers'}
                         <span className="text-slate-400">({filteredVouchers.length})</span>
                     </span>

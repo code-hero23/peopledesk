@@ -31,7 +31,7 @@ const VoucherStatusFlow = ({ voucher }) => {
         },
         { 
             id: 'PAID', 
-            label: 'Paid', 
+            label: 'Approved', 
             isComplete: ['PAID', 'COMPLETED'].includes(status), 
             isCurrent: cooStatus === 'APPROVED' && status === 'PAID' && !isRejected
         },
@@ -100,7 +100,7 @@ const VoucherStatusFlow = ({ voucher }) => {
             {status === 'PAID' && (
                 <div className="mt-8 sm:mt-10 p-3 bg-teal-50 border border-teal-100 rounded-xl flex items-center gap-3 animate-in fade-in slide-in-from-top-2">
                     <Check size={16} className="text-teal-600 flex-shrink-0" />
-                    <p className="text-[10px] font-bold text-teal-700">Approved by both AM & COO. Status is PAID. Ready for cash disbursement & settlement.</p>
+                    <p className="text-[10px] font-bold text-teal-700">Approved by both AM & COO. Status is Approved. Ready for cash disbursement & settlement.</p>
                 </div>
             )}
             {status === 'COMPLETED' && (
