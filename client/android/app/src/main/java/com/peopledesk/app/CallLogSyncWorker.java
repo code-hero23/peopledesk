@@ -1,13 +1,22 @@
 package com.peopledesk.app;
 
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ServiceInfo;
 import android.database.Cursor;
+import android.os.Build;
 import android.provider.CallLog;
 import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.util.Log;
 import androidx.annotation.NonNull;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+import androidx.work.ForegroundInfo;
 import androidx.work.Worker;
 import androidx.work.WorkerParameters;
 import org.json.JSONArray;
@@ -21,10 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.Set;
-import java.util.Calendar;
-import java.util.TimeZone;
-import androidx.core.content.ContextCompat;
-import android.content.pm.PackageManager;
 
 public class CallLogSyncWorker extends Worker {
     private static final String TAG = "CallLogSyncWorker";
@@ -93,15 +98,54 @@ public class CallLogSyncWorker extends Worker {
         return defaultValue;
     }
 
+    private static void writePreference(Context context, String key, String value) {
+        try {
+            SharedPreferences capPrefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+            capPrefs.edit().putString(key, value).apply();
+        } catch (Exception ignored) {}
+    }
+
+    @NonNull
+    @Override
+    public ForegroundInfo getForegroundInfo() {
+        Context context = getApplicationContext();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                ForegroundSyncService.CHANNEL_ID,
+                "PeopleDesk Field & Call Sync Service",
+                NotificationManager.IMPORTANCE_LOW
+            );
+            NotificationManager manager = context.getSystemService(NotificationManager.class);
+            if (manager != null) {
+                manager.createNotificationChannel(channel);
+            }
+        }
+        Notification notification = new NotificationCompat.Builder(context, ForegroundSyncService.CHANNEL_ID)
+            .setContentTitle("PeopleDesk Sync Active")
+            .setContentText("Syncing official call logs...")
+            .setSmallIcon(android.R.drawable.stat_notify_sync)
+            .setPriority(NotificationCompat.PRIORITY_LOW)
+            .setOngoing(true)
+            .build();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            return new ForegroundInfo(ForegroundSyncService.NOTIFICATION_ID, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC);
+        }
+        return new ForegroundInfo(ForegroundSyncService.NOTIFICATION_ID, notification);
+    }
+
     @NonNull
     @Override
     public Result doWork() {
+        Context appContext = getApplicationContext();
+        try {
+            CallSyncAlarmReceiver.scheduleAlarmsOnly(appContext);
+        } catch (Exception ignored) {}
         boolean forceSync = getInputData().getBoolean("forceSync", false);
-        boolean success = performSync(getApplicationContext(), forceSync);
+        boolean success = performSync(appContext, forceSync);
         return success ? Result.success() : Result.retry();
     }
 
-    public static boolean performSync(Context context, boolean forceSync) {
+    public static synchronized boolean performSync(Context context, boolean forceSync) {
         Log.d(TAG, "Starting automatic call log sync...");
         try {
             String apiUrl = readPreference(context, "apiUrl", "https://peopledesk.orbixdesigns.com/api");
@@ -114,10 +158,15 @@ public class CallLogSyncWorker extends Worker {
                 return true;
             }
 
-
             if (ContextCompat.checkSelfPermission(context, android.Manifest.permission.READ_CALL_LOG) != PackageManager.PERMISSION_GRANTED) {
                 Log.e(TAG, "Sync skipped: READ_CALL_LOG permission is not granted");
                 return false;
+            }
+
+            // Check remote pending status & keep officialSim in sync with server setting
+            String remoteSim = checkPendingAndSyncSimConfig(context, apiUrl, deviceToken);
+            if (remoteSim != null && !remoteSim.isEmpty()) {
+                officialSim = remoteSim;
             }
 
             long activationTime = 0;
@@ -176,7 +225,9 @@ public class CallLogSyncWorker extends Worker {
                 if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
                     sm = (SubscriptionManager) context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
                     if (sm != null) {
-                        activeList = sm.getActiveSubscriptionInfoList();
+                        try {
+                            activeList = sm.getActiveSubscriptionInfoList();
+                        } catch (SecurityException ignored) {}
                         if (activeList != null) {
                             activeSubCount = activeList.size();
                             for (SubscriptionInfo si : activeList) {
@@ -185,7 +236,7 @@ public class CallLogSyncWorker extends Worker {
                                 try {
                                     iccId = si.getIccId();
                                 } catch (Exception ignored) {}
-                                String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : si.getDisplayName().toString();
+                                String carrier = si.getCarrierName() != null ? si.getCarrierName().toString() : (si.getDisplayName() != null ? si.getDisplayName().toString() : "");
                                 String display = si.getDisplayName() != null ? si.getDisplayName().toString() : carrier;
                                 String slot = String.valueOf(si.getSimSlotIndex() + 1);
                                 labelMap.put(id, carrier);
@@ -461,7 +512,7 @@ public class CallLogSyncWorker extends Worker {
         }
     }
 
-    private static boolean hasPendingRemoteSyncRequest(String baseUrl, String deviceToken) {
+    private static String checkPendingAndSyncSimConfig(Context context, String baseUrl, String deviceToken) {
         try {
             String fullUrl = baseUrl;
             if (!fullUrl.endsWith("/")) fullUrl += "/";
@@ -471,13 +522,12 @@ public class CallLogSyncWorker extends Worker {
             HttpURLConnection conn = (HttpURLConnection) url.openConnection();
             conn.setRequestMethod("GET");
             conn.setRequestProperty("Authorization", "Device " + deviceToken);
-            conn.setConnectTimeout(15000);
-            conn.setReadTimeout(15000);
+            conn.setConnectTimeout(10000);
+            conn.setReadTimeout(10000);
 
             int code = conn.getResponseCode();
             if (code < 200 || code >= 300) {
-                Log.w(TAG, "Pending remote sync check returned code: " + code);
-                return false;
+                return null;
             }
 
             String body;
@@ -486,10 +536,15 @@ public class CallLogSyncWorker extends Worker {
             }
 
             JSONObject response = new JSONObject(body);
-            return response.optBoolean("pending", false);
+            String serverSim = response.optString("officialSim", "").trim();
+            if (!serverSim.isEmpty() && !"null".equalsIgnoreCase(serverSim)) {
+                writePreference(context, "cre_official_sim", serverSim);
+                return serverSim;
+            }
+            return null;
         } catch (Exception e) {
             Log.w(TAG, "Could not check pending remote sync request", e);
-            return false;
+            return null;
         }
     }
 }

@@ -35,12 +35,17 @@
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.LOCKED_BOOT_COMPLETED" />
+                <action android:name="android.intent.action.QUICKBOOT_POWERON" />
+                <action android:name="com.htc.intent.action.QUICKBOOT_POWERON" />
                 <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
                 <action android:name="android.intent.action.TIME_SET" />
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.PHONE_STATE" />
                 <action android:name="com.peopledesk.app.CALL_SYNC_START" />
                 <action android:name="com.peopledesk.app.CALL_SYNC_TICK" />
                 <action android:name="com.peopledesk.app.CALL_SYNC_FINAL" />
+                <action android:name="com.peopledesk.app.CALL_SYNC_POST_CALL" />
             </intent-filter>
         </receiver>
 
@@ -48,6 +53,7 @@
             android:name=".ForegroundSyncService"
             android:enabled="true"
             android:exported="false"
+            android:stopWithTask="false"
             android:foregroundServiceType="dataSync" />
     </application>
 

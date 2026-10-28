@@ -176,6 +176,7 @@ export default function CallSyncDeviceSetup() {
     setStatus('Syncing call logs right now...');
     try {
       const plugin = getCallLogPlugin();
+      await plugin.scheduleCallLogSync?.();
       const { value: deviceToken } = await Preferences.get({ key: 'call_sync_device_token' });
       const { value: officialSim } = await Preferences.get({ key: 'cre_official_sim' });
       const { value: apiUrl } = await Preferences.get({ key: 'apiUrl' });
@@ -230,6 +231,17 @@ export default function CallSyncDeviceSetup() {
     }
   };
 
+  const openBackgroundSettings = async () => {
+    try {
+      const plugin = getCallLogPlugin();
+      await plugin.requestExactAlarmPermission?.();
+      await plugin.requestBatteryExemption?.();
+      await plugin.openOemBackgroundSettings?.();
+    } catch (err) {
+      console.warn('Could not open OEM background settings:', err);
+    }
+  };
+
   const resetSetup = async () => {
     await Preferences.remove({ key: 'call_sync_device_token' });
     setActivated(false);
@@ -252,6 +264,13 @@ export default function CallSyncDeviceSetup() {
               className="w-full rounded-xl bg-blue-600 hover:bg-blue-500 p-4 font-bold text-sm transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {busy ? 'Syncing...' : '🔄 SYNC CALL LOGS NOW'}
+            </button>
+            <button
+              type="button"
+              onClick={openBackgroundSettings}
+              className="w-full rounded-xl border border-amber-500/30 bg-amber-500/10 hover:bg-amber-500/20 p-3 text-xs text-amber-300 font-semibold transition-all"
+            >
+              ⚙️ Allow Background Sync (Vivo / OEM Battery Settings)
             </button>
             <button 
               onClick={resetSetup} 
@@ -358,4 +377,3 @@ export default function CallSyncDeviceSetup() {
     </main>
   );
 }
-

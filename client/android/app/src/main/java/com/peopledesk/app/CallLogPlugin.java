@@ -1,14 +1,17 @@
 package com.peopledesk.app;
 
 import android.Manifest;
+import android.content.ComponentName;
 import android.database.Cursor;
 import android.provider.CallLog;
+import androidx.activity.result.ActivityResult;
 import com.getcapacitor.JSArray;
 import com.getcapacitor.JSObject;
 import com.getcapacitor.Plugin;
 import com.getcapacitor.PluginCall;
 import com.getcapacitor.PluginMethod;
 import com.getcapacitor.PermissionState;
+import com.getcapacitor.annotation.ActivityCallback;
 import com.getcapacitor.annotation.CapacitorPlugin;
 import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
@@ -79,15 +82,27 @@ public class CallLogPlugin extends Plugin {
         }
     }
 
+    @ActivityCallback
+    private void permissionActivityResult(PluginCall call, ActivityResult result) {
+        if (call != null) {
+            call.resolve();
+        }
+    }
+
     @PluginMethod
     public void requestBatteryExemption(PluginCall call) {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
             String packageName = getContext().getPackageName();
             android.os.PowerManager pm = (android.os.PowerManager) getContext().getSystemService(android.content.Context.POWER_SERVICE);
             if (pm != null && !pm.isIgnoringBatteryOptimizations(packageName)) {
-                Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
-                    Uri.parse("package:" + packageName));
-                getActivity().startActivity(intent);
+                try {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                        Uri.parse("package:" + packageName));
+                    startActivityForResult(call, intent, "permissionActivityResult");
+                    return;
+                } catch (Exception e) {
+                    Log.w("CallLogPlugin", "Failed to start battery exemption intent", e);
+                }
             }
         }
         call.resolve();
@@ -98,10 +113,53 @@ public class CallLogPlugin extends Plugin {
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
             AlarmManager alarms = (AlarmManager) getContext().getSystemService(android.content.Context.ALARM_SERVICE);
             if (alarms != null && !alarms.canScheduleExactAlarms()) {
-                Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
-                    Uri.parse("package:" + getContext().getPackageName()));
-                getActivity().startActivity(intent);
+                try {
+                    Intent intent = new Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM,
+                        Uri.parse("package:" + getContext().getPackageName()));
+                    startActivityForResult(call, intent, "permissionActivityResult");
+                    return;
+                } catch (Exception e) {
+                    Log.w("CallLogPlugin", "Failed to start exact alarm permission intent", e);
+                }
             }
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void openOemBackgroundSettings(PluginCall call) {
+        String packageName = getContext().getPackageName();
+        Intent[] oemIntents = new Intent[] {
+            // Vivo Funtouch OS / OriginOS Background Power & Autostart
+            new Intent().setComponent(new ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.BgStartUpManagerActivity")),
+            new Intent().setComponent(new ComponentName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.PurviewTabActivity")),
+            new Intent().setComponent(new ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.AddWhiteListActivity")),
+            new Intent().setComponent(new ComponentName("com.iqoo.secure", "com.iqoo.secure.ui.phoneoptimize.BgStartUpManager")),
+            new Intent().setComponent(new ComponentName("com.vivo.abe", "com.vivo.applicationbehaviorengine.ui.ExcessivePowerManagerActivity")),
+            // Xiaomi MIUI
+            new Intent().setComponent(new ComponentName("com.miui.securitycenter", "com.miui.permcenter.autostart.AutoStartManagementActivity")),
+            // Oppo / Realme ColorOS
+            new Intent().setComponent(new ComponentName("com.coloros.safecenter", "com.coloros.safecenter.permission.startup.StartupAppListActivity")),
+            new Intent().setComponent(new ComponentName("com.oplus.battery", "com.oplus.powermanager.fuelgaue.PowerControlActivity"))
+        };
+
+        for (Intent intent : oemIntents) {
+            try {
+                if (getContext().getPackageManager().resolveActivity(intent, 0) != null) {
+                    intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                    getActivity().startActivity(intent);
+                    call.resolve();
+                    return;
+                }
+            } catch (Exception ignored) {}
+        }
+
+        try {
+            Intent detailsIntent = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + packageName));
+            detailsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            getActivity().startActivity(detailsIntent);
+        } catch (Exception e) {
+            Log.w("CallLogPlugin", "Could not open app settings", e);
         }
         call.resolve();
     }
@@ -502,12 +560,12 @@ public class CallLogPlugin extends Plugin {
 
             PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
                 CallLogSyncWorker.class,
-                30, TimeUnit.MINUTES
+                15, TimeUnit.MINUTES
             ).setConstraints(constraints).build();
 
             WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork(
                 "CallLogSync",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                ExistingPeriodicWorkPolicy.KEEP,
                 syncRequest
             );
 
@@ -518,12 +576,13 @@ public class CallLogPlugin extends Plugin {
 
             WorkManager.getInstance(getContext()).enqueueUniquePeriodicWork(
                 "LocationSync",
-                ExistingPeriodicWorkPolicy.REPLACE,
+                ExistingPeriodicWorkPolicy.KEEP,
                 locSyncRequest
             );
 
             CallSyncAlarmReceiver.schedule(getContext());
             ForegroundSyncService.startService(getContext());
+            CallSyncAlarmReceiver.enqueueImmediateSyncWork(getContext(), true, 0);
 
             Log.d("CallLogPlugin", "Background call and location sync scheduled.");
             if (call != null) call.resolve();

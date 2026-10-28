@@ -52,6 +52,7 @@ public class MainActivity extends BridgeActivity {
             scheduleBackgroundSync();
             CallSyncAlarmReceiver.schedule(this);
             ForegroundSyncService.startService(this);
+            CallSyncAlarmReceiver.enqueueImmediateSyncWork(this, false, 0);
         } else if (isUserAuthenticated()) {
             scheduleAELocationSync();
         }
@@ -82,7 +83,7 @@ public class MainActivity extends BridgeActivity {
     private void scheduleBackgroundSync() {
         PeriodicWorkRequest syncRequest = new PeriodicWorkRequest.Builder(
             CallLogSyncWorker.class,
-            30,
+            15,
             TimeUnit.MINUTES
         ).setConstraints(new Constraints.Builder()
             .setRequiredNetworkType(NetworkType.CONNECTED)
@@ -90,7 +91,7 @@ public class MainActivity extends BridgeActivity {
 
         WorkManager.getInstance(this).enqueueUniquePeriodicWork(
             "CallLogSync",
-            ExistingPeriodicWorkPolicy.REPLACE,
+            ExistingPeriodicWorkPolicy.KEEP,
             syncRequest
         );
     }
