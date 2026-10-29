@@ -100,19 +100,7 @@ function Login() {
     }, [user, isSuccess, isAEManagerApp, navigate, dispatch]);
 
     if (showCallSyncSetup && Capacitor.isNativePlatform() && !isAEManagerApp) {
-        return (
-            <div className="relative min-h-screen bg-slate-950">
-                <CallSyncDeviceSetup />
-                <div className="fixed bottom-4 left-0 right-0 text-center z-50">
-                    <button
-                        onClick={() => setShowCallSyncSetup(false)}
-                        className="text-xs font-semibold text-slate-400 hover:text-white underline px-4 py-2 rounded-full bg-slate-900/80 backdrop-blur border border-white/10 shadow-lg"
-                    >
-                        Switch to Staff Account Login
-                    </button>
-                </div>
-            </div>
-        );
+        return <CallSyncDeviceSetup />;
     }
 
     // Error Display Logic
@@ -332,11 +320,11 @@ PeopleDesk User`)}`}
                                     <div className="grid grid-cols-2 gap-2.5">
                                         <a
                                             href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/downloads/peopledesk-apk`}
-                                            download="PeopleDesk-latest.apk"
+                                            download="PD-CallSync-latest.apk"
                                             className="flex items-center justify-center gap-1.5 px-3 py-2.5 rounded-xl bg-white/[0.04] hover:bg-white/10 text-slate-300 hover:text-white border border-white/5 text-xs font-bold transition-all group"
                                         >
                                             <Smartphone size={13} className="text-blue-400 group-hover:scale-110 transition-transform" />
-                                            <span>PeopleDesk APK</span>
+                                            <span>Call Sync APK</span>
                                         </a>
                                         <a
                                             href={`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api'}/downloads/ae-manager-apk`}

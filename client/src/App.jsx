@@ -1,4 +1,6 @@
+import { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { Capacitor } from '@capacitor/core';
 import Login from './pages/Login';
 import { ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -45,6 +47,8 @@ import PrivateRoute from './components/PrivateRoute';
 import PWAFresher from './components/PWAFresher';
 import SupportButton from './components/common/SupportButton';
 import EmployeeAttendanceDetail from './pages/admin/EmployeeAttendanceDetail';
+import CallSyncDeviceSetup from './components/CallSyncDeviceSetup';
+import { getCallLogPlugin } from './utils/capacitorPlugins';
 
 import PublicEventHub from './pages/public/PublicEventHub';
 import PublicGameRegistration from './pages/public/PublicGameRegistration';
@@ -53,6 +57,36 @@ import { EmployeeGuard, RootRedirect, AELiveTrackerGuard } from './components/Ro
 import AELocationWatcher from './components/AELocationWatcher';
 
 function App() {
+  const [isAEManagerApp, setIsAEManagerApp] = useState(false);
+
+  useEffect(() => {
+    if (!Capacitor.isNativePlatform()) return;
+    const detectFlavor = async () => {
+      try {
+        const plugin = getCallLogPlugin();
+        if (plugin && plugin.getAppInfo) {
+          const info = await plugin.getAppInfo();
+          if (info?.isAEManager || (info?.packageName && info.packageName.toLowerCase().includes('aemanager'))) {
+            setIsAEManagerApp(true);
+          }
+        }
+      } catch (e) {
+        console.warn('Could not detect app flavor:', e);
+      }
+    };
+    detectFlavor();
+  }, []);
+
+  // Native Call Sync APK (com.peopledesk.app) always opens directly into the Call Sync Device Activation screen
+  if (Capacitor.isNativePlatform() && !isAEManagerApp) {
+    return (
+      <>
+        <ToastContainer position="top-right" autoClose={3000} />
+        <CallSyncDeviceSetup />
+      </>
+    );
+  }
+
   return (
     <>
       <PWAFresher />
@@ -62,6 +96,7 @@ function App() {
         <Routes>
           {/* Public Zero-Login Routes */}
           <Route path="/login" element={<Login />} />
+          <Route path="/call-sync-setup" element={<CallSyncDeviceSetup />} />
           <Route path="/games-hub" element={<PublicEventHub />} />
           <Route path="/events-hub" element={<PublicEventHub />} />
           <Route path="/register" element={<PublicGameRegistration />} />

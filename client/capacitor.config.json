@@ -1,6 +1,6 @@
 {
   "appId": "com.peopledesk.app",
-  "appName": "PeopleDesk",
+  "appName": "PD Call Sync",
   "webDir": "dist",
   "server": {
     "androidScheme": "https",

@@ -32,19 +32,22 @@ if [ -d "android" ] && command -v java &> /dev/null && [ -n "$ANDROID_HOME" -o -
     cd android
     chmod +x ./gradlew || true
     
-    echo "Building Release APKs (PeopleDesk & AE Manager)..."
+    echo "Building Release APKs (PD Call Sync & AE Manager)..."
     ./gradlew assembleRelease || true
     ./gradlew assembleDebug || true
 
     mkdir -p ../../server/uploads/apks/
+    mkdir -p ../../server/uploads/apks/call-sync/
     
-    # PeopleDesk APKs (Prioritize signed release or debug APK)
+    # Call Sync APKs (Stored in subfolder server/uploads/apks/call-sync/)
     if [ -f "app/build/outputs/apk/peopledesk/release/app-peopledesk-release.apk" ]; then
+        cp app/build/outputs/apk/peopledesk/release/app-peopledesk-release.apk ../../server/uploads/apks/call-sync/call-sync-latest.apk || true
         cp app/build/outputs/apk/peopledesk/release/app-peopledesk-release.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
-        echo "📍 PeopleDesk Release APK Location: server/uploads/apks/peopledesk-release-latest.apk"
+        echo "📍 Call Sync Release APK Location: server/uploads/apks/call-sync/call-sync-latest.apk"
     elif [ -f "app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk" ]; then
+        cp app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk ../../server/uploads/apks/call-sync/call-sync-latest.apk || true
         cp app/build/outputs/apk/peopledesk/debug/app-peopledesk-debug.apk ../../server/uploads/apks/peopledesk-release-latest.apk || true
-        echo "📍 PeopleDesk Debug APK Location (Signed): server/uploads/apks/peopledesk-release-latest.apk"
+        echo "📍 Call Sync Debug APK Location (Signed): server/uploads/apks/call-sync/call-sync-latest.apk"
     fi
 
     # AE Manager APKs (Prioritize signed release or debug APK)

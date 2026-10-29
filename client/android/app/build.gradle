@@ -7,8 +7,8 @@ android {
         applicationId "com.peopledesk.app"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0"
+        versionCode 2
+        versionName "1.1"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
@@ -76,4 +76,37 @@ try {
     }
 } catch(Exception e) {
     logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}
+
+tasks.whenTaskAdded { task ->
+    if (task.name == 'assemblePeopledeskRelease') {
+        task.doLast {
+            def builtApk = file("${buildDir}/outputs/apk/peopledesk/release/app-peopledesk-release.apk")
+            if (builtApk.exists()) {
+                def serverCallSyncDir = file("../../../server/uploads/apks/call-sync")
+                serverCallSyncDir.mkdirs()
+                copy {
+                    from builtApk
+                    into serverCallSyncDir
+                    rename { "call-sync-latest.apk" }
+                }
+                def serverApksDir = file("../../../server/uploads/apks")
+                serverApksDir.mkdirs()
+                copy {
+                    from builtApk
+                    into serverApksDir
+                    rename { "peopledesk-release-latest.apk" }
+                }
+                def userDownloadsDir = new File(System.getProperty("user.home"), "Downloads/CallSync")
+                if (userDownloadsDir.getParentFile().exists()) {
+                    userDownloadsDir.mkdirs()
+                    copy {
+                        from builtApk
+                        into userDownloadsDir
+                        rename { "PD-CallSync-latest.apk" }
+                    }
+                }
+            }
+        }
+    }
 }
