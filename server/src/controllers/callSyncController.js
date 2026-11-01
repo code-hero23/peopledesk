@@ -1,7 +1,6 @@
 const crypto = require('crypto');
-const { PrismaClient } = require('@prisma/client');
 
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
 const makeCode = () => crypto.randomBytes(5).toString('hex').toUpperCase();
 const makeSecret = () => crypto.randomBytes(32).toString('base64url');

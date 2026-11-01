@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST, getLatestCompletedCycle } = require('../utils/dateHelpers');
 
 // @desc    Get employee salary summary for current or historical cycle

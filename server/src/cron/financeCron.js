@@ -1,6 +1,5 @@
 const cron = require('node-cron');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 const initFinanceCron = () => {
     // Run at 00:00 on the 1st day of every 3rd month (Quarterly)

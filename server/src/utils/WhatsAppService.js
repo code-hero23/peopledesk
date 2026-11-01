@@ -1,4 +1,5 @@
 const axios = require('axios');
+const prisma = require('../config/prisma');
 
 /**
  * Service to handle WhatsApp Business API notifications via Meta Cloud API.
@@ -140,8 +141,6 @@ class WhatsAppService {
     async sendLateLoginAlert(to, userName, consecutiveDays) {
         // Check if late enforcement is globally enabled
         try {
-            const { PrismaClient } = require('@prisma/client');
-            const prisma = new PrismaClient();
             const setting = await prisma.globalSetting.findUnique({
                 where: { key: 'isLateCheckInEnforced' }
             });

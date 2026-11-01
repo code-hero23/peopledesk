@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
 const bcrypt = require('bcryptjs');
 const xlsx = require('xlsx');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const { generateAndSendDailySummary } = require('../cron/DailySummaryCron');
 const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 const { sendEmail } = require('../utils/emailService');

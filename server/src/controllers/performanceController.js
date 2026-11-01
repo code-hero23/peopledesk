@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 // Helper to generate automatic remarks based on total score
 const generateAutoRemark = (totalScore) => {

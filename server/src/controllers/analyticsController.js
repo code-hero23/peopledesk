@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // Helper to format minutes to "Xh Ym"

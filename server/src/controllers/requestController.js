@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const { getCycleStartDateIST, getCycleEndDateIST, parseRobustDate } = require('../utils/dateHelpers');
 const { sendEmail } = require('../utils/emailService');
 const whatsappService = require('../utils/WhatsAppService');

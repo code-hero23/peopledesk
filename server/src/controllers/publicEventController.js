@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const ExcelJS = require('exceljs');
 
 const DEFAULT_GAMES = [

@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const { getTrackingWindowIST } = require('../utils/dateHelpers');
 
 // Record location update from AE APK

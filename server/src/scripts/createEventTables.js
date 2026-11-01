@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 
 async function createOnlyEventTables() {
     console.log('--- SAFELY CREATING EVENT TABLES ONLY (Zero existing data touched) ---');

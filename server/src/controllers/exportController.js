@@ -1,7 +1,6 @@
-const { PrismaClient } = require('@prisma/client');
 const XLSX = require('xlsx');
 const ExcelJS = require('exceljs');
-const prisma = new PrismaClient();
+const prisma = require('../config/prisma');
 const { getCycleStartDateIST, getCycleEndDateIST, getStartOfDayIST, getEndOfDayIST, normalizeBiometricDate } = require('../utils/dateHelpers');
 const { sendEmail } = require('../utils/emailService');
 
