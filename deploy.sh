@@ -17,7 +17,7 @@ npx prisma generate
 # Attempt prisma migrate deploy safely (fallback to safe_update.js if no pending migrations)
 npx prisma migrate deploy || echo "⚠️ Prisma migrate deploy skipped/handled, running safe_update.js..."
 node scripts/safe_update.js
-pm2 restart all || pm2 start src/app.js --name "peopledesk-backend"
+pm2 restart peopledesk-backend || pm2 start index.js --name "peopledesk-backend"
 cd ..
 
 echo "🎨 Building Frontend..."

@@ -12,48 +12,30 @@ const getTrimmedEnv = (name) => {
     return typeof value === 'string' ? value.trim() : '';
 };
 
-const getVapidConfigError = () => {
+const configureWebPush = () => {
     const subject = getTrimmedEnv('VAPID_SUBJECT');
     const publicKey = getTrimmedEnv('VAPID_PUBLIC_KEY');
     const privateKey = getTrimmedEnv('VAPID_PRIVATE_KEY');
 
     if (!subject || !publicKey || !privateKey) {
-        return 'Missing VAPID_SUBJECT, VAPID_PUBLIC_KEY, or VAPID_PRIVATE_KEY.';
+        return { ok: false, error: 'Missing VAPID_SUBJECT, VAPID_PUBLIC_KEY, or VAPID_PRIVATE_KEY.' };
     }
 
     if (PLACEHOLDER_VALUES.has(publicKey) || PLACEHOLDER_VALUES.has(privateKey)) {
-        return 'VAPID keys are still set to placeholder values.';
+        return { ok: false, error: 'VAPID keys are still set to placeholder values.' };
     }
 
     try {
-        webpush.validatePublicKey(publicKey);
+        webpush.setVapidDetails(subject, publicKey, privateKey);
+        return { ok: true };
     } catch (error) {
-        return `Invalid VAPID public key: ${error.message}`;
+        return { ok: false, error: `Invalid VAPID configuration: ${error.message}` };
     }
-
-    try {
-        webpush.validatePrivateKey(privateKey);
-    } catch (error) {
-        return `Invalid VAPID private key: ${error.message}`;
-    }
-
-    return null;
 };
 
-const configureWebPush = () => {
-    const error = getVapidConfigError();
-
-    if (error) {
-        return { ok: false, error };
-    }
-
-    webpush.setVapidDetails(
-        getTrimmedEnv('VAPID_SUBJECT'),
-        getTrimmedEnv('VAPID_PUBLIC_KEY'),
-        getTrimmedEnv('VAPID_PRIVATE_KEY')
-    );
-
-    return { ok: true };
+const getVapidConfigError = () => {
+    const result = configureWebPush();
+    return result.ok ? null : result.error;
 };
 
 module.exports = {
