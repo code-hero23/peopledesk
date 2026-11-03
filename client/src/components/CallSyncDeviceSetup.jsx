@@ -10,19 +10,42 @@ const filterLogsForSim = (logs, officialSim, activationTime = 0) => {
   const target = normalizeSimValue(officialSim);
   const isAll = !target || target === '0' || target === 'all' || target === 'both';
 
+  const isCarrier = target.match(/[a-z]/i) && !target.startsWith('sim') && !target.startsWith('slot');
+  const cleanCarrier = isCarrier ? target.replace(/^(sim|slot)\s*\d*\s*[-:]*\s*/i, '').trim() : '';
+  const isVi = isCarrier && (cleanCarrier.includes('vi') || cleanCarrier.includes('vodafone') || cleanCarrier.includes('idea'));
+
   return (Array.isArray(logs) ? logs : []).filter((log) => {
     if (activationTime > 0 && log.date && log.date < activationTime) {
       return false;
     }
     if (isAll) return true;
 
+    const logLabel = normalizeSimValue(log.simLabel);
+
+    if (isCarrier) {
+      let matches = false;
+      if (isVi) {
+        matches = logLabel.includes('vi') || logLabel.includes('vodafone') || logLabel.includes('idea');
+      } else {
+        matches = Boolean(logLabel && (logLabel.includes(cleanCarrier) || cleanCarrier.includes(logLabel)));
+      }
+      if (!matches) return false;
+
+      // Working hours guard: 09:30 AM to 07:45 PM IST
+      if (log.date) {
+        const d = new Date(Number(log.date) + 5.5 * 60 * 60 * 1000);
+        const mins = d.getUTCHours() * 60 + d.getUTCMinutes();
+        if (mins < 570 || mins > 1185) return false;
+      }
+      return true;
+    }
+
     const simSlot = normalizeSimValue(log.simSlot);
     if (simSlot && simSlot !== '0' && simSlot !== 'unknown') {
       return simSlot === target;
     }
 
-    const simLabel = normalizeSimValue(log.simLabel);
-    if (simLabel && (simLabel.includes(`sim ${target}`) || simLabel.includes(`slot ${target}`))) {
+    if (logLabel && (logLabel.includes(`sim ${target}`) || logLabel.includes(`slot ${target}`))) {
       return true;
     }
 
@@ -63,10 +86,20 @@ export default function CallSyncDeviceSetup() {
         const plugin = getCallLogPlugin();
         const info = await plugin.getSimInfo();
         if (info && info.sims && info.sims.length > 0) {
-          const options = info.sims.map(s => ({
-            slot: s.simSlot,
-            label: `${s.simLabel || s.displayName || 'SIM ' + s.simSlot} (SIM ${s.simSlot})`
-          }));
+          const options = [];
+          info.sims.forEach(s => {
+            const carrier = (s.simLabel || s.displayName || '').trim();
+            options.push({
+              slot: s.simSlot,
+              label: `SIM ${s.simSlot}${carrier ? ` (${carrier})` : ''}`
+            });
+            if (carrier && carrier.toLowerCase() !== 'unknown') {
+              options.push({
+                slot: carrier,
+                label: `Carrier: ${carrier} (Swapped / Single SIM Filter)`
+              });
+            }
+          });
           options.push({ slot: 'all', label: 'Both SIMs (SIM 1 & SIM 2)' });
           setSimOptions(options);
         }

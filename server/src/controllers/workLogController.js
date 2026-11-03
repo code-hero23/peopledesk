@@ -561,23 +561,60 @@ const syncCallLogs = async (req, res) => {
         const simFilterUpper = String(simFilter || '').trim().toUpperCase();
         const isAllSims = !simFilter || simFilterUpper === '0' || simFilterUpper === 'ALL' || simFilterUpper === 'BOTH';
 
+        const isCarrierTarget = !isAllSims && /[a-z]/i.test(simFilter) &&
+            !/^sim\s*\d*$/i.test(String(simFilter).trim()) &&
+            !/^slot\s*\d*$/i.test(String(simFilter).trim());
+
         const canonicalSimSlot = !isAllSims ? String(simFilter).trim().replace(/^(sim|slot)\s*/i, '') : null;
 
         const matchesSelectedSim = (log, target) => {
             if (!target || isAllSims) return true;
-            const normalizedTarget = normalizeText(target).replace(/^(sim|slot)\s*/i, '');
-            const logSlot = normalizeText(log.simSlot).replace(/^(sim|slot)\s*/i, '');
-            const logLabel = normalizeText(log.simLabel);
-            const otherSlot = normalizedTarget === '1' ? '2' : '1';
+            const normalizedTarget = normalizeText(target).trim();
+            const logSlot = normalizeText(log.simSlot).replace(/^(sim|slot)\s*/i, '').trim();
+            const logLabel = normalizeText(log.simLabel).trim();
+
+            // A. Carrier Name Matching (e.g. "Vi India", "Vi", "Jio", "Airtel")
+            if (isCarrierTarget) {
+                const cleanCarrier = normalizedTarget.replace(/^(sim|slot)\s*\d*\s*[-:]*\s*/i, '').trim();
+                const isViTarget = cleanCarrier.includes('vi') || cleanCarrier.includes('vodafone') || cleanCarrier.includes('idea');
+                
+                let carrierMatched = false;
+                if (isViTarget) {
+                    carrierMatched = logLabel.includes('vi') || logLabel.includes('vodafone') || logLabel.includes('idea');
+                } else {
+                    carrierMatched = Boolean(logLabel && (logLabel.includes(cleanCarrier) || cleanCarrier.includes(logLabel)));
+                }
+
+                if (!carrierMatched) return false;
+
+                // Extra safety: Filter out calls outside official working hours window (09:30 AM to 07:45 PM IST)
+                if (log.date) {
+                    const rawTs = Number(log.date);
+                    if (!isNaN(rawTs) && rawTs > 0) {
+                        const tsMs = rawTs < 10000000000 ? rawTs * 1000 : rawTs;
+                        const istDate = new Date(tsMs + 5.5 * 60 * 60 * 1000);
+                        const mins = istDate.getUTCHours() * 60 + istDate.getUTCMinutes();
+                        // 09:30 AM (570) to 07:45 PM (1185)
+                        if (mins < 570 || mins > 1185) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
+            // B. Slot Number Matching (SIM 1 / SIM 2)
+            const slotNum = normalizedTarget.replace(/^(sim|slot)\s*/i, '');
+            const otherSlot = slotNum === '1' ? '2' : '1';
 
             // 1. If explicit slot is provided and not 0/unknown, strictly compare
             if (logSlot && logSlot !== '0' && logSlot !== 'unknown' && logSlot !== 'null') {
-                return logSlot === normalizedTarget;
+                return logSlot === slotNum;
             }
 
             // 2. If label clearly mentions a slot, check if it matches target or other SIM
             if (logLabel) {
-                if (logLabel.includes(`sim ${normalizedTarget}`) || logLabel.includes(`slot ${normalizedTarget}`)) {
+                if (logLabel.includes(`sim ${slotNum}`) || logLabel.includes(`slot ${slotNum}`)) {
                     return true;
                 }
                 if (logLabel.includes(`sim ${otherSlot}`) || logLabel.includes(`slot ${otherSlot}`)) {
@@ -588,7 +625,7 @@ const syncCallLogs = async (req, res) => {
             // 3. Check simId if single digit 1 or 2
             const logId = normalizeText(log.simId);
             if (logId === '1' || logId === '2') {
-                return logId === normalizedTarget;
+                return logId === slotNum;
             }
 
             // 4. Default: reject unknown slot when a specific SIM is required to prevent cross-SIM bleeding
@@ -599,7 +636,10 @@ const syncCallLogs = async (req, res) => {
             const normalized = { ...log };
             const existingSlot = String(normalized.simSlot || '').trim().toLowerCase().replace(/^(sim|slot)\s*/i, '');
             if (canonicalSimSlot && (existingSlot === '' || existingSlot === '0' || existingSlot === 'unknown' || existingSlot === 'undefined')) {
-                normalized.simSlot = canonicalSimSlot;
+                normalized.simSlot = isCarrierTarget ? '1' : canonicalSimSlot;
+            }
+            if (isCarrierTarget && (!normalized.simLabel || normalized.simLabel.toLowerCase() === 'unknown')) {
+                normalized.simLabel = String(simFilter).trim();
             }
             return normalized;
         };

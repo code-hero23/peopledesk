@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
+const prisma = require('../src/config/prisma');
 
 async function run() {
     try {
@@ -51,19 +50,43 @@ async function run() {
 
 
 
-            // Filter out calls that don't match the official SIM slot index
+            // Filter out calls that don't match the official SIM slot index or carrier
             const filteredCalls = originalCalls.filter(c => {
+                const targetSlot = String(officialSim).trim().toLowerCase();
+                const isCarrier = targetSlot.match(/[a-z]/i) && !targetSlot.startsWith('sim') && !targetSlot.startsWith('slot');
+                const label = String(c.simLabel || '').toLowerCase();
+
+                if (isCarrier) {
+                    const clean = targetSlot.replace(/^(sim|slot)\s*\d*\s*[-:]*\s*/i, '').trim();
+                    const isVi = clean.includes('vi') || clean.includes('vodafone') || clean.includes('idea');
+                    let matches = false;
+                    if (isVi) {
+                        matches = label.includes('vi') || label.includes('vodafone') || label.includes('idea');
+                    } else {
+                        matches = Boolean(label && (label.includes(clean) || clean.includes(label)));
+                    }
+                    if (!matches) return false;
+
+                    // Also filter out calls outside 09:30 AM - 07:45 PM IST
+                    if (c.date) {
+                        const raw = Number(c.date);
+                        if (!isNaN(raw) && raw > 0) {
+                            const ms = raw < 10000000000 ? raw * 1000 : raw;
+                            const d = new Date(ms + 5.5 * 60 * 60 * 1000);
+                            const mins = d.getUTCHours() * 60 + d.getUTCMinutes();
+                            if (mins < 570 || mins > 1185) return false;
+                        }
+                    }
+                    return true;
+                }
+
                 // If the call's simSlot is the official SIM, keep it.
-                // If it resolves via standard 1-based format, match it.
                 const slot = String(c.simSlot || '').trim();
-                const targetSlot = String(officialSim).trim();
-                
                 if (slot && slot !== "0") {
                     return slot === targetSlot;
                 }
                 
                 // Fallback to label check if slot index is not populated or "0"
-                const label = String(c.simLabel || '').toLowerCase();
                 if (targetSlot === '1' && (label.includes('sim 1') || label.includes('slot 1'))) return true;
                 if (targetSlot === '2' && (label.includes('sim 2') || label.includes('slot 2'))) return true;
 

@@ -697,13 +697,35 @@ const Overview = () => {
 
                 const target = String(officialSim).trim().toLowerCase();
                 const isAll = target === '0' || target === 'all' || target === 'both';
+                const isCarrier = target.match(/[a-z]/i) && !target.startsWith('sim') && !target.startsWith('slot');
+                const cleanCarrier = isCarrier ? target.replace(/^(sim|slot)\s*\d*\s*[-:]*\s*/i, '').trim() : '';
+                const isVi = isCarrier && (cleanCarrier.includes('vi') || cleanCarrier.includes('vodafone') || cleanCarrier.includes('idea'));
+
                 const filteredLogs = logsResult.logs.filter(log => {
                     if (isAll) return true;
+                    const label = String(log.simLabel || '').trim().toLowerCase();
+
+                    if (isCarrier) {
+                        let matches = false;
+                        if (isVi) {
+                            matches = label.includes('vi') || label.includes('vodafone') || label.includes('idea');
+                        } else {
+                            matches = Boolean(label && (label.includes(cleanCarrier) || cleanCarrier.includes(label)));
+                        }
+                        if (!matches) return false;
+
+                        if (log.date) {
+                            const d = new Date(Number(log.date) + 5.5 * 60 * 60 * 1000);
+                            const mins = d.getUTCHours() * 60 + d.getUTCMinutes();
+                            if (mins < 570 || mins > 1185) return false;
+                        }
+                        return true;
+                    }
+
                     const slot = String(log.simSlot || '').trim().toLowerCase();
                     if (slot && slot !== '0' && slot !== 'unknown') {
                         return slot === target;
                     }
-                    const label = String(log.simLabel || '').trim().toLowerCase();
                     if (label.includes(`sim ${target}`) || label.includes(`slot ${target}`)) {
                         return true;
                     }

@@ -169,6 +169,53 @@ public class CallLogSyncWorker extends Worker {
                 officialSim = remoteSim;
             }
 
+            // Active SIM check if carrier filter is active (e.g. "Vi India", "Vi", "Jio", "Airtel")
+            String offTarget = officialSim != null ? officialSim.trim().toLowerCase() : "";
+            boolean isCarrierFilter = offTarget.matches(".*[a-z].*") &&
+                !offTarget.matches("^sim\\s*\\d*$") &&
+                !offTarget.matches("^slot\\s*\\d*$") &&
+                !offTarget.equals("all") &&
+                !offTarget.equals("both");
+
+            if (isCarrierFilter) {
+                String cleanCarrier = offTarget.replaceAll("^(sim|slot)\\s*\\d*\\s*[-:]*\\s*", "").trim();
+                boolean isVi = cleanCarrier.contains("vi") || cleanCarrier.contains("vodafone") || cleanCarrier.contains("idea");
+
+                boolean activeCarrierFound = false;
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.LOLLIPOP_MR1) {
+                    SubscriptionManager sm = (SubscriptionManager) context.getSystemService(Context.TELEPHONY_SUBSCRIPTION_SERVICE);
+                    if (sm != null) {
+                        try {
+                            List<SubscriptionInfo> subs = sm.getActiveSubscriptionInfoList();
+                            if (subs != null) {
+                                for (SubscriptionInfo si : subs) {
+                                    String cName = (si.getCarrierName() != null ? si.getCarrierName().toString() : "").toLowerCase();
+                                    String dName = (si.getDisplayName() != null ? si.getDisplayName().toString() : "").toLowerCase();
+                                    if (isVi) {
+                                        if (cName.contains("vi") || cName.contains("vodafone") || cName.contains("idea") ||
+                                            dName.contains("vi") || dName.contains("vodafone") || dName.contains("idea")) {
+                                            activeCarrierFound = true;
+                                            break;
+                                        }
+                                    } else {
+                                        if ((!cName.isEmpty() && (cName.contains(cleanCarrier) || cleanCarrier.contains(cName))) ||
+                                            (!dName.isEmpty() && (dName.contains(cleanCarrier) || cleanCarrier.contains(dName)))) {
+                                            activeCarrierFound = true;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (SecurityException ignored) {}
+                    }
+                }
+
+                if (!activeCarrierFound && !forceSync) {
+                    Log.d(TAG, "Sync paused: Official carrier '" + officialSim + "' is not currently active in phone (personal SIM inserted)");
+                    return true;
+                }
+            }
+
             long activationTime = 0;
             try {
                 String actTimeStr = readPreference(context, "call_sync_activation_time", "0");
@@ -427,16 +474,44 @@ public class CallLogSyncWorker extends Worker {
 
                     boolean matches = officialSim.equals("0") || officialSim.equalsIgnoreCase("all") || officialSim.equalsIgnoreCase("both");
                     if (!matches) {
-                        String officialLabel = null;
-                        if (simLabels.has(officialSim)) {
-                            officialLabel = simLabels.optString(officialSim, "").trim().toLowerCase();
-                        }
                         String currentLabel = (simLabel != null) ? simLabel.trim().toLowerCase() : "";
-                        
-                        if (officialLabel != null && !officialLabel.isEmpty() && !currentLabel.isEmpty() && !currentLabel.equals("unknown") && !currentLabel.equals("null")) {
-                            matches = currentLabel.equals(officialLabel);
+                        String officialTarget = officialSim.trim().toLowerCase();
+
+                        boolean isCarrierFilter = officialTarget.matches(".*[a-z].*") &&
+                            !officialTarget.matches("^sim\\s*\\d*$") &&
+                            !officialTarget.matches("^slot\\s*\\d*$");
+
+                        if (isCarrierFilter) {
+                            String cleanTarget = officialTarget.replaceAll("^(sim|slot)\\s*\\d*\\s*[-:]*\\s*", "").trim();
+                            boolean isVi = cleanTarget.contains("vi") || cleanTarget.contains("vodafone") || cleanTarget.contains("idea");
+                            if (isVi) {
+                                matches = currentLabel.contains("vi") || currentLabel.contains("vodafone") || currentLabel.contains("idea");
+                            } else {
+                                matches = !currentLabel.isEmpty() && (currentLabel.contains(cleanTarget) || cleanTarget.contains(currentLabel));
+                            }
+
+                            // Working hours window guard for carrier-specific filtering (09:30 AM to 07:45 PM IST)
+                            if (matches) {
+                                java.util.Calendar cal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Asia/Kolkata"));
+                                cal.setTimeInMillis(callDate);
+                                int hour = cal.get(java.util.Calendar.HOUR_OF_DAY);
+                                int minute = cal.get(java.util.Calendar.MINUTE);
+                                int totalMins = hour * 60 + minute;
+                                if (totalMins < 570 || totalMins > 1185) {
+                                    matches = false; // Outside office hours -> personal call!
+                                }
+                            }
                         } else {
-                            matches = simSlot.equals(officialSim);
+                            String officialLabel = null;
+                            if (simLabels.has(officialSim)) {
+                                officialLabel = simLabels.optString(officialSim, "").trim().toLowerCase();
+                            }
+                            
+                            if (officialLabel != null && !officialLabel.isEmpty() && !currentLabel.isEmpty() && !currentLabel.equals("unknown") && !currentLabel.equals("null")) {
+                                matches = currentLabel.equals(officialLabel);
+                            } else {
+                                matches = simSlot.equals(officialSim);
+                            }
                         }
                     }
 

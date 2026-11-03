@@ -398,6 +398,16 @@ const CRECallReports = () => {
         const targetSlot = normalizeSimValue(targetSim);
         if (!targetSlot || targetSlot === '0' || targetSlot === 'all' || targetSlot === 'both') return true;
 
+        const isCarrier = targetSlot.match(/[a-z]/i) && !targetSlot.startsWith('sim') && !targetSlot.startsWith('slot');
+        if (isCarrier) {
+            const clean = targetSlot.replace(/^(sim|slot)\s*\d*\s*[-:]*\s*/i, '').trim();
+            const label = normalizeSimValue(call?.simLabel);
+            if (clean.includes('vi') || clean.includes('vodafone') || clean.includes('idea')) {
+                return label.includes('vi') || label.includes('vodafone') || label.includes('idea');
+            }
+            return Boolean(label && (label.includes(clean) || clean.includes(label)));
+        }
+
         const resolvedSlot = resolveCallSimSlot(call);
         if (resolvedSlot === targetSlot) return true;
 

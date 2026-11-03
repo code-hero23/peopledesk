@@ -1506,7 +1506,7 @@ const AdminCallReports = () => {
                                                                 {cleanDevice}
                                                             </span>
                                                             <span className="px-1.5 py-0.2 rounded text-[8px] font-bold bg-slate-800 text-cyan-300 border border-slate-700">
-                                                                SIM {dev.officialSim}
+                                                                {dev.officialSim?.match(/^[12]$/) ? `SIM ${dev.officialSim}` : dev.officialSim}
                                                             </span>
                                                         </div>
                                                     </div>
