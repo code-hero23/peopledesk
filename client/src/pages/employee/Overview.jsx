@@ -7,7 +7,7 @@ import {
     Calendar, Clock, CheckCircle2, AlertCircle, MapPin, Coffee, Utensils,
     Briefcase, LogOut, ChevronRight, User, TrendingUp, Sparkles, Building2,
     Monitor, MapPinned, Star, ArrowRight, Camera, X, MessageSquare, History, CheckCircle, Info, Send, Trash2, Smartphone, RefreshCw, Armchair,
-    ChevronDown, AlertTriangle
+    ChevronDown, AlertTriangle, Lock
 } from 'lucide-react';
 import {
     getAttendanceStatus,
@@ -574,6 +574,25 @@ const Overview = () => {
             setIsSiteLogin(true);
         }
     }, [user]);
+
+    const [isMobileView, setIsMobileView] = useState(() => {
+        if (typeof window === 'undefined') return false;
+        const isSmallScreen = window.innerWidth < 768;
+        const isMobDevice = getDeviceType() === 'mobile';
+        const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+        return isSmallScreen || isMobDevice || isNative;
+    });
+
+    useEffect(() => {
+        const handleResize = () => {
+            const isSmallScreen = window.innerWidth < 768;
+            const isMobDevice = getDeviceType() === 'mobile';
+            const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+            setIsMobileView(isSmallScreen || isMobDevice || isNative);
+        };
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, []);
 
     const discoverSims = async () => {
         if (isDiscoveringSims) return;
@@ -1788,6 +1807,12 @@ const Overview = () => {
                 )}
                 {activeModal === 'break' && (
                     <Modal isOpen onClose={() => setActiveModal(null)} title="Take Break">
+                        {isMobileView && (
+                            <div className="mx-4 mt-3 mb-1 p-3 bg-amber-500/10 border border-amber-500/20 rounded-2xl flex items-center gap-2.5 text-xs font-bold text-amber-700 dark:text-amber-400">
+                                <Lock size={16} className="shrink-0 text-amber-600 dark:text-amber-400" />
+                                <span>Tea & Lunch breaks are restricted in mobile view. Please use office desktop.</span>
+                            </div>
+                        )}
                         <div className="grid grid-cols-2 gap-4 p-4">
                             {(() => {
                                 const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
@@ -1801,10 +1826,17 @@ const Overview = () => {
                                 const isBlue = t.color === 'blue';
                                 const isPurple = t.color === 'purple';
                                 const isOrange = t.color === 'orange';
+                                const isRestrictedOnMobile = isMobileView && (t.id === 'TEA' || t.id === 'LUNCH');
+
                                 return (
                                     <button
                                         key={t.id}
+                                        disabled={isRestrictedOnMobile}
                                         onClick={() => {
+                                            if (isRestrictedOnMobile) {
+                                                toast.error(`${t.title} cannot be updated from mobile view. Please use office desktop.`);
+                                                return;
+                                            }
                                             setConfirmationConfig({
                                                 isOpen: true,
                                                 title: `Start ${t.title}`,
@@ -1825,16 +1857,24 @@ const Overview = () => {
                                                 }
                                             });
                                         }}
-                                        className={`group relative flex flex-col items-center p-3.5 bg-slate-50 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 rounded-3xl transition-all duration-300 border border-slate-200/80 dark:border-slate-700/80 ${
-                                            isBlue
-                                                ? 'hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/20'
-                                                : isPurple
-                                                    ? 'hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/20'
-                                                    : isOrange
-                                                        ? 'hover:border-orange-500 hover:shadow-xl hover:shadow-orange-500/20'
-                                                        : 'hover:border-amber-500 hover:shadow-xl hover:shadow-amber-500/20'
-                                        } overflow-hidden text-center`}
-                                    >
+                                        className={`group relative flex flex-col items-center p-3.5 rounded-3xl transition-all duration-300 border overflow-hidden text-center ${
+                                            isRestrictedOnMobile
+                                                ? 'bg-slate-100/80 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-800 opacity-50 cursor-not-allowed filter grayscale-[35%]'
+                                                : `bg-slate-50 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 border-slate-200/80 dark:border-slate-700/80 ${
+                                                    isBlue
+                                                        ? 'hover:border-blue-500 hover:shadow-xl hover:shadow-blue-500/20'
+                                                        : isPurple
+                                                            ? 'hover:border-purple-500 hover:shadow-xl hover:shadow-purple-500/20'
+                                                            : isOrange
+                                                                ? 'hover:border-orange-500 hover:shadow-xl hover:shadow-orange-500/20'
+                                                                : 'hover:border-amber-500 hover:shadow-xl hover:shadow-amber-500/20'
+                                                }`
+                                        }`}>
+                                        {isRestrictedOnMobile && (
+                                            <div className="absolute top-2.5 right-2.5 z-20 px-2 py-0.5 rounded-full bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 text-[9px] font-black tracking-wider uppercase flex items-center gap-1 shadow-sm">
+                                                <Lock size={10} /> Desktop Only
+                                            </div>
+                                        )}
                                         {t.image ? (
                                             <div className="relative w-full h-32 rounded-2xl overflow-hidden bg-slate-950 mb-3 shadow-inner group-hover:scale-[1.03] transition-transform duration-300 flex items-center justify-center">
                                                 <video 

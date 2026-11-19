@@ -210,6 +210,17 @@ const pauseAttendance = async (req, res) => {
     try {
         const userId = req.user.id;
         const { breakType } = req.body; // TEA, LUNCH, CLIENT_MEETING, BH_MEETING
+
+        // Restrict Tea and Lunch break updates from mobile view / devices
+        const userAgent = req.headers['user-agent'] || '';
+        const isMobileDevice = /Mobile|Android|iP(hone|od)|BlackBerry|IEMobile|Kindle|Silk-Accelerated/i.test(userAgent) ||
+                               req.headers['x-device-type'] === 'mobile';
+        if (isMobileDevice && (breakType === 'TEA' || breakType === 'LUNCH')) {
+            return res.status(403).json({
+                message: 'Tea Break and Lunch Break updates are restricted in mobile view. Please use office desktop.'
+            });
+        }
+
         const today = new Date();
         today.setHours(0, 0, 0, 0);
 

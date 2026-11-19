@@ -5,11 +5,12 @@ const { body, validationResult } = require('express-validator');
 const { loginUser, registerUser, getMe, googleLogin } = require('../controllers/authController');
 const { protect } = require('../middlewares/authMiddleware');
 
-// Rate limiting for login/register - increased significantly for thorough testing
+// Rate limiting for login/register
 const authLimiter = rateLimit({
-    windowMs: 5 * 60 * 1000, // 5 minutes
-    max: 500, // Increased to 500 for robust development testing
-    message: 'Too many login/registration attempts, please try again after 5 minutes',
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    max: 200, // Generous ceiling per client IP
+    skipSuccessfulRequests: true, // Never penalize successful logins!
+    message: { message: 'Too many failed login attempts, please try again after 15 minutes' },
     standardHeaders: true,
     legacyHeaders: false,
 });
