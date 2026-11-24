@@ -431,6 +431,7 @@ model ManualPayroll {
   shortageDeduction    Float    @default(0)
   manualDeductions     Float    @default(0)
   netPayout            Float
+  remarks              String?
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
 

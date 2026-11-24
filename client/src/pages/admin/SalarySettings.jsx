@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
     Save, AlertCircle, Info, CheckCircle2, DollarSign,
     Clock, RefreshCw, FileText, Upload, Download,
-    ChevronRight, Calendar, Calculator, Phone
+    ChevronRight, Calendar, Calculator, Phone, Zap
 } from 'lucide-react';
 
 const SalarySettings = () => {
@@ -21,8 +21,41 @@ const SalarySettings = () => {
     const [uploadMonth, setUploadMonth] = useState(new Date().getMonth() + 2 > 12 ? 1 : new Date().getMonth() + 2);
     const [uploadYear, setUploadYear] = useState(new Date().getFullYear());
     const [selectedFile, setSelectedFile] = useState(null);
+    const [isDownloadingPayroll, setIsDownloadingPayroll] = useState(false);
 
     const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+
+    const handleDownloadPayrollReport = async () => {
+        try {
+            setIsDownloadingPayroll(true);
+            setError('');
+            const token = user.token;
+            const config = {
+                headers: { Authorization: `Bearer ${token}` },
+                responseType: 'blob'
+            };
+
+            const response = await axios.get(`${baseUrl}/payroll/report?month=${uploadMonth}&year=${uploadYear}`, config);
+            const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+            const link = document.createElement('a');
+            link.href = url;
+            const monthName = months[uploadMonth - 1]?.substring(0, 3) || uploadMonth;
+            const prevMonthIndex = uploadMonth - 2 < 0 ? 11 : uploadMonth - 2;
+            const prevMonthName = months[prevMonthIndex]?.substring(0, 3) || '';
+            const prevYear = uploadMonth === 1 ? uploadYear - 1 : uploadYear;
+
+            link.setAttribute('download', `PAYROLL_SALARY_${prevMonthName}26_to_${monthName}25_${uploadYear}.xlsx`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            setMessage(`Payroll report for ${months[uploadMonth - 1]} ${uploadYear} generated successfully.`);
+        } catch (err) {
+            console.error('Payroll report download failed:', err);
+            setError('Failed to download payroll report. Please try again.');
+        } finally {
+            setIsDownloadingPayroll(false);
+        }
+    };
 
     const fetchSettings = async () => {
         try {
@@ -303,12 +336,24 @@ const SalarySettings = () => {
                                         <Upload className="text-amber-600" size={24} />
                                         Upload Payroll Records
                                     </h3>
-                                    <button
-                                        onClick={handleDownloadTemplate}
-                                        className="text-[10px] font-black text-amber-600 flex items-center gap-1.5 hover:translate-x-1 transition-transform"
-                                    >
-                                        <Download size={14} /> DOWNLOAD TEMPLATE
-                                    </button>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <button
+                                            type="button"
+                                            onClick={handleDownloadPayrollReport}
+                                            disabled={isDownloadingPayroll}
+                                            className="text-[10px] font-black text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-xl border border-indigo-200 flex items-center gap-1.5 transition-all shadow-sm disabled:opacity-50"
+                                        >
+                                            {isDownloadingPayroll ? <RefreshCw size={12} className="animate-spin" /> : <Download size={12} />}
+                                            {isDownloadingPayroll ? 'DOWNLOADING...' : 'DOWNLOAD PAYROLL REPORT'}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={handleDownloadTemplate}
+                                            className="text-[10px] font-black text-amber-600 bg-amber-50 hover:bg-amber-100 px-3 py-1.5 rounded-xl border border-amber-200 flex items-center gap-1.5 transition-all shadow-sm"
+                                        >
+                                            <FileText size={12} /> CSV TEMPLATE
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <form onSubmit={handleFileUpload} className="space-y-8">
@@ -497,6 +542,26 @@ const SalarySettings = () => {
                                                 </li>
                                             ))}
                                         </ul>
+                                    </div>
+
+                                    <div className="p-6 bg-gradient-to-r from-indigo-950 via-slate-900 to-indigo-900 rounded-3xl text-white shadow-xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border border-indigo-800/40">
+                                        <div>
+                                            <h4 className="text-sm font-black flex items-center gap-2">
+                                                <Zap size={16} className="text-amber-400" /> Generate Official Payroll Report
+                                            </h4>
+                                            <p className="text-xs text-slate-300 font-medium mt-1">
+                                                Download full monthly payroll Excel report with salary details, biometric verification & deductions.
+                                            </p>
+                                        </div>
+                                        <button
+                                            type="button"
+                                            onClick={handleDownloadPayrollReport}
+                                            disabled={isDownloadingPayroll}
+                                            className="px-5 py-3 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-black rounded-2xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs shrink-0 disabled:opacity-50"
+                                        >
+                                            {isDownloadingPayroll ? <RefreshCw size={14} className="animate-spin" /> : <Download size={14} />}
+                                            <span>{isDownloadingPayroll ? 'Generating...' : 'Download Payroll Excel'}</span>
+                                        </button>
                                     </div>
                                 </div>
                             </motion.div>

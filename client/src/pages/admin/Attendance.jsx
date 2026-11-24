@@ -69,6 +69,7 @@ const Attendance = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
     const [cycleRange, setCycleRange] = useState({ startDate: '', endDate: '' });
+    const [isGeneratingPayroll, setIsGeneratingPayroll] = useState(false);
 
     const handleCycleChange = (range) => {
         setCycleRange(range);
@@ -206,6 +207,7 @@ const Attendance = () => {
 
     const onGeneratePayrollReport = async () => {
         try {
+            setIsGeneratingPayroll(true);
             const config = {
                 headers: {
                     Authorization: `Bearer ${user.token}`,
@@ -237,6 +239,8 @@ const Attendance = () => {
         } catch (error) {
             console.error("Payroll report failed:", error);
             alert("Failed to generate payroll report. Please try again.");
+        } finally {
+            setIsGeneratingPayroll(false);
         }
     };
 
@@ -367,11 +371,12 @@ const Attendance = () => {
 
                     <button
                         onClick={onGeneratePayrollReport}
-                        className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-2xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs font-bold"
+                        disabled={isGeneratingPayroll}
+                        className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-2xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                         title="Generate Monthly Payroll Salary Excel Report"
                     >
-                        <Zap size={15} />
-                        <span>Payroll Report</span>
+                        {isGeneratingPayroll ? <RefreshCw size={15} className="animate-spin" /> : <Zap size={15} />}
+                        <span>{isGeneratingPayroll ? 'Generating Report...' : 'Payroll Report'}</span>
                     </button>
 
                     <button

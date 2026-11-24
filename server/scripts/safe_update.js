@@ -339,6 +339,14 @@ async function main() {
     console.error('Error cleaning up AE call logs:', err.message);
   }
 
+  // Adding ManualPayroll remarks column
+  try {
+    await prisma.$executeRawUnsafe(`ALTER TABLE "ManualPayroll" ADD COLUMN IF NOT EXISTS "remarks" TEXT`);
+    console.log('Column "remarks" added to ManualPayroll or already exists.');
+  } catch (err) {
+    console.warn('Note on ManualPayroll remarks update:', err.message);
+  }
+
   // Reset today's CallLogs so dual-SIM users re-sync fresh SIM 1 & SIM 2 tags
   try {
     const today = new Date().toISOString().split('T')[0];
