@@ -1846,10 +1846,10 @@ const Overview = () => {
                                 const todayTeaBreaks = (attendance?.breaks || []).filter(b => b.breakType === 'TEA');
                                 const teaCount = todayTeaBreaks.length;
                                 const teaTitle = teaCount === 0 ? 'Tea Break 1 (15m)' : (teaCount === 1 ? 'Tea Break 2 (15m)' : 'Tea Break (15m)');
-                                const teaSubtitle = teaCount === 0 ? '15m quota (Morning)' : (teaCount === 1 ? '15m quota (Evening)' : `${teaCount}/2 used today`);
+                                const teaSubtitle = teaCount === 0 ? '15m + 2m grace (Morning)' : (teaCount === 1 ? '15m + 2m grace (Evening)' : `${teaCount}/2 used today`);
                                 return [
                                     { id: 'TEA', icon: Coffee, title: teaTitle, subtitle: teaSubtitle, color: 'amber', image: isNative ? '/tea-break.mp4' : '/tea-break.mp4', fallbackImg: '/tea-break.gif' },
-                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break (45m)', subtitle: '45m quota', color: 'orange', image: isNative ? '/lunch-break.mp4' : '/lunch-break.mp4', fallbackImg: '/lunch-break.gif' },
+                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break (45m)', subtitle: '45m + 2m grace', color: 'orange', image: isNative ? '/lunch-break.mp4' : '/lunch-break.mp4', fallbackImg: '/lunch-break.gif' },
                                     { id: 'CLIENT_MEETING', icon: Briefcase, title: 'Client Meeting', color: 'blue', image: isNative ? '/client-meeting-break.mp4' : '/client-meeting-break.mp4', fallbackImg: '/client-meeting-break.gif' },
                                     { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'purple', image: isNative ? '/bh-meeting-break.mp4' : '/bh-meeting-break.mp4', fallbackImg: '/bh-meeting-break.gif' }
                                 ];

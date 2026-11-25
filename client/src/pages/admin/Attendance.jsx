@@ -532,9 +532,9 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Status</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">In Device</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Out Device</th>
-                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Tea 1 (15m)</th>
-                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Tea 2 (15m)</th>
-                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Lunch Break</th>
+                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="15m limit + 2m grace">Tea 1 (15m)</th>
+                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="15m limit + 2m grace">Tea 2 (15m)</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="45m limit + 2m grace">Lunch (45m)</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Meetings</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Net Hours</th>
                             </tr>
@@ -798,12 +798,24 @@ const Attendance = () => {
                                             )}
                                         </td>
 
-                                        {/* Lunch Break */}
+                                        {/* Lunch Break (45m) */}
                                         <td className="px-6 py-4 text-center">
                                             {record.breakData?.lunch > 0 ? (
-                                                <span className="text-orange-600 dark:text-orange-400 font-bold font-mono px-2 py-0.5 bg-orange-50 dark:bg-orange-950/40 rounded-md">
-                                                    {formatDuration(record.breakData.lunch)}
-                                                </span>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span 
+                                                        className={`font-bold font-mono px-2 py-0.5 rounded-md ${
+                                                            record.breakData?.lunchExceeded || record.breakData?.lunch > 47
+                                                                ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-black'
+                                                                : 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
+                                                        }`}
+                                                        title={record.breakData?.lunch > 47 ? 'Exceeded allowed 47m (45m + 2m grace)' : 'Lunch Break (45m limit + 2m grace)'}
+                                                    >
+                                                        {formatDuration(record.breakData.lunch)}
+                                                    </span>
+                                                    {(record.breakData?.lunchExceeded || record.breakData?.lunch > 47) && (
+                                                        <span className="text-[9px] font-black uppercase text-rose-500 tracking-tight">Exceeded</span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="text-slate-300 dark:text-slate-700">-</span>
                                             )}

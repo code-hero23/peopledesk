@@ -158,12 +158,66 @@ class WhatsAppService {
     }
 
     /**
-     * Send Break Exceedance Alert
+     * Send Break Exceedance Alert with auto fallback to text message
      */
-    async sendBreakExceedanceAlert(to, userName, breakType, limitMinutes) {
-        // Template: break_exceed_alert
-        // Params: {{1}} = Name, {{2}} = Break Type (Tea/Lunch), {{3}} = Limit Minutes
-        return this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, limitMinutes], [], 'en');
+    async sendBreakExceedanceAlert(to, userName, breakType, limitMinutes, details = {}) {
+        // 1. Try template first
+        const templateResult = await this.sendTemplateMessage(to, 'break_exceed_alert', [userName, breakType, String(limitMinutes)], [], 'en');
+        if (templateResult && templateResult.success) {
+            return templateResult;
+        }
+
+        // 2. Fallback to freeform text
+        const startTime = details.startTimeFormatted || 'N/A';
+        const duration = details.durationMinutes ? `${details.durationMinutes} mins` : `${limitMinutes} mins`;
+        const textContent = `⚠️ *BREAK EXCEEDANCE ALERT*
+----------------------------------
+👤 *Employee:* ${userName}
+☕ *Break Type:* ${breakType}
+🕒 *Start Time:* ${startTime}
+⏳ *Duration:* ${duration} (Limit: ${limitMinutes} mins)
+🚨 *Status:* Exceeded allowed time
+----------------------------------
+*PeopleDesk Attendance Monitoring*`;
+
+        return this.sendTextMessage(to, textContent);
+    }
+
+    /**
+     * Send Break Exceedance Summary List to Admin / Manager
+     */
+    async sendBreakExceedanceSummaryList(to, list) {
+        if (!list || list.length === 0) return { success: false };
+
+        const itemsText = list.map((emp, idx) => {
+            return `${idx + 1}. *${emp.name}* (${emp.designation || 'Employee'})
+   • *Break:* ${emp.breakName}
+   • *Start Time:* ${emp.startTimeFormatted}
+   • *Duration:* ${emp.durationMinutes} mins (Limit: ${emp.allowedLimit}m + 2m grace = ${emp.threshold}m)
+   • *Exceeded by:* ${emp.exceededBy} mins`;
+        }).join('\n\n');
+
+        const nowFormatted = new Date().toLocaleString('en-IN', {
+            timeZone: 'Asia/Kolkata',
+            day: '2-digit',
+            month: 'short',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: true
+        });
+
+        const message = `🚨 *PEOPLEDESK: BREAK EXCEEDANCE ALERT*
+----------------------------------
+The following employee(s) have exceeded their break time (including 2 mins grace):
+
+${itemsText}
+
+📅 *Reported At:* ${nowFormatted}
+----------------------------------
+*PeopleDesk Automated Monitor*`;
+
+        return this.sendTextMessage(to, message);
     }
 
     /**

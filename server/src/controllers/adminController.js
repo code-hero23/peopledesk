@@ -1083,9 +1083,10 @@ const getDailyAttendance = async (req, res) => {
                     tea2: tea2Duration,
                     tea1Active: tea1Active,
                     tea2Active: tea2Active,
-                    tea1Exceeded: tea1Duration > 15,
-                    tea2Exceeded: tea2Duration > 15,
+                    tea1Exceeded: tea1Duration > 17, // 15 mins + 2 mins grace = 17 mins
+                    tea2Exceeded: tea2Duration > 17, // 15 mins + 2 mins grace = 17 mins
                     lunch: Math.round(totalLunchBreakMinutes),
+                    lunchExceeded: Math.round(totalLunchBreakMinutes) > 47, // 45 mins + 2 mins grace = 47 mins
                     meetings: Math.round(totalMeetingMinutes)
                 },
                 permission: activePermission ? {
