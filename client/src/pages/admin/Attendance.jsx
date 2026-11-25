@@ -532,9 +532,9 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Status</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">In Device</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Out Device</th>
-                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="15m limit + 2m grace">Tea 1 (15m)</th>
-                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="15m limit + 2m grace">Tea 2 (15m)</th>
-                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="45m limit + 2m grace">Lunch (45m)</th>
+                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="Tea Break 1 (15 mins)">Tea 1 (15m)</th>
+                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="Tea Break 2 (15 mins)">Tea 2 (15m)</th>
+                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center" title="Lunch Break (45 mins)">Lunch (45m)</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Meetings</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Net Hours</th>
                             </tr>
@@ -808,7 +808,7 @@ const Attendance = () => {
                                                                 ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-black'
                                                                 : 'bg-orange-50 dark:bg-orange-950/40 text-orange-600 dark:text-orange-400'
                                                         }`}
-                                                        title={record.breakData?.lunch > 47 ? 'Exceeded allowed 47m (45m + 2m grace)' : 'Lunch Break (45m limit + 2m grace)'}
+                                                        title={record.breakData?.lunch > 47 ? 'Exceeded Lunch Break limit' : 'Lunch Break (45m)'}
                                                     >
                                                         {formatDuration(record.breakData.lunch)}
                                                     </span>

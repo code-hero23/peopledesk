@@ -186,14 +186,14 @@ class WhatsAppService {
     /**
      * Send Break Exceedance Summary List to Admin / Manager
      */
-    async sendBreakExceedanceSummaryList(to, list) {
+    async sendBreakExceedanceSummaryList(to, list, title = 'BREAK EXCEEDANCE ALERT') {
         if (!list || list.length === 0) return { success: false };
 
         const itemsText = list.map((emp, idx) => {
-            return `${idx + 1}. *${emp.name}* (${emp.designation || 'Employee'})
+            return `${idx + 1}. *${emp.name}* (${emp.designation || 'Staff'})
    • *Break:* ${emp.breakName}
    • *Start Time:* ${emp.startTimeFormatted}
-   • *Duration:* ${emp.durationMinutes} mins (Limit: ${emp.allowedLimit}m + 2m grace = ${emp.threshold}m)
+   • *Duration:* ${emp.durationMinutes} mins (Allowed: ${emp.allowedLimit} mins)
    • *Exceeded by:* ${emp.exceededBy} mins`;
         }).join('\n\n');
 
@@ -207,9 +207,9 @@ class WhatsAppService {
             hour12: true
         });
 
-        const message = `🚨 *PEOPLEDESK: BREAK EXCEEDANCE ALERT*
+        const message = `🚨 *PEOPLEDESK: ${title.toUpperCase()}*
 ----------------------------------
-The following employee(s) have exceeded their break time (including 2 mins grace):
+The following employee(s) have exceeded their break time:
 
 ${itemsText}
 

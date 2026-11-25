@@ -36,7 +36,7 @@ initDailySummaryCron();
 initWeeklyExcessiveAbsenceCron();
 // initReviewRequestCron();
 // initWorklogReminderCron();
-// initBreakExceedanceCron();
+initBreakExceedanceCron();
 
 
 // CORS Middleware (enabled for all origins and methods in dev & production API)

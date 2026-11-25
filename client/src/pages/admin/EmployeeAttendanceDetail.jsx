@@ -224,14 +224,14 @@ const EmployeeAttendanceDetail = () => {
                                                                     <>
                                                                         <td className="p-4 text-center font-medium border-r border-gray-100">
                                                                             {tea1 > 0 ? (
-                                                                                <span className={`px-2 py-0.5 rounded ${tea1 > 17 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`} title={tea1 > 17 ? 'Exceeded 17m limit (15m + 2m grace)' : 'Tea 1 (15m limit + 2m grace)'}>
+                                                                                <span className={`px-2 py-0.5 rounded ${tea1 > 17 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`} title={tea1 > 17 ? 'Exceeded Tea 1 limit' : 'Tea 1 (15m)'}>
                                                                                     {formatMinutes(tea1)}
                                                                                 </span>
                                                                             ) : <span className="text-gray-300">--</span>}
                                                                         </td>
                                                                         <td className="p-4 text-center font-medium border-r border-gray-100">
                                                                             {tea2 > 0 ? (
-                                                                                <span className={`px-2 py-0.5 rounded ${tea2 > 17 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`} title={tea2 > 17 ? 'Exceeded 17m limit (15m + 2m grace)' : 'Tea 2 (15m limit + 2m grace)'}>
+                                                                                <span className={`px-2 py-0.5 rounded ${tea2 > 17 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`} title={tea2 > 17 ? 'Exceeded Tea 2 limit' : 'Tea 2 (15m)'}>
                                                                                     {formatMinutes(tea2)}
                                                                                 </span>
                                                                             ) : <span className="text-gray-300">--</span>}
@@ -243,7 +243,7 @@ const EmployeeAttendanceDetail = () => {
                                                                 {(() => {
                                                                     const lunchDur = calculateBreakDuration(dayData.breaks, ['LUNCH']);
                                                                     return lunchDur > 0 ? (
-                                                                        <span className={`px-2 py-0.5 rounded ${lunchDur > 47 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`} title={lunchDur > 47 ? 'Exceeded 47m limit (45m + 2m grace)' : 'Lunch (45m limit + 2m grace)'}>
+                                                                        <span className={`px-2 py-0.5 rounded ${lunchDur > 47 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`} title={lunchDur > 47 ? 'Exceeded Lunch limit' : 'Lunch (45m)'}>
                                                                             {formatMinutes(lunchDur)}
                                                                         </span>
                                                                     ) : <span className="text-gray-300">--</span>;
