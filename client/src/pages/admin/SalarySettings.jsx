@@ -44,7 +44,7 @@ const SalarySettings = () => {
             const prevMonthName = months[prevMonthIndex]?.substring(0, 3) || '';
             const prevYear = uploadMonth === 1 ? uploadYear - 1 : uploadYear;
 
-            link.setAttribute('download', `PAYROLL_SALARY_${prevMonthName}26_to_${monthName}25_${uploadYear}.xlsx`);
+            link.setAttribute('download', `PAYROLL_REPORT_${prevMonthName}26_to_${monthName}25_${uploadYear}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();

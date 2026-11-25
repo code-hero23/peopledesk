@@ -232,7 +232,7 @@ const Attendance = () => {
             const prevMonthDate = new Date(year, month - 2, 1);
             const prevMonthName = prevMonthDate.toLocaleString('default', { month: 'short' });
 
-            link.setAttribute('download', `PAYROLL_SALARY_${prevMonthName}26_to_${monthName}25_${year}.xlsx`);
+            link.setAttribute('download', `PAYROLL_REPORT_${prevMonthName}26_to_${monthName}25_${year}.xlsx`);
             document.body.appendChild(link);
             link.click();
             link.remove();
