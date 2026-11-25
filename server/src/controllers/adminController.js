@@ -1020,6 +1020,34 @@ const getDailyAttendance = async (req, res) => {
             const effectiveMinutes = Math.max(0, totalGrossDurationMinutes - totalBreakDeductionMinutes);
             const totalHours = (effectiveMinutes / 60).toFixed(2);
 
+            // Collect all user breaks chronologically to differentiate Tea 1 & Tea 2 (15 mins each)
+            const allUserBreaks = [];
+            userRecords.forEach(record => {
+                if (Array.isArray(record.breaks)) {
+                    allUserBreaks.push(...record.breaks);
+                }
+            });
+            allUserBreaks.sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+
+            const teaBreaks = allUserBreaks.filter(b => b.breakType === 'TEA');
+            const tea1 = teaBreaks[0] || null;
+            const tea1Active = tea1 ? !tea1.endTime : false;
+            const nowTime = new Date();
+            const tea1Duration = tea1 
+                ? Math.round(tea1.duration || (tea1Active ? (nowTime - new Date(tea1.startTime)) / 60000 : 0)) 
+                : 0;
+
+            let tea2Duration = 0;
+            let tea2Active = false;
+            if (teaBreaks.length > 1) {
+                for (let i = 1; i < teaBreaks.length; i++) {
+                    const tb = teaBreaks[i];
+                    if (!tb.endTime) tea2Active = true;
+                    const dur = Math.round(tb.duration || (!tb.endTime ? (nowTime - new Date(tb.startTime)) / 60000 : 0));
+                    tea2Duration += dur;
+                }
+            }
+
             // Leaves for user
             const userLeaves = leaveRequests.filter(l => l.userId === user.id && isLeaveOnDate(l));
             const approvedFullLeave = userLeaves.find(l => l.type !== 'HALF_DAY' && l.status === 'APPROVED');
@@ -1051,6 +1079,12 @@ const getDailyAttendance = async (req, res) => {
                 sessions: sessions,
                 breakData: {
                     tea: Math.round(totalTeaBreakMinutes),
+                    tea1: tea1Duration,
+                    tea2: tea2Duration,
+                    tea1Active: tea1Active,
+                    tea2Active: tea2Active,
+                    tea1Exceeded: tea1Duration > 15,
+                    tea2Exceeded: tea2Duration > 15,
                     lunch: Math.round(totalLunchBreakMinutes),
                     meetings: Math.round(totalMeetingMinutes)
                 },
@@ -1131,13 +1165,31 @@ const getActiveStatuses = async (req, res) => {
             }
         });
 
-        const formattedStatuses = activeBreaks.map(b => ({
-            id: b.id,
-            userId: b.attendance.userId,
-            userName: b.attendance.user.name,
-            designation: b.attendance.user.designation,
-            breakType: b.breakType,
-            startTime: b.startTime
+        const formattedStatuses = await Promise.all(activeBreaks.map(async (b) => {
+            let breakType = b.breakType;
+            if (b.breakType === 'TEA') {
+                const priorTeaCount = await prisma.breakLog.count({
+                    where: {
+                        attendance: { userId: b.attendance.userId },
+                        breakType: 'TEA',
+                        startTime: {
+                            gte: today,
+                            lt: b.startTime
+                        }
+                    }
+                });
+                breakType = priorTeaCount >= 1 ? 'TEA_2' : 'TEA_1';
+            }
+
+            return {
+                id: b.id,
+                userId: b.attendance.userId,
+                userName: b.attendance.user.name,
+                designation: b.attendance.user.designation,
+                breakType: breakType,
+                originalBreakType: b.breakType,
+                startTime: b.startTime
+            };
         }));
 
         res.json(formattedStatuses);

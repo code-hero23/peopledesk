@@ -1,7 +1,7 @@
 import React from 'react';
 import { Coffee, Utensils, Briefcase, Users, X, Lock } from 'lucide-react';
 
-const BreakSelectionModal = ({ isOpen, onClose, onSelect }) => {
+const BreakSelectionModal = ({ isOpen, onClose, onSelect, teaCount = 0 }) => {
     if (!isOpen) return null;
 
     const isMobileView = typeof window !== 'undefined' && (
@@ -9,9 +9,11 @@ const BreakSelectionModal = ({ isOpen, onClose, onSelect }) => {
         /Mobile|iP(hone|od)|Android|BlackBerry|IEMobile/i.test(navigator.userAgent)
     );
 
+    const teaLabel = teaCount === 0 ? 'Tea 1 (15m)' : (teaCount === 1 ? 'Tea 2 (15m)' : 'Tea Break (15m)');
+
     const breakOptions = [
-        { id: 'TEA', label: 'Tea Break', icon: <Coffee className="w-6 h-6" />, color: 'bg-orange-100 text-orange-600 border-orange-200', restrictedOnMobile: true },
-        { id: 'LUNCH', label: 'Lunch Break', icon: <Utensils className="w-6 h-6" />, color: 'bg-green-100 text-green-600 border-green-200', restrictedOnMobile: true },
+        { id: 'TEA', label: teaLabel, icon: <Coffee className="w-6 h-6" />, color: 'bg-orange-100 text-orange-600 border-orange-200', restrictedOnMobile: true },
+        { id: 'LUNCH', label: 'Lunch (45m)', icon: <Utensils className="w-6 h-6" />, color: 'bg-green-100 text-green-600 border-green-200', restrictedOnMobile: true },
         { id: 'CLIENT_MEETING', label: 'Client Meeting', icon: <Briefcase className="w-6 h-6" />, color: 'bg-blue-100 text-blue-600 border-blue-200', restrictedOnMobile: false },
         { id: 'BH_MEETING', label: 'BH Meeting', icon: <Users className="w-6 h-6" />, color: 'bg-purple-100 text-purple-600 border-purple-200', restrictedOnMobile: false },
     ];

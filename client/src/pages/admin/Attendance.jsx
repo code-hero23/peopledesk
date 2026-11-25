@@ -122,7 +122,9 @@ const Attendance = () => {
 
     const getStatusStyles = (type) => {
         switch (type) {
-            case 'TEA': return { bg: 'bg-amber-500/10 border-amber-500/30 text-amber-500', icon: Coffee, label: 'Tea Break' };
+            case 'TEA':
+            case 'TEA_1': return { bg: 'bg-amber-500/10 border-amber-500/30 text-amber-500', icon: Coffee, label: 'Tea 1 (15m)' };
+            case 'TEA_2': return { bg: 'bg-amber-600/10 border-amber-600/30 text-amber-600 dark:text-amber-400', icon: Coffee, label: 'Tea 2 (15m)' };
             case 'LUNCH': return { bg: 'bg-orange-500/10 border-orange-500/30 text-orange-500', icon: Utensils, label: 'Lunch Break' };
             case 'CLIENT_MEETING': return { bg: 'bg-blue-500/10 border-blue-500/30 text-blue-400', icon: Users, label: 'Client Meeting' };
             case 'BH_MEETING': return { bg: 'bg-purple-500/10 border-purple-500/30 text-purple-400', icon: Zap, label: 'BH Meeting' };
@@ -530,7 +532,8 @@ const Attendance = () => {
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Status</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">In Device</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Out Device</th>
-                                <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Tea Break</th>
+                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Tea 1 (15m)</th>
+                                <th className="px-5 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Tea 2 (15m)</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Lunch Break</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Meetings</th>
                                 <th className="px-6 py-4 font-black text-slate-500 dark:text-slate-400 uppercase tracking-widest text-center">Net Hours</th>
@@ -539,14 +542,14 @@ const Attendance = () => {
                         <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60">
                             {isLoading ? (
                                 <tr>
-                                    <td colSpan="8" className="text-center py-12 text-slate-400 font-bold uppercase tracking-widest">
+                                    <td colSpan="9" className="text-center py-12 text-slate-400 font-bold uppercase tracking-widest">
                                         <RefreshCw size={20} className="animate-spin mx-auto mb-2 text-blue-500 opacity-60" />
                                         Loading Daily Attendance Matrix...
                                     </td>
                                 </tr>
                             ) : filteredAttendance.length === 0 ? (
                                 <tr>
-                                    <td colSpan="8" className="text-center py-12 text-slate-400 font-bold text-xs italic">
+                                    <td colSpan="9" className="text-center py-12 text-slate-400 font-bold text-xs italic">
                                         No attendance records matching your criteria.
                                     </td>
                                 </tr>
@@ -749,12 +752,47 @@ const Attendance = () => {
                                             )}
                                         </td>
 
-                                        {/* Tea Break */}
-                                        <td className="px-6 py-4 text-center">
-                                            {record.breakData?.tea > 0 ? (
-                                                <span className="text-amber-600 dark:text-amber-400 font-bold font-mono px-2 py-0.5 bg-amber-50 dark:bg-amber-950/40 rounded-md">
-                                                    {formatDuration(record.breakData.tea)}
-                                                </span>
+                                        {/* Tea 1 (15m) */}
+                                        <td className="px-5 py-4 text-center">
+                                            {record.breakData?.tea1 > 0 || record.breakData?.tea1Active ? (
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className={`font-bold font-mono px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
+                                                        record.breakData?.tea1Exceeded 
+                                                            ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-black' 
+                                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+                                                    }`}>
+                                                        {record.breakData?.tea1Active && (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                                        )}
+                                                        {formatDuration(record.breakData.tea1)}
+                                                    </span>
+                                                    {record.breakData?.tea1Exceeded && (
+                                                        <span className="text-[9px] font-black uppercase text-rose-500 tracking-tight">Exceeded</span>
+                                                    )}
+                                                </div>
+                                            ) : (
+                                                <span className="text-slate-300 dark:text-slate-700">-</span>
+                                            )}
+                                        </td>
+
+                                        {/* Tea 2 (15m) */}
+                                        <td className="px-5 py-4 text-center">
+                                            {record.breakData?.tea2 > 0 || record.breakData?.tea2Active ? (
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <span className={`font-bold font-mono px-2 py-0.5 rounded-md inline-flex items-center gap-1 ${
+                                                        record.breakData?.tea2Exceeded 
+                                                            ? 'bg-rose-500/15 text-rose-600 dark:text-rose-400 border border-rose-500/30 font-black' 
+                                                            : 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400'
+                                                    }`}>
+                                                        {record.breakData?.tea2Active && (
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>
+                                                        )}
+                                                        {formatDuration(record.breakData.tea2)}
+                                                    </span>
+                                                    {record.breakData?.tea2Exceeded && (
+                                                        <span className="text-[9px] font-black uppercase text-rose-500 tracking-tight">Exceeded</span>
+                                                    )}
+                                                </div>
                                             ) : (
                                                 <span className="text-slate-300 dark:text-slate-700">-</span>
                                             )}

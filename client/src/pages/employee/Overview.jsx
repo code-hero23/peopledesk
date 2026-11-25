@@ -61,7 +61,34 @@ const isAeAttendanceUser = (user) => {
 };
 
 // Helper: Break styling and metadata
-const getBreakDetails = (breakType) => {
+const getBreakDetails = (breakType, attendance = null, activeBreak = null) => {
+    let teaTitle = 'Tea Break';
+    let teaHeading = 'On Tea Break';
+    let teaBtnText = 'End Tea Break';
+    let teaBannerTitle = 'Tea Break Active';
+    let teaBannerSub = 'Currently on Tea Break';
+    let teaClockTag = 'ON TEA BREAK';
+
+    if (breakType === 'TEA' && attendance && attendance.breaks) {
+        const teaBreaks = (attendance.breaks || []).filter(b => b.breakType === 'TEA').sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        const activeIdx = teaBreaks.findIndex(b => (activeBreak && b.id === activeBreak.id) || !b.endTime);
+        if (activeIdx === 0) {
+            teaTitle = 'Tea Break 1 (15m)';
+            teaHeading = 'On Tea Break 1';
+            teaBtnText = 'End Tea Break 1';
+            teaBannerTitle = 'Tea Break 1 Active (15m)';
+            teaBannerSub = 'Tea Break 1 - Max 15 minutes';
+            teaClockTag = 'TEA BREAK 1 (15m)';
+        } else if (activeIdx >= 1) {
+            teaTitle = 'Tea Break 2 (15m)';
+            teaHeading = 'On Tea Break 2';
+            teaBtnText = 'End Tea Break 2';
+            teaBannerTitle = 'Tea Break 2 Active (15m)';
+            teaBannerSub = 'Tea Break 2 - Max 15 minutes';
+            teaClockTag = 'TEA BREAK 2 (15m)';
+        }
+    }
+
     switch (breakType) {
         case 'CLIENT_MEETING':
             return {
@@ -124,31 +151,31 @@ const getBreakDetails = (breakType) => {
         case 'TEA':
             return {
                 type: 'TEA',
-                title: 'Tea Break',
+                title: teaTitle,
                 category: 'break',
                 color: 'amber',
                 icon: Coffee,
-                heading: 'On Tea Break',
+                heading: teaHeading,
                 badgeText: 'Break Paused',
                 badgeClass: 'bg-amber-500 text-white shadow-lg shadow-amber-500/30',
-                subText: 'Take a sip, relax & recharge your energy',
+                subText: 'Take a sip, relax & recharge (15 mins quota)',
                 cardBg: 'bg-gradient-to-br from-amber-500/[0.09] via-white to-orange-500/[0.05] dark:from-amber-950/40 dark:via-slate-900 dark:to-orange-950/30',
                 cardBorder: 'border-2 border-amber-400 dark:border-amber-500 shadow-2xl shadow-amber-500/20 ring-2 ring-amber-400/30',
                 auraColor: 'bg-amber-500/25 dark:bg-amber-500/35',
                 titleColor: 'text-amber-700 dark:text-amber-400',
                 metaBorder: 'border-amber-200/80 dark:border-amber-800/60',
                 btnClass: 'bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-600 hover:to-orange-600 text-white shadow-xl shadow-amber-500/40 ring-4 ring-amber-300/60 dark:ring-amber-500/40 animate-pulse',
-                btnText: 'End Tea Break',
+                btnText: teaBtnText,
                 bannerBorder: 'from-amber-500 via-orange-500 to-amber-500',
                 bannerShadow: 'shadow-amber-500/20',
                 bannerPing: 'bg-amber-400',
                 bannerDot: 'bg-amber-500',
-                bannerTitle: 'Tea Break Active',
-                bannerSub: 'Currently on Tea Break',
+                bannerTitle: teaBannerTitle,
+                bannerSub: teaBannerSub,
                 clockBg: 'from-[#451a03] via-[#78350f] to-[#b45309]',
                 clockMascotBg: 'bg-gradient-to-br from-amber-950 via-slate-900 to-orange-950',
                 clockTagBg: 'bg-amber-900/90 text-amber-200 border-amber-400/50',
-                clockTagText: 'ON TEA BREAK'
+                clockTagText: teaClockTag
             };
         case 'LUNCH':
             return {
@@ -228,7 +255,7 @@ const SmartDisplayClock = ({ attendance, isCheckedIn, activeBreak }) => {
     };
 
     const progress = calculateProgress();
-    const breakDetails = activeBreak ? getBreakDetails(activeBreak.breakType) : null;
+    const breakDetails = activeBreak ? getBreakDetails(activeBreak.breakType, attendance, activeBreak) : null;
 
     return (
         <div className={`relative w-full max-w-[340px] h-40 xl:w-80 xl:h-44 rounded-[2.2rem] xl:rounded-[2.5rem] overflow-hidden shadow-xl shrink-0 group transition-all duration-500 hover:scale-[1.01] ${
@@ -882,8 +909,8 @@ const Overview = () => {
     }, [activeBreak, attendance]);
 
     const breakDetails = useMemo(() => {
-        return currentActiveBreak ? getBreakDetails(currentActiveBreak.breakType) : null;
-    }, [currentActiveBreak]);
+        return currentActiveBreak ? getBreakDetails(currentActiveBreak.breakType, attendance, currentActiveBreak) : null;
+    }, [currentActiveBreak, attendance]);
 
     const [sessionDuration, setSessionDuration] = useState('00:00:00');
     const [isSeatModalOpen, setIsSeatModalOpen] = useState(false);
@@ -1816,9 +1843,13 @@ const Overview = () => {
                         <div className="grid grid-cols-2 gap-4 p-4">
                             {(() => {
                                 const isNative = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform && Capacitor.isNativePlatform();
+                                const todayTeaBreaks = (attendance?.breaks || []).filter(b => b.breakType === 'TEA');
+                                const teaCount = todayTeaBreaks.length;
+                                const teaTitle = teaCount === 0 ? 'Tea Break 1 (15m)' : (teaCount === 1 ? 'Tea Break 2 (15m)' : 'Tea Break (15m)');
+                                const teaSubtitle = teaCount === 0 ? '15m quota (Morning)' : (teaCount === 1 ? '15m quota (Evening)' : `${teaCount}/2 used today`);
                                 return [
-                                    { id: 'TEA', icon: Coffee, title: 'Tea Break', color: 'amber', image: isNative ? '/tea-break.mp4' : '/tea-break.mp4', fallbackImg: '/tea-break.gif' },
-                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break', color: 'orange', image: isNative ? '/lunch-break.mp4' : '/lunch-break.mp4', fallbackImg: '/lunch-break.gif' },
+                                    { id: 'TEA', icon: Coffee, title: teaTitle, subtitle: teaSubtitle, color: 'amber', image: isNative ? '/tea-break.mp4' : '/tea-break.mp4', fallbackImg: '/tea-break.gif' },
+                                    { id: 'LUNCH', icon: Utensils, title: 'Lunch Break (45m)', subtitle: '45m quota', color: 'orange', image: isNative ? '/lunch-break.mp4' : '/lunch-break.mp4', fallbackImg: '/lunch-break.gif' },
                                     { id: 'CLIENT_MEETING', icon: Briefcase, title: 'Client Meeting', color: 'blue', image: isNative ? '/client-meeting-break.mp4' : '/client-meeting-break.mp4', fallbackImg: '/client-meeting-break.gif' },
                                     { id: 'BH_MEETING', icon: MessageSquare, title: 'BH Meeting', color: 'purple', image: isNative ? '/bh-meeting-break.mp4' : '/bh-meeting-break.mp4', fallbackImg: '/bh-meeting-break.gif' }
                                 ];
@@ -1900,6 +1931,9 @@ const Overview = () => {
                                                         ? 'group-hover:text-orange-600 dark:group-hover:text-orange-400'
                                                         : 'group-hover:text-amber-600 dark:group-hover:text-amber-400'
                                         } transition-colors`}>{t.title}</span>
+                                        {t.subtitle && (
+                                            <span className="text-[10px] text-slate-400 font-semibold mt-0.5">{t.subtitle}</span>
+                                        )}
                                     </button>
                                 );
                             })}

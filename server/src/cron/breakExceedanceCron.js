@@ -45,10 +45,22 @@ const initBreakExceedanceCron = () => {
 
                 if (b.breakType === 'TEA') {
                     limit = 15;
-                    breakName = 'Tea Break';
+                    const startOfDay = new Date(startTime);
+                    startOfDay.setHours(0, 0, 0, 0);
+                    const priorTeaCount = await prisma.breakLog.count({
+                        where: {
+                            attendance: { userId: user.id },
+                            breakType: 'TEA',
+                            startTime: {
+                                gte: startOfDay,
+                                lt: b.startTime
+                            }
+                        }
+                    });
+                    breakName = priorTeaCount >= 1 ? 'Tea Break 2 (15 mins)' : 'Tea Break 1 (15 mins)';
                 } else if (b.breakType === 'LUNCH') {
                     limit = 45;
-                    breakName = 'Lunch Break';
+                    breakName = 'Lunch Break (45 mins)';
                 }
 
                 if (durationMinutes > limit) {

@@ -29,6 +29,19 @@ const MyAttendance = () => {
     };
 
 
+    const getSplitTeaDurations = (breaks) => {
+        if (!breaks || breaks.length === 0) return { tea1: 0, tea2: 0 };
+        const teaBreaks = breaks
+            .filter(b => b.breakType === 'TEA')
+            .sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+        const tea1 = teaBreaks[0] ? (teaBreaks[0].duration || (teaBreaks[0].endTime ? Math.round((new Date(teaBreaks[0].endTime) - new Date(teaBreaks[0].startTime)) / 60000) : 0)) : 0;
+        let tea2 = 0;
+        for (let i = 1; i < teaBreaks.length; i++) {
+            tea2 += (teaBreaks[i].duration || (teaBreaks[i].endTime ? Math.round((new Date(teaBreaks[i].endTime) - new Date(teaBreaks[i].startTime)) / 60000) : 0));
+        }
+        return { tea1, tea2 };
+    };
+
     const formatMinutes = (minutes) => {
         if (!minutes) return '0m';
         if (minutes < 60) return `${minutes}m`;
@@ -129,7 +142,8 @@ const MyAttendance = () => {
                                         <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-orange-50/50">Log Out</th>
                                         <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-indigo-50/50">Bio In</th>
                                         <th className="p-4 font-semibold text-slate-700 w-24 text-center border-r border-gray-100 bg-purple-50/50">Bio Out</th>
-                                        <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Coffee size={14} /> Tea Break</div></th>
+                                        <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Coffee size={14} /> Tea 1 (15m)</div></th>
+                                        <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Coffee size={14} /> Tea 2 (15m)</div></th>
                                         <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Coffee size={14} /> Lunch</div></th>
                                         <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><Users size={14} /> Client Meet</div></th>
                                         <th className="p-4 font-semibold text-slate-700 text-center border-r border-gray-100"><div className="flex items-center justify-center gap-1"><MonitorPlay size={14} /> Online Disc.</div></th>
@@ -139,7 +153,7 @@ const MyAttendance = () => {
                                 <tbody>
                                     {displayDates.length === 0 ? (
                                         <tr>
-                                            <td colSpan="8" className="p-8 text-center text-gray-500">
+                                            <td colSpan="11" className="p-8 text-center text-gray-500">
                                                 Select a valid cycle range to view attendance history.
                                             </td>
                                         </tr>
@@ -178,9 +192,27 @@ const MyAttendance = () => {
                                                             <td className="p-4 text-center font-medium text-purple-700 bg-purple-50/10 border-r border-gray-100">
                                                                 {dayData.biometricOut ? formatTime(dayData.biometricOut) : '--:--'}
                                                             </td>
-                                                            <td className="p-4 text-center text-gray-600 font-medium border-r border-gray-100">
-                                                                {formatMinutes(calculateBreakDuration(dayData.breaks, ['TEA']))}
-                                                            </td>
+                                                            {(() => {
+                                                                const { tea1, tea2 } = getSplitTeaDurations(dayData.breaks);
+                                                                return (
+                                                                    <>
+                                                                        <td className="p-4 text-center font-medium border-r border-gray-100">
+                                                                            {tea1 > 0 ? (
+                                                                                <span className={`px-2 py-0.5 rounded ${tea1 > 15 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`}>
+                                                                                    {formatMinutes(tea1)}
+                                                                                </span>
+                                                                            ) : <span className="text-gray-300">--</span>}
+                                                                        </td>
+                                                                        <td className="p-4 text-center font-medium border-r border-gray-100">
+                                                                            {tea2 > 0 ? (
+                                                                                <span className={`px-2 py-0.5 rounded ${tea2 > 15 ? 'text-rose-600 bg-rose-50 font-bold border border-rose-200' : 'text-gray-700'}`}>
+                                                                                    {formatMinutes(tea2)}
+                                                                                </span>
+                                                                            ) : <span className="text-gray-300">--</span>}
+                                                                        </td>
+                                                                    </>
+                                                                );
+                                                            })()}
                                                             <td className="p-4 text-center text-gray-600 font-medium border-r border-gray-100">
                                                                 {formatMinutes(calculateBreakDuration(dayData.breaks, ['LUNCH']))}
                                                             </td>
@@ -195,7 +227,7 @@ const MyAttendance = () => {
                                                             </td>
                                                         </>
                                                     ) : (
-                                                        <td colSpan="9" className="p-4 text-center text-gray-400 font-medium bg-gray-50/50">
+                                                        <td colSpan="10" className="p-4 text-center text-gray-400 font-medium bg-gray-50/50">
                                                             Absent / No Data
                                                         </td>
                                                     )}
