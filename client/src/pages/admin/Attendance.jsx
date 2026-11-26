@@ -222,7 +222,10 @@ const Attendance = () => {
             let defaultFileName = '';
 
             if (startDate && endDate) {
-                apiUrl = `${baseUrl}/payroll/report?startDate=${startDate}&endDate=${endDate}`;
+                const endD = new Date(endDate);
+                const calcMonth = endD.getMonth() + 1;
+                const calcYear = endD.getFullYear();
+                apiUrl = `${baseUrl}/payroll/report?startDate=${startDate}&endDate=${endDate}&month=${calcMonth}&year=${calcYear}`;
                 defaultFileName = startDate === endDate 
                     ? `PAYROLL_REPORT_${startDate}.xlsx` 
                     : `PAYROLL_REPORT_${startDate}_to_${endDate}.xlsx`;

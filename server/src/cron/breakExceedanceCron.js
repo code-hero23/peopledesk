@@ -4,7 +4,7 @@ const whatsappService = require('../utils/WhatsAppService');
 const { sendEmail } = require('../utils/emailService');
 
 const ADMIN_ALERT_PHONE = process.env.BREAK_ALERT_PHONE || '9092705679';
-const ADMIN_ALERT_EMAIL = process.env.BREAK_ALERT_EMAIL || 'es.cookscape@gmail.com';
+const ADMIN_ALERT_EMAILS = process.env.BREAK_ALERT_EMAIL ? process.env.BREAK_ALERT_EMAIL.split(',').map(e => e.trim()) : ['es.cookscape@gmail.com', 'webapp.cookscape@gmail.com'];
 
 // Format time in Indian Standard Time (IST)
 const formatISTTime = (date) => {
@@ -242,13 +242,13 @@ const checkAndSendScheduledBreakAlert = async (breakCategory, alertNum) => {
                 ).join('\n\n');
 
             await sendEmail({
-                to: ADMIN_ALERT_EMAIL,
+                to: ADMIN_ALERT_EMAILS.join(', '),
                 subject: `🚨 ${alertTitle} (${exceededList.length} Employee${exceededList.length > 1 ? 's' : ''}) - PeopleDesk`,
                 html: emailHtml,
                 text: emailText
             });
 
-            console.log(`[BreakCron] Email sent to ${ADMIN_ALERT_EMAIL} for ${exceededList.length} employee(s)`);
+            console.log(`[BreakCron] Email sent to ${ADMIN_ALERT_EMAILS.join(', ')} for ${exceededList.length} employee(s)`);
         } catch (emailErr) {
             console.error(`[BreakCron] Email error:`, emailErr.message);
         }
