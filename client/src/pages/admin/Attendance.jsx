@@ -217,24 +217,46 @@ const Attendance = () => {
                 responseType: 'blob',
             };
 
-            const dateObj = new Date(cycleRange.endDate);
-            const month = dateObj.getMonth() + 1;
-            const year = dateObj.getFullYear();
-
             const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
-            let apiUrl = `${baseUrl}/payroll/report?month=${month}&year=${year}`;
+            let apiUrl = '';
+            let defaultFileName = '';
+
+            if (startDate && endDate) {
+                apiUrl = `${baseUrl}/payroll/report?startDate=${startDate}&endDate=${endDate}`;
+                defaultFileName = startDate === endDate 
+                    ? `PAYROLL_REPORT_${startDate}.xlsx` 
+                    : `PAYROLL_REPORT_${startDate}_to_${endDate}.xlsx`;
+            } else {
+                const dateObj = new Date(cycleRange.endDate || new Date());
+                const month = dateObj.getMonth() + 1;
+                const year = dateObj.getFullYear();
+                apiUrl = `${baseUrl}/payroll/report?month=${month}&year=${year}`;
+                const monthName = dateObj.toLocaleString('default', { month: 'short' });
+                const prevMonthDate = new Date(year, month - 2, 1);
+                const prevMonthName = prevMonthDate.toLocaleString('default', { month: 'short' });
+                defaultFileName = `PAYROLL_REPORT_${prevMonthName}26_to_${monthName}25_${year}.xlsx`;
+            }
+
+            if (searchTerm) {
+                apiUrl += `&search=${encodeURIComponent(searchTerm)}`;
+            }
 
             const response = await axios.get(apiUrl, config);
+
+            // Extract filename from response headers if available
+            let downloadFileName = defaultFileName;
+            const disposition = response.headers && (response.headers['content-disposition'] || response.headers['Content-Disposition']);
+            if (disposition) {
+                const match = disposition.match(/filename=(?:["']?)([^"';]+)(?:["']?)/);
+                if (match && match[1]) {
+                    downloadFileName = match[1].trim();
+                }
+            }
 
             const url = window.URL.createObjectURL(new Blob([response.data], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
             const link = document.createElement('a');
             link.href = url;
-            const monthName = dateObj.toLocaleString('default', { month: 'short' });
-
-            const prevMonthDate = new Date(year, month - 2, 1);
-            const prevMonthName = prevMonthDate.toLocaleString('default', { month: 'short' });
-
-            link.setAttribute('download', `PAYROLL_REPORT_${prevMonthName}26_to_${monthName}25_${year}.xlsx`);
+            link.setAttribute('download', downloadFileName);
             document.body.appendChild(link);
             link.click();
             link.remove();
@@ -375,7 +397,7 @@ const Attendance = () => {
                         onClick={onGeneratePayrollReport}
                         disabled={isGeneratingPayroll}
                         className="px-4 py-2.5 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-500 hover:to-orange-500 text-white rounded-2xl transition-all shadow-md active:scale-95 flex items-center gap-2 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Generate Monthly Payroll Salary Excel Report"
+                        title={startDate && endDate ? (startDate === endDate ? `Download Payroll Report for ${startDate}` : `Download Payroll Report (${startDate} to ${endDate})`) : "Download Payroll Report"}
                     >
                         {isGeneratingPayroll ? <RefreshCw size={15} className="animate-spin" /> : <Zap size={15} />}
                         <span>{isGeneratingPayroll ? 'Generating Report...' : 'Payroll Report'}</span>

@@ -1,6 +1,6 @@
 const prisma = require('../config/prisma');
 const excelJS = require('exceljs');
-const { getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
+const { getStartOfDayIST, getEndOfDayIST, getCycleStartDateIST, getCycleEndDateIST } = require('../utils/dateHelpers');
 
 // Helper: Clean non-numeric characters for currency/number parsing
 const cleanNumber = (val) => {
@@ -11,39 +11,65 @@ const cleanNumber = (val) => {
     return isNaN(parsed) ? 0 : parsed;
 };
 
-// @desc    Generate Payroll Report
+// @desc    Generate Payroll Report (supports selected date range or monthly cycle)
 // @route   GET /api/payroll/report
 // @access  Private (Admin, HR, Business Head, Accounts Manager)
 const generatePayrollReport = async (req, res) => {
     try {
-        const { month, year, format } = req.query;
-        if (!month || !year) {
-            return res.status(400).json({ message: 'Month and year are required' });
+        const { month, year, format, startDate: queryStartDate, endDate: queryEndDate, date: queryDate, search } = req.query;
+
+        let startDate, endDate;
+        let cycleLabel = '';
+        let fileLabel = '';
+
+        if (queryStartDate && queryEndDate) {
+            startDate = getStartOfDayIST(queryStartDate);
+            endDate = getEndOfDayIST(queryEndDate);
+            if (startDate > endDate) {
+                const temp = startDate;
+                startDate = endDate;
+                endDate = temp;
+            }
+            if (queryStartDate === queryEndDate) {
+                cycleLabel = queryStartDate;
+                fileLabel = queryStartDate;
+            } else {
+                cycleLabel = `${queryStartDate} to ${queryEndDate}`;
+                fileLabel = `${queryStartDate}_to_${queryEndDate}`;
+            }
+        } else if (queryDate) {
+            startDate = getStartOfDayIST(queryDate);
+            endDate = getEndOfDayIST(queryDate);
+            cycleLabel = queryDate;
+            fileLabel = queryDate;
+        } else if (month && year) {
+            const m = parseInt(month, 10);
+            const y = parseInt(year, 10);
+
+            if (isNaN(m) || m < 1 || m > 12 || isNaN(y) || y < 2000 || y > 2100) {
+                return res.status(400).json({ message: 'Invalid month or year provided' });
+            }
+
+            // Standard Payroll Cycle: 26th of (m-1) to 25th of m
+            // Example: Month 2 (Feb) 2026 -> 26 Jan 2026 00:00:00 IST to 25 Feb 2026 23:59:59.999 IST
+            let prevM = m - 2; // 0-indexed internal month
+            let prevY = y;
+            if (prevM < 0) {
+                prevM += 12;
+                prevY -= 1;
+            }
+
+            startDate = getCycleStartDateIST(null, prevY, prevM);
+            endDate = getCycleEndDateIST(null, y, m - 1);
+
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const prevMonthName = monthNames[prevM];
+            const curMonthName = monthNames[m - 1];
+            cycleLabel = `26 ${prevMonthName} ${prevY} to 25 ${curMonthName} ${y}`;
+            fileLabel = `${prevMonthName}26_to_${curMonthName}25_${y}`;
+        } else {
+            return res.status(400).json({ message: 'Date range (startDate & endDate) or month & year are required' });
         }
-
-        const m = parseInt(month, 10);
-        const y = parseInt(year, 10);
-
-        if (isNaN(m) || m < 1 || m > 12 || isNaN(y) || y < 2000 || y > 2100) {
-            return res.status(400).json({ message: 'Invalid month or year provided' });
-        }
-
-        // Standard Payroll Cycle: 26th of (m-1) to 25th of m
-        // Example: Month 2 (Feb) 2026 -> 26 Jan 2026 00:00:00 IST to 25 Feb 2026 23:59:59.999 IST
-        let prevM = m - 2; // 0-indexed internal month
-        let prevY = y;
-        if (prevM < 0) {
-            prevM += 12;
-            prevY -= 1;
-        }
-
-        const startDate = getCycleStartDateIST(null, prevY, prevM);
-        const endDate = getCycleEndDateIST(null, y, m - 1);
-
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-        const prevMonthName = monthNames[prevM];
-        const curMonthName = monthNames[m - 1];
-        const cycleLabel = `26 ${prevMonthName} ${prevY} to 25 ${curMonthName} ${y}`;
 
         // 1. Determine user scope based on requester role
         let userWhere = { status: 'ACTIVE' };
@@ -54,6 +80,13 @@ const generatePayrollReport = async (req, res) => {
         } else {
             // Admin, HR, Accounts Manager: all active staff, exclude Admin account itself
             userWhere.role = { not: 'ADMIN' };
+        }
+
+        if (search) {
+            userWhere.OR = [
+                { name: { contains: search, mode: 'insensitive' } },
+                { email: { contains: search, mode: 'insensitive' } }
+            ];
         }
 
         const users = await prisma.user.findMany({
@@ -116,12 +149,14 @@ const generatePayrollReport = async (req, res) => {
             permissionMap.set(p.userId, (permissionMap.get(p.userId) || 0) + 1);
         });
 
-        // Applied leaves: overlap days within cycle
+        // Applied leaves: overlap days within selected range
         allLeaves.forEach(l => {
-            const startOverlap = new Date(Math.max(new Date(l.startDate).setHours(0, 0, 0, 0), startDate.getTime()));
-            const endOverlap = new Date(Math.min(new Date(l.endDate).setHours(23, 59, 59, 999), endDate.getTime()));
+            const leaveStart = getStartOfDayIST(l.startDate);
+            const leaveEnd = getEndOfDayIST(l.endDate);
+            const startOverlap = new Date(Math.max(leaveStart.getTime(), startDate.getTime()));
+            const endOverlap = new Date(Math.min(leaveEnd.getTime(), endDate.getTime()));
             if (startOverlap <= endOverlap) {
-                const days = Math.max(1, Math.ceil((endOverlap - startOverlap) / (1000 * 60 * 60 * 24)));
+                const days = Math.max(1, Math.round((endOverlap.getTime() - startOverlap.getTime()) / (1000 * 60 * 60 * 24)));
                 if (l.type === 'HALF_DAY') {
                     leaveHalfMap.set(l.userId, (leaveHalfMap.get(l.userId) || 0) + days);
                 } else {
@@ -154,9 +189,9 @@ const generatePayrollReport = async (req, res) => {
         if (format === 'json') {
             return res.json({
                 cycle: {
-                    month: m,
-                    year: y,
-                    label: cycleLabel
+                    label: cycleLabel,
+                    startDate,
+                    endDate
                 },
                 totalEmployees: records.length,
                 records
@@ -168,7 +203,8 @@ const generatePayrollReport = async (req, res) => {
         workbook.creator = 'PeopleDesk HRM';
         workbook.created = new Date();
 
-        const sheet = workbook.addWorksheet('Payroll Summary', {
+        const safeSheetName = fileLabel.length <= 22 ? `Payroll ${fileLabel}` : 'Payroll Summary';
+        const sheet = workbook.addWorksheet(safeSheetName, {
             views: [{ state: 'frozen', xSplit: 0, ySplit: 1 }]
         });
 
@@ -234,7 +270,7 @@ const generatePayrollReport = async (req, res) => {
         });
 
         res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        res.setHeader('Content-Disposition', `attachment; filename=PAYROLL_REPORT_${prevMonthName}26_to_${curMonthName}25_${y}.xlsx`);
+        res.setHeader('Content-Disposition', `attachment; filename=PAYROLL_REPORT_${fileLabel}.xlsx`);
 
         await workbook.xlsx.write(res);
         res.end();
