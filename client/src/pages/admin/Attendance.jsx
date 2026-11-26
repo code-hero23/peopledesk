@@ -262,7 +262,17 @@ const Attendance = () => {
             link.remove();
         } catch (error) {
             console.error("Payroll report failed:", error);
-            alert("Failed to generate payroll report. Please try again.");
+            let errMsg = "Failed to generate payroll report. Please try again.";
+            if (error.response?.data instanceof Blob) {
+                try {
+                    const text = await error.response.data.text();
+                    const json = JSON.parse(text);
+                    if (json.message) errMsg = json.message;
+                } catch (e) {}
+            } else if (error.response?.data?.message) {
+                errMsg = error.response.data.message;
+            }
+            alert(errMsg);
         } finally {
             setIsGeneratingPayroll(false);
         }
