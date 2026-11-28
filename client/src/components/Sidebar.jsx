@@ -36,7 +36,8 @@ import {
     Award,
     Sparkle,
     Activity,
-    Smartphone
+    Smartphone,
+    Hammer
 } from 'lucide-react';
 import ThemeSelector from './common/ThemeSelector';
 import ApkDownloadModal from './common/ApkDownloadModal';
@@ -275,6 +276,7 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             {(['ADMIN', 'SUPER_ADMIN', 'BUSINESS_HEAD', 'AE_MANAGER', 'AR_MANAGER'].includes(user?.role) || user?.designation === 'AE MANAGER' || user?.designation === 'AR MANAGER' || user?.designation?.toUpperCase()?.includes('AE MANAGER') || user?.designation?.toUpperCase()?.includes('AR MANAGER')) && (
                                 <NavItem to="/admin/site-assignments" icon={MapPin} label="Assign Sites (AE Manager)" indent />
                             )}
+                            <NavItem to="/admin/carpenter-management" icon={Hammer} label="Carpenter Management" indent />
                             {(['ADMIN', 'BUSINESS_HEAD'].includes(user?.role) || user?.designation === 'BH' || user?.designation === 'FRONT DESK MANAGER') && (
                                 <NavItem to="/admin/visitors-record" icon={BookOpen} label="Visitors Book" indent />
                             )}
@@ -329,6 +331,9 @@ const Sidebar = ({ isMobileOpen, onMobileClose }) => {
                             <NavItem to="/dashboard/requests" icon={CalendarClock} label="My Requests" />
                             {(user?.role === 'AE' || user?.role === 'AE_MANAGER' || user?.role === 'AR_MANAGER' || user?.designation?.toUpperCase()?.includes('AE') || user?.designation?.toUpperCase()?.includes('ARCHITECT')) && (
                                 <NavItem to="/dashboard/site-assignments" icon={MapPin} label="Assigned Sites" />
+                            )}
+                            {(user?.designation?.toUpperCase()?.includes('VENDOR') && user?.role !== 'WALL2WALL_EMPLOYEE') && (
+                                <NavItem to="/dashboard/carpenter-management" icon={Hammer} label="Carpenter Management" />
                             )}
                             <NavItem to="/dashboard/attendance" icon={FileCheck} label="My Attendance" />
                             <NavItem to="/seating" icon={Armchair} label="Seating Layout" />

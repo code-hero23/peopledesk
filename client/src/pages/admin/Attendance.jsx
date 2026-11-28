@@ -222,13 +222,40 @@ const Attendance = () => {
             let defaultFileName = '';
 
             if (startDate && endDate) {
-                const endD = new Date(endDate);
-                const calcMonth = endD.getMonth() + 1;
-                const calcYear = endD.getFullYear();
-                apiUrl = `${baseUrl}/payroll/report?startDate=${startDate}&endDate=${endDate}&month=${calcMonth}&year=${calcYear}`;
-                defaultFileName = startDate === endDate 
-                    ? `PAYROLL_REPORT_${startDate}.xlsx` 
-                    : `PAYROLL_REPORT_${startDate}_to_${endDate}.xlsx`;
+                // Safely normalize date strings to YYYY-MM-DD
+                const normalizeDateStr = (str) => {
+                    if (!str) return '';
+                    const trimmed = String(str).trim();
+                    if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(trimmed)) {
+                        const parts = trimmed.split(/[-/]/);
+                        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+                    }
+                    return trimmed;
+                };
+
+                const normStart = normalizeDateStr(startDate);
+                const normEnd = normalizeDateStr(endDate);
+
+                // Compute month and year reliably as integer fallback
+                let calcMonth = null;
+                let calcYear = null;
+                if (normEnd && normEnd.includes('-')) {
+                    const parts = normEnd.split('-');
+                    if (parts[0].length === 4) {
+                        calcYear = parseInt(parts[0], 10);
+                        calcMonth = parseInt(parts[1], 10);
+                    }
+                }
+                if (!calcMonth || !calcYear || isNaN(calcMonth) || isNaN(calcYear)) {
+                    const endD = new Date(normEnd || endDate);
+                    calcMonth = !isNaN(endD.getTime()) ? endD.getMonth() + 1 : (new Date().getMonth() + 1);
+                    calcYear = !isNaN(endD.getTime()) ? endD.getFullYear() : (new Date().getFullYear());
+                }
+
+                apiUrl = `${baseUrl}/payroll/report?startDate=${normStart}&endDate=${normEnd}&month=${calcMonth}&year=${calcYear}`;
+                defaultFileName = normStart === normEnd 
+                    ? `PAYROLL_REPORT_${normStart}.xlsx` 
+                    : `PAYROLL_REPORT_${normStart}_to_${normEnd}.xlsx`;
             } else {
                 const dateObj = new Date(cycleRange.endDate || new Date());
                 const month = dateObj.getMonth() + 1;

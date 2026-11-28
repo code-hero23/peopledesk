@@ -48,6 +48,7 @@ import PWAFresher from './components/PWAFresher';
 import SupportButton from './components/common/SupportButton';
 import EmployeeAttendanceDetail from './pages/admin/EmployeeAttendanceDetail';
 import CallSyncDeviceSetup from './components/CallSyncDeviceSetup';
+import CarpenterManagement from './pages/employee/CarpenterManagement';
 import { getCallLogPlugin } from './utils/capacitorPlugins';
 
 import PublicEventHub from './pages/public/PublicEventHub';
@@ -122,6 +123,7 @@ function App() {
                 <Route path="/dashboard/call-reports" element={<CRECallReports />} />
                 <Route path="/dashboard/visitors-record" element={<VisitorRecordBook />} />
                 <Route path="/dashboard/kpi-scoreboard" element={<MyKPIScoreboard />} />
+                <Route path="/dashboard/carpenter-management" element={<CarpenterManagement />} />
                 <Route path="/dashboard/helpdesk" element={<Helpdesk />} />
                 <Route path="/seating" element={<SeatingLayout />} />
               </Route>
@@ -138,6 +140,7 @@ function App() {
               <Route path="/admin/vouchers" element={<ExpenseHubB />} />
               <Route path="/admin/visit-requests" element={<VisitRequests />} />
               <Route path="/admin/site-assignments" element={<SiteAssignments />} />
+              <Route path="/admin/carpenter-management" element={<CarpenterManagement />} />
               <Route path="/admin/ae-manager" element={<Navigate to="/admin/site-assignments" replace />} />
               <Route path="/ae-manager" element={<Navigate to="/admin/site-assignments" replace />} />
               <Route path="/admin/visitors-record" element={<VisitorRecordBook />} />

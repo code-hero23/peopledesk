@@ -6,9 +6,29 @@ const getISTDate = () => {
     return istTime;
 };
 
+const parseDateSafe = (dateInput) => {
+    if (!dateInput) return new Date();
+    if (dateInput instanceof Date) return dateInput;
+    if (typeof dateInput === 'string') {
+        const trimmed = dateInput.trim();
+        // Handle DD-MM-YYYY or DD/MM/YYYY
+        if (/^\d{1,2}[-/]\d{1,2}[-/]\d{4}$/.test(trimmed)) {
+            const parts = trimmed.split(/[-/]/).map(Number);
+            return new Date(parts[2], parts[1] - 1, parts[0]);
+        }
+        // Handle YYYY-MM-DD or YYYY/MM/DD
+        if (/^\d{4}[-/]\d{1,2}[-/]\d{1,2}$/.test(trimmed)) {
+            const parts = trimmed.split(/[-/]/).map(Number);
+            return new Date(parts[0], parts[1] - 1, parts[2]);
+        }
+    }
+    const parsed = new Date(dateInput);
+    return isNaN(parsed.getTime()) ? new Date() : parsed;
+};
+
 const getStartOfDayIST = (dateInput = new Date()) => {
     // 1. Get current time in UTC
-    const now = dateInput ? new Date(dateInput) : new Date();
+    const now = parseDateSafe(dateInput);
 
     // 2. Add 5 hours 30 mins to get IST time
     const istOffset = 5.5 * 60 * 60 * 1000;
@@ -26,7 +46,7 @@ const getStartOfDayIST = (dateInput = new Date()) => {
 
 const getEndOfDayIST = (dateInput = new Date()) => {
     // Same logic, but set to 23:59:59.999
-    const now = dateInput ? new Date(dateInput) : new Date();
+    const now = parseDateSafe(dateInput);
     const istOffset = 5.5 * 60 * 60 * 1000;
     const istTime = new Date(now.getTime() + istOffset);
 
