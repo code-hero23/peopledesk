@@ -26,7 +26,7 @@ router.route('/assignments/:id')
     .put(updateAssignment)
     .delete(deleteAssignment);
 
-router.post('/assignments/:id/daily-logs', upload.array('photos', 5), addDailyWorkLog);
+router.post('/assignments/:id/daily-logs', upload.array('photos', 20), addDailyWorkLog);
 router.delete('/daily-logs/:logId', deleteDailyWorkLog);
 
 module.exports = router;

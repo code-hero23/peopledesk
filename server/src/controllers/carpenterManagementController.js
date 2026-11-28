@@ -184,8 +184,9 @@ const createAssignment = async (req, res) => {
             remarks
         } = req.body;
 
-        if (!siteName || !carpenterName) {
-            return res.status(400).json({ message: 'Site name and Carpenter name are required' });
+        const unifiedName = (siteName || clientName || '').trim();
+        if (!unifiedName || !carpenterName) {
+            return res.status(400).json({ message: 'Client / Project name and Carpenter name are required' });
         }
 
         const parsedStartDate = startDate ? new Date(startDate) : new Date();
@@ -202,8 +203,8 @@ const createAssignment = async (req, res) => {
             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW(), NOW())
             RETURNING *
         `, 
-            siteName, 
-            clientName || '', 
+            unifiedName, 
+            unifiedName, 
             siteAddress || '', 
             carpenterName, 
             carpenterPhone || '', 
@@ -269,8 +270,9 @@ const updateAssignment = async (req, res) => {
         }
 
         const cur = existing[0];
-        const finalSite = siteName !== undefined ? siteName : cur.siteName;
-        const finalClient = clientName !== undefined ? clientName : cur.clientName;
+        const unifiedName = siteName !== undefined ? siteName : clientName;
+        const finalSite = unifiedName !== undefined ? unifiedName : cur.siteName;
+        const finalClient = unifiedName !== undefined ? unifiedName : (cur.clientName || cur.siteName);
         const finalAddress = siteAddress !== undefined ? siteAddress : cur.siteAddress;
         const finalCarpenter = carpenterName !== undefined ? carpenterName : cur.carpenterName;
         const finalPhone = carpenterPhone !== undefined ? carpenterPhone : cur.carpenterPhone;
